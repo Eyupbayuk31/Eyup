@@ -84,6 +84,24 @@
       });
     }
 
+    // Kucuk UI bildirim (konsol + mini toast)
+    function _fsToast(msg, isError){
+      try {
+        let el = document.getElementById('_fsToast');
+        if(!el){
+          el = document.createElement('div');
+          el.id = '_fsToast';
+          el.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:999999;padding:8px 12px;border-radius:8px;font-size:12px;font-family:system-ui,sans-serif;color:#fff;max-width:340px;word-break:break-word;box-shadow:0 4px 16px rgba(0,0,0,0.4);transition:opacity .3s;opacity:0;';
+          document.body.appendChild(el);
+        }
+        el.style.background = isError ? '#b91c1c' : '#047857';
+        el.textContent = msg;
+        el.style.opacity = '1';
+        clearTimeout(el._t);
+        el._t = setTimeout(()=>{ el.style.opacity = '0'; }, isError ? 5000 : 2200);
+      } catch(e){}
+    }
+
     async function flushKey(key){
       if(!(key in window._sbPending)) return;
       if(!window._fs) return;
@@ -96,23 +114,27 @@
           if(Array.isArray(val) && size >= SINGLE_DOC_LIMIT){
             await _writeChunked(key, val);
             console.log('[Firestore] chunked yazildi:', key, '(', val.length, 'kayit,', size, 'byte )');
+            _fsToast('☁️ ' + key + ' kaydedildi (' + val.length + ' kayit)');
           } else {
             await _writeSingle(key, val);
             console.log('[Firestore] yazildi:', key, '(', size, 'byte )');
+            _fsToast('☁️ ' + key + ' kaydedildi');
           }
         } catch(err){
-          // Tek dokuman basarisizsa (limit vb.), subcollection dene
           if(Array.isArray(val) && err && /too large|1 MiB|exceed|invalid-argument/i.test(String(err.message || err))){
             try {
               await _writeChunked(key, val);
               console.log('[Firestore] fallback chunked yazildi:', key);
+              _fsToast('☁️ ' + key + ' chunked kaydedildi');
               return;
             } catch(err2){
               console.warn('[Firestore] chunked yazma hatasi:', key, err2);
+              _fsToast('⚠️ ' + key + ' Firestore hatasi: ' + (err2.message || err2), true);
               return;
             }
           }
           console.warn('[Firestore] yazma hatasi:', key, err && err.message, err);
+          _fsToast('⚠️ ' + key + ' yazilamadi: ' + (err && err.message ? err.message : err), true);
         }
       })();
       window._sbInflight[key] = p;
@@ -227,9 +249,13 @@
     window._syncFromFirestore = syncFromFirestore;
 
     function bootSync(){
+      // Sadece acilista senkronize et; 60-sn periyodik sync yeni yerel veriyi
+      // silebildigi icin kaldirildi. Kullanici el ile yenileyerek baska
+      // cihazdan gelen degisiklikleri cekebilir.
       setTimeout(syncFromFirestore, 400);
-      setInterval(syncFromFirestore, 60000);
     }
+    // Disa ac: manuel yenileme gerekirse konsoldan cagirilabilir.
+    window._resyncFromCloud = syncFromFirestore;
 
     if(window._fs){
       bootSync();
