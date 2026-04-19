@@ -4,7 +4,7 @@
   <!-- ===== FIREBASE FIRESTORE SDK ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr7TIB84oZuAqc4k65VvszAMCyqjfRi6o",
@@ -19,7 +19,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window._fs = { db, collection, doc, setDoc, getDocs };
+    window._fs = { db, collection, doc, setDoc, getDocs, deleteDoc, writeBatch };
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
   <script>
@@ -46,17 +46,75 @@
     window._sbPending = {};    // bekleyen en son deger
     window._sbInflight = {};   // su an gonderilen yazma promisleri
 
+    // JSON byte boyutu tahmini
+    function _jsonSize(v){
+      try { return new Blob([JSON.stringify(v)]).size; }
+      catch(e){ try { return JSON.stringify(v).length * 2; } catch(_){ return 0; } }
+    }
+    // Firestore tek dokuman limiti ~1 MiB; guvenlik payi ile 900 KB
+    const SINGLE_DOC_LIMIT = 900 * 1024;
+
+    async function _writeSingle(key, val){
+      const { db, doc, setDoc } = window._fs;
+      await setDoc(doc(db, 'appdata', key), {
+        data: val,
+        updated_at: new Date().toISOString(),
+        chunked: false
+      });
+    }
+
+    async function _writeChunked(key, val){
+      const { db, collection, doc, setDoc, getDocs, deleteDoc } = window._fs;
+      const newIds = new Set();
+      for(let i = 0; i < val.length; i++){
+        const item = val[i];
+        const id = (item && item.id != null) ? String(item.id) : ('idx_' + i);
+        newIds.add(id);
+        await setDoc(doc(db, 'appdata', key, 'items', id), item);
+      }
+      // Eskiden var olup simdi listede olmayanlari sil
+      const snap = await getDocs(collection(db, 'appdata', key, 'items'));
+      for(const d of snap.docs){
+        if(!newIds.has(d.id)) await deleteDoc(d.ref);
+      }
+      await setDoc(doc(db, 'appdata', key), {
+        chunked: true,
+        count: val.length,
+        updated_at: new Date().toISOString()
+      });
+    }
+
     async function flushKey(key){
       if(!(key in window._sbPending)) return;
       if(!window._fs) return;
       const val = window._sbPending[key];
       delete window._sbPending[key];
       if(window._sbQ[key]) { clearTimeout(window._sbQ[key]); delete window._sbQ[key]; }
-      const { db, doc, setDoc } = window._fs;
-      const p = setDoc(doc(db, 'appdata', key), {
-        data: val,
-        updated_at: new Date().toISOString()
-      }).catch(function(err){ console.warn('[Firestore] yazma hatasi:', key, err); });
+      const size = _jsonSize(val);
+      const p = (async function(){
+        try {
+          if(Array.isArray(val) && size >= SINGLE_DOC_LIMIT){
+            await _writeChunked(key, val);
+            console.log('[Firestore] chunked yazildi:', key, '(', val.length, 'kayit,', size, 'byte )');
+          } else {
+            await _writeSingle(key, val);
+            console.log('[Firestore] yazildi:', key, '(', size, 'byte )');
+          }
+        } catch(err){
+          // Tek dokuman basarisizsa (limit vb.), subcollection dene
+          if(Array.isArray(val) && err && /too large|1 MiB|exceed|invalid-argument/i.test(String(err.message || err))){
+            try {
+              await _writeChunked(key, val);
+              console.log('[Firestore] fallback chunked yazildi:', key);
+              return;
+            } catch(err2){
+              console.warn('[Firestore] chunked yazma hatasi:', key, err2);
+              return;
+            }
+          }
+          console.warn('[Firestore] yazma hatasi:', key, err && err.message, err);
+        }
+      })();
       window._sbInflight[key] = p;
       try { await p; } finally { if(window._sbInflight[key] === p) delete window._sbInflight[key]; }
     }
@@ -99,21 +157,17 @@
       else { FS_KEYS.forEach(function(k){ localStorage.removeItem(k); }); }
     };
 
-    // ── Firestore'da olmayan ama localStorage'da bulunan FS_KEYS'i yukle
-    async function seedMissingToFirestore(existingKeys){
-      if(!window._fs) return;
-      const { db, doc, setDoc } = window._fs;
+    // ── Firestore'da olmayan veya bos gelen FS_KEYS'i localStorage'dan seed et
+    async function seedMissingToFirestore(existingKeysWithData){
       for(const key of FS_KEYS){
-        if(existingKeys.has(key)) continue;
+        if(existingKeysWithData.has(key)) continue;
         try {
           const raw = localStorage.getItem(key);
           if(!raw) continue;
           const val = JSON.parse(raw);
           if(!Array.isArray(val) || val.length === 0) continue;
-          await setDoc(doc(db, 'appdata', key), {
-            data: val,
-            updated_at: new Date().toISOString()
-          });
+          window._sbPending[key] = val;
+          await flushKey(key);
           console.log('[Firestore] seed:', key, '(', val.length, 'kayit )');
         } catch(e) { console.warn('[Firestore] seed hatasi:', key, e); }
       }
@@ -127,21 +181,40 @@
         if(!window._fs) return;
         const { db, collection, getDocs } = window._fs;
         const snap = await getDocs(collection(db, 'appdata'));
-        const existingKeys = new Set();
+        const existingKeysWithData = new Set();
+        const seenKeys = [];
         let count = 0;
+        // Tek dokumanli veriler
+        const chunkedKeys = [];
         snap.forEach(function(docSnap){
-          const row = docSnap.data();
-          existingKeys.add(docSnap.id);
-          if(Array.isArray(row.data) && row.data.length > 0){
+          const row = docSnap.data() || {};
+          seenKeys.push(docSnap.id);
+          if(row.chunked){
+            chunkedKeys.push(docSnap.id);
+          } else if(Array.isArray(row.data) && row.data.length > 0){
             try { localStorage.setItem(docSnap.id, JSON.stringify(row.data)); } catch(e) {}
+            existingKeysWithData.add(docSnap.id);
             count++;
           }
         });
+        // Chunked (subcollection) veriler
+        for(const key of chunkedKeys){
+          try {
+            const sub = await getDocs(collection(db, 'appdata', key, 'items'));
+            const arr = [];
+            sub.forEach(d => arr.push(d.data()));
+            if(arr.length > 0){
+              try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e) {}
+              existingKeysWithData.add(key);
+              count++;
+            }
+          } catch(e){ console.warn('[Firestore] chunked okuma hatasi:', key, e); }
+        }
         window._sbLoaded = true;
-        console.log('[Firestore] ' + count + ' koleksiyon yuklendi. Mevcut dokumanlar:', [...existingKeys]);
+        console.log('[Firestore] ' + count + ' koleksiyon yuklendi. Dokumanlar:', seenKeys, 'chunked:', chunkedKeys);
         if(!_seedDone){
           _seedDone = true;
-          await seedMissingToFirestore(existingKeys);
+          await seedMissingToFirestore(existingKeysWithData);
         }
         if(typeof refreshAll === 'function') try{ refreshAll(); }catch(e){}
         if(typeof applyFilters === 'function') try{ applyFilters(); }catch(e){}
