@@ -1841,7 +1841,48 @@ body::after{
   font-weight: 800;
   transition: all 0.3s var(--ease-spring);
 }
+.topbar-avatar{ cursor:pointer; }
 .topbar-avatar:hover{ transform: rotate(-8deg) scale(1.08); }
+
+/* ── Profil Dropdown ── */
+.profile-wrap{ position:relative; }
+.profile-dropdown{
+  display:none;position:absolute;right:0;top:calc(100% + 10px);
+  min-width:200px;background:var(--bg-card-solid);
+  border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.45);z-index:200;
+  overflow:hidden;
+}
+.profile-dropdown.open{ display:block; animation: pdDrop .18s ease-out; }
+@keyframes pdDrop{
+  from{ opacity:0; transform:translateY(-8px) scale(0.97); }
+  to{   opacity:1; transform:translateY(0)    scale(1); }
+}
+.pd-header{
+  padding:14px 16px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.pd-avatar{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px;color:#fff;
+}
+.pd-info .pd-name{ font-size:14px;font-weight:700;color:var(--text-main); }
+.pd-info .pd-role{ font-size:11px;color:var(--text-muted);margin-top:1px; }
+.pd-body{ padding:6px; }
+.pd-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:8px;cursor:pointer;font-size:13px;
+  color:var(--text-muted);transition:background .15s,color .15s;
+  text-decoration:none;width:100%;background:none;border:none;
+  font-family:inherit;text-align:left;
+}
+.pd-item:hover{ background:var(--glass);color:var(--text-main); }
+.pd-item i{ width:16px;text-align:center;font-size:13px; }
+.pd-item.danger{ color:#ef4444; }
+.pd-item.danger:hover{ background:rgba(239,68,68,.1); }
 
 .notif-bell{
   transition: all 0.25s var(--ease-smooth);
@@ -3124,6 +3165,9 @@ body::after{
   <div class="sidebar-footer">
     <div class="sf-row"><i class="fas fa-code"></i><span style="font-weight:600;">v7.0 — Premium</span></div>
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
+    <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
+      <i class="fas fa-right-from-bracket"></i> Çıkış Yap
+    </button>
   </div>
 </aside>
 
@@ -3150,7 +3194,26 @@ body::after{
           <div id="notifList"></div>
         </div>
       </div>
-      <div class="topbar-avatar">E</div>
+      <div class="profile-wrap">
+        <div class="topbar-avatar" id="profileAvatar" onclick="toggleProfileDropdown()" title="Profil">E</div>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="pd-header">
+            <div class="pd-avatar" id="pdAvatarBig">E</div>
+            <div class="pd-info">
+              <div class="pd-name" id="pdName">admin</div>
+              <div class="pd-role" id="pdRole">Admin</div>
+            </div>
+          </div>
+          <div class="pd-body">
+            <button class="pd-item" onclick="closeProfileDropdown();showPage('settings');switchSettingsTab('kullanicilar')">
+              <i class="fas fa-user-gear"></i> Hesap Ayarları
+            </button>
+            <button class="pd-item danger" onclick="closeProfileDropdown();logout()">
+              <i class="fas fa-right-from-bracket"></i> Çıkış Yap
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3922,6 +3985,7 @@ body::after{
         <button class="s-tab" data-stab="veri" onclick="switchSettingsTab('veri')"><i class="fas fa-database"></i> Veri</button>
         <button class="s-tab" data-stab="performans" onclick="switchSettingsTab('performans')"><i class="fas fa-gauge-high"></i> Performans</button>
         <button class="s-tab" data-stab="hakkinda" onclick="switchSettingsTab('hakkinda')"><i class="fas fa-circle-info"></i> Hakkında</button>
+        <button class="s-tab" data-stab="kullanicilar" onclick="switchSettingsTab('kullanicilar')"><i class="fas fa-users"></i> Kullanıcılar</button>
       </div>
 
       <!-- GENEL -->
@@ -3978,28 +4042,28 @@ body::after{
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Repo Sahibi (kullanıcı adı)</label>
-              <input class="form-input" type="text" id="githubOwner" placeholder="örn: Eyupbayuk31" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubOwner" placeholder="örn: Eyupbayuk31">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Repo Adı</label>
-              <input class="form-input" type="text" id="githubRepo" placeholder="örn: Eyup" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubRepo" placeholder="örn: Eyup">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Branch</label>
-              <input class="form-input" type="text" id="githubBranch" placeholder="main" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubBranch" placeholder="main">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Klasör (repo içinde)</label>
-              <input class="form-input" type="text" id="githubFolder" placeholder="kanitlar" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubFolder" placeholder="kanitlar">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Personal Access Token</label>
               <div style="position:relative;">
-                <input class="form-input" type="password" id="githubToken" placeholder="ghp_... veya github_pat_..." onchange="saveGithubConfig()" style="padding-right:80px;">
+                <input class="form-input" type="password" id="githubToken" placeholder="ghp_... veya github_pat_..." style="padding-right:80px;">
                 <button type="button" onclick="_toggleGithubTokenVisibility()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--primary);cursor:pointer;font-size:12px;">Göster</button>
               </div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.6;">
@@ -4007,12 +4071,13 @@ body::after{
               </div>
             </div>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="testGithubConnection()"><i class="fas fa-plug"></i> Bağlantıyı Test Et</button>
-              <button class="btn btn-secondary" onclick="clearGithubConfig()"><i class="fas fa-trash"></i> Ayarları Temizle</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button class="btn btn-primary" onclick="saveGithubConfig()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-floppy-disk"></i> Kaydet</button>
+              <button class="btn btn-secondary" onclick="testGithubConnection()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-plug"></i> Test Et</button>
+              <button class="btn btn-danger" onclick="clearGithubConfig()" title="Ayarları Temizle"><i class="fas fa-trash"></i></button>
             </div>
-
-            <div id="githubTestResult" style="font-size:12px;margin-top:10px;"></div>
+            <div id="githubSaveStatus" style="font-size:12px;margin-bottom:6px;display:none;"></div>
+            <div id="githubTestResult" style="font-size:12px;margin-top:4px;"></div>
           </div>
         </div>
 
@@ -4237,6 +4302,109 @@ body::after{
             <div class="s-kbd-row"><span>Kısayolları göster</span><kbd>?</kbd></div>
             <div class="s-kbd-row"><span>Modal kapat</span><kbd>Esc</kbd></div>
           </div>
+        </div>
+      </div>
+
+      <!-- KULLANICILAR -->
+      <div class="s-panel" data-spanel="kullanicilar">
+        <div class="s-card">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);"><i class="fas fa-users"></i></div>
+            <div>
+              <h3>Kullanıcı Yönetimi</h3>
+              <p>Sisteme giriş yapabilecek kullanıcıları yönetin</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <button class="btn btn-primary" onclick="openAddUserForm()" style="width:100%;justify-content:center;">
+              <i class="fas fa-user-plus"></i> Yeni Kullanıcı Ekle
+            </button>
+
+            <!-- Kullanıcı ekleme formu -->
+            <div id="addUserForm">
+              <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:4px;"><i class="fas fa-user-plus"></i> Yeni Kullanıcı</div>
+              <div class="form-group">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Kullanıcı Adı</label>
+                <input class="form-input" type="text" id="newUserName" placeholder="örn: operator1">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Şifre</label>
+                <input class="form-input" type="password" id="newUserPass" placeholder="En az 3 karakter">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Rol</label>
+                <select class="form-input" id="newUserRole">
+                  <option value="user">Kullanıcı</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="saveNewUser()" style="flex:1;justify-content:center;"><i class="fas fa-save"></i> Kaydet</button>
+                <button class="btn btn-secondary" onclick="closeAddUserForm()" style="flex:1;justify-content:center;"><i class="fas fa-times"></i> İptal</button>
+              </div>
+            </div>
+
+            <!-- Kullanıcı listesi -->
+            <div class="user-list-wrap" id="userListWrap"></div>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-shield-halved"></i></div>
+            <div>
+              <h3>Şifre Değiştir</h3>
+              <p>Mevcut hesabınızın şifresini güncelleyin</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div class="form-group">
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Kullanıcı Adı</label>
+              <input class="form-input" type="text" id="chgUser" placeholder="Kullanıcı adınız">
+            </div>
+            <div class="form-group">
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Mevcut Şifre</label>
+              <input class="form-input" type="password" id="chgOld" placeholder="Mevcut şifreniz">
+            </div>
+            <div class="form-group">
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Yeni Şifre</label>
+              <input class="form-input" type="password" id="chgNew" placeholder="Yeni şifre">
+            </div>
+            <div class="form-group">
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Yeni Şifre (Tekrar)</label>
+              <input class="form-input" type="password" id="chgNew2" placeholder="Yeni şifreyi tekrar girin">
+            </div>
+            <button class="btn btn-primary" onclick="settingsChangePassword()" style="width:100%;justify-content:center;">
+              <i class="fas fa-key"></i> Şifreyi Güncelle
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kullanıcı düzenleme modalı -->
+    <div id="editUserModal">
+      <div id="editUserModalCard">
+        <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:16px;"><i class="fas fa-user-pen" style="color:var(--primary);margin-right:6px;"></i> Kullanıcıyı Düzenle</div>
+        <input type="hidden" id="editUserOldName">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Kullanıcı Adı</label>
+          <input class="form-input" type="text" id="editUserName" placeholder="Kullanıcı adı">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Yeni Şifre <span style="font-weight:400;color:var(--text-muted)">(boş bırakırsanız değişmez)</span></label>
+          <input class="form-input" type="password" id="editUserPass" placeholder="Yeni şifre">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Rol</label>
+          <select class="form-input" id="editUserRole">
+            <option value="user">Kullanıcı</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveEditUser()" style="flex:1;justify-content:center;"><i class="fas fa-save"></i> Kaydet</button>
+          <button class="btn btn-secondary" onclick="closeEditUserModal()" style="flex:1;justify-content:center;"><i class="fas fa-times"></i> İptal</button>
         </div>
       </div>
     </div>
@@ -4474,6 +4642,48 @@ function closeSidebar(){
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('show');
 }
+
+// ── Profil Dropdown ───────────────────────────────────────
+function _initProfileUI(){
+  try{
+    const uname = localStorage.getItem('irsaliye_last_user') || 'admin';
+    const users  = (typeof authGetUsers === 'function') ? authGetUsers() : [];
+    const found  = users.find(u => u.username.toLowerCase() === uname.toLowerCase());
+    const role   = found ? found.role : 'admin';
+    const initials = uname.slice(0,2).toUpperCase();
+
+    const av  = document.getElementById('profileAvatar');
+    const avB = document.getElementById('pdAvatarBig');
+    const nm  = document.getElementById('pdName');
+    const rl  = document.getElementById('pdRole');
+
+    if(av)  av.textContent  = initials;
+    if(avB) avB.textContent = initials;
+    if(nm)  nm.textContent  = uname;
+    if(rl)  rl.textContent  = role === 'admin' ? 'Yönetici' : 'Kullanıcı';
+  }catch(e){}
+}
+function toggleProfileDropdown(){
+  const dd = document.getElementById('profileDropdown');
+  if(!dd) return;
+  const isOpen = dd.classList.contains('open');
+  if(isOpen){ dd.classList.remove('open'); }
+  else { _initProfileUI(); dd.classList.add('open'); }
+}
+function closeProfileDropdown(){
+  const dd = document.getElementById('profileDropdown');
+  if(dd) dd.classList.remove('open');
+}
+// Dropdown dışına tıklayınca kapat
+document.addEventListener('click', function(e){
+  const wrap = document.querySelector('.profile-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    closeProfileDropdown();
+  }
+});
+// Sayfa yüklenince avatar'ı güncelle
+document.addEventListener('DOMContentLoaded', _initProfileUI);
+// ─────────────────────────────────────────────────────────
 
 // ==================== TOAST ====================
 function toast(msg,type='success'){
@@ -7656,7 +7866,126 @@ function switchSettingsTab(tab){
   document.querySelectorAll('.s-tab').forEach(t=>t.classList.toggle('active', t.dataset.stab===tab));
   document.querySelectorAll('.s-panel').forEach(p=>p.classList.toggle('active', p.dataset.spanel===tab));
   if(tab==='performans'&&typeof renderStorageInfo==='function')renderStorageInfo();
+  if(tab==='kullanicilar') renderUserList();
 }
+
+// ── Kullanıcı Yönetimi ────────────────────────────────────
+function renderUserList(){
+  const wrap = document.getElementById('userListWrap');
+  if(!wrap) return;
+  const users = (typeof authGetUsers === 'function') ? authGetUsers() : [];
+  if(!users.length){ wrap.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px;">Henüz kullanıcı yok</div>'; return; }
+  wrap.innerHTML = users.map((u,i)=>`
+    <div class="user-row">
+      <div class="user-row-info">
+        <div class="u-name"><i class="fas fa-user" style="color:var(--primary);margin-right:6px;font-size:12px;"></i>${_escHtml(u.username)}</div>
+        <span class="u-role ${u.role==='admin'?'admin':'user'}">${u.role==='admin'?'Admin':'Kullanıcı'}</span>
+      </div>
+      <div class="user-row-actions">
+        <button class="btn btn-xs btn-secondary" onclick="openEditUserModal(${i})" title="Düzenle"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-xs btn-danger" onclick="deleteUser(${i})" title="Sil"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+
+function _escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function openAddUserForm(){
+  const f = document.getElementById('addUserForm');
+  if(!f) return;
+  f.classList.add('show');
+  document.getElementById('newUserName').value='';
+  document.getElementById('newUserPass').value='';
+  document.getElementById('newUserRole').value='user';
+  document.getElementById('newUserName').focus();
+}
+function closeAddUserForm(){
+  const f = document.getElementById('addUserForm');
+  if(f) f.classList.remove('show');
+}
+function saveNewUser(){
+  const name = document.getElementById('newUserName').value.trim();
+  const pass = document.getElementById('newUserPass').value;
+  const role = document.getElementById('newUserRole').value;
+  if(!name){ toast('Kullanıcı adı boş olamaz','danger'); return; }
+  if(pass.length < 3){ toast('Şifre en az 3 karakter olmalı','danger'); return; }
+  const users = authGetUsers();
+  if(users.find(u=>u.username.toLowerCase()===name.toLowerCase())){ toast('Bu kullanıcı adı zaten var','danger'); return; }
+  users.push({username:name, password:pass, role:role});
+  authSaveUsers(users);
+  closeAddUserForm();
+  renderUserList();
+  toast('Kullanıcı eklendi: '+name,'success');
+}
+
+function deleteUser(idx){
+  const users = authGetUsers();
+  if(users.length <= 1){ toast('Son kullanıcı silinemez','danger'); return; }
+  if(users[idx].role==='admin' && users.filter(u=>u.role==='admin').length <= 1){ toast('En az bir admin kalmalı','danger'); return; }
+  if(!confirm(users[idx].username + ' silinsin mi?')) return;
+  users.splice(idx,1);
+  authSaveUsers(users);
+  renderUserList();
+  toast('Kullanıcı silindi','info');
+}
+
+function openEditUserModal(idx){
+  const users = authGetUsers();
+  const u = users[idx];
+  if(!u) return;
+  document.getElementById('editUserOldName').value = u.username;
+  document.getElementById('editUserName').value = u.username;
+  document.getElementById('editUserPass').value = '';
+  document.getElementById('editUserRole').value = u.role || 'user';
+  document.getElementById('editUserModal').classList.add('show');
+}
+function closeEditUserModal(){
+  document.getElementById('editUserModal').classList.remove('show');
+}
+function saveEditUser(){
+  const oldName = document.getElementById('editUserOldName').value;
+  const newName = document.getElementById('editUserName').value.trim();
+  const newPass = document.getElementById('editUserPass').value;
+  const newRole = document.getElementById('editUserRole').value;
+  if(!newName){ toast('Kullanıcı adı boş olamaz','danger'); return; }
+  const users = authGetUsers();
+  const idx = users.findIndex(u=>u.username===oldName);
+  if(idx===-1){ toast('Kullanıcı bulunamadı','danger'); return; }
+  if(newName !== oldName && users.find(u=>u.username.toLowerCase()===newName.toLowerCase())){
+    toast('Bu kullanıcı adı zaten mevcut','danger'); return;
+  }
+  if(newPass && newPass.length < 3){ toast('Şifre en az 3 karakter olmalı','danger'); return; }
+  users[idx].username = newName;
+  if(newPass) users[idx].password = newPass;
+  users[idx].role = newRole;
+  authSaveUsers(users);
+  closeEditUserModal();
+  renderUserList();
+  toast('Kullanıcı güncellendi','success');
+}
+document.getElementById('editUserModal')?.addEventListener('click', function(e){
+  if(e.target===this) closeEditUserModal();
+});
+
+function settingsChangePassword(){
+  const u = document.getElementById('chgUser').value.trim();
+  const o = document.getElementById('chgOld').value;
+  const n = document.getElementById('chgNew').value;
+  const n2= document.getElementById('chgNew2').value;
+  if(!u||!o||!n||!n2){ toast('Tüm alanları doldurun','danger'); return; }
+  if(n.length < 3){ toast('Yeni şifre en az 3 karakter','danger'); return; }
+  if(n!==n2){ toast('Yeni şifreler eşleşmiyor','danger'); return; }
+  const users = authGetUsers();
+  const idx = users.findIndex(uu=>uu.username.toLowerCase()===u.toLowerCase());
+  if(idx===-1||users[idx].password!==o){ toast('Kullanıcı adı veya mevcut şifre hatalı','danger'); return; }
+  users[idx].password = n;
+  authSaveUsers(users);
+  document.getElementById('chgOld').value='';
+  document.getElementById('chgNew').value='';
+  document.getElementById('chgNew2').value='';
+  toast('Şifre başarıyla güncellendi','success');
+}
+// ─────────────────────────────────────────────────────────
 
 function setMode(mode){
   document.querySelectorAll('.s-mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
@@ -8099,51 +8428,95 @@ function loadPublishUrlIntoInput(){
 
 // ====================================================================
 // GITHUB UPLOAD CONFIG — Ayarlar ekranı
+// Ayrı bir localStorage anahtarı kullanılır ('irsaliye_github_cfg')
+// getData/setData'nın array bug'ından etkilenmez, logout'tan sonra kaybolmaz.
 // ====================================================================
+const _GH_KEY = 'irsaliye_github_cfg';
+
+function _ghLoad(){
+  try{ return JSON.parse(localStorage.getItem(_GH_KEY)) || {}; }catch(e){ return {}; }
+}
+function _ghSave(obj){
+  try{ localStorage.setItem(_GH_KEY, JSON.stringify(obj)); }catch(e){}
+}
+
 function saveGithubConfig(){
-  const settings = getData('settings') || {};
   const ownerEl  = document.getElementById('githubOwner');
   const repoEl   = document.getElementById('githubRepo');
   const branchEl = document.getElementById('githubBranch');
   const folderEl = document.getElementById('githubFolder');
   const tokenEl  = document.getElementById('githubToken');
-  if(ownerEl)  settings.githubOwner  = ownerEl.value.trim();
-  if(repoEl)   settings.githubRepo   = repoEl.value.trim();
-  if(branchEl) settings.githubBranch = branchEl.value.trim() || 'main';
-  if(folderEl) settings.githubFolder = folderEl.value.trim() || 'kanitlar';
-  if(tokenEl && tokenEl.value)  settings.githubToken  = tokenEl.value.trim();
-  setData('settings', settings);
+
+  const cfg = _ghLoad();
+  if(ownerEl)  cfg.githubOwner  = ownerEl.value.trim();
+  if(repoEl)   cfg.githubRepo   = repoEl.value.trim();
+  if(branchEl) cfg.githubBranch = branchEl.value.trim() || 'main';
+  if(folderEl) cfg.githubFolder = folderEl.value.trim() || 'kanitlar';
+  if(tokenEl && tokenEl.value) cfg.githubToken = tokenEl.value.trim();
+  _ghSave(cfg);
+
+  // Eski 'settings' key'indeki github alanlarını da temizle (migration)
+  try{
+    const old = JSON.parse(localStorage.getItem('settings'));
+    if(old && typeof old === 'object' && !Array.isArray(old)){
+      ['githubToken','githubOwner','githubRepo','githubBranch','githubFolder'].forEach(k=>delete old[k]);
+      localStorage.setItem('settings', JSON.stringify(old));
+    }
+  }catch(e){}
+
+  const status = document.getElementById('githubSaveStatus');
+  if(status){
+    status.style.display = 'block';
+    status.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i> <span style="color:#10b981;font-weight:600;">Ayarlar kaydedildi — çıkış yapsanız da kalıcıdır.</span>';
+    setTimeout(()=>{ status.style.display='none'; }, 4000);
+  }
   toast('GitHub ayarları kaydedildi','success');
 }
 
 function loadGithubConfigIntoInputs(){
-  const settings = getData('settings') || {};
+  const cfg = _ghLoad();
+  // Eski 'settings' key'inden migrate et (varsa)
+  try{
+    const old = JSON.parse(localStorage.getItem('settings'));
+    if(old && typeof old === 'object' && !Array.isArray(old) && old.githubToken){
+      if(!cfg.githubToken) cfg.githubToken = old.githubToken;
+      if(!cfg.githubOwner) cfg.githubOwner = old.githubOwner;
+      if(!cfg.githubRepo)  cfg.githubRepo  = old.githubRepo;
+      if(!cfg.githubBranch)cfg.githubBranch= old.githubBranch;
+      if(!cfg.githubFolder)cfg.githubFolder= old.githubFolder;
+      _ghSave(cfg);
+    }
+  }catch(e){}
+
   const map = {
-    githubOwner: settings.githubOwner || '',
-    githubRepo: settings.githubRepo || '',
-    githubBranch: settings.githubBranch || 'main',
-    githubFolder: settings.githubFolder || 'kanitlar',
-    githubToken: settings.githubToken || ''
+    githubOwner:  cfg.githubOwner  || '',
+    githubRepo:   cfg.githubRepo   || '',
+    githubBranch: cfg.githubBranch || 'main',
+    githubFolder: cfg.githubFolder || 'kanitlar',
+    githubToken:  cfg.githubToken  || ''
   };
   Object.keys(map).forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value = map[id];
   });
+
+  // Kayıtlı config varsa göster
+  const status = document.getElementById('githubSaveStatus');
+  if(status && cfg.githubToken){
+    status.style.display = 'block';
+    status.innerHTML = '<i class="fas fa-shield-check" style="color:#10b981;"></i> <span style="color:#10b981;">Kayıtlı config yüklendi.</span>';
+    setTimeout(()=>{ status.style.display='none'; }, 3000);
+  }
 }
 
 function clearGithubConfig(){
   if(!confirm('GitHub ayarları (token dahil) silinsin mi?')) return;
-  const settings = getData('settings') || {};
-  delete settings.githubToken;
-  delete settings.githubOwner;
-  delete settings.githubRepo;
-  delete settings.githubBranch;
-  delete settings.githubFolder;
-  setData('settings', settings);
+  localStorage.removeItem(_GH_KEY);
   ['githubOwner','githubRepo','githubBranch','githubFolder','githubToken'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const r = document.getElementById('githubTestResult'); if(r) r.innerHTML = '';
+  const s = document.getElementById('githubSaveStatus'); if(s) s.style.display='none';
   toast('GitHub ayarları silindi','info');
 }
 
@@ -8721,13 +9094,13 @@ function _dataUrlToBlob(dataUrl){
 // Bu yüzden kodu paylaşmak/yayınlamak güvenlidir.
 
 function _getGithubConfig(){
-  const s = getData('settings') || {};
+  const cfg = (typeof _ghLoad === 'function') ? _ghLoad() : {};
   return {
-    token: (s.githubToken || '').trim(),
-    owner: (s.githubOwner || '').trim(),
-    repo:  (s.githubRepo  || '').trim(),
-    branch:(s.githubBranch || 'main').trim(),
-    folder:(s.githubFolder || 'kanitlar').trim().replace(/^\/+|\/+$/g,'')
+    token: (cfg.githubToken  || '').trim(),
+    owner: (cfg.githubOwner  || '').trim(),
+    repo:  (cfg.githubRepo   || '').trim(),
+    branch:(cfg.githubBranch || 'main').trim(),
+    folder:(cfg.githubFolder || 'kanitlar').trim().replace(/^\/+|\/+$/g,'')
   };
 }
 
@@ -10383,6 +10756,59 @@ body.logged-out { overflow:hidden !important; }
   #loginOverlay .blob, #loginCard .logo-wrap::before, #loginCard .login-btn::before { animation:none !important; }
   #loginCard{ animation:none !important; }
 }
+
+/* ---- Şifre Sıfırlama Bölümü ---- */
+#resetSection{
+  display:none;flex-direction:column;gap:10px;
+  padding:14px;background:rgba(124,58,237,0.07);
+  border:1px solid rgba(124,58,237,0.22);border-radius:12px;margin-top:6px;
+}
+#resetSection.show{ display:flex; animation: loginPop .25s ease-out; }
+#resetSection h4{
+  margin:0;font-size:13px;font-weight:700;color:var(--primary,#7c3aed);
+  display:flex;align-items:center;gap:6px;
+}
+#resetSection .field{ margin-bottom:0; }
+#resetMsg{font-size:12px;display:none;padding:6px 10px;border-radius:8px;margin-top:2px;}
+#resetMsg.ok{display:block;background:rgba(16,185,129,.12);color:#10b981;}
+#resetMsg.err{display:block;background:rgba(239,68,68,.12);color:#ef4444;}
+.reset-submit-btn{
+  width:100%;padding:10px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,var(--primary,#7c3aed),var(--primary-dark,#5b21b6));
+  color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s;
+}
+.reset-submit-btn:hover{opacity:.9;}
+.reset-cancel-btn{
+  width:100%;padding:7px;border:1px solid rgba(124,58,237,.2);
+  border-radius:10px;background:transparent;color:var(--text-muted,#8b8a94);
+  font-size:13px;cursor:pointer;transition:background .2s;
+}
+.reset-cancel-btn:hover{background:rgba(124,58,237,.06);}
+
+/* ---- Kullanıcı Yönetimi (Ayarlar) ---- */
+.user-list-wrap{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--glass);border:1px solid var(--border);border-radius:10px;}
+.user-row-info{flex:1;min-width:0;}
+.user-row-info .u-name{font-size:14px;font-weight:600;color:var(--text-main);}
+.user-row-info .u-role{font-size:11px;padding:2px 8px;border-radius:5px;display:inline-block;margin-top:2px;font-weight:600;}
+.u-role.admin{background:rgba(124,58,237,.15);color:var(--primary,#7c3aed);}
+.u-role.user{background:rgba(59,130,246,.15);color:#3b82f6;}
+.user-row-actions{display:flex;gap:6px;flex-shrink:0;}
+#addUserForm{display:none;flex-direction:column;gap:10px;padding:14px;
+  background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.18);
+  border-radius:12px;margin-top:10px;}
+#addUserForm.show{display:flex;animation:loginPop .2s ease-out;}
+#editUserModal{
+  display:none;position:fixed;inset:0;z-index:9000;
+  background:rgba(0,0,0,.65);align-items:center;justify-content:center;
+}
+#editUserModal.show{display:flex;}
+#editUserModalCard{
+  background:var(--bg-card-solid,#160f28);border:1px solid var(--border);
+  border-radius:18px;padding:24px;width:90%;max-width:400px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
 </style>
 
 <div id="loginOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
@@ -10432,6 +10858,42 @@ body.logged-out { overflow:hidden !important; }
         <button type="button" class="forgot" id="loginForgot">Şifremi unuttum</button>
       </div>
 
+      <!-- Şifre Sıfırlama Bölümü -->
+      <div id="resetSection">
+        <h4><i class="fas fa-key"></i> Şifre Değiştir</h4>
+        <div class="field">
+          <label for="resetUser">Kullanıcı Adı</label>
+          <div class="input-wrap">
+            <i class="fas fa-user ico-left"></i>
+            <input type="text" id="resetUser" placeholder="Kullanıcı adınız">
+          </div>
+        </div>
+        <div class="field">
+          <label for="resetOld">Mevcut Şifre</label>
+          <div class="input-wrap">
+            <i class="fas fa-lock ico-left"></i>
+            <input type="password" id="resetOld" placeholder="Mevcut şifreniz">
+          </div>
+        </div>
+        <div class="field">
+          <label for="resetNew">Yeni Şifre</label>
+          <div class="input-wrap">
+            <i class="fas fa-lock-open ico-left"></i>
+            <input type="password" id="resetNew" placeholder="Yeni şifre (min 3 karakter)">
+          </div>
+        </div>
+        <div class="field">
+          <label for="resetNew2">Yeni Şifre (Tekrar)</label>
+          <div class="input-wrap">
+            <i class="fas fa-check-circle ico-left"></i>
+            <input type="password" id="resetNew2" placeholder="Yeni şifreyi tekrar girin">
+          </div>
+        </div>
+        <div id="resetMsg"></div>
+        <button type="button" class="reset-submit-btn" id="resetSubmitBtn"><i class="fas fa-save"></i> Şifreyi Kaydet</button>
+        <button type="button" class="reset-cancel-btn" id="resetCancelBtn"><i class="fas fa-times"></i> İptal</button>
+      </div>
+
       <button type="submit" class="login-btn" id="loginBtn">
         <span class="spinner"></span>
         <span class="btn-text"><i class="fas fa-sign-in-alt"></i> Giriş Yap</span>
@@ -10451,13 +10913,34 @@ body.logged-out { overflow:hidden !important; }
   const AUTH_KEY = 'irsaliye_auth_v1';
   const LAST_USER_KEY = 'irsaliye_last_user';
   const LOCK_KEY = 'irsaliye_login_lock';
-  const USER = 'admin';
-  const PASS = '123';
+  const USERS_KEY = 'irsaliye_users';
   const MAX_ATTEMPTS = 5;
-  const LOCK_MS = 30 * 1000; // 30 sn kilit
+  const LOCK_MS = 30 * 1000;
 
   let attempts = 0;
   let lockTimer = null;
+
+  // ── Kullanıcı deposu ──────────────────────────────────────
+  function getUsers(){
+    try {
+      const u = JSON.parse(localStorage.getItem(USERS_KEY) || 'null');
+      if(Array.isArray(u) && u.length) return u;
+    } catch(e){}
+    return [{username:'admin', password:'123', role:'admin'}];
+  }
+  function saveUsers(users){
+    try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch(e){}
+  }
+  function findUser(username){
+    return getUsers().find(u => u.username.toLowerCase() === username.toLowerCase()) || null;
+  }
+  // İlk açılışta varsayılan kullanıcıyı kaydet
+  if(!localStorage.getItem(USERS_KEY)) saveUsers(getUsers());
+
+  // Dışa aç (settings sayfası kullanır)
+  window.authGetUsers = getUsers;
+  window.authSaveUsers = saveUsers;
+  // ─────────────────────────────────────────────────────────
 
   function isAuthed(){
     try { return (localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY)) === '1'; }
@@ -10476,21 +10959,20 @@ body.logged-out { overflow:hidden !important; }
   const overlay = document.getElementById('loginOverlay');
   const userInp = document.getElementById('loginUser');
   const passInp = document.getElementById('loginPass');
-  const btn = document.getElementById('loginBtn');
-  const err = document.getElementById('loginError');
-  const errTxt = document.getElementById('loginErrorText');
-  const lock = document.getElementById('loginLock');
+  const btn     = document.getElementById('loginBtn');
+  const err     = document.getElementById('loginError');
+  const errTxt  = document.getElementById('loginErrorText');
+  const lock    = document.getElementById('loginLock');
   const lockTxt = document.getElementById('loginLockText');
-  const capsEl = document.getElementById('capsWarn');
-  const meter = document.getElementById('passMeter');
-  const meterBar = meter.querySelector('div');
-  const greet = document.getElementById('loginGreet');
-  const clockTxt = document.getElementById('loginClockText');
+  const capsEl  = document.getElementById('capsWarn');
+  const meter   = document.getElementById('passMeter');
+  const meterBar= meter.querySelector('div');
+  const greet   = document.getElementById('loginGreet');
+  const clockTxt= document.getElementById('loginClockText');
 
   function showLogin(){
     overlay.style.display = 'flex';
     document.body.classList.add('logged-out');
-    // Selamlama
     const h = new Date().getHours();
     let g = 'Hoş geldin 👋';
     if(h < 6) g = 'İyi geceler 🌙';
@@ -10498,13 +10980,10 @@ body.logged-out { overflow:hidden !important; }
     else if(h < 18) g = 'İyi günler 🌤️';
     else g = 'İyi akşamlar 🌆';
     greet.textContent = g + ' — devam etmek için giriş yap';
-
-    // Son kullanıcıyı hatırla
     try {
       const last = localStorage.getItem(LAST_USER_KEY);
       if(last) userInp.value = last;
     } catch(e){}
-
     setTimeout(()=>{ (userInp.value ? passInp : userInp).focus(); }, 120);
     startClock();
     checkLockOnLoad();
@@ -10566,14 +11045,77 @@ body.logged-out { overflow:hidden !important; }
     passInp.focus();
   });
 
-  // Şifremi unuttum
+  // ── Şifremi Unuttum / Şifre Değiştir ─────────────────────
+  const resetSection = document.getElementById('resetSection');
+  const resetMsg     = document.getElementById('resetMsg');
+  const resetUserInp = document.getElementById('resetUser');
+  const resetOldInp  = document.getElementById('resetOld');
+  const resetNewInp  = document.getElementById('resetNew');
+  const resetNew2Inp = document.getElementById('resetNew2');
+
   document.getElementById('loginForgot').addEventListener('click', function(){
-    if(typeof toast==='function'){
-      toast('Varsayılan bilgiler → kullanıcı: admin, şifre: 123','info');
+    const isOpen = resetSection.classList.contains('show');
+    if(isOpen){
+      resetSection.classList.remove('show');
     } else {
-      alert('Varsayılan kullanıcı: admin\nŞifre: 123');
+      resetUserInp.value = userInp.value || '';
+      resetOldInp.value = '';
+      resetNewInp.value = '';
+      resetNew2Inp.value = '';
+      resetMsg.className = '';
+      resetMsg.textContent = '';
+      resetSection.classList.add('show');
+      setTimeout(()=> (resetUserInp.value ? resetOldInp : resetUserInp).focus(), 80);
     }
   });
+
+  document.getElementById('resetCancelBtn').addEventListener('click', function(){
+    resetSection.classList.remove('show');
+  });
+
+  document.getElementById('resetSubmitBtn').addEventListener('click', function(){
+    const uname = resetUserInp.value.trim();
+    const oldP  = resetOldInp.value;
+    const newP  = resetNewInp.value;
+    const newP2 = resetNew2Inp.value;
+
+    resetMsg.className = '';
+    resetMsg.textContent = '';
+
+    if(!uname || !oldP || !newP || !newP2){
+      resetMsg.className = 'err';
+      resetMsg.textContent = 'Tüm alanları doldurun.';
+      return;
+    }
+    if(newP.length < 3){
+      resetMsg.className = 'err';
+      resetMsg.textContent = 'Yeni şifre en az 3 karakter olmalı.';
+      return;
+    }
+    if(newP !== newP2){
+      resetMsg.className = 'err';
+      resetMsg.textContent = 'Yeni şifreler eşleşmiyor.';
+      return;
+    }
+
+    const users = getUsers();
+    const idx = users.findIndex(u => u.username.toLowerCase() === uname.toLowerCase());
+    if(idx === -1 || users[idx].password !== oldP){
+      resetMsg.className = 'err';
+      resetMsg.textContent = 'Kullanıcı adı veya mevcut şifre hatalı.';
+      return;
+    }
+
+    users[idx].password = newP;
+    saveUsers(users);
+    resetMsg.className = 'ok';
+    resetMsg.textContent = 'Şifre başarıyla güncellendi! Şimdi giriş yapabilirsiniz.';
+    resetNewInp.value = '';
+    resetNew2Inp.value = '';
+    resetOldInp.value = '';
+    setTimeout(()=> resetSection.classList.remove('show'), 2500);
+  });
+  // ─────────────────────────────────────────────────────────
 
   // Kilit kontrolü
   function checkLockOnLoad(){
@@ -10607,7 +11149,7 @@ body.logged-out { overflow:hidden !important; }
     lockTimer = setInterval(tick, 500);
   }
 
-  // Form submit
+  // Form submit — localStorage kullanıcı deposuna göre kontrol
   document.getElementById('loginForm').addEventListener('submit', function(e){
     e.preventDefault();
     if(btn.disabled) return;
@@ -10619,9 +11161,9 @@ body.logged-out { overflow:hidden !important; }
     err.classList.remove('show');
     btn.classList.add('loading');
 
-    // Küçük gecikme (yükleme efekti)
     setTimeout(()=>{
-      if(u.toLowerCase() === USER && p === PASS){
+      const matched = findUser(u);
+      if(matched && matched.password === p){
         setAuthed(remember);
         try { localStorage.setItem(LAST_USER_KEY, u); } catch(e){}
         btn.classList.remove('loading');
@@ -10630,7 +11172,6 @@ body.logged-out { overflow:hidden !important; }
         setTimeout(()=>{
           hideLogin();
           if(typeof toast==='function') toast('Hoş geldin, ' + u + ' 👋', 'success');
-          // Butonu orijinal haline döndür (bir sonraki çıkışta tekrar göründüğünde)
           btn.innerHTML = '<span class="spinner"></span><span class="btn-text"><i class="fas fa-sign-in-alt"></i> Giriş Yap</span>';
           btn.style.background = '';
         }, 500);
