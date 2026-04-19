@@ -41,23 +41,57 @@
       return [];
     };
 
-    // ── setData: localStorage + Firestore (debounce 600ms)
-    window._sbQ = {};
+    // ── setData: localStorage + Firestore (anlık yazma, kisa debounce)
+    window._sbQ = {};          // bekleyen timer'lar
+    window._sbPending = {};    // bekleyen en son deger
+    window._sbInflight = {};   // su an gonderilen yazma promisleri
+
+    async function flushKey(key){
+      if(!(key in window._sbPending)) return;
+      if(!window._fs) return;
+      const val = window._sbPending[key];
+      delete window._sbPending[key];
+      if(window._sbQ[key]) { clearTimeout(window._sbQ[key]); delete window._sbQ[key]; }
+      const { db, doc, setDoc } = window._fs;
+      const p = setDoc(doc(db, 'appdata', key), {
+        data: val,
+        updated_at: new Date().toISOString()
+      }).catch(function(err){ console.warn('[Firestore] yazma hatasi:', key, err); });
+      window._sbInflight[key] = p;
+      try { await p; } finally { if(window._sbInflight[key] === p) delete window._sbInflight[key]; }
+    }
+    window._flushKey = flushKey;
+
+    async function flushAll(){
+      const keys = Object.keys(window._sbPending);
+      await Promise.all(keys.map(flushKey));
+      await Promise.all(Object.values(window._sbInflight));
+    }
+    window._flushAll = flushAll;
+
     window.setData = function(key, val){
       try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
       if(!FS_KEYS.includes(key)) return;
+      window._sbPending[key] = val;
       if(window._sbQ[key]) clearTimeout(window._sbQ[key]);
-      window._sbQ[key] = setTimeout(async function(){
-        try {
-          if(!window._fs) { console.warn('[Firestore] SDK henuz hazir degil:', key); return; }
-          const { db, doc, setDoc } = window._fs;
-          await setDoc(doc(db, 'appdata', key), {
-            data: val,
-            updated_at: new Date().toISOString()
-          });
-        } catch(err) { console.warn('[Firestore] yazma hatasi:', key, err); }
-      }, 600);
+      // Kisa debounce: hizli arka arkaya gelen cagrilar birlesir, ama sayfa
+      // kapanmadan yazma baslar. SDK hazir degilse tekrar dene.
+      window._sbQ[key] = setTimeout(function tryFlush(){
+        if(!window._fs){
+          window._sbQ[key] = setTimeout(tryFlush, 150);
+          return;
+        }
+        flushKey(key);
+      }, 150);
     };
+
+    // Sayfa kapanmadan / arka plana gitmeden once bekleyen yazmalari gonder
+    function onHide(){ flushAll(); }
+    window.addEventListener('pagehide', onHide);
+    window.addEventListener('beforeunload', onHide);
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'hidden') flushAll();
+    });
 
     // ── invalidateCache
     window.invalidateCache = function(key){
