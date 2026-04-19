@@ -99,23 +99,50 @@
       else { FS_KEYS.forEach(function(k){ localStorage.removeItem(k); }); }
     };
 
+    // ── Firestore'da olmayan ama localStorage'da bulunan FS_KEYS'i yukle
+    async function seedMissingToFirestore(existingKeys){
+      if(!window._fs) return;
+      const { db, doc, setDoc } = window._fs;
+      for(const key of FS_KEYS){
+        if(existingKeys.has(key)) continue;
+        try {
+          const raw = localStorage.getItem(key);
+          if(!raw) continue;
+          const val = JSON.parse(raw);
+          if(!Array.isArray(val) || val.length === 0) continue;
+          await setDoc(doc(db, 'appdata', key), {
+            data: val,
+            updated_at: new Date().toISOString()
+          });
+          console.log('[Firestore] seed:', key, '(', val.length, 'kayit )');
+        } catch(e) { console.warn('[Firestore] seed hatasi:', key, e); }
+      }
+    }
+
     // ── Sayfa açılınca Firestore'dan tüm veriyi çek
     window._sbLoaded = false;
+    let _seedDone = false;
     async function syncFromFirestore(){
       try {
         if(!window._fs) return;
         const { db, collection, getDocs } = window._fs;
         const snap = await getDocs(collection(db, 'appdata'));
+        const existingKeys = new Set();
         let count = 0;
         snap.forEach(function(docSnap){
           const row = docSnap.data();
+          existingKeys.add(docSnap.id);
           if(Array.isArray(row.data) && row.data.length > 0){
             try { localStorage.setItem(docSnap.id, JSON.stringify(row.data)); } catch(e) {}
             count++;
           }
         });
         window._sbLoaded = true;
-        console.log('[Firestore] ' + count + ' koleksiyon yuklendi.');
+        console.log('[Firestore] ' + count + ' koleksiyon yuklendi. Mevcut dokumanlar:', [...existingKeys]);
+        if(!_seedDone){
+          _seedDone = true;
+          await seedMissingToFirestore(existingKeys);
+        }
         if(typeof refreshAll === 'function') try{ refreshAll(); }catch(e){}
         if(typeof applyFilters === 'function') try{ applyFilters(); }catch(e){}
         if(typeof renderUserList === 'function') try{ renderUserList(); }catch(e){}
