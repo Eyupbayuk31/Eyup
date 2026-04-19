@@ -3602,6 +3602,20 @@ body::after{
             <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label><select class="form-input" id="fAtolye"><option value="">Atölye Seçin</option></select></div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="fTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="fTeslimAlan"></div>
+            <div class="form-group" style="grid-column:span 2;">
+              <label>Renk *</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input class="form-input" id="fRenk" placeholder="Örn: Siyah, Beyaz, Lacivert…" list="renkListesi" style="flex:1;">
+                <input type="color" id="fRenkSwatch" title="Renk seç" style="width:40px;height:38px;border:1px solid var(--border);border-radius:8px;padding:2px;background:var(--bg-input);cursor:pointer;" oninput="document.getElementById('fRenk').value=this.value">
+              </div>
+              <datalist id="renkListesi">
+                <option value="Siyah"><option value="Beyaz"><option value="Lacivert">
+                <option value="Kırmızı"><option value="Mavi"><option value="Yeşil">
+                <option value="Sarı"><option value="Gri"><option value="Bej">
+                <option value="Bordo"><option value="Mor"><option value="Turuncu">
+                <option value="Pembe"><option value="Kahverengi"><option value="Haki">
+              </datalist>
+            </div>
             <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="fTermin" type="date"></div>
             <div class="form-group"><label>Açıklama</label><input class="form-input" id="fAciklama"></div>
           </div>
@@ -5265,6 +5279,14 @@ function showDetailUni(id,type){
     }
   }
   if(type==='fermuar'&&item.beden){
+    if(item.renk){
+      const isHex=/^#[0-9a-fA-F]{6}$/.test(item.renk);
+      html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;">
+        <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span>
+        ${isHex?`<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${item.renk};border:1px solid rgba(0,0,0,.2);flex-shrink:0;"></span>`:''}
+        <span style="font-weight:700;font-size:14px;">${item.renk}</span>
+      </div>`;
+    }
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
@@ -5387,6 +5409,13 @@ function generatePDF(id, type) {
   if (item.teslimEden) html += `<div class="info-box"><div class="label">Teslim Eden</div><div class="value">${item.teslimEden}</div></div>`;
   if (item.teslimAlan) html += `<div class="info-box"><div class="label">Teslim Alan</div><div class="value">${item.teslimAlan}</div></div>`;
   if (item.termin) html += `<div class="info-box"><div class="label">Termin Tarihi</div><div class="value">${item.termin}</div></div>`;
+  if (type === 'fermuar' && item.renk) {
+    const isHex = /^#[0-9a-fA-F]{6}$/.test(item.renk);
+    const swatchHtml = isHex
+      ? `<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${item.renk};border:1px solid #ccc;vertical-align:middle;margin-right:5px;"></span>`
+      : '';
+    html += `<div class="info-box" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="label">🎨 Renk</div><div class="value">${swatchHtml}${item.renk}</div></div>`;
+  }
   html += `</div>`;
 
   // Type-specific content
@@ -5412,7 +5441,12 @@ function generatePDF(id, type) {
 
   if (type === 'fermuar' && item.beden) {
     const bedenLabel = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    html += `<div class="section-title">🔗 Beden Detayları</div><table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
+    const renkIsHex = item.renk && /^#[0-9a-fA-F]{6}$/.test(item.renk);
+    const renkSwatch = renkIsHex
+      ? `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${item.renk};border:1px solid #ccc;vertical-align:middle;margin-right:4px;"></span>`
+      : '';
+    html += `<div class="section-title">🔗 Beden Detayları${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${renkSwatch}${item.renk}</span>` : ''}</div>`;
+    html += `<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
     for (let k in item.beden) { html += `<tr><td><b>${bedenLabel[k]||k}</b></td><td>${item.beden[k].cm} cm</td><td>${item.beden[k].adet}</td></tr>`; }
     html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
@@ -5491,13 +5525,15 @@ function saveFermuar(){
   const model=document.getElementById('fModel').value.trim();const tarih=document.getElementById('fTarih').value;
   const atolye=document.getElementById('fAtolye').value;const teslimEden=document.getElementById('fTeslimEden').value.trim();
   const teslimAlan=document.getElementById('fTeslimAlan').value.trim();
-  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan)return toast('Zorunlu alanları doldurun','error');
+  const renk=document.getElementById('fRenk').value.trim();
+  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
   const sizes=['xxs','xs','s','m','l','xl','xxl','3xl'];const beden={};let total=0;
   sizes.forEach(s=>{const cm=+(document.getElementById('fer_'+s+'cm').value||0);const adet=+(document.getElementById('fer_'+s+'a').value||0);if(adet>0)beden[s]={cm,adet};total+=adet;});
   const no=getNextNo();
-  const item={id:Date.now(),no:'FER-'+String(no).padStart(3,'0'),type:'fermuar',model,tarih,atolye,teslimEden,teslimAlan,termin:document.getElementById('fTermin').value,aciklama:document.getElementById('fAciklama').value.trim(),beden,totalAdet:total,durum:'bekliyor',createdAt:new Date().toISOString()};
+  const item={id:Date.now(),no:'FER-'+String(no).padStart(3,'0'),type:'fermuar',model,tarih,atolye,teslimEden,teslimAlan,renk,termin:document.getElementById('fTermin').value,aciklama:document.getElementById('fAciklama').value.trim(),beden,totalAdet:total,durum:'bekliyor',createdAt:new Date().toISOString()};
   const list=getData('fermuarlar');list.unshift(item);setData('fermuarlar',list);incNextNo();
-  ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama'].forEach(id=>document.getElementById(id).value='');
+  ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fRenkSwatch').value='#000000';
   sizes.forEach(s=>{document.getElementById('fer_'+s+'cm').value='';document.getElementById('fer_'+s+'a').value='';});
   document.getElementById('ferToplam').textContent='0';
   const today=new Date().toISOString().split('T')[0];document.getElementById('fTarih').value=today;
