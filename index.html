@@ -4,6 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>İrsaliye Pro v7 — Premium Design</title>
+<!-- Tema flaşını önle: render başlamadan sync çalışır -->
+<script>
+(function(){
+  try{
+    var t=JSON.parse(localStorage.getItem('config_theme'));
+    if(t&&typeof t==='string'){
+      document.documentElement.setAttribute('data-theme',t);
+      // body parse edilir edilmez de uygula
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.setAttribute('data-theme',t);
+      },{once:true});
+    }
+    var fs=JSON.parse(localStorage.getItem('config_fontSize'));
+    if(fs) document.documentElement.style.fontSize=fs+'px';
+  }catch(e){}
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -3118,7 +3135,7 @@ body::after{
 }
 </style>
 </head>
-<body data-theme="default">
+<body>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
@@ -6047,7 +6064,9 @@ let monthlyChartObj=null,atolyeChartObj=null;
 
 // ==================== SETTINGS ====================
 function setTheme(theme){
-  document.body.setAttribute('data-theme',theme);setConfig('theme',theme);
+  document.documentElement.setAttribute('data-theme',theme);
+  document.body.setAttribute('data-theme',theme);
+  setConfig('theme',theme);
   document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
   const btn=document.querySelector(`[data-theme-btn="${theme}"]`);if(btn)btn.classList.add('active');
 }
