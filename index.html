@@ -1,14 +1,30 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <!-- ===== SUPABASE SDK ===== -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- ===== FIREBASE FIRESTORE SDK ===== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr7TIB84oZuAqc4k65VvszAMCyqjfRi6o",
+      authDomain: "ybreyup.firebaseapp.com",
+      projectId: "ybreyup",
+      storageBucket: "ybreyup.firebasestorage.app",
+      messagingSenderId: "195141663340",
+      appId: "1:195141663340:web:1583e8c222f11758bfb649",
+      measurementId: "G-3NK5P2MTP9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window._fs = { db, collection, doc, setDoc, getDocs };
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
   <script>
   (function(){
     'use strict';
-    const SUPA_URL = "https://wryngxvwshbyfvjcelxs.supabase.co";
-    const SUPA_KEY = "sb_publishable_B4b522H77mFTS7mUzOe84w_fgl9ebFM";
-    window._supa = supabase.createClient(SUPA_URL, SUPA_KEY);
 
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
@@ -25,7 +41,7 @@
       return [];
     };
 
-    // ── setData: localStorage + Supabase (debounce 600ms)
+    // ── setData: localStorage + Firestore (debounce 600ms)
     window._sbQ = {};
     window.setData = function(key, val){
       try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
@@ -33,8 +49,13 @@
       if(window._sbQ[key]) clearTimeout(window._sbQ[key]);
       window._sbQ[key] = setTimeout(async function(){
         try {
-          await window._supa.from('appdata').upsert({key: key, data: val, updated_at: new Date().toISOString()}, {onConflict: 'key'});
-        } catch(err) { console.warn('[Supabase] yazma hatasi:', key, err); }
+          if(!window._fs) { console.warn('[Firestore] SDK henuz hazir degil:', key); return; }
+          const { db, doc, setDoc } = window._fs;
+          await setDoc(doc(db, 'appdata', key), {
+            data: val,
+            updated_at: new Date().toISOString()
+          });
+        } catch(err) { console.warn('[Firestore] yazma hatasi:', key, err); }
       }, 600);
     };
 
@@ -44,40 +65,47 @@
       else { FS_KEYS.forEach(function(k){ localStorage.removeItem(k); }); }
     };
 
-    // ── Sayfa açılınca Supabase'den tüm veriyi çek
+    // ── Sayfa açılınca Firestore'dan tüm veriyi çek
     window._sbLoaded = false;
-    async function syncFromSupabase(){
+    async function syncFromFirestore(){
       try {
-        const { data, error } = await window._supa.from('appdata').select('key, data');
-        if(error) throw error;
+        if(!window._fs) return;
+        const { db, collection, getDocs } = window._fs;
+        const snap = await getDocs(collection(db, 'appdata'));
         let count = 0;
-        (data || []).forEach(function(row){
+        snap.forEach(function(docSnap){
+          const row = docSnap.data();
           if(Array.isArray(row.data) && row.data.length > 0){
-            try { localStorage.setItem(row.key, JSON.stringify(row.data)); } catch(e) {}
+            try { localStorage.setItem(docSnap.id, JSON.stringify(row.data)); } catch(e) {}
             count++;
           }
         });
         window._sbLoaded = true;
-        console.log('[Supabase] ' + count + ' koleksiyon yuklendi.');
+        console.log('[Firestore] ' + count + ' koleksiyon yuklendi.');
         if(typeof refreshAll === 'function') try{ refreshAll(); }catch(e){}
         if(typeof applyFilters === 'function') try{ applyFilters(); }catch(e){}
         if(typeof renderUserList === 'function') try{ renderUserList(); }catch(e){}
       } catch(err) {
-        console.warn('[Supabase] okuma hatasi:', err);
+        console.warn('[Firestore] okuma hatasi:', err);
         window._sbLoaded = true;
       }
     }
+    window._syncFromFirestore = syncFromFirestore;
 
-    document.addEventListener('DOMContentLoaded', function(){
-      setTimeout(syncFromSupabase, 800);
-    });
+    function bootSync(){
+      setTimeout(syncFromFirestore, 400);
+      setInterval(syncFromFirestore, 60000);
+    }
 
-    // Her 60 saniyede arka planda senkronize et
-    setInterval(syncFromSupabase, 60000);
+    if(window._fs){
+      bootSync();
+    } else {
+      window.addEventListener('firebase-ready', bootSync, { once: true });
+    }
 
   })();
   </script>
-  <!-- ===== /SUPABASE SDK ===== -->
+  <!-- ===== /FIREBASE FIRESTORE SDK ===== -->
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11073,9 +11101,10 @@ body.logged-out { overflow:hidden !important; }
   }
   function saveUsers(users){
     try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch(e){}
-    if(typeof window._supa !== 'undefined'){
-      window._supa.from('appdata').upsert({key: USERS_KEY, data: users, updated_at: new Date().toISOString()}, {onConflict: 'key'})
-        .catch(function(e){ console.warn('[Supabase] kullanici yazma hatasi:', e); });
+    if(window._fs){
+      const { db, doc, setDoc } = window._fs;
+      setDoc(doc(db, 'appdata', USERS_KEY), { data: users, updated_at: new Date().toISOString() })
+        .catch(function(e){ console.warn('[Firestore] kullanici yazma hatasi:', e); });
     }
   }
   function findUser(username){
