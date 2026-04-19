@@ -3979,28 +3979,28 @@ body::after{
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Repo Sahibi (kullanıcı adı)</label>
-              <input class="form-input" type="text" id="githubOwner" placeholder="örn: Eyupbayuk31" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubOwner" placeholder="örn: Eyupbayuk31">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Repo Adı</label>
-              <input class="form-input" type="text" id="githubRepo" placeholder="örn: Eyup" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubRepo" placeholder="örn: Eyup">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Branch</label>
-              <input class="form-input" type="text" id="githubBranch" placeholder="main" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubBranch" placeholder="main">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Klasör (repo içinde)</label>
-              <input class="form-input" type="text" id="githubFolder" placeholder="kanitlar" onchange="saveGithubConfig()">
+              <input class="form-input" type="text" id="githubFolder" placeholder="kanitlar">
             </div>
 
             <div class="form-group">
               <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Personal Access Token</label>
               <div style="position:relative;">
-                <input class="form-input" type="password" id="githubToken" placeholder="ghp_... veya github_pat_..." onchange="saveGithubConfig()" style="padding-right:80px;">
+                <input class="form-input" type="password" id="githubToken" placeholder="ghp_... veya github_pat_..." style="padding-right:80px;">
                 <button type="button" onclick="_toggleGithubTokenVisibility()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--primary);cursor:pointer;font-size:12px;">Göster</button>
               </div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.6;">
@@ -4008,12 +4008,13 @@ body::after{
               </div>
             </div>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="testGithubConnection()"><i class="fas fa-plug"></i> Bağlantıyı Test Et</button>
-              <button class="btn btn-secondary" onclick="clearGithubConfig()"><i class="fas fa-trash"></i> Ayarları Temizle</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button class="btn btn-primary" onclick="saveGithubConfig()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-floppy-disk"></i> Kaydet</button>
+              <button class="btn btn-secondary" onclick="testGithubConnection()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-plug"></i> Test Et</button>
+              <button class="btn btn-danger" onclick="clearGithubConfig()" title="Ayarları Temizle"><i class="fas fa-trash"></i></button>
             </div>
-
-            <div id="githubTestResult" style="font-size:12px;margin-top:10px;"></div>
+            <div id="githubSaveStatus" style="font-size:12px;margin-bottom:6px;display:none;"></div>
+            <div id="githubTestResult" style="font-size:12px;margin-top:4px;"></div>
           </div>
         </div>
 
@@ -8322,51 +8323,95 @@ function loadPublishUrlIntoInput(){
 
 // ====================================================================
 // GITHUB UPLOAD CONFIG — Ayarlar ekranı
+// Ayrı bir localStorage anahtarı kullanılır ('irsaliye_github_cfg')
+// getData/setData'nın array bug'ından etkilenmez, logout'tan sonra kaybolmaz.
 // ====================================================================
+const _GH_KEY = 'irsaliye_github_cfg';
+
+function _ghLoad(){
+  try{ return JSON.parse(localStorage.getItem(_GH_KEY)) || {}; }catch(e){ return {}; }
+}
+function _ghSave(obj){
+  try{ localStorage.setItem(_GH_KEY, JSON.stringify(obj)); }catch(e){}
+}
+
 function saveGithubConfig(){
-  const settings = getData('settings') || {};
   const ownerEl  = document.getElementById('githubOwner');
   const repoEl   = document.getElementById('githubRepo');
   const branchEl = document.getElementById('githubBranch');
   const folderEl = document.getElementById('githubFolder');
   const tokenEl  = document.getElementById('githubToken');
-  if(ownerEl)  settings.githubOwner  = ownerEl.value.trim();
-  if(repoEl)   settings.githubRepo   = repoEl.value.trim();
-  if(branchEl) settings.githubBranch = branchEl.value.trim() || 'main';
-  if(folderEl) settings.githubFolder = folderEl.value.trim() || 'kanitlar';
-  if(tokenEl && tokenEl.value)  settings.githubToken  = tokenEl.value.trim();
-  setData('settings', settings);
+
+  const cfg = _ghLoad();
+  if(ownerEl)  cfg.githubOwner  = ownerEl.value.trim();
+  if(repoEl)   cfg.githubRepo   = repoEl.value.trim();
+  if(branchEl) cfg.githubBranch = branchEl.value.trim() || 'main';
+  if(folderEl) cfg.githubFolder = folderEl.value.trim() || 'kanitlar';
+  if(tokenEl && tokenEl.value) cfg.githubToken = tokenEl.value.trim();
+  _ghSave(cfg);
+
+  // Eski 'settings' key'indeki github alanlarını da temizle (migration)
+  try{
+    const old = JSON.parse(localStorage.getItem('settings'));
+    if(old && typeof old === 'object' && !Array.isArray(old)){
+      ['githubToken','githubOwner','githubRepo','githubBranch','githubFolder'].forEach(k=>delete old[k]);
+      localStorage.setItem('settings', JSON.stringify(old));
+    }
+  }catch(e){}
+
+  const status = document.getElementById('githubSaveStatus');
+  if(status){
+    status.style.display = 'block';
+    status.innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i> <span style="color:#10b981;font-weight:600;">Ayarlar kaydedildi — çıkış yapsanız da kalıcıdır.</span>';
+    setTimeout(()=>{ status.style.display='none'; }, 4000);
+  }
   toast('GitHub ayarları kaydedildi','success');
 }
 
 function loadGithubConfigIntoInputs(){
-  const settings = getData('settings') || {};
+  const cfg = _ghLoad();
+  // Eski 'settings' key'inden migrate et (varsa)
+  try{
+    const old = JSON.parse(localStorage.getItem('settings'));
+    if(old && typeof old === 'object' && !Array.isArray(old) && old.githubToken){
+      if(!cfg.githubToken) cfg.githubToken = old.githubToken;
+      if(!cfg.githubOwner) cfg.githubOwner = old.githubOwner;
+      if(!cfg.githubRepo)  cfg.githubRepo  = old.githubRepo;
+      if(!cfg.githubBranch)cfg.githubBranch= old.githubBranch;
+      if(!cfg.githubFolder)cfg.githubFolder= old.githubFolder;
+      _ghSave(cfg);
+    }
+  }catch(e){}
+
   const map = {
-    githubOwner: settings.githubOwner || '',
-    githubRepo: settings.githubRepo || '',
-    githubBranch: settings.githubBranch || 'main',
-    githubFolder: settings.githubFolder || 'kanitlar',
-    githubToken: settings.githubToken || ''
+    githubOwner:  cfg.githubOwner  || '',
+    githubRepo:   cfg.githubRepo   || '',
+    githubBranch: cfg.githubBranch || 'main',
+    githubFolder: cfg.githubFolder || 'kanitlar',
+    githubToken:  cfg.githubToken  || ''
   };
   Object.keys(map).forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value = map[id];
   });
+
+  // Kayıtlı config varsa göster
+  const status = document.getElementById('githubSaveStatus');
+  if(status && cfg.githubToken){
+    status.style.display = 'block';
+    status.innerHTML = '<i class="fas fa-shield-check" style="color:#10b981;"></i> <span style="color:#10b981;">Kayıtlı config yüklendi.</span>';
+    setTimeout(()=>{ status.style.display='none'; }, 3000);
+  }
 }
 
 function clearGithubConfig(){
   if(!confirm('GitHub ayarları (token dahil) silinsin mi?')) return;
-  const settings = getData('settings') || {};
-  delete settings.githubToken;
-  delete settings.githubOwner;
-  delete settings.githubRepo;
-  delete settings.githubBranch;
-  delete settings.githubFolder;
-  setData('settings', settings);
+  localStorage.removeItem(_GH_KEY);
   ['githubOwner','githubRepo','githubBranch','githubFolder','githubToken'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const r = document.getElementById('githubTestResult'); if(r) r.innerHTML = '';
+  const s = document.getElementById('githubSaveStatus'); if(s) s.style.display='none';
   toast('GitHub ayarları silindi','info');
 }
 
@@ -8944,13 +8989,13 @@ function _dataUrlToBlob(dataUrl){
 // Bu yüzden kodu paylaşmak/yayınlamak güvenlidir.
 
 function _getGithubConfig(){
-  const s = getData('settings') || {};
+  const cfg = (typeof _ghLoad === 'function') ? _ghLoad() : {};
   return {
-    token: (s.githubToken || '').trim(),
-    owner: (s.githubOwner || '').trim(),
-    repo:  (s.githubRepo  || '').trim(),
-    branch:(s.githubBranch || 'main').trim(),
-    folder:(s.githubFolder || 'kanitlar').trim().replace(/^\/+|\/+$/g,'')
+    token: (cfg.githubToken  || '').trim(),
+    owner: (cfg.githubOwner  || '').trim(),
+    repo:  (cfg.githubRepo   || '').trim(),
+    branch:(cfg.githubBranch || 'main').trim(),
+    folder:(cfg.githubFolder || 'kanitlar').trim().replace(/^\/+|\/+$/g,'')
   };
 }
 
