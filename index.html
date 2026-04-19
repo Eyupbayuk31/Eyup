@@ -1841,7 +1841,48 @@ body::after{
   font-weight: 800;
   transition: all 0.3s var(--ease-spring);
 }
+.topbar-avatar{ cursor:pointer; }
 .topbar-avatar:hover{ transform: rotate(-8deg) scale(1.08); }
+
+/* ── Profil Dropdown ── */
+.profile-wrap{ position:relative; }
+.profile-dropdown{
+  display:none;position:absolute;right:0;top:calc(100% + 10px);
+  min-width:200px;background:var(--bg-card-solid);
+  border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.45);z-index:200;
+  overflow:hidden;
+}
+.profile-dropdown.open{ display:block; animation: pdDrop .18s ease-out; }
+@keyframes pdDrop{
+  from{ opacity:0; transform:translateY(-8px) scale(0.97); }
+  to{   opacity:1; transform:translateY(0)    scale(1); }
+}
+.pd-header{
+  padding:14px 16px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.pd-avatar{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px;color:#fff;
+}
+.pd-info .pd-name{ font-size:14px;font-weight:700;color:var(--text-main); }
+.pd-info .pd-role{ font-size:11px;color:var(--text-muted);margin-top:1px; }
+.pd-body{ padding:6px; }
+.pd-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:8px;cursor:pointer;font-size:13px;
+  color:var(--text-muted);transition:background .15s,color .15s;
+  text-decoration:none;width:100%;background:none;border:none;
+  font-family:inherit;text-align:left;
+}
+.pd-item:hover{ background:var(--glass);color:var(--text-main); }
+.pd-item i{ width:16px;text-align:center;font-size:13px; }
+.pd-item.danger{ color:#ef4444; }
+.pd-item.danger:hover{ background:rgba(239,68,68,.1); }
 
 .notif-bell{
   transition: all 0.25s var(--ease-smooth);
@@ -3124,6 +3165,9 @@ body::after{
   <div class="sidebar-footer">
     <div class="sf-row"><i class="fas fa-code"></i><span style="font-weight:600;">v7.0 — Premium</span></div>
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
+    <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
+      <i class="fas fa-right-from-bracket"></i> Çıkış Yap
+    </button>
   </div>
 </aside>
 
@@ -3150,7 +3194,26 @@ body::after{
           <div id="notifList"></div>
         </div>
       </div>
-      <div class="topbar-avatar">E</div>
+      <div class="profile-wrap">
+        <div class="topbar-avatar" id="profileAvatar" onclick="toggleProfileDropdown()" title="Profil">E</div>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="pd-header">
+            <div class="pd-avatar" id="pdAvatarBig">E</div>
+            <div class="pd-info">
+              <div class="pd-name" id="pdName">admin</div>
+              <div class="pd-role" id="pdRole">Admin</div>
+            </div>
+          </div>
+          <div class="pd-body">
+            <button class="pd-item" onclick="closeProfileDropdown();showPage('settings');switchSettingsTab('kullanicilar')">
+              <i class="fas fa-user-gear"></i> Hesap Ayarları
+            </button>
+            <button class="pd-item danger" onclick="closeProfileDropdown();logout()">
+              <i class="fas fa-right-from-bracket"></i> Çıkış Yap
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4579,6 +4642,48 @@ function closeSidebar(){
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('show');
 }
+
+// ── Profil Dropdown ───────────────────────────────────────
+function _initProfileUI(){
+  try{
+    const uname = localStorage.getItem('irsaliye_last_user') || 'admin';
+    const users  = (typeof authGetUsers === 'function') ? authGetUsers() : [];
+    const found  = users.find(u => u.username.toLowerCase() === uname.toLowerCase());
+    const role   = found ? found.role : 'admin';
+    const initials = uname.slice(0,2).toUpperCase();
+
+    const av  = document.getElementById('profileAvatar');
+    const avB = document.getElementById('pdAvatarBig');
+    const nm  = document.getElementById('pdName');
+    const rl  = document.getElementById('pdRole');
+
+    if(av)  av.textContent  = initials;
+    if(avB) avB.textContent = initials;
+    if(nm)  nm.textContent  = uname;
+    if(rl)  rl.textContent  = role === 'admin' ? 'Yönetici' : 'Kullanıcı';
+  }catch(e){}
+}
+function toggleProfileDropdown(){
+  const dd = document.getElementById('profileDropdown');
+  if(!dd) return;
+  const isOpen = dd.classList.contains('open');
+  if(isOpen){ dd.classList.remove('open'); }
+  else { _initProfileUI(); dd.classList.add('open'); }
+}
+function closeProfileDropdown(){
+  const dd = document.getElementById('profileDropdown');
+  if(dd) dd.classList.remove('open');
+}
+// Dropdown dışına tıklayınca kapat
+document.addEventListener('click', function(e){
+  const wrap = document.querySelector('.profile-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    closeProfileDropdown();
+  }
+});
+// Sayfa yüklenince avatar'ı güncelle
+document.addEventListener('DOMContentLoaded', _initProfileUI);
+// ─────────────────────────────────────────────────────────
 
 // ==================== TOAST ====================
 function toast(msg,type='success'){
