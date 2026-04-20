@@ -4,11 +4,11 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v6-2026-04-20">
+  <meta name="app-version" content="fs-v7-live-2026-04-20">
   <!-- ===== FIREBASE FIRESTORE SDK ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCr7TIB84oZuAqc4k65VvszAMCyqjfRi6o",
@@ -23,7 +23,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window._fs = { db, collection, doc, setDoc, getDocs, deleteDoc, writeBatch };
+    window._fs = { db, collection, doc, setDoc, getDocs, deleteDoc, writeBatch, onSnapshot };
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
   <script>
@@ -40,6 +40,24 @@
 
     // Sync bekleyen yazma promis listesi (pagehide'da bekleriz)
     window._fsInflight = new Set();
+
+    // Bekleyen silme/yazma id'leri — onSnapshot canli merge'te filtre icin
+    // (kendi delete'imiz henuz Firestore'a ulasmadan snapshot'ta hala varsa
+    //  localStorage'a geri eklememek icin).
+    window._fsPendingDeletes = new Map(); // key -> Set<id>
+    window._fsRecentWrites   = new Map(); // key -> Map<id, tsMs>
+
+    function _trackDelete(key, id){
+      if(!window._fsPendingDeletes.has(key)) window._fsPendingDeletes.set(key, new Set());
+      window._fsPendingDeletes.get(key).add(id);
+    }
+    function _untrackDelete(key, id){
+      const s = window._fsPendingDeletes.get(key); if(s){ s.delete(id); }
+    }
+    function _markWrite(key, id){
+      if(!window._fsRecentWrites.has(key)) window._fsRecentWrites.set(key, new Map());
+      window._fsRecentWrites.get(key).set(id, Date.now());
+    }
 
     // ── Mini toast
     function _fsToast(msg, isError){
@@ -117,13 +135,16 @@
 
       // Upsert
       for(const [id, item] of upserts){
+        _markWrite(key, id);
         try { await _writeItem(key, id, item); }
         catch(e){ console.warn('[Firestore] upsert hatasi', key, id, e); throw e; }
       }
       // Delete
       for(const id of deletes){
+        _trackDelete(key, id);
         try { await _deleteItem(key, id); }
         catch(e){ console.warn('[Firestore] silme hatasi', key, id, e); }
+        finally { setTimeout(() => _untrackDelete(key, id), 3000); }
       }
       await _writeParentMeta(key, nextMap.size);
       return { upserts: upserts.length, deletes: deletes.length };
@@ -246,9 +267,111 @@
     window._syncFromFirestore = syncFromFirestore;
     window._resyncFromCloud = syncFromFirestore;
 
+    // ── Canli listener: baska cihaz yazdiginda otomatik guncelle
+    window._fsUnsubs = [];
+    function _refreshUI(){
+      try { if(typeof refreshAll === 'function')     refreshAll(); } catch(e){}
+      try { if(typeof applyFilters === 'function')   applyFilters(); } catch(e){}
+      try { if(typeof renderUserList === 'function') renderUserList(); } catch(e){}
+    }
+    function startLiveListeners(){
+      if(!window._fs || !window._fs.onSnapshot) return;
+      const { db, collection, onSnapshot } = window._fs;
+      // Onceki listener'lari temizle (resync sonrasi tekrar cagrilirsa)
+      window._fsUnsubs.forEach(u => { try { u(); } catch(e){} });
+      window._fsUnsubs = [];
+      let firstSnap = new Set(FS_KEYS); // ilk snapshot'ta toast atma
+
+      FS_KEYS.forEach(function(key){
+        try {
+          const unsub = onSnapshot(
+            collection(db, 'appdata', key, 'items'),
+            function(snap){
+              try {
+                // Kendi yeni yazdigimiz id'leri ve bekleyen delete'leri filtrele
+                const pendingDel = window._fsPendingDeletes.get(key) || new Set();
+                const recent     = window._fsRecentWrites.get(key)   || new Map();
+                const now = Date.now();
+
+                const remoteMap = new Map();
+                snap.forEach(function(d){
+                  const id = d.id;
+                  // Bekleyen silme varsa remote'u yok say (localStorage'da da yok)
+                  if(pendingDel.has(id)) return;
+                  remoteMap.set(id, d.data());
+                });
+
+                const local = window.getData(key);
+                const localMap = new Map();
+                local.forEach((it, i) => localMap.set(_itemId(it, i), it));
+
+                // Son 5 sn icinde biz yazdiysak local'i tercih et (echo veya
+                //  kismi snapshot)
+                const merged = new Map();
+                for(const [id, item] of remoteMap){
+                  const rt = recent.get(id);
+                  if(rt && (now - rt) < 5000 && localMap.has(id)){
+                    merged.set(id, localMap.get(id));
+                  } else {
+                    merged.set(id, item);
+                  }
+                }
+                // Henuz buluta gitmemis local-only ogeleri koru
+                for(const [id, item] of localMap){
+                  if(!merged.has(id)){
+                    const rt = recent.get(id);
+                    // Biz sildiysek (silinmek uzere) yine koruyalim degil,
+                    // pendingDelete zaten filtrede; buraya sadece bulut tarafindan
+                    // silinmis ogeler duser. Eger biz yeni yazdiysak (recent),
+                    // korumamiz gerek. Aksi halde local'den da duser.
+                    if(rt && (now - rt) < 5000){
+                      merged.set(id, item);
+                    }
+                  }
+                }
+
+                const prevJSON = JSON.stringify(local);
+                const arr = [...merged.values()].sort(function(a,b){
+                  const ta = String((a && (a.createdAt || a.id)) || '');
+                  const tb = String((b && (b.createdAt || b.id)) || '');
+                  return tb.localeCompare(ta);
+                });
+                const nextJSON = JSON.stringify(arr);
+
+                if(prevJSON !== nextJSON){
+                  try { localStorage.setItem(key, nextJSON); } catch(e){}
+                  // Ilk snapshot degilse kullaniciya gosterelim
+                  if(!firstSnap.has(key)){
+                    _fsToast('☁️ ' + key + ' guncellendi (' + arr.length + ')');
+                    _refreshUI();
+                  }
+                }
+                firstSnap.delete(key);
+              } catch(err){
+                console.warn('[Firestore] snapshot handler hatasi:', key, err);
+              }
+            },
+            function(err){
+              console.warn('[Firestore] listener hatasi:', key, err);
+            }
+          );
+          window._fsUnsubs.push(unsub);
+        } catch(e){
+          console.warn('[Firestore] listener baslatilamadi:', key, e);
+        }
+      });
+      console.log('[Firestore] canli listener aktif:', FS_KEYS.length, 'key');
+    }
+    window._startLiveListeners = startLiveListeners;
+
     function bootSync(){
-      _fsToast('☁️ Firestore v6 baglandi');
-      setTimeout(syncFromFirestore, 400);
+      _fsToast('☁️ Firestore v7 baglandi (canli)');
+      setTimeout(function(){
+        syncFromFirestore().finally(function(){
+          // Boot sync bittikten sonra canli listener'lari ac
+          setTimeout(startLiveListeners, 300);
+        });
+      }, 400);
     }
     if(window._fs){ setTimeout(bootSync, 50); }
     else {
