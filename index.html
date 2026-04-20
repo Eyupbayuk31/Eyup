@@ -66,7 +66,7 @@
         if(!el){
           el = document.createElement('div');
           el.id = '_fsToast';
-          el.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:999999;padding:8px 12px;border-radius:8px;font-size:12px;font-family:system-ui,sans-serif;color:#fff;max-width:340px;word-break:break-word;box-shadow:0 4px 16px rgba(0,0,0,0.4);transition:opacity .3s;opacity:0;';
+          el.style.cssText = 'position:fixed;right:12px;bottom:78px;z-index:999999;padding:8px 12px;border-radius:8px;font-size:12px;font-family:system-ui,sans-serif;color:#fff;max-width:340px;word-break:break-word;box-shadow:0 4px 16px rgba(0,0,0,0.4);transition:opacity .3s;opacity:0;pointer-events:none;';
           document.body.appendChild(el);
         }
         el.style.background = isError ? '#b91c1c' : '#047857';
