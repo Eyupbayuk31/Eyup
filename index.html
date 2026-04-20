@@ -75,7 +75,8 @@
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
       'atolyeler','stoklar','stokHareketler','recycleBin',
-      'irsaliye_users','sablonlar','takvimler'
+      'irsaliye_users','sablonlar','takvimler',
+      'irsaliye_github_cfg'  // admin'in token'i tum cihazlarda paylasilsin
     ];
     const RECENT_WRITE_MS = 5000;
     const PENDING_DELETE_MS = 5000;
@@ -6482,7 +6483,7 @@ function importData(e){
       // Tum FS_KEYS'i generik olarak yukle — eksik key kalmasin
       const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
                       'atolyeler','stoklar','stokHareketler','recycleBin',
-                      'irsaliye_users','sablonlar','takvimler'];
+                      'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
       fsKeys.forEach(k => { if(Array.isArray(data[k])) setData(k, data[k]); });
       if(data.config){if(data.config.nextIrsaliyeNo)setConfig('nextIrsaliyeNo',data.config.nextIrsaliyeNo);if(data.config.theme)setTheme(data.config.theme);if(data.config.fontSize){setConfig('fontSize',data.config.fontSize);setFontSize(data.config.fontSize);}}
       toast('Veriler başarıyla içe aktarıldı');refreshAll();
@@ -7891,7 +7892,7 @@ function clearAllData() {
   // Firestore ile senkron key'ler — bos dizi yazarak bulutta da siliniyor
   const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
                   'atolyeler','stoklar','stokHareketler','recycleBin',
-                  'irsaliye_users','sablonlar','takvimler'];
+                  'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
   fsKeys.forEach(k => {
     if (typeof window.setData === 'function') window.setData(k, []);
     else localStorage.removeItem(k);
@@ -8849,11 +8850,29 @@ function loadPublishUrlIntoInput(){
 // ====================================================================
 const _GH_KEY = 'irsaliye_github_cfg';
 
+// Firestore sync icin config [{id:'main', ...cfg}] array formatinda saklanir.
+// Eski formatla (saf obje) geriye donuk uyumlu: yuklerken her iki sekli de kabul et.
 function _ghLoad(){
-  try{ return JSON.parse(localStorage.getItem(_GH_KEY)) || {}; }catch(e){ return {}; }
+  try{
+    const raw = JSON.parse(localStorage.getItem(_GH_KEY));
+    if(!raw) return {};
+    if(Array.isArray(raw)){
+      return (raw[0] && typeof raw[0] === 'object') ? raw[0] : {};
+    }
+    return (typeof raw === 'object') ? raw : {};
+  }catch(e){ return {}; }
 }
 function _ghSave(obj){
-  try{ localStorage.setItem(_GH_KEY, JSON.stringify(obj)); }catch(e){}
+  const item = Object.assign({}, obj, { id: 'main' });
+  const arr = [item];
+  try{
+    if(typeof window.setData === 'function'){
+      // localStorage + Firestore birlikte yazilir, tum cihazlar otomatik gorur
+      window.setData(_GH_KEY, arr);
+    } else {
+      localStorage.setItem(_GH_KEY, JSON.stringify(arr));
+    }
+  }catch(e){}
 }
 
 function saveGithubConfig(){
@@ -8927,7 +8946,9 @@ function loadGithubConfigIntoInputs(){
 
 function clearGithubConfig(){
   if(!confirm('GitHub ayarları (token dahil) silinsin mi?')) return;
-  localStorage.removeItem(_GH_KEY);
+  // Bos array yazarak Firestore'dan da silinsin (tum cihazlardan kalkar)
+  if(typeof window.setData === 'function') window.setData(_GH_KEY, []);
+  else localStorage.removeItem(_GH_KEY);
   ['githubOwner','githubRepo','githubBranch','githubFolder','githubToken'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
