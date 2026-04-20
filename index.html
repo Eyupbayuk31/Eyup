@@ -6479,24 +6479,18 @@ function importData(e){
   reader.onload=function(ev){
     try{
       const data=JSON.parse(ev.target.result);
-      if(data.irsaliyeler)setData('irsaliyeler',data.irsaliyeler);
-      if(data.fermuarlar)setData('fermuarlar',data.fermuarlar);
-      if(data.lastikler)setData('lastikler',data.lastikler);
-      if(data.dugmeler)setData('dugmeler',data.dugmeler);
-      if(data.atolyeler)setData('atolyeler',data.atolyeler);
-      if(data.toptanlar)setData('toptanlar',data.toptanlar);
+      // Tum FS_KEYS'i generik olarak yukle — eksik key kalmasin
+      const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
+                      'atolyeler','stoklar','stokHareketler','recycleBin',
+                      'irsaliye_users','sablonlar','takvimler'];
+      fsKeys.forEach(k => { if(Array.isArray(data[k])) setData(k, data[k]); });
       if(data.config){if(data.config.nextIrsaliyeNo)setConfig('nextIrsaliyeNo',data.config.nextIrsaliyeNo);if(data.config.theme)setTheme(data.config.theme);if(data.config.fontSize){setConfig('fontSize',data.config.fontSize);setFontSize(data.config.fontSize);}}
       toast('Veriler başarıyla içe aktarıldı');refreshAll();
     }catch(err){toast('Geçersiz dosya formatı','error');}
   };reader.readAsText(file);
 }
 
-function clearAllData(){
-  if(!confirm('TÜM VERİLER SİLİNECEK! Emin misiniz?'))return;
-  if(!confirm('Son uyarı: Bu işlem geri alınamaz!'))return;
-  ['irsaliyeler','fermuarlar','lastikler','dugmeler','atolyeler','toptanlar'].forEach(k=>localStorage.removeItem(k));
-  toast('Tüm veriler silindi','info');refreshAll();
-}
+// clearAllData tek yerde (line ~7894) tanimli — asagidaki calisir.
 
 // ==================== CALENDAR ====================
 let calYear, calMonth;
@@ -7894,10 +7888,18 @@ function importBackup() {
 function clearAllData() {
   if (!confirm('⚠️ TÜM VERİLER silinecek! Bu işlem GERİ ALINAMAZ!\n\nDevam etmek için Tamam\'a basın.')) return;
   if (!confirm('Son uyarı: Tüm irsaliyeler, atölyeler, stoklar ve ayarlar silinecek. Emin misiniz?')) return;
-  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','atolyeler','stoklar','stokHareketler','recycleBin','pinnedItems','dailyGoal'];
-  keys.forEach(k => localStorage.removeItem(k));
+  // Firestore ile senkron key'ler — bos dizi yazarak bulutta da siliniyor
+  const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
+                  'atolyeler','stoklar','stokHareketler','recycleBin',
+                  'irsaliye_users','sablonlar','takvimler'];
+  fsKeys.forEach(k => {
+    if (typeof window.setData === 'function') window.setData(k, []);
+    else localStorage.removeItem(k);
+  });
+  // Firestore'la ilgisi olmayan yerel config key'leri
+  ['pinnedItems','dailyGoal','pinnedIrsaliye','v8_daily_goal'].forEach(k => localStorage.removeItem(k));
   toast('Tüm veriler silindi','info');
-  setTimeout(() => location.reload(), 800);
+  setTimeout(() => location.reload(), 1200);
 }
 
 
@@ -11914,9 +11916,9 @@ body.logged-out { overflow:hidden !important; }
               } else {
                 arr.push({ id: Date.now(), ad: name, name: name });
               }
-              localStorage.setItem(k, JSON.stringify(arr));
-              // Firestore senkronu icin setData'ya da bildir
-              try { if(typeof window.setData === 'function') window.setData(k, arr); } catch(e){}
+              // setData hem localStorage'a hem Firestore'a yazar
+              if(typeof window.setData === 'function') window.setData(k, arr);
+              else { try { localStorage.setItem(k, JSON.stringify(arr)); } catch(e){} }
               added = true;
             }
           }
