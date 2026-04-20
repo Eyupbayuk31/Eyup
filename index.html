@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v8-authoritative-2026-04-20">
+  <meta name="app-version" content="fs-v9-fix-override-2026-04-20">
   <!-- ===== FIREBASE FIRESTORE SDK ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
@@ -152,8 +152,13 @@
 
     // ── setData: localStorage + Firestore delta
     window.setData = function(key, val){
-      // Diff icin mevcut (yazim oncesi) degeri oku
-      const prev = window.getData(key);
+      // Diff icin mevcut (yazim oncesi) degeri DOGRUDAN localStorage'dan oku
+      // (ustte wrapper varsa onden geçmesin)
+      let prev = [];
+      try {
+        const raw = JSON.parse(localStorage.getItem(key));
+        if(Array.isArray(raw)) prev = raw;
+      } catch(e){}
       try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
       if(!FS_KEYS.includes(key)) return;
 
@@ -339,7 +344,7 @@
     window._startLiveListeners = startLiveListeners;
 
     function bootSync(){
-      _fsToast('☁️ Firestore v8 baglandi (canli)');
+      _fsToast('☁️ Firestore v9 baglandi (canli)');
       setTimeout(function(){
         syncFromFirestore().finally(function(){
           // Boot sync bittikten sonra canli listener'lari ac
@@ -4980,8 +4985,12 @@ body::after{
 
 <script>
 // ==================== DATA LAYER ====================
-function getData(key){try{return JSON.parse(localStorage.getItem(key))||[];}catch(e){return[];}}
-function setData(key,val){localStorage.setItem(key,JSON.stringify(val));}
+// getData/setData Firestore IIFE tarafindan window'a eklendi.
+// Bu script icinde bare cagrilar (setData/getData) hoisting nedeniyle
+// eskiden burada yeniden tanimlanip Firestore versiyonunu eziyordu.
+// Artik window.getData / window.setData uzerinden Firestore'a ulasiyor.
+var getData = window.getData || function(key){try{return JSON.parse(localStorage.getItem(key))||[];}catch(e){return[];}};
+var setData = window.setData || function(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}};
 function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'+key))||def;}catch(e){return def;}}
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
@@ -7892,39 +7901,11 @@ function openShareFromModal() {
 
 // ==== PAKET 6: PERFORMANCE LAYER ====
 
-// --- Memory cache for getData (Supabase entegrasyonu ile uyumlu) ---
-(function() {
-  const _cache = {};
-  const _baseGet = window.getData;
-  const _baseSet = window.setData;
-
-  window.getData = function(key) {
-    if (_cache[key] !== undefined) return _cache[key];
-    const val = _baseGet ? _baseGet(key) : (()=>{ try{ return JSON.parse(localStorage.getItem(key))||[]; }catch(e){ return []; } })();
-    _cache[key] = val;
-    return val;
-  };
-
-  window.setData = function(key, val) {
-    _cache[key] = val;
-    if (_baseSet) {
-      _baseSet(key, val);
-    } else {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {
-        if (e.name === 'QuotaExceededError') {
-          if(typeof toast==='function') toast('⚠️ Depolama dolu!','error');
-        }
-      }
-    }
-  };
-
-  window.invalidateCache = function(key) {
-    if (key) delete _cache[key];
-    else Object.keys(_cache).forEach(k => delete _cache[k]);
-  };
-
-  window._dataCache = _cache; // debug
-})();
+// --- getData/setData zaten Firestore IIFE tarafindan window'a kuruldu.
+// Ust katmanda cache koymuyoruz: onSnapshot her degisiklikte localStorage'i
+// ezip UI'yi tazeliyor, araya cache girerse silinen ogeler eski cache'den
+// geri gorunuyor.
+// window.invalidateCache Firestore IIFE'sinde tanimli (localStorage temizler).
 
 // --- Debounce utility ---
 function debounce(fn, wait) {
@@ -11925,6 +11906,8 @@ body.logged-out { overflow:hidden !important; }
                 arr.push({ id: Date.now(), ad: name, name: name });
               }
               localStorage.setItem(k, JSON.stringify(arr));
+              // Firestore senkronu icin setData'ya da bildir
+              try { if(typeof window.setData === 'function') window.setData(k, arr); } catch(e){}
               added = true;
             }
           }
