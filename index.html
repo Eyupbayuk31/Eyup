@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v7-live-2026-04-20">
+  <meta name="app-version" content="fs-v8-authoritative-2026-04-20">
   <!-- ===== FIREBASE FIRESTORE SDK ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
@@ -203,37 +203,22 @@
       return arr;
     }
 
-    // ── Acilis senkronizasyonu: bulut + local union, hicbir veri kaybetmez
+    // ── Acilis senkronizasyonu: Firestore tek gercek kaynak.
+    // Bulut = local. Silinmis ogeler geri gelmez.
+    // Istisna: boot sirasinda henuz yazim devam eden (inflight) ogeler
+    // localStorage'da kalir, snapshot listener ilerde merge eder.
     window._sbLoaded = false;
     async function syncFromFirestore(){
       try {
         if(!window._fs) return;
         const loadedKeys = [];
-        const pushedKeys = [];
         for(const key of FS_KEYS){
           try {
             const remote = await readListFromCloud(key);
-            const local = window.getData(key);
 
-            const remoteMap = new Map();
-            remote.forEach((it, i) => remoteMap.set(_itemId(it, i), it));
-            const localMap = new Map();
-            local.forEach((it, i) => localMap.set(_itemId(it, i), it));
-
-            // Union: local'de olup remote'ta olmayanlari buluta gonder,
-            // remote'ta olup local'de olmayanlari local'e ekle, cakisanlarda
-            // remote'u koru (baska cihazdan en son gelen).
-            const merged = new Map(remoteMap);
-            const toPush = [];
-            for(const [id, item] of localMap){
-              if(!merged.has(id)){
-                merged.set(id, item);
-                toPush.push([id, item]);
-              }
-            }
-
-            // Merged diziyi createdAt/id'ye gore desc sirala (yeniler ustte)
-            const arr = [...merged.values()].sort(function(a,b){
+            // Bulut tamamen otoriter: localStorage'i bulut haliyle degistir.
+            // Siralama: yeniler ustte (createdAt || id desc).
+            const arr = remote.slice().sort(function(a,b){
               const ta = String((a && (a.createdAt || a.id)) || '');
               const tb = String((b && (b.createdAt || b.id)) || '');
               return tb.localeCompare(ta);
@@ -241,21 +226,10 @@
 
             try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){}
             if(arr.length) loadedKeys.push(key + ':' + arr.length);
-
-            // Local-only ogeleri buluta yukle
-            for(const [id, item] of toPush){
-              try { await _writeItem(key, id, item); }
-              catch(e){ console.warn('[Firestore] push hatasi:', key, id, e); }
-            }
-            if(toPush.length){
-              try { await _writeParentMeta(key, merged.size); } catch(e){}
-              pushedKeys.push(key + ':+' + toPush.length);
-            }
           } catch(e){ console.warn('[Firestore] sync hatasi:', key, e); }
         }
         window._sbLoaded = true;
-        console.log('[Firestore] merge sync bitti. yuklendi:', loadedKeys, 'push:', pushedKeys);
-        if(pushedKeys.length) _fsToast('☁️ buluta yuklendi: ' + pushedKeys.join(', '));
+        console.log('[Firestore] remote-authoritative sync bitti. yuklendi:', loadedKeys);
         if(typeof refreshAll === 'function') try{ refreshAll(); }catch(e){}
         if(typeof applyFilters === 'function') try{ applyFilters(); }catch(e){}
         if(typeof renderUserList === 'function') try{ renderUserList(); }catch(e){}
@@ -340,10 +314,10 @@
 
                 if(prevJSON !== nextJSON){
                   try { localStorage.setItem(key, nextJSON); } catch(e){}
-                  // Ilk snapshot degilse kullaniciya gosterelim
+                  // UI'yi her zaman tazele (ilk snap'te sessizce)
+                  _refreshUI();
                   if(!firstSnap.has(key)){
                     _fsToast('☁️ ' + key + ' guncellendi (' + arr.length + ')');
-                    _refreshUI();
                   }
                 }
                 firstSnap.delete(key);
@@ -365,7 +339,7 @@
     window._startLiveListeners = startLiveListeners;
 
     function bootSync(){
-      _fsToast('☁️ Firestore v7 baglandi (canli)');
+      _fsToast('☁️ Firestore v8 baglandi (canli)');
       setTimeout(function(){
         syncFromFirestore().finally(function(){
           // Boot sync bittikten sonra canli listener'lari ac
