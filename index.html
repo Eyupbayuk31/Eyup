@@ -26,65 +26,18 @@
   (function(){
     'use strict';
 
+    // Her FS_KEY = Firestore subcollection `appdata/{key}/items/{itemId}`.
+    // Her oge kendi dokumanidir → 1 MiB limit bos, debounce yok, race yok.
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
       'atolyeler','stoklar','stokHareketler','recycleBin',
       'irsaliye_users','sablonlar','takvimler'
     ];
 
-    // ── getData: localStorage cache (hızlı UI)
-    window.getData = function(key){
-      try {
-        const v = JSON.parse(localStorage.getItem(key));
-        if(Array.isArray(v)) return v;
-      } catch(e) {}
-      return [];
-    };
+    // Sync bekleyen yazma promis listesi (pagehide'da bekleriz)
+    window._fsInflight = new Set();
 
-    // ── setData: localStorage + Firestore (anlık yazma, kisa debounce)
-    window._sbQ = {};          // bekleyen timer'lar
-    window._sbPending = {};    // bekleyen en son deger
-    window._sbInflight = {};   // su an gonderilen yazma promisleri
-
-    // JSON byte boyutu tahmini
-    function _jsonSize(v){
-      try { return new Blob([JSON.stringify(v)]).size; }
-      catch(e){ try { return JSON.stringify(v).length * 2; } catch(_){ return 0; } }
-    }
-    // Firestore tek dokuman limiti ~1 MiB; guvenlik payi ile 900 KB
-    const SINGLE_DOC_LIMIT = 900 * 1024;
-
-    async function _writeSingle(key, val){
-      const { db, doc, setDoc } = window._fs;
-      await setDoc(doc(db, 'appdata', key), {
-        data: val,
-        updated_at: new Date().toISOString(),
-        chunked: false
-      });
-    }
-
-    async function _writeChunked(key, val){
-      const { db, collection, doc, setDoc, getDocs, deleteDoc } = window._fs;
-      const newIds = new Set();
-      for(let i = 0; i < val.length; i++){
-        const item = val[i];
-        const id = (item && item.id != null) ? String(item.id) : ('idx_' + i);
-        newIds.add(id);
-        await setDoc(doc(db, 'appdata', key, 'items', id), item);
-      }
-      // Eskiden var olup simdi listede olmayanlari sil
-      const snap = await getDocs(collection(db, 'appdata', key, 'items'));
-      for(const d of snap.docs){
-        if(!newIds.has(d.id)) await deleteDoc(d.ref);
-      }
-      await setDoc(doc(db, 'appdata', key), {
-        chunked: true,
-        count: val.length,
-        updated_at: new Date().toISOString()
-      });
-    }
-
-    // Kucuk UI bildirim (konsol + mini toast)
+    // ── Mini toast
     function _fsToast(msg, isError){
       try {
         let el = document.getElementById('_fsToast');
@@ -101,71 +54,108 @@
         el._t = setTimeout(()=>{ el.style.opacity = '0'; }, isError ? 5000 : 2200);
       } catch(e){}
     }
+    window._fsToast = _fsToast;
 
-    async function flushKey(key){
-      if(!(key in window._sbPending)) return;
-      if(!window._fs) return;
-      const val = window._sbPending[key];
-      delete window._sbPending[key];
-      if(window._sbQ[key]) { clearTimeout(window._sbQ[key]); delete window._sbQ[key]; }
-      const size = _jsonSize(val);
-      const p = (async function(){
-        try {
-          if(Array.isArray(val) && size >= SINGLE_DOC_LIMIT){
-            await _writeChunked(key, val);
-            console.log('[Firestore] chunked yazildi:', key, '(', val.length, 'kayit,', size, 'byte )');
-            _fsToast('☁️ ' + key + ' kaydedildi (' + val.length + ' kayit)');
-          } else {
-            await _writeSingle(key, val);
-            console.log('[Firestore] yazildi:', key, '(', size, 'byte )');
-            _fsToast('☁️ ' + key + ' kaydedildi');
-          }
-        } catch(err){
-          if(Array.isArray(val) && err && /too large|1 MiB|exceed|invalid-argument/i.test(String(err.message || err))){
-            try {
-              await _writeChunked(key, val);
-              console.log('[Firestore] fallback chunked yazildi:', key);
-              _fsToast('☁️ ' + key + ' chunked kaydedildi');
-              return;
-            } catch(err2){
-              console.warn('[Firestore] chunked yazma hatasi:', key, err2);
-              _fsToast('⚠️ ' + key + ' Firestore hatasi: ' + (err2.message || err2), true);
-              return;
-            }
-          }
-          console.warn('[Firestore] yazma hatasi:', key, err && err.message, err);
-          _fsToast('⚠️ ' + key + ' yazilamadi: ' + (err && err.message ? err.message : err), true);
-        }
-      })();
-      window._sbInflight[key] = p;
-      try { await p; } finally { if(window._sbInflight[key] === p) delete window._sbInflight[key]; }
+    function _itemId(item, i){
+      if(!item || typeof item !== 'object') return 'idx_' + i;
+      if(item.id != null)       return String(item.id);
+      if(item.username)         return 'u_' + String(item.username).toLowerCase();
+      if(item.code)             return 'c_' + String(item.code);
+      return 'idx_' + i;
     }
-    window._flushKey = flushKey;
 
-    async function flushAll(){
-      const keys = Object.keys(window._sbPending);
-      await Promise.all(keys.map(flushKey));
-      await Promise.all(Object.values(window._sbInflight));
-    }
-    window._flushAll = flushAll;
-
-    window.setData = function(key, val){
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
-      if(!FS_KEYS.includes(key)) return;
-      window._sbPending[key] = val;
-      if(window._sbQ[key]) clearTimeout(window._sbQ[key]);
-      // Kisa debounce: hizli arka arkaya gelen cagrilar birlesir, ama sayfa
-      // kapanmadan yazma baslar. SDK hazir degilse tekrar dene.
-      window._sbQ[key] = setTimeout(function tryFlush(){
-        if(!window._fs){
-          window._sbQ[key] = setTimeout(tryFlush, 150);
-          return;
-        }
-        flushKey(key);
-      }, 150);
+    // ── getData: localStorage cache (hizli UI)
+    window.getData = function(key){
+      try {
+        const v = JSON.parse(localStorage.getItem(key));
+        if(Array.isArray(v)) return v;
+      } catch(e) {}
+      return [];
     };
 
-    // Sayfa kapanmadan / arka plana gitmeden once bekleyen yazmalari gonder
+    // ── Tek oge yazma/silme
+    async function _writeItem(key, id, item){
+      const { db, doc, setDoc } = window._fs;
+      await setDoc(doc(db, 'appdata', key, 'items', id), item);
+    }
+    async function _deleteItem(key, id){
+      const { db, doc, deleteDoc } = window._fs;
+      await deleteDoc(doc(db, 'appdata', key, 'items', id));
+    }
+    async function _writeParentMeta(key, count){
+      const { db, doc, setDoc } = window._fs;
+      await setDoc(doc(db, 'appdata', key), {
+        count: count,
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    // ── Yeni liste ile eski liste arasinda delta uygula
+    async function _syncList(key, prev, next){
+      if(!window._fs) throw new Error('Firebase SDK hazir degil');
+      const prevMap = new Map();
+      (prev || []).forEach((it, i) => prevMap.set(_itemId(it, i), it));
+      const nextMap = new Map();
+      (next || []).forEach((it, i) => nextMap.set(_itemId(it, i), it));
+
+      const upserts = [];
+      const deletes = [];
+      for(const [id, item] of nextMap){
+        const pv = prevMap.get(id);
+        // Degismisse veya yeniyse yaz
+        if(!pv || JSON.stringify(pv) !== JSON.stringify(item)){
+          upserts.push([id, item]);
+        }
+      }
+      for(const id of prevMap.keys()){
+        if(!nextMap.has(id)) deletes.push(id);
+      }
+
+      // Upsert
+      for(const [id, item] of upserts){
+        try { await _writeItem(key, id, item); }
+        catch(e){ console.warn('[Firestore] upsert hatasi', key, id, e); throw e; }
+      }
+      // Delete
+      for(const id of deletes){
+        try { await _deleteItem(key, id); }
+        catch(e){ console.warn('[Firestore] silme hatasi', key, id, e); }
+      }
+      await _writeParentMeta(key, nextMap.size);
+      return { upserts: upserts.length, deletes: deletes.length };
+    }
+
+    // ── setData: localStorage + Firestore delta
+    window.setData = function(key, val){
+      // Diff icin mevcut (yazim oncesi) degeri oku
+      const prev = window.getData(key);
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+      if(!FS_KEYS.includes(key)) return;
+
+      const run = async function(){
+        // SDK hazir olana kadar bekle
+        while(!window._fs){ await new Promise(r => setTimeout(r, 100)); }
+        try {
+          const res = await _syncList(key, prev, val);
+          console.log('[Firestore]', key, '→ +' + res.upserts, '-' + res.deletes);
+          if(res.upserts || res.deletes){
+            _fsToast('☁️ ' + key + ' kaydedildi (+' + res.upserts + ' / -' + res.deletes + ')');
+          }
+        } catch(err){
+          console.warn('[Firestore] yazma hatasi:', key, err);
+          _fsToast('⚠️ ' + key + ' yazilamadi: ' + (err && err.message ? err.message : err), true);
+        }
+      };
+      const p = run();
+      window._fsInflight.add(p);
+      p.finally(() => window._fsInflight.delete(p));
+    };
+
+    // ── Sayfa kapanirken bekleyen yazmalari bekle (best effort)
+    async function flushAll(){
+      await Promise.all([...window._fsInflight]);
+    }
+    window._flushAll = flushAll;
     function onHide(){ flushAll(); }
     window.addEventListener('pagehide', onHide);
     window.addEventListener('beforeunload', onHide);
@@ -179,89 +169,57 @@
       else { FS_KEYS.forEach(function(k){ localStorage.removeItem(k); }); }
     };
 
-    // ── Firestore'da olmayan veya bos gelen FS_KEYS'i localStorage'dan seed et
-    async function seedMissingToFirestore(existingKeysWithData){
-      for(const key of FS_KEYS){
-        if(existingKeysWithData.has(key)) continue;
-        try {
-          const raw = localStorage.getItem(key);
-          if(!raw) continue;
-          const val = JSON.parse(raw);
-          if(!Array.isArray(val) || val.length === 0) continue;
-          window._sbPending[key] = val;
-          await flushKey(key);
-          console.log('[Firestore] seed:', key, '(', val.length, 'kayit )');
-        } catch(e) { console.warn('[Firestore] seed hatasi:', key, e); }
-      }
+    // ── Firestore'dan tüm veriyi oku
+    async function readListFromCloud(key){
+      const { db, collection, getDocs } = window._fs;
+      const sub = await getDocs(collection(db, 'appdata', key, 'items'));
+      const arr = [];
+      sub.forEach(d => arr.push(d.data()));
+      return arr;
     }
 
-    // ── Sayfa açılınca Firestore'dan tüm veriyi çek
+    // ── Acilis senkronizasyonu: bulutu oku, bos ise localStorage'dan seed et
     window._sbLoaded = false;
-    let _seedDone = false;
     async function syncFromFirestore(){
       try {
         if(!window._fs) return;
-        const { db, collection, getDocs } = window._fs;
-        const snap = await getDocs(collection(db, 'appdata'));
-        const existingKeysWithData = new Set();
-        const seenKeys = [];
-        let count = 0;
-        // Tek dokumanli veriler
-        const chunkedKeys = [];
-        snap.forEach(function(docSnap){
-          const row = docSnap.data() || {};
-          seenKeys.push(docSnap.id);
-          if(row.chunked){
-            chunkedKeys.push(docSnap.id);
-          } else if(Array.isArray(row.data) && row.data.length > 0){
-            try { localStorage.setItem(docSnap.id, JSON.stringify(row.data)); } catch(e) {}
-            existingKeysWithData.add(docSnap.id);
-            count++;
-          }
-        });
-        // Chunked (subcollection) veriler
-        for(const key of chunkedKeys){
+        const loadedKeys = [];
+        const seededKeys = [];
+        for(const key of FS_KEYS){
           try {
-            const sub = await getDocs(collection(db, 'appdata', key, 'items'));
-            const arr = [];
-            sub.forEach(d => arr.push(d.data()));
+            const arr = await readListFromCloud(key);
             if(arr.length > 0){
-              try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e) {}
-              existingKeysWithData.add(key);
-              count++;
+              try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){}
+              loadedKeys.push(key + ':' + arr.length);
+            } else {
+              // Bulut bos; localStorage'da varsa seed et
+              const local = window.getData(key);
+              if(Array.isArray(local) && local.length > 0){
+                try {
+                  const res = await _syncList(key, [], local);
+                  seededKeys.push(key + ':' + res.upserts);
+                } catch(e){ console.warn('[Firestore] seed hatasi:', key, e); }
+              }
             }
-          } catch(e){ console.warn('[Firestore] chunked okuma hatasi:', key, e); }
+          } catch(e){ console.warn('[Firestore] okuma hatasi:', key, e); }
         }
         window._sbLoaded = true;
-        console.log('[Firestore] ' + count + ' koleksiyon yuklendi. Dokumanlar:', seenKeys, 'chunked:', chunkedKeys);
-        if(!_seedDone){
-          _seedDone = true;
-          await seedMissingToFirestore(existingKeysWithData);
-        }
+        console.log('[Firestore] yuklendi:', loadedKeys, 'seed:', seededKeys);
+        if(seededKeys.length) _fsToast('☁️ seed: ' + seededKeys.join(', '));
         if(typeof refreshAll === 'function') try{ refreshAll(); }catch(e){}
         if(typeof applyFilters === 'function') try{ applyFilters(); }catch(e){}
         if(typeof renderUserList === 'function') try{ renderUserList(); }catch(e){}
       } catch(err) {
-        console.warn('[Firestore] okuma hatasi:', err);
+        console.warn('[Firestore] acilis sync hatasi:', err);
         window._sbLoaded = true;
       }
     }
     window._syncFromFirestore = syncFromFirestore;
-
-    function bootSync(){
-      // Sadece acilista senkronize et; 60-sn periyodik sync yeni yerel veriyi
-      // silebildigi icin kaldirildi. Kullanici el ile yenileyerek baska
-      // cihazdan gelen degisiklikleri cekebilir.
-      setTimeout(syncFromFirestore, 400);
-    }
-    // Disa ac: manuel yenileme gerekirse konsoldan cagirilabilir.
     window._resyncFromCloud = syncFromFirestore;
 
-    if(window._fs){
-      bootSync();
-    } else {
-      window.addEventListener('firebase-ready', bootSync, { once: true });
-    }
+    function bootSync(){ setTimeout(syncFromFirestore, 400); }
+    if(window._fs){ bootSync(); }
+    else { window.addEventListener('firebase-ready', bootSync, { once: true }); }
 
   })();
   </script>
@@ -11260,12 +11218,9 @@ body.logged-out { overflow:hidden !important; }
     return [{username:'admin', password:'123', role:'admin'}];
   }
   function saveUsers(users){
-    try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch(e){}
-    if(window._fs){
-      const { db, doc, setDoc } = window._fs;
-      setDoc(doc(db, 'appdata', USERS_KEY), { data: users, updated_at: new Date().toISOString() })
-        .catch(function(e){ console.warn('[Firestore] kullanici yazma hatasi:', e); });
-    }
+    // setData uzerinden yaz → her kullanici kendi dokumaninda
+    if(typeof window.setData === 'function') window.setData(USERS_KEY, users);
+    else { try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch(e){} }
   }
   function findUser(username){
     return getUsers().find(u => u.username.toLowerCase() === username.toLowerCase()) || null;
