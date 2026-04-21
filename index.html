@@ -6312,10 +6312,16 @@ function generatePDF(id, type) {
 
   if (type === 'fermuar' && item.beden) {
     const bedenLabel = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    html += `<div class="section-title">🔗 Beden Detayları${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
-    html += `<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
-    for (let k in item.beden) { html += `<tr><td><b>${bedenLabel[k]||k}</b></td><td>${item.beden[k].cm} cm</td><td>${item.beden[k].adet}</td></tr>`; }
-    html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}</div>`;
+    const bedenCount = Object.keys(item.beden).length;
+    const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
+    const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
+
+    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">🔗 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">CM</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
+    for (let k in item.beden) {
+      html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k].cm} cm</td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k].adet}</td></tr>`;
+    }
+    html += `</tbody></table><div class="total-row" style="font-size:${bedenCount >= 7 ? '12px' : '14px'};padding:${bedenCount >= 7 ? '6px 0' : '8px 0'};">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
 
   if (type === 'lastik') {
@@ -6342,9 +6348,15 @@ function generatePDF(id, type) {
 
   if (type === 'toptan' && item.beden) {
     const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    html += `<div class="section-title">📦 Beden Detayları${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
-    html += `<table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
-    for (let k in item.beden) { html += `<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`; }
+    const bedenCount = Object.keys(item.beden).length;
+    const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
+    const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
+
+    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">📦 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
+    for (let k in item.beden) {
+      html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bl[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k]}</td></tr>`;
+    }
     html += `</tbody></table><div class="total-row">Toplam Adet: ${item.total||0}</div>`;
     // Toptan sipariş için otomatik açıklama
     html += `<div class="note-box" style="background:#fef3c7;border-color:#fbbf24;margin-top:16px;">
@@ -7478,31 +7490,38 @@ function updateSelDash(checks){
   
   // === FERMUAR DETAY TABLOSU ===
   if(fermuarItems.length>0){
+    // Fermuar sayısına göre font boyutunu ayarla
+    const fermuarCount = fermuarItems.length;
+    const fontSize = fermuarCount >= 5 ? '9px' : fermuarCount >= 4 ? '10px' : fermuarCount >= 3 ? '11px' : '13px';
+    const thPadding = fermuarCount >= 5 ? '8px 6px' : fermuarCount >= 4 ? '10px 8px' : fermuarCount >= 3 ? '12px 10px' : '14px 16px';
+    const tdPadding = fermuarCount >= 5 ? '6px 4px' : fermuarCount >= 4 ? '8px 6px' : fermuarCount >= 3 ? '10px 8px' : '11px 16px';
+    const badgeFontSize = fermuarCount >= 5 ? '9px' : fermuarCount >= 4 ? '10px' : '11px';
+
     html+='<div class="sd-section">';
     html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar">🔗</span> Fermuar Detayi</div>';
-    html+='<div class="sd-table-wrap"><table class="sd-table">';
-    html+='<thead><tr><th class="sd-th-first">Beden</th>';
+    html+=`<div class="sd-table-wrap"><table class="sd-table" style="font-size:${fontSize};">`;
+    html+=`<thead><tr><th class="sd-th-first" style="padding:${thPadding};">Beden</th>`;
     fermuarItems.forEach(it=>{
-      html+=`<th><div class="sd-th-no">${it.no||'FZ'}</div><div class="sd-th-model">${it.model||'-'}</div></th>`;
+      html+=`<th style="padding:${thPadding};"><div class="sd-th-no" style="font-size:${badgeFontSize};">${it.no||'FZ'}</div><div class="sd-th-model" style="font-size:${fermuarCount >= 5 ? '8px' : '10px'};">${it.model||'-'}</div></th>`;
     });
-    html+='<th class="sd-total-col">TOPLAM</th></tr></thead><tbody>';
-    
+    html+=`<th class="sd-total-col" style="padding:${thPadding};">TOPLAM</th></tr></thead><tbody>`;
+
     const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
     const bedLabels=['XXS','XS','S','M','L','XL','XXL','3XL'];
     beds.forEach((b,idx)=>{
       const rowAdet=fermuarItems.reduce((s,it)=>s+(+it[b+'a']||0),0);
       const rowCm=fermuarItems.reduce((s,it)=>s+(+it[b+'cm']||0),0);
-      html+=`<tr><td class="sd-size-label"><span class="sd-size-badge">${bedLabels[idx]}</span></td>`;
+      html+=`<tr><td class="sd-size-label" style="padding:${tdPadding};"><span class="sd-size-badge" style="font-size:${badgeFontSize};">${bedLabels[idx]}</span></td>`;
       fermuarItems.forEach(it=>{
         const a=(+it[b+'a']||0);
         const c=(+it[b+'cm']||0);
         if(a>0||c>0){
-          html+=`<td class="sd-cell-value">${a>0?a:'-'}${c>0?' <span class="sd-cm-info">('+c+'cm)</span>':''}</td>`;
+          html+=`<td class="sd-cell-value" style="padding:${tdPadding};">${a>0?a:'-'}${c>0?' <span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">('+c+'cm)</span>':''}</td>`;
         }else{
-          html+=`<td class="sd-cell-empty">-</td>`;
+          html+=`<td class="sd-cell-empty" style="padding:${tdPadding};">-</td>`;
         }
       });
-      html+=`<td class="sd-total-col"><strong>${rowAdet>0?rowAdet+' adet':'-'}</strong>${rowCm>0?'<br><span class="sd-cm-info">'+rowCm+'cm</span>':''}</td></tr>`;
+      html+=`<td class="sd-total-col" style="padding:${tdPadding};"><strong>${rowAdet>0?rowAdet+' adet':'-'}</strong>${rowCm>0?'<br><span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">'+rowCm+'cm</span>':''}</td></tr>`;
     });
     html+='</tbody></table></div></div>';
   }
@@ -7553,22 +7572,29 @@ function updateSelDash(checks){
   
   // === TOPTAN DETAY ===
   if(toptanItems.length>0){
+    // Toptan sayısına göre font boyutunu ayarla
+    const toptanCount = toptanItems.length;
+    const fontSize = toptanCount >= 5 ? '9px' : toptanCount >= 4 ? '10px' : toptanCount >= 3 ? '11px' : '13px';
+    const thPadding = toptanCount >= 5 ? '8px 6px' : toptanCount >= 4 ? '10px 8px' : toptanCount >= 3 ? '12px 10px' : '14px 16px';
+    const tdPadding = toptanCount >= 5 ? '6px 4px' : toptanCount >= 4 ? '8px 6px' : toptanCount >= 3 ? '10px 8px' : '11px 16px';
+    const badgeFontSize = toptanCount >= 5 ? '9px' : toptanCount >= 4 ? '10px' : '11px';
+
     html+='<div class="sd-section">';
     html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan">🚚</span> Toptan Siparis Detayi</div>';
-    html+='<div class="sd-table-wrap"><table class="sd-table">';
-    html+='<thead><tr><th class="sd-th-first">Beden</th>';
+    html+=`<div class="sd-table-wrap"><table class="sd-table" style="font-size:${fontSize};">`;
+    html+=`<thead><tr><th class="sd-th-first" style="padding:${thPadding};">Beden</th>`;
     toptanItems.forEach(it=>{
-      html+=`<th><div class="sd-th-no">${it.no||'TP'}</div><div class="sd-th-model">${it.urun||'-'}</div></th>`;
+      html+=`<th style="padding:${thPadding};"><div class="sd-th-no" style="font-size:${badgeFontSize};">${it.no||'TP'}</div><div class="sd-th-model" style="font-size:${toptanCount >= 5 ? '8px' : '10px'};">${it.urun||'-'}</div></th>`;
     });
-    html+='<th class="sd-total-col">TOPLAM</th></tr></thead><tbody>';
-    
+    html+=`<th class="sd-total-col" style="padding:${thPadding};">TOPLAM</th></tr></thead><tbody>`;
+
     const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
     const bedLabels=['XXS','XS','S','M','L','XL','XXL','3XL'];
     beds.forEach((b,idx)=>{
       const rowTotal=toptanItems.reduce((sum,it)=>sum+(+it[b]||0),0);
-      html+=`<tr><td class="sd-size-label"><span class="sd-size-badge">${bedLabels[idx]}</span></td>`;
-      toptanItems.forEach(it=>{const v=(+it[b]||0);html+=`<td class="${v>0?'sd-cell-value':'sd-cell-empty'}">${v>0?v.toLocaleString('tr'):'-'}</td>`;});
-      html+=`<td class="sd-total-col"><strong>${rowTotal>0?rowTotal.toLocaleString('tr'):'-'}</strong></td></tr>`;
+      html+=`<tr><td class="sd-size-label" style="padding:${tdPadding};"><span class="sd-size-badge" style="font-size:${badgeFontSize};">${bedLabels[idx]}</span></td>`;
+      toptanItems.forEach(it=>{const v=(+it[b]||0);html+=`<td class="${v>0?'sd-cell-value':'sd-cell-empty'}" style="padding:${tdPadding};">${v>0?v.toLocaleString('tr'):'-'}</td>`;});
+      html+=`<td class="sd-total-col" style="padding:${tdPadding};"><strong>${rowTotal>0?rowTotal.toLocaleString('tr'):'-'}</strong></td></tr>`;
     });
     html+='</tbody></table></div></div>';
   }
