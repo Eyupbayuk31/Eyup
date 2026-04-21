@@ -3542,7 +3542,9 @@ body::after{
 
     <div class="nav-section">Yönetim</div>
     <a onclick="showPage('atolye')"><i class="fas fa-industry"></i><span>Atölyeler</span></a>
-    <a onclick="showPage('stok')"><i class="fas fa-warehouse"></i><span>Stok Takibi</span></a>
+    <a onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
+    <a onclick="showPage('stok-utupaket')"><i class="fas fa-box-open"></i><span>Ütü &amp; Paket</span></a>
+    <a onclick="showPage('stok-dikim')"><i class="fas fa-scissors"></i><span>Dikim</span></a>
     <a onclick="showPage('takvim')"><i class="fas fa-calendar-alt"></i><span>Takvim</span></a>
     <a onclick="showPage('reports')"><i class="fas fa-chart-bar"></i><span>Raporlar</span></a>
     <a onclick="showPage('geridonusum')"><i class="fas fa-trash-restore"></i><span>Geri Dönüşüm</span></a>
@@ -4116,51 +4118,49 @@ body::after{
     </div>
 
     <!-- ========== STOK TAKİBİ ========== -->
+    <!-- ========== GENEL STOK (uyarı merkezi) ========== -->
     <div class="page" id="page-stok">
       <div class="section-header">
-        <div><h2>Stok Takibi</h2><p>Malzeme ve ürün stoklarını yönetin</p></div>
+        <div><h2><i class="fas fa-triangle-exclamation" style="color:#ef4444;margin-right:8px;"></i>Genel Stok</h2><p>Düşük ve kritik stok uyarıları</p></div>
         <button class="btn btn-primary" onclick="openStokModal()"><i class="fas fa-plus"></i> Yeni Stok Ekle</button>
       </div>
-
-      <!-- Stok İstatistikleri -->
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(124,58,237,0.12);color:var(--primary);"><i class="fas fa-boxes-stacked"></i></div>
-          <div class="stat-value" id="stokTotal">0</div>
-          <div class="stat-label">Toplam Stok Kalemi</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(16,185,129,0.12);color:#10b981;"><i class="fas fa-check-circle"></i></div>
-          <div class="stat-value" id="stokYeterli">0</div>
-          <div class="stat-label">Yeterli Stok</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;"><i class="fas fa-exclamation-triangle"></i></div>
-          <div class="stat-value" id="stokDusuk">0</div>
-          <div class="stat-label">Düşük Stok Uyarısı</div>
-        </div>
+      <!-- Özet kartları -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(124,58,237,0.12);color:var(--primary);"><i class="fas fa-boxes-stacked"></i></div><div class="stat-value" id="stokTotal">0</div><div class="stat-label">Toplam Kalem</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;"><i class="fas fa-exclamation-circle"></i></div><div class="stat-value" id="stokYaklasan">0</div><div class="stat-label">Sınıra Yakın</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-value" id="stokDusuk">0</div><div class="stat-label">Düşük / Tükendi</div></div>
       </div>
-
-      <!-- Stok Arama ve Filtre -->
-      <div class="search-bar" style="margin-bottom:12px;">
-        <i class="fas fa-search"></i>
-        <input type="text" id="stokSearch" placeholder="Stok adı veya kategori ara..." oninput="renderStokList()">
-      </div>
+      <!-- Uyarı paneli -->
+      <div id="stokUyariPanel" style="margin-bottom:16px;"></div>
+      <!-- Tüm stoklar (aciliyete göre sıralı) -->
+      <div class="search-bar" style="margin-bottom:12px;"><i class="fas fa-search"></i><input type="text" id="stokSearch" placeholder="Stok adı veya kategori ara..." oninput="renderStokList()"></div>
       <div class="type-filter-bar" style="margin-bottom:16px;" id="stokTypeFilter"></div>
-
-      <!-- Stok Tablosu (Masaüstü) -->
-      <div class="card table-desktop" style="padding:0;">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Min. Stok</th><th>Durum</th><th>Son Güncelleme</th><th>İşlem</th></tr></thead>
-            <tbody id="stokTable"></tbody>
-          </table>
-        </div>
-        <div class="empty-state" id="stokEmpty" style="display:none;"><i class="fas fa-warehouse"></i><p>Henüz stok kaydı yok.</p></div>
-      </div>
-
-      <!-- Stok Kartları (Mobil) -->
+      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>Güncelleme</th><th>İşlem</th></tr></thead><tbody id="stokTable"></tbody></table></div><div class="empty-state" id="stokEmpty" style="display:none;"><i class="fas fa-warehouse"></i><p>Henüz stok kaydı yok.</p></div></div>
       <div class="table-mobile" id="stokMobile" style="display:none;"></div>
+    </div>
+
+    <!-- ========== ÜTÜ & PAKET STOĞU ========== -->
+    <div class="page" id="page-stok-utupaket">
+      <div class="section-header">
+        <div><h2><i class="fas fa-box-open" style="color:var(--primary);margin-right:8px;"></i>Ütü &amp; Paket</h2><p>Poşet, Kılçık, Bant Geniş, Bant Dar stokları</p></div>
+        <button class="btn btn-primary" onclick="openStokModal(null,'Poşet')"><i class="fas fa-plus"></i> Ekle</button>
+      </div>
+      <div id="stokUPUyari" style="margin-bottom:12px;"></div>
+      <div class="type-filter-bar" style="margin-bottom:14px;" id="stokUPFilter"></div>
+      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="stokUPTable"></tbody></table></div><div class="empty-state" id="stokUPEmpty" style="display:none;"><i class="fas fa-box-open"></i><p>Henüz kayıt yok.</p></div></div>
+      <div class="table-mobile" id="stokUPMobile" style="display:none;"></div>
+    </div>
+
+    <!-- ========== DİKİM STOĞU ========== -->
+    <div class="page" id="page-stok-dikim">
+      <div class="section-header">
+        <div><h2><i class="fas fa-scissors" style="color:var(--primary);margin-right:8px;"></i>Dikim</h2><p>Fermuar, Düğme, Lastik stokları</p></div>
+        <button class="btn btn-primary" onclick="openStokModal(null,'Fermuar')"><i class="fas fa-plus"></i> Ekle</button>
+      </div>
+      <div id="stokDKUyari" style="margin-bottom:12px;"></div>
+      <div class="type-filter-bar" style="margin-bottom:14px;" id="stokDKFilter"></div>
+      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="stokDKTable"></tbody></table></div><div class="empty-state" id="stokDKEmpty" style="display:none;"><i class="fas fa-scissors"></i><p>Henüz kayıt yok.</p></div></div>
+      <div class="table-mobile" id="stokDKMobile" style="display:none;"></div>
     </div>
 
     <!-- Stok Ekleme/Düzenleme Modalı -->
@@ -4174,13 +4174,21 @@ body::after{
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
           <div class="form-group"><label>Kategori *</label>
             <select class="form-input" id="stokKategori">
-              <option value="Poşet">📦 Poşet</option>
-              <option value="Fermuar">🔗 Fermuar</option>
-              <option value="Lastik">📏 Lastik</option>
-              <option value="Düğme">🔘 Düğme</option>
-              <option value="Bant">🎀 Bant</option>
-              <option value="Kılçık">📌 Kılçık</option>
-              <option value="Diğer">📋 Diğer</option>
+              <optgroup label="Ütü &amp; Paket">
+                <option value="Poşet">📦 Poşet</option>
+                <option value="Bant Geniş">🎀 Bant Geniş</option>
+                <option value="Bant Dar">🎗️ Bant Dar</option>
+                <option value="Kılçık">📌 Kılçık</option>
+              </optgroup>
+              <optgroup label="Dikim">
+                <option value="Fermuar">🔗 Fermuar</option>
+                <option value="Düğme">🔘 Düğme</option>
+                <option value="Lastik">📏 Lastik</option>
+              </optgroup>
+              <optgroup label="Diğer">
+                <option value="Bant">🎀 Bant (Eski)</option>
+                <option value="Diğer">📋 Diğer</option>
+              </optgroup>
             </select>
           </div>
           <div class="form-group"><label>Birim *</label>
@@ -5009,7 +5017,7 @@ function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',stok:'Stok Takibi',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','reports','settings'];
 
 function showPage(page){
@@ -5019,7 +5027,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','atolye','stok','takvim','reports','geridonusum','settings','qr','signature','templates'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','atolye','stok','stok-utupaket','stok-dikim','takvim','reports','geridonusum','settings','qr','signature','templates'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -5166,7 +5174,7 @@ function refreshAtolyeList(){
 let stokEditId = null;
 let stokCatFilter = 'all';
 
-function openStokModal(id){
+function openStokModal(id, defaultKategori){
   stokEditId = id || null;
   document.getElementById('stokModalTitle').textContent = id ? 'Stok Düzenle' : 'Yeni Stok Ekle';
   if(id){
@@ -5181,7 +5189,8 @@ function openStokModal(id){
       document.getElementById('stokNot').value = item.not || '';
     }
   } else {
-    ['stokAdi','stokMiktar','stokMin','stokNot'].forEach(id => document.getElementById(id).value = '');
+    ['stokAdi','stokMiktar','stokMin','stokNot'].forEach(i => document.getElementById(i).value = '');
+    if(defaultKategori) document.getElementById('stokKategori').value = defaultKategori;
   }
   document.getElementById('stokModal').classList.add('show');
 }
@@ -5264,10 +5273,133 @@ function stokHareket(id, tip){
 }
 
 function getStockStatus(miktar, minStok){
-  if(minStok <= 0) return { label: 'Yeterli', class: 'chip-success', barClass: 'green' };
-  if(miktar <= 0) return { label: 'Tükendi!', class: 'chip-danger', barClass: 'red' };
-  if(miktar <= minStok) return { label: 'Düşük', class: 'chip-warning', barClass: 'yellow' };
-  return { label: 'Yeterli', class: 'chip-success', barClass: 'green' };
+  if(minStok <= 0) return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0 };
+  if(miktar <= 0) return { label: '🚨 Tükendi!', class: 'chip-danger', icon: '🚨', urgent: 3 };
+  if(miktar <= minStok) return { label: '⚠️ Düşük', class: 'chip-warning', icon: '⚠️', urgent: 2 };
+  if(miktar <= minStok * 1.5) return { label: '🔶 Yaklaşıyor', class: 'chip-info', icon: '🔶', urgent: 1 };
+  return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0 };
+}
+
+function _stokUyariPanelHtml(list, cats){
+  const filtered = cats ? list.filter(s => cats.includes(s.kategori)) : list;
+  const uyarilar = filtered
+    .map(s => ({ ...s, st: getStockStatus(s.miktar, s.minStok) }))
+    .filter(s => s.st.urgent > 0)
+    .sort((a,b) => b.st.urgent - a.st.urgent || (a.miktar/Math.max(1,a.minStok)) - (b.miktar/Math.max(1,b.minStok)));
+  if(!uyarilar.length) return '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px 16px;font-size:13px;color:#10b981;"><i class="fas fa-check-circle"></i> Tüm stoklar yeterli seviyede.</div>';
+  return uyarilar.map(s => {
+    const pct = s.minStok > 0 ? Math.min(100, Math.round(s.miktar/s.minStok*100)) : 100;
+    const bg = s.st.urgent===3?'rgba(239,68,68,0.08)':s.st.urgent===2?'rgba(245,158,11,0.08)':'rgba(99,102,241,0.06)';
+    const border = s.st.urgent===3?'rgba(239,68,68,0.4)':s.st.urgent===2?'rgba(245,158,11,0.4)':'rgba(99,102,241,0.3)';
+    const barColor = s.st.urgent===3?'#ef4444':s.st.urgent===2?'#f59e0b':'#6366f1';
+    return `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+        <div><span style="font-weight:700;font-size:13px;">${s.st.icon} ${s.ad}</span> <span style="font-size:11px;color:var(--text-muted);">${s.kategori}</span></div>
+        <div style="font-size:13px;font-weight:700;">${s.miktar.toLocaleString('tr-TR')} / <span style="color:var(--text-muted);font-weight:400;">${s.minStok.toLocaleString('tr-TR')} ${s.birim} sınır</span></div>
+      </div>
+      <div style="background:var(--bg-card);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;">
+        <div style="background:${barColor};height:100%;width:${pct}%;border-radius:4px;transition:width .3s;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-xs btn-success" onclick="stokHareket(${s.id},'giris')"><i class="fas fa-plus"></i> Giriş</button>
+        <button class="btn btn-xs btn-secondary" onclick="openStokModal(${s.id})"><i class="fas fa-pen"></i> Düzenle</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _stokTableRows(list){
+  return list.map(s=>{
+    const st = getStockStatus(s.miktar, s.minStok);
+    const updated = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('tr-TR') : '-';
+    return `<tr>
+      <td><b>${s.ad}</b>${s.not?'<div style="font-size:10px;color:var(--text-muted);">'+s.not+'</div>':''}</td>
+      <td><span class="chip chip-info" style="font-size:10px;">${s.kategori}</span></td>
+      <td><b>${s.miktar.toLocaleString('tr-TR')}</b></td>
+      <td>${s.birim}</td>
+      <td>${s.minStok>0?s.minStok.toLocaleString('tr-TR'):'-'}</td>
+      <td><span class="chip ${st.class}" style="font-size:11px;">${st.label}</span></td>
+      <td style="font-size:11px;">${updated}</td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="btn btn-xs btn-success" onclick="stokHareket(${s.id},'giris')" title="Giriş"><i class="fas fa-plus"></i></button>
+        <button class="btn btn-xs btn-danger" onclick="stokHareket(${s.id},'cikis')" title="Çıkış"><i class="fas fa-minus"></i></button>
+        <button class="btn btn-xs btn-secondary" onclick="openStokModal(${s.id})"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-xs btn-danger" onclick="deleteStok(${s.id})"><i class="fas fa-trash"></i></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function _stokMobileCards(list){
+  return list.map(s=>{
+    const st = getStockStatus(s.miktar, s.minStok);
+    return `<div class="mobile-card" style="${st.urgent>0?'border-left:3px solid '+(st.urgent===3?'#ef4444':st.urgent===2?'#f59e0b':'#6366f1')+';':''}">
+      <div class="mc-header">
+        <span style="font-weight:700;">${s.ad}</span>
+        <span class="chip ${st.class}" style="font-size:11px;">${st.label}</span>
+      </div>
+      <div class="mc-meta">
+        <span><i class="fas fa-tag"></i> ${s.kategori}</span>
+        <span><i class="fas fa-cubes"></i> ${s.miktar.toLocaleString('tr-TR')} ${s.birim}</span>
+        ${s.minStok>0?`<span><i class="fas fa-flag"></i> Sınır: ${s.minStok.toLocaleString('tr-TR')}</span>`:''}
+      </div>
+      <div class="mc-actions">
+        <button class="btn btn-xs btn-success" onclick="stokHareket(${s.id},'giris')"><i class="fas fa-plus"></i> Giriş</button>
+        <button class="btn btn-xs btn-danger" onclick="stokHareket(${s.id},'cikis')"><i class="fas fa-minus"></i> Çıkış</button>
+        <button class="btn btn-xs btn-secondary" onclick="openStokModal(${s.id})"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-xs btn-danger" onclick="deleteStok(${s.id})"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const STOK_UP_CATS = ['Poşet','Bant Geniş','Bant Dar','Kılçık','Bant'];
+const STOK_DK_CATS = ['Fermuar','Düğme','Lastik'];
+
+function renderStokUtuPaket(){
+  const all = getData('stoklar');
+  const list = all.filter(s => STOK_UP_CATS.includes(s.kategori))
+    .sort((a,b) => getStockStatus(a.miktar,a.minStok).urgent - getStockStatus(b.miktar,b.minStok).urgent ? getStockStatus(b.miktar,b.minStok).urgent - getStockStatus(a.miktar,a.minStok).urgent : 0);
+  // Uyarı paneli
+  const uyari = document.getElementById('stokUPUyari');
+  if(uyari) uyari.innerHTML = _stokUyariPanelHtml(all, STOK_UP_CATS);
+  // Kategori filtre
+  const cats = ['Poşet','Bant Geniş','Bant Dar','Kılçık'];
+  const filterBar = document.getElementById('stokUPFilter');
+  if(filterBar) filterBar.innerHTML = cats.map(c=>{
+    const cnt = list.filter(s=>s.kategori===c).length;
+    if(!cnt) return '';
+    return `<div class="type-chip" onclick="openStokModal(null,'${c}')" style="cursor:pointer;"><i class="fas fa-plus"></i> + ${c} <span class="tc-count">${cnt}</span></div>`;
+  }).join('');
+  // Tablo
+  const sortedList = [...list].sort((a,b) => getStockStatus(b.miktar,b.minStok).urgent - getStockStatus(a.miktar,a.minStok).urgent);
+  const tbody = document.getElementById('stokUPTable');
+  const empty = document.getElementById('stokUPEmpty');
+  const mobile = document.getElementById('stokUPMobile');
+  if(tbody) tbody.innerHTML = sortedList.length ? _stokTableRows(sortedList) : '';
+  if(empty) empty.style.display = sortedList.length ? 'none' : 'flex';
+  if(mobile){ mobile.style.display = sortedList.length ? 'block' : 'none'; mobile.innerHTML = _stokMobileCards(sortedList); }
+}
+
+function renderStokDikim(){
+  const all = getData('stoklar');
+  const list = all.filter(s => STOK_DK_CATS.includes(s.kategori));
+  const uyari = document.getElementById('stokDKUyari');
+  if(uyari) uyari.innerHTML = _stokUyariPanelHtml(all, STOK_DK_CATS);
+  const cats = ['Fermuar','Düğme','Lastik'];
+  const filterBar = document.getElementById('stokDKFilter');
+  if(filterBar) filterBar.innerHTML = cats.map(c=>{
+    const cnt = list.filter(s=>s.kategori===c).length;
+    if(!cnt) return '';
+    return `<div class="type-chip" onclick="openStokModal(null,'${c}')" style="cursor:pointer;"><i class="fas fa-plus"></i> + ${c} <span class="tc-count">${cnt}</span></div>`;
+  }).join('');
+  const sortedList = [...list].sort((a,b) => getStockStatus(b.miktar,b.minStok).urgent - getStockStatus(a.miktar,a.minStok).urgent);
+  const tbody = document.getElementById('stokDKTable');
+  const empty = document.getElementById('stokDKEmpty');
+  const mobile = document.getElementById('stokDKMobile');
+  if(tbody) tbody.innerHTML = sortedList.length ? _stokTableRows(sortedList) : '';
+  if(empty) empty.style.display = sortedList.length ? 'none' : 'flex';
+  if(mobile){ mobile.style.display = sortedList.length ? 'block' : 'none'; mobile.innerHTML = _stokMobileCards(sortedList); }
 }
 
 function renderStokTypeFilter(){
@@ -5290,22 +5422,30 @@ function setStokCatFilter(cat){
 }
 
 function renderStokList(){
-  let list = getData('stoklar');
+  const allList = getData('stoklar');
   renderStokTypeFilter();
 
-  // Update stats
-  document.getElementById('stokTotal').textContent = list.length;
-  const dusuk = list.filter(s => s.minStok > 0 && s.miktar <= s.minStok).length;
-  const yeterli = list.length - dusuk;
-  document.getElementById('stokYeterli').textContent = yeterli;
+  // Update stats using new HTML IDs
+  document.getElementById('stokTotal').textContent = allList.length;
+  const yaklasan = allList.filter(s => { const st = getStockStatus(s.miktar, s.minStok); return st.urgent === 1; }).length;
+  const dusuk = allList.filter(s => { const st = getStockStatus(s.miktar, s.minStok); return st.urgent >= 2; }).length;
+  document.getElementById('stokYaklasan').textContent = yaklasan;
   document.getElementById('stokDusuk').textContent = dusuk;
 
+  // Uyarı paneli — tüm kategoriler
+  const uyariPanel = document.getElementById('stokUyariPanel');
+  if(uyariPanel) uyariPanel.innerHTML = _stokUyariPanelHtml(allList, null);
+
   // Filter by category
+  let list = [...allList];
   if(stokCatFilter !== 'all') list = list.filter(s => s.kategori === stokCatFilter);
 
   // Filter by search
   const search = (document.getElementById('stokSearch')?.value || '').toLowerCase().trim();
   if(search) list = list.filter(s => s.ad.toLowerCase().includes(search) || s.kategori.toLowerCase().includes(search));
+
+  // Sort by urgency descending
+  list.sort((a,b) => getStockStatus(b.miktar, b.minStok).urgent - getStockStatus(a.miktar, a.minStok).urgent);
 
   const tbody = document.getElementById('stokTable');
   const emptyEl = document.getElementById('stokEmpty');
@@ -6776,6 +6916,8 @@ function refreshPage(page){
   else if(page==='list'){currentTypeFilter='all';document.getElementById('listSearch').value='';document.getElementById('filterDate').value='all';document.getElementById('filterAtolye').value='all';document.getElementById('filterDurum').value='all';document.getElementById('filterSort').value='newest';applyFilters();}
   else if(page==='atolye')refreshAtolyeList();
   else if(page==='stok')renderStokList();
+  else if(page==='stok-utupaket')renderStokUtuPaket();
+  else if(page==='stok-dikim')renderStokDikim();
   else if(page==='takvim')renderCalendar();
   else if(page==='lastik')refreshLastikList();
   else if(page==='toptan')refreshToptanList();
