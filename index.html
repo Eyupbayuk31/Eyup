@@ -5680,9 +5680,9 @@ function renderAksesuarTable(){
 
     return `<tr>
       <td style="position:sticky;left:0;background:var(--card);z-index:5;">${renderTextInput('modelKodu', 'Model Kodu')}</td>
-      <td>${renderDateInput('cikisDikim')}</td>
+      <td>${renderTextInput('cikisDikim', '02.03.2026 Sür Tekstil')}</td>
       <td>${renderTextInput('koliNo', 'K-001')}</td>
-      <td>${renderDateInput('termin')}</td>
+      <td>${renderTextInput('termin', '15.04.2026')}</td>
       <td>${renderNumberInput('adet')}</td>
       <td>${renderCounter('markaEtiketi')}</td>
       <td>${renderCounter('icBarkod')}</td>
@@ -5694,7 +5694,7 @@ function renderAksesuarTable(){
       <td>${renderCounter('susKarti')}</td>
       <td>${renderCounter('lisansKarti')}</td>
       <td>${renderTextInput('raf', 'Raf No')}</td>
-      <td>${renderDateInput('cikisUtupaket')}</td>
+      <td>${renderTextInput('cikisUtupaket', '20.04.2026')}</td>
       <td style="position:sticky;right:0;background:var(--card);z-index:5;">
         <button onclick="deleteAksesuar(${item.id})" class="btn-icon" title="Sil" style="color:#ef4444;"><i class="fas fa-trash"></i></button>
       </td>
