@@ -11753,135 +11753,160 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 /* ---- Login card (glass) ---- */
 #loginCard{
   position:relative; z-index:2;
-  width:100%; max-width:440px;
-  padding:38px 36px 28px;
-  border-radius:28px;
+  width:100%; max-width:460px;
+  padding:42px 40px 32px;
+  border-radius:32px;
   color:#1a1330;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(252,250,255,.96) 100%);
-  border:1px solid rgba(255,255,255,.7);
+    linear-gradient(135deg, rgba(255,255,255,.95) 0%, rgba(248,245,255,.92) 100%);
+  border:1px solid rgba(255,255,255,.8);
   box-shadow:
-    0 30px 80px -20px rgba(10,6,30,.55),
-    0 12px 30px -10px rgba(124,58,237,.35),
-    inset 0 1px 0 rgba(255,255,255,.95);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  animation: loginPop .45s cubic-bezier(.22,1,.36,1);
+    0 40px 100px -25px rgba(10,6,30,.6),
+    0 20px 50px -15px rgba(124,58,237,.4),
+    inset 0 2px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(124,58,237,.1);
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  animation: loginPop .5s cubic-bezier(.22,1,.36,1);
 }
 #loginCard::before{
-  content:""; position:absolute; inset:-1px; border-radius:29px;
-  padding:1px; pointer-events:none;
+  content:""; position:absolute; inset:-2px; border-radius:34px;
+  padding:2px; pointer-events:none;
   background: linear-gradient(135deg,
-    rgba(255,255,255,.9) 0%,
-    rgba(124,58,237,.25) 30%,
-    rgba(59,130,246,.2) 60%,
-    rgba(255,255,255,.9) 100%);
+    rgba(255,255,255,1) 0%,
+    rgba(139,92,246,.6) 25%,
+    rgba(236,72,153,.5) 50%,
+    rgba(59,130,246,.6) 75%,
+    rgba(255,255,255,1) 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
-  opacity:.85;
+  opacity:.9;
+  animation: borderShimmer 3s ease-in-out infinite;
+}
+@keyframes borderShimmer {
+  0%, 100% { opacity:.9; }
+  50% { opacity:.6; }
 }
 @keyframes loginPop {
-  from{ opacity:0; transform:translateY(14px) scale(.985); }
-  to  { opacity:1; transform:none; }
+  from{ opacity:0; transform:translateY(20px) scale(.96); filter:blur(4px); }
+  to  { opacity:1; transform:none; filter:blur(0); }
 }
 
 /* ---- Brand / logo ---- */
 #loginCard .brand{
   display:flex; flex-direction:column; align-items:center;
-  margin-bottom:28px;
+  margin-bottom:32px;
 }
 #loginCard .logo-wrap{
-  position:relative; width:84px; height:84px;
+  position:relative; width:96px; height:96px;
   display:flex; align-items:center; justify-content:center;
-  margin-bottom:18px;
+  margin-bottom:20px;
 }
 #loginCard .logo-wrap::before{
-  content:""; position:absolute; inset:-8px;
-  border-radius:30px;
+  content:""; position:absolute; inset:-12px;
+  border-radius:36px;
   background: conic-gradient(from 0deg,
-    #7c3aed, #3b82f6, #ec4899, #7c3aed);
-  filter: blur(14px); opacity:.55;
-  animation: logoHalo 6s linear infinite;
+    #8b5cf6, #ec4899, #3b82f6, #10b981, #8b5cf6);
+  filter: blur(20px); opacity:.7;
+  animation: logoHalo 8s linear infinite;
 }
 @keyframes logoHalo{ to { transform:rotate(360deg); } }
 #loginCard .logo-wrap::after{
-  content:""; position:absolute; inset:-2px;
-  border-radius:22px;
-  background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.1));
+  content:""; position:absolute; inset:-3px;
+  border-radius:28px;
+  background: linear-gradient(135deg, rgba(255,255,255,1), rgba(255,255,255,.3));
   z-index:0;
 }
 #loginCard .logo{
   position:relative; z-index:1;
   width:100%; height:100%;
-  border-radius:20px;
+  border-radius:24px;
   background:
-    linear-gradient(135deg, #8b5cf6 0%, #6d28d9 55%, #4c1d95 100%);
+    linear-gradient(135deg, #a78bfa 0%, #8b5cf6 40%, #7c3aed 70%, #6d28d9 100%);
   display:flex; align-items:center; justify-content:center;
-  color:#fff; font-size:36px;
+  color:#fff; font-size:42px;
   box-shadow:
-    0 16px 40px -8px rgba(124,58,237,.6),
-    inset 0 1px 0 rgba(255,255,255,.4),
-    inset 0 -8px 16px rgba(0,0,0,.15);
+    0 20px 50px -10px rgba(124,58,237,.7),
+    inset 0 2px 0 rgba(255,255,255,.5),
+    inset 0 -10px 20px rgba(0,0,0,.2);
   letter-spacing:-.02em;
+  animation: logoFloat 3s ease-in-out infinite;
 }
-#loginCard .logo i{ filter: drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+#loginCard .logo i{
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.3));
+  animation: logoPulse 2s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
 
 #loginCard h1{
   font-family:'Outfit','Inter',sans-serif;
-  font-size:30px; font-weight:800;
-  background: linear-gradient(135deg, #1a1330 0%, #6d28d9 100%);
+  font-size:34px; font-weight:900;
+  background: linear-gradient(135deg, #1a1330 0%, #7c3aed 50%, #ec4899 100%);
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  margin:0 0 6px; letter-spacing:-.8px;
+  margin:0 0 8px; letter-spacing:-1px;
   text-align:center;
+  filter: drop-shadow(0 2px 4px rgba(124,58,237,.15));
 }
 #loginCard .subtitle{
-  font-size:14px; color:#6b7280; text-align:center;
-  font-weight:500; letter-spacing:-.1px;
+  font-size:15px; color:#6b7280; text-align:center;
+  font-weight:500; letter-spacing:-.2px;
 }
 
 /* ---- Form ---- */
-#loginCard .field{ margin-bottom:16px; }
+#loginCard .field{ margin-bottom:18px; }
 #loginCard label{
-  display:block; font-size:11px; font-weight:700;
-  color:#4b5563; margin-bottom:8px;
-  text-transform:uppercase; letter-spacing:1.1px;
+  display:block; font-size:12px; font-weight:700;
+  color:#4b5563; margin-bottom:10px;
+  text-transform:uppercase; letter-spacing:1px;
 }
 #loginCard .input-wrap{ position:relative; }
 #loginCard .input-wrap .ico-left{
-  position:absolute; left:18px; top:50%; transform:translateY(-50%);
-  color:#9ca3af; font-size:15px; pointer-events:none;
-  transition: color .25s, transform .25s;
-  width:18px; text-align:center; z-index:2;
+  position:absolute; left:20px; top:50%; transform:translateY(-50%);
+  color:#9ca3af; font-size:16px; pointer-events:none;
+  transition: color .3s, transform .3s;
+  width:20px; text-align:center; z-index:2;
 }
 #loginCard input[type="text"],
 #loginCard input[type="password"]{
   width:100% !important;
-  padding:15px 50px 15px 52px !important;
-  border:1.5px solid #e5e7eb !important;
-  border-radius:14px !important;
+  padding:16px 54px 16px 56px !important;
+  border:2px solid #e5e7eb !important;
+  border-radius:16px !important;
   font-size:15px !important;
-  background:#f8f9fc !important;
-  transition: all .25s cubic-bezier(.4,0,.2,1);
+  background:linear-gradient(135deg, #fafbff 0%, #f8f9fc 100%) !important;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
   font-family:inherit !important;
   color:#1a1330 !important;
   box-sizing:border-box !important;
   text-indent:0 !important;
   height:auto !important;
   font-weight:500;
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,.05);
 }
 #loginCard input::placeholder{ color:#9ca3af; opacity:1; font-weight:400; }
-#loginCard input:hover{ border-color:#d1d5db !important; }
+#loginCard input:hover{
+  border-color:#d1d5db !important;
+  box-shadow: 0 4px 12px -2px rgba(0,0,0,.08);
+}
 #loginCard input:focus{
   outline:none !important;
-  border-color: #7c3aed !important;
-  background:#fff !important;
+  border-color: #8b5cf6 !important;
+  background:linear-gradient(135deg, #fff 0%, #faf5ff 100%) !important;
   box-shadow:
-    0 0 0 4px rgba(124,58,237,.12),
-    0 4px 12px -2px rgba(124,58,237,.15) !important;
+    0 0 0 5px rgba(139,92,246,.15),
+    0 8px 20px -4px rgba(124,58,237,.2) !important;
+  transform: translateY(-1px);
 }
 #loginCard .input-wrap:focus-within .ico-left{
-  color:#7c3aed;
-  transform: translateY(-50%) scale(1.08);
+  color:#8b5cf6;
+  transform: translateY(-50%) scale(1.12);
 }
 
 #loginCard .toggle-pass{
@@ -11984,48 +12009,55 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
 /* Main button */
 #loginCard .login-btn{
-  width:100%; padding:16px;
-  border:none; border-radius:14px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 50%, #4c1d95 100%);
-  background-size: 200% 200%;
+  width:100%; padding:18px;
+  border:none; border-radius:16px;
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 25%, #7c3aed 50%, #6d28d9 75%, #5b21b6 100%);
+  background-size: 300% 300%;
   background-position: 0% 50%;
-  color:#fff; font-size:15px; font-weight:700;
-  cursor:pointer; transition: all .3s cubic-bezier(.4,0,.2,1);
+  color:#fff; font-size:16px; font-weight:700;
+  cursor:pointer; transition: all .4s cubic-bezier(.4,0,.2,1);
   box-shadow:
-    0 12px 28px -6px rgba(124,58,237,.55),
-    0 4px 10px -2px rgba(124,58,237,.35),
-    inset 0 1px 0 rgba(255,255,255,.22);
+    0 16px 40px -8px rgba(124,58,237,.6),
+    0 6px 16px -4px rgba(124,58,237,.4),
+    inset 0 2px 0 rgba(255,255,255,.3),
+    inset 0 -2px 0 rgba(0,0,0,.1);
   font-family:inherit;
   position:relative; overflow:hidden;
-  display:flex; align-items:center; justify-content:center; gap:10px;
-  letter-spacing:.2px;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  letter-spacing:.3px;
+  animation: buttonGlow 3s ease-in-out infinite;
+}
+@keyframes buttonGlow {
+  0%, 100% { box-shadow: 0 16px 40px -8px rgba(124,58,237,.6), 0 6px 16px -4px rgba(124,58,237,.4), inset 0 2px 0 rgba(255,255,255,.3), inset 0 -2px 0 rgba(0,0,0,.1); }
+  50% { box-shadow: 0 20px 50px -10px rgba(124,58,237,.7), 0 8px 20px -4px rgba(124,58,237,.5), inset 0 2px 0 rgba(255,255,255,.4), inset 0 -2px 0 rgba(0,0,0,.15); }
 }
 #loginCard .login-btn::before{
   content:""; position:absolute; inset:0;
   background: linear-gradient(120deg,
-    transparent 30%,
-    rgba(255,255,255,.28) 50%,
-    transparent 70%);
+    transparent 20%,
+    rgba(255,255,255,.35) 50%,
+    transparent 80%);
   transform: translateX(-100%);
-  transition: transform .6s;
+  transition: transform .7s;
 }
 #loginCard .login-btn:hover{
-  transform:translateY(-2px);
+  transform:translateY(-3px) scale(1.01);
   background-position: 100% 50%;
   box-shadow:
-    0 18px 36px -6px rgba(124,58,237,.65),
-    0 6px 14px -2px rgba(124,58,237,.45),
-    inset 0 1px 0 rgba(255,255,255,.3);
+    0 24px 60px -12px rgba(124,58,237,.75),
+    0 10px 24px -4px rgba(124,58,237,.55),
+    inset 0 2px 0 rgba(255,255,255,.4),
+    inset 0 -2px 0 rgba(0,0,0,.15);
 }
 #loginCard .login-btn:hover::before{ transform:translateX(100%); }
-#loginCard .login-btn:active{ transform:translateY(0) scale(.995); }
+#loginCard .login-btn:active{ transform:translateY(-1px) scale(.99); }
 #loginCard .login-btn:disabled,
 #loginCard .login-btn.loading{ opacity:.78; cursor:wait; }
-#loginCard .login-btn .btn-text{ position:relative; z-index:1; display:inline-flex; align-items:center; gap:10px; }
-#loginCard .login-btn .btn-text i{ font-size:14px; }
+#loginCard .login-btn .btn-text{ position:relative; z-index:1; display:inline-flex; align-items:center; gap:12px; }
+#loginCard .login-btn .btn-text i{ font-size:15px; }
 #loginCard .login-btn .spinner{
-  display:none; width:18px; height:18px;
-  border:2.5px solid rgba(255,255,255,.35);
+  display:none; width:20px; height:20px;
+  border:3px solid rgba(255,255,255,.3);
   border-top-color:#fff; border-radius:50%;
   animation: spin .8s linear infinite;
 }
@@ -12284,7 +12316,6 @@ body.logged-out { overflow:hidden !important; }
 
     <div class="footer-note">
       <b>İrsaliye Pro</b> — Eyüp tarafından yapılmıştır
-      <br><span class="version">v6</span>
     </div>
   </div>
 </div>
