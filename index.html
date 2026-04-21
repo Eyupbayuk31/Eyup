@@ -6280,16 +6280,31 @@ function generatePDF(id, type) {
     const bantNames = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
     let hasSizes = Object.values(item.sizes).some(v => v > 0);
     if (hasSizes) {
-      html += `<div class="section-title">📦 Poşet Ölçüleri</div><table><thead><tr><th>Ölçü</th><th>Adet</th></tr></thead><tbody>`;
-      for (let k in item.sizes) { if (item.sizes[k] > 0) html += `<tr><td><b>${sizeNames[k]||k}</b></td><td>${item.sizes[k]}</td></tr>`; }
+      // Poşet sayısına göre font boyutunu ayarla
+      const sizeCount = Object.values(item.sizes).filter(v => v > 0).length;
+      const fontSize = sizeCount >= 5 ? '9px' : sizeCount >= 4 ? '10px' : '11px';
+      const padding = sizeCount >= 5 ? '4px 6px' : sizeCount >= 4 ? '5px 7px' : '6px 8px';
+
+      html += `<div class="section-title" style="font-size:${sizeCount >= 5 ? '11px' : '12px'};">📦 Poşet Ölçüleri</div>`;
+      html += `<table style="margin-bottom:${sizeCount >= 5 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Ölçü</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
+      for (let k in item.sizes) {
+        if (item.sizes[k] > 0) html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${sizeNames[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.sizes[k]}</td></tr>`;
+      }
       const totalS = Object.values(item.sizes).reduce((a,b)=>a+b,0);
-      html += `</tbody></table><div class="total-row">Toplam Poşet: ${totalS}</div>`;
+      html += `</tbody></table><div class="total-row" style="font-size:${sizeCount >= 5 ? '12px' : '14px'};padding:${sizeCount >= 5 ? '6px 0' : '8px 0'};">Toplam Poşet: ${totalS}</div>`;
     }
     if (item.bant) {
       let hasBant = Object.values(item.bant).some(v => v > 0);
       if (hasBant) {
-        html += `<div class="section-title">🎀 Bant & Kılçık</div><table><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>`;
-        for (let k in item.bant) { if (item.bant[k] > 0) html += `<tr><td><b>${bantNames[k]||k}</b></td><td>${item.bant[k]}</td></tr>`; }
+        const bantCount = Object.values(item.bant).filter(v => v > 0).length;
+        const fontSize = bantCount >= 3 ? '9px' : '10px';
+        const padding = bantCount >= 3 ? '4px 6px' : '5px 7px';
+
+        html += `<div class="section-title" style="font-size:${bantCount >= 3 ? '11px' : '12px'};">🎀 Bant & Kılçık</div>`;
+        html += `<table style="margin-bottom:${bantCount >= 3 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Ürün</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
+        for (let k in item.bant) {
+          if (item.bant[k] > 0) html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bantNames[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.bant[k]}</td></tr>`;
+        }
         html += `</tbody></table>`;
       }
     }
