@@ -3378,6 +3378,62 @@ body::after{
 .v8-srb.purple .v8-srb-val{color:#a78bfa;}.v8-srb.pink .v8-srb-val{color:#f472b6;}.v8-srb.teal .v8-srb-val{color:#2dd4bf;}.v8-srb.amber .v8-srb-val{color:#fbbf24;}
 @media(max-width:680px){.v8-summary-ribbon{grid-template-columns:repeat(2,1fr);}.v8-srb:nth-child(2){border-right:none;}}
 
+/* Durum Özeti Kartı (Hava Durumu Benzeri) */
+.db-status-card{
+  display:flex;align-items:center;gap:16px;padding:20px;
+  background:linear-gradient(135deg, var(--bg-card), color-mix(in oklab, var(--primary) 3%, var(--bg-card)));
+  border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:16px;position:relative;overflow:hidden;
+  transition:all 0.3s;
+}
+.db-status-card::before{
+  content:'';position:absolute;top:-50%;right:-50%;
+  width:200%;height:200%;
+  background:radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+.db-status-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.12);}
+.db-status-icon{
+  font-size:48px;flex-shrink:0;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,0.1));
+  animation:dbStatusFloat 3s ease-in-out infinite;
+}
+@keyframes dbStatusFloat{
+  0%, 100%{transform:translateY(0px);}
+  50%{transform:translateY(-5px);}
+}
+.db-status-body{flex:1;min-width:0;}
+.db-status-title{
+  font-size:18px;font-weight:800;color:var(--text-main);
+  margin-bottom:4px;letter-spacing:-0.3px;
+}
+.db-status-desc{
+  font-size:13px;color:var(--text-muted);line-height:1.5;
+}
+.db-status-badge{
+  text-align:center;padding:12px 16px;
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:12px;flex-shrink:0;
+}
+.db-status-badge-val{
+  font-size:24px;font-weight:900;
+  background:linear-gradient(135deg, var(--primary-light), var(--primary));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:-0.5px;
+}
+.db-status-badge-lbl{
+  font-size:10px;color:var(--text-muted);
+  font-weight:700;text-transform:uppercase;
+  letter-spacing:0.5px;margin-top:2px;
+}
+@media(max-width:768px){
+  .db-status-card{flex-wrap:wrap;padding:16px;}
+  .db-status-icon{font-size:36px;}
+  .db-status-title{font-size:16px;}
+  .db-status-desc{font-size:12px;}
+  .db-status-badge{width:100%;order:3;}
+}
+
 /* FAB menu */
 .v8-fab-menu{position:fixed;bottom:150px;right:20px;z-index:55;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:10px;pointer-events:none;}
 .v8-fab-menu.open{pointer-events:auto;}
@@ -3722,6 +3778,19 @@ body::after{
     <div class="v8-srb pink"><div class="v8-srb-val" id="v8srbHafta">0</div><div class="v8-srb-lbl">Bu Hafta</div></div>
     <div class="v8-srb teal"><div class="v8-srb-val" id="v8srbAtolye">0</div><div class="v8-srb-lbl">Aktif Atölye</div></div>
     <div class="v8-srb amber"><div class="v8-srb-val" id="v8srbBugun">0</div><div class="v8-srb-lbl">Bugün</div></div>
+  </div>
+
+  <!-- Durum Özeti Kartı (Hava Durumu Benzeri) -->
+  <div class="db-status-card" id="dbStatusCard">
+    <div class="db-status-icon" id="dbStatusIcon">☀️</div>
+    <div class="db-status-body">
+      <div class="db-status-title" id="dbStatusTitle">Her şey yolunda!</div>
+      <div class="db-status-desc" id="dbStatusDesc">Bugün 5 iş var, tümü zamanında ilerliyor.</div>
+    </div>
+    <div class="db-status-badge" id="dbStatusBadge">
+      <div class="db-status-badge-val" id="dbStatusBadgeVal">100%</div>
+      <div class="db-status-badge-lbl">Performans</div>
+    </div>
   </div>
 
   <!-- V8: Goal Ring + Gradient defs -->
@@ -6775,6 +6844,84 @@ function refreshHome(){
       tEl.innerHTML=tHtml;
     }
   }
+
+  // Durum Özeti Kartı (Hava Durumu Benzeri)
+  updateStatusCard(allUnified, todayCount, bekliyor, gecmis, teslimAy);
+}
+
+function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
+  var icon = '☀️';
+  var title = 'Her şey yolunda!';
+  var desc = '';
+  var badgeVal = '100%';
+  var badgeLbl = 'Performans';
+
+  var total = allData.length;
+  var teslimRate = total > 0 ? Math.round((teslimAy / total) * 100) : 0;
+
+  // Durum analizi
+  if(gecmis > 5){
+    icon = '⛈️';
+    title = 'Dikkat! Gecikme var';
+    desc = gecmis + ' iş termin geçmiş. Acil aksiyonlar gerekiyor!';
+    badgeVal = '⚠️';
+    badgeLbl = 'Kritik';
+  } else if(gecmis > 0){
+    icon = '⛅';
+    title = 'Birkaç gecikme var';
+    desc = gecmis + ' iş termin geçmiş. Kontrol etmeyi unutmayın.';
+    badgeVal = teslimRate + '%';
+    badgeLbl = 'Teslim Oranı';
+  } else if(bekliyor > 10){
+    icon = '📈';
+    title = 'Yoğun bir hafta!';
+    desc = 'Şu anda ' + bekliyor + ' iş bekliyor. Harika bir tempo!';
+    badgeVal = bekliyor + '';
+    badgeLbl = 'Bekleyen İş';
+  } else if(todayCount > 5){
+    icon = '🔥';
+    title = 'Bugün çok verimli!';
+    desc = 'Bugün ' + todayCount + ' yeni iş oluşturuldu. Harika gidiyorsunuz!';
+    badgeVal = todayCount + '';
+    badgeLbl = 'Bugün';
+  } else if(todayCount > 0){
+    icon = '✨';
+    title = 'Güzel bir gün!';
+    desc = 'Bugün ' + todayCount + ' iş var, ' + bekliyor + ' iş bekliyor.';
+    badgeVal = teslimRate + '%';
+    badgeLbl = 'Teslim Oranı';
+  } else if(bekliyor === 0 && total > 0){
+    icon = '🎉';
+    title = 'Tüm işler tamamlandı!';
+    desc = 'Bekleyen iş yok. Harika bir performans!';
+    badgeVal = '100%';
+    badgeLbl = 'Tamamlandı';
+  } else if(total === 0){
+    icon = '🌱';
+    title = 'Yeni başlangıç!';
+    desc = 'İlk irsaliyenizi oluşturmaya hazır mısınız?';
+    badgeVal = '0';
+    badgeLbl = 'Kayıt';
+  } else {
+    icon = '☀️';
+    title = 'Her şey yolunda!';
+    desc = bekliyor + ' iş bekliyor, tümü zamanında ilerliyor.';
+    badgeVal = teslimRate + '%';
+    badgeLbl = 'Teslim Oranı';
+  }
+
+  // Güncelle
+  var iconEl = document.getElementById('dbStatusIcon');
+  var titleEl = document.getElementById('dbStatusTitle');
+  var descEl = document.getElementById('dbStatusDesc');
+  var badgeValEl = document.getElementById('dbStatusBadgeVal');
+  var badgeLblEl = document.getElementById('dbStatusBadgeLbl');
+
+  if(iconEl) iconEl.textContent = icon;
+  if(titleEl) titleEl.textContent = title;
+  if(descEl) descEl.textContent = desc;
+  if(badgeValEl) badgeValEl.textContent = badgeVal;
+  if(badgeLblEl) badgeLblEl.textContent = badgeLbl;
 }
 
 
