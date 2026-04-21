@@ -75,7 +75,7 @@
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
       'atolyeler','stoklar','stokHareketler','recycleBin',
-      'irsaliye_users','sablonlar','takvimler',
+      'irsaliye_users','sablonlar','takvimler','aksesuarlar',
       'irsaliye_github_cfg'  // admin'in token'i tum cihazlarda paylasilsin
     ];
     const RECENT_WRITE_MS = 5000;
@@ -3542,6 +3542,7 @@ body::after{
 
     <div class="nav-section">Yönetim</div>
     <a onclick="showPage('atolye')"><i class="fas fa-industry"></i><span>Atölyeler</span></a>
+    <a onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
     <a onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
     <a onclick="showPage('stok-utupaket')"><i class="fas fa-box-open"></i><span>Ütü &amp; Paket</span></a>
     <a onclick="showPage('stok-dikim')"><i class="fas fa-scissors"></i><span>Dikim</span></a>
@@ -4321,6 +4322,70 @@ body::after{
       </div>
     </div>
 
+    <!-- ========== AKSESUAR TAKİP ========== -->
+    <div class="page" id="page-aksesuar">
+      <div class="section-header">
+        <div><h2><i class="fas fa-tags" style="color:var(--primary);margin-right:8px;"></i>Aksesuar Takip</h2><p>Model aksesuarlarını takip edin</p></div>
+        <button class="btn btn-primary" onclick="openAksesuarModal()"><i class="fas fa-plus"></i> Yeni Model Ekle</button>
+      </div>
+      <div class="search-bar" style="margin-bottom:12px;"><i class="fas fa-search"></i><input type="text" id="aksesuarSearch" placeholder="Model kodu veya marka ara..." oninput="renderAksesuarTable()"></div>
+      <div class="card" style="padding:0;overflow-x:auto;">
+        <div class="table-wrap">
+          <table style="min-width:1400px;">
+            <thead>
+              <tr>
+                <th style="min-width:100px;">Model Kodu</th>
+                <th style="min-width:100px;">Çıkış (Dikim)</th>
+                <th style="min-width:80px;">Koli No</th>
+                <th style="min-width:100px;">Termin</th>
+                <th style="min-width:80px;">Adet</th>
+                <th style="min-width:100px;">Marka Etiketi</th>
+                <th style="min-width:100px;">İç Barkod</th>
+                <th style="min-width:120px;">Yıkama Talimatı</th>
+                <th style="min-width:120px;">Yıkama (Toptan)</th>
+                <th style="min-width:80px;">Ecom</th>
+                <th style="min-width:100px;">İstanbul Sticker</th>
+                <th style="min-width:100px;">Süs Etiketi</th>
+                <th style="min-width:100px;">Süs Kartı</th>
+                <th style="min-width:100px;">Lisans Kartı</th>
+                <th style="min-width:100px;">Raf (Ütüpaket)</th>
+                <th style="min-width:100px;">Çıkış (Ütüpaket)</th>
+                <th style="min-width:80px;">İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="aksesuarTable"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="aksesuarEmpty" style="display:none;">
+          <i class="fas fa-tags"></i>
+          <p>Henüz aksesuar kaydı yok.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aksesuar Modal -->
+    <div class="modal-overlay" id="aksesuarModal">
+      <div class="modal" style="max-width:600px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h3 style="font-weight:700;font-size:17px;" id="aksesuarModalTitle">Yeni Model Ekle</h3>
+          <button onclick="closeAksesuarModal()" style="background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="aksesuarModelKodu" placeholder="Örn: MDL-2024-001"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group"><label>Çıkış Tarihi (Dikim)</label><input type="date" class="form-input" id="aksesuarCikisDikim"></div>
+          <div class="form-group"><label>Koli No</label><input class="form-input" id="aksesuarKoliNo" placeholder="Örn: K-001"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group"><label>Termin Tarihi</label><input type="date" class="form-input" id="aksesuarTermin"></div>
+          <div class="form-group"><label>Model Adeti</label><input type="number" class="form-input" id="aksesuarAdet" placeholder="0"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-primary" onclick="saveAksesuar()" style="flex:1;"><i class="fas fa-save"></i> Kaydet</button>
+          <button class="btn btn-secondary" onclick="closeAksesuarModal()" style="flex:1;">İptal</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ========== TAKVİM ========== -->
     <div class="page" id="page-takvim">
       <div class="section-header">
@@ -5016,7 +5081,7 @@ function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','reports','settings'];
 
 function showPage(page){
@@ -5026,7 +5091,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','atolye','stok','stok-utupaket','stok-dikim','takvim','reports','geridonusum','settings','qr','signature','templates'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','atolye','aksesuar','stok','stok-utupaket','stok-dikim','takvim','reports','geridonusum','settings','qr','signature','templates'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -5514,6 +5579,189 @@ function renderStokList(){
 
 // Close stok modal on overlay click
 document.getElementById('stokModal').addEventListener('click', function(e){ if(e.target===this) closeStokModal(); });
+
+// ==================== AKSESUAR TAKİP ====================
+let _editingAksesuarId = null;
+
+function openAksesuarModal(id){
+  _editingAksesuarId = id;
+  const modal = document.getElementById('aksesuarModal');
+  const title = document.getElementById('aksesuarModalTitle');
+
+  if(id){
+    title.textContent = 'Aksesuar Düzenle';
+    const list = getData('aksesuarlar');
+    const item = list.find(a => a.id === id);
+    if(item){
+      document.getElementById('aksesuarModelKodu').value = item.modelKodu || '';
+      document.getElementById('aksesuarCikisDikim').value = item.cikisDikim || '';
+      document.getElementById('aksesuarKoliNo').value = item.koliNo || '';
+      document.getElementById('aksesuarTermin').value = item.termin || '';
+      document.getElementById('aksesuarAdet').value = item.adet || '';
+    }
+  } else {
+    title.textContent = 'Yeni Model Ekle';
+    document.getElementById('aksesuarModelKodu').value = '';
+    document.getElementById('aksesuarCikisDikim').value = '';
+    document.getElementById('aksesuarKoliNo').value = '';
+    document.getElementById('aksesuarTermin').value = '';
+    document.getElementById('aksesuarAdet').value = '';
+  }
+  modal.classList.add('show');
+}
+
+function closeAksesuarModal(){
+  document.getElementById('aksesuarModal').classList.remove('show');
+  _editingAksesuarId = null;
+}
+
+function saveAksesuar(){
+  const modelKodu = document.getElementById('aksesuarModelKodu').value.trim();
+  if(!modelKodu) return toast('Model kodu zorunludur','error');
+
+  const item = {
+    id: _editingAksesuarId || Date.now(),
+    modelKodu,
+    cikisDikim: document.getElementById('aksesuarCikisDikim').value,
+    koliNo: document.getElementById('aksesuarKoliNo').value.trim(),
+    termin: document.getElementById('aksesuarTermin').value,
+    adet: +(document.getElementById('aksesuarAdet').value || 0),
+    markaEtiketi: 0,
+    icBarkod: 0,
+    yikamaTalimati: 0,
+    yikamaToptan: 0,
+    ecom: 0,
+    istanbulSticker: 0,
+    susEtiketi: 0,
+    susKarti: 0,
+    lisansKarti: 0,
+    raf: '',
+    cikisUtupaket: '',
+    createdAt: _editingAksesuarId ? undefined : new Date().toISOString()
+  };
+
+  let list = getData('aksesuarlar');
+  if(_editingAksesuarId){
+    const idx = list.findIndex(a => a.id === _editingAksesuarId);
+    if(idx >= 0) list[idx] = {...list[idx], ...item};
+  } else {
+    list.unshift(item);
+  }
+
+  setData('aksesuarlar', list);
+  closeAksesuarModal();
+  renderAksesuarTable();
+  toast(_editingAksesuarId ? 'Aksesuar güncellendi' : 'Aksesuar eklendi');
+}
+
+function deleteAksesuar(id){
+  if(!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+  let list = getData('aksesuarlar');
+  list = list.filter(a => a.id !== id);
+  setData('aksesuarlar', list);
+  renderAksesuarTable();
+  toast('Kayıt silindi','info');
+}
+
+function incrementAksesuar(id, field){
+  let list = getData('aksesuarlar');
+  const item = list.find(a => a.id === id);
+  if(item){
+    item[field] = (item[field] || 0) + 1;
+    setData('aksesuarlar', list);
+    renderAksesuarTable();
+  }
+}
+
+function decrementAksesuar(id, field){
+  let list = getData('aksesuarlar');
+  const item = list.find(a => a.id === id);
+  if(item && item[field] > 0){
+    item[field] = item[field] - 1;
+    setData('aksesuarlar', list);
+    renderAksesuarTable();
+  }
+}
+
+function updateAksesuarField(id, field, value){
+  let list = getData('aksesuarlar');
+  const item = list.find(a => a.id === id);
+  if(item){
+    item[field] = value;
+    setData('aksesuarlar', list);
+  }
+}
+
+function renderAksesuarTable(){
+  let list = getData('aksesuarlar');
+  const search = document.getElementById('aksesuarSearch').value.toLowerCase();
+
+  if(search){
+    list = list.filter(a =>
+      (a.modelKodu || '').toLowerCase().includes(search) ||
+      (a.koliNo || '').toLowerCase().includes(search)
+    );
+  }
+
+  const tbody = document.getElementById('aksesuarTable');
+  const empty = document.getElementById('aksesuarEmpty');
+
+  if(list.length === 0){
+    tbody.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  tbody.innerHTML = list.map(item => {
+    const renderCounter = (field) => {
+      const val = item[field] || 0;
+      return `<div style="display:flex;align-items:center;gap:4px;justify-content:center;">
+        <button onclick="decrementAksesuar(${item.id},'${field}')" style="width:24px;height:24px;border:1px solid var(--border);background:var(--glass);border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--text);">−</button>
+        <span style="min-width:24px;text-align:center;font-weight:600;">${val}</span>
+        <button onclick="incrementAksesuar(${item.id},'${field}')" style="width:24px;height:24px;border:1px solid var(--border);background:var(--glass);border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--text);">+</button>
+      </div>`;
+    };
+
+    const renderDateInput = (field) => {
+      const val = item[field] || '';
+      return `<input type="date" value="${val}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+    };
+
+    const renderTextInput = (field, placeholder = '') => {
+      const val = item[field] || '';
+      return `<input type="text" value="${val}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" placeholder="${placeholder}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+    };
+
+    return `<tr>
+      <td><strong>${item.modelKodu}</strong></td>
+      <td>${renderDateInput('cikisDikim')}</td>
+      <td>${renderTextInput('koliNo', 'K-001')}</td>
+      <td>${renderDateInput('termin')}</td>
+      <td>${item.adet || 0}</td>
+      <td>${renderCounter('markaEtiketi')}</td>
+      <td>${renderCounter('icBarkod')}</td>
+      <td>${renderCounter('yikamaTalimati')}</td>
+      <td>${renderCounter('yikamaToptan')}</td>
+      <td>${renderCounter('ecom')}</td>
+      <td>${renderCounter('istanbulSticker')}</td>
+      <td>${renderCounter('susEtiketi')}</td>
+      <td>${renderCounter('susKarti')}</td>
+      <td>${renderCounter('lisansKarti')}</td>
+      <td>${renderTextInput('raf', 'Raf No')}</td>
+      <td>${renderDateInput('cikisUtupaket')}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:center;">
+          <button onclick="openAksesuarModal(${item.id})" class="btn-icon" title="Düzenle"><i class="fas fa-edit"></i></button>
+          <button onclick="deleteAksesuar(${item.id})" class="btn-icon" title="Sil" style="color:#ef4444;"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('aksesuarModal').addEventListener('click', function(e){ if(e.target===this) closeAksesuarModal(); });
 
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
@@ -6914,6 +7162,7 @@ function refreshPage(page){
   if(page==='home')refreshHome();
   else if(page==='list'){currentTypeFilter='all';document.getElementById('listSearch').value='';document.getElementById('filterDate').value='all';document.getElementById('filterAtolye').value='all';document.getElementById('filterDurum').value='all';document.getElementById('filterSort').value='newest';applyFilters();}
   else if(page==='atolye')refreshAtolyeList();
+  else if(page==='aksesuar')renderAksesuarTable();
   else if(page==='stok')renderStokList();
   else if(page==='stok-utupaket')renderStokUtuPaket();
   else if(page==='stok-dikim')renderStokDikim();
