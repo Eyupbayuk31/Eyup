@@ -4894,18 +4894,19 @@ body::after{
 
       <!-- Photo Capture -->
       <div class="photo-capture-wrap">
-        <div class="card-title"><i class="fas fa-camera"></i> Fotoğraf Çek</div>
+        <div class="card-title"><i class="fas fa-camera"></i> Fotoğraf Çek / Ekle <span id="photoCountBadge" style="font-size:11px;font-weight:400;color:var(--text-muted);"></span></div>
         <div style="display:none;" id="photoLiveBox">
           <video id="photoVideo" autoplay playsinline muted></video>
         </div>
-        <img id="photoPreview" class="photo-preview" style="display:none;" alt="Fotoğraf">
+        <!-- Çoklu fotoğraf galerisi -->
+        <div id="photoGallery" style="display:none;margin-bottom:12px;"></div>
         <div class="sig-actions">
           <button class="btn btn-primary" id="photoStartBtn" onclick="startPhotoCamera()"><i class="fas fa-video"></i> Kamerayı Aç</button>
-          <button class="btn btn-success" id="photoCaptureBtn" onclick="capturePhoto()" style="display:none;"><i class="fas fa-camera"></i> Çek</button>
+          <button class="btn btn-success" id="photoCaptureBtn" onclick="capturePhoto()" style="display:none;"><i class="fas fa-camera"></i> Çek &amp; Ekle</button>
           <button class="btn btn-secondary" id="photoStopBtn" onclick="stopPhotoCamera()" style="display:none;"><i class="fas fa-stop"></i> Kapat</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('photoFileInput').click()"><i class="fas fa-upload"></i> Galeri</button>
-          <input type="file" id="photoFileInput" accept="image/*" style="display:none;" onchange="loadPhotoFromFile(event)">
-          <button class="btn btn-danger" onclick="removePhoto()"><i class="fas fa-trash"></i> Fotoğrafı Sil</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('photoFileInput').click()"><i class="fas fa-upload"></i> Galeriden Ekle</button>
+          <input type="file" id="photoFileInput" accept="image/*" style="display:none;" onchange="loadPhotoFromFile(event)" multiple>
+          <button class="btn btn-danger" onclick="removeAllPhotos()"><i class="fas fa-trash"></i> Tümünü Sil</button>
         </div>
         <canvas id="photoCanvas" style="display:none;"></canvas>
       </div>
@@ -9037,17 +9038,18 @@ function generateQrForItem(id, type){
 
   // QR artık URL taşır — tarayan kişi tarayıcıda doğrudan irsaliye görür
   const scanUrl = _buildQrScanUrl(item, type);
-  const hasPhoto = !!item._photo;
-  const hasPhotoUrl = !!item._photoUrl;
+  const photos = _getPhotosArray(item);
+  const uploadedCount = photos.filter(p=>p.url).length;
   let photoWarnHtml = '';
-  if(hasPhoto && !hasPhotoUrl){
+  if(photos.length && uploadedCount < photos.length){
+    const missing = photos.length - uploadedCount;
     photoWarnHtml = `<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);font-size:12px;color:#f59e0b;">
-      ⚠️ Fotoğraf henüz buluta yüklenmemiş — QR'ı tarayan kişi fotoğrafı göremeyecek.
+      ⚠️ ${missing} fotoğraf henüz buluta yüklenmemiş — QR'ı tarayan kişi göremeyecek.
       <button class="btn btn-sm btn-secondary" onclick="retryPhotoUpload(${JSON.stringify(id)},'${type}')" style="margin-left:8px;"><i class="fas fa-upload"></i> Şimdi Yükle</button>
     </div>`;
-  } else if(hasPhotoUrl){
+  } else if(uploadedCount > 0){
     photoWarnHtml = `<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);font-size:11px;color:#10b981;">
-      ✓ Fotoğraf buluta yüklü — tarayan kişi QR'dan ulaşabilecek
+      ✓ ${uploadedCount} fotoğraf buluta yüklü — tarayan kişi QR'dan ulaşabilecek
     </div>`;
   }
 
@@ -9235,7 +9237,8 @@ function renderSigWaybillList(){
     const badges = [];
     badges.push(`<span class="sig-wb-badge type">${TYPE_LABEL_MAP[i._type] || i._type}</span>`);
     if(i._signature) badges.push('<span class="sig-wb-badge signed">✍️ İmzalı</span>');
-    if(i._photo)     badges.push('<span class="sig-wb-badge photo">📸 Fotoğraflı</span>');
+    const pc = _getPhotosArray(i).length;
+    if(pc) badges.push(`<span class="sig-wb-badge photo">📸 ${pc>1?pc+' Foto':'Fotoğraflı'}</span>`);
     return `
       <div class="sig-wb-item ${isSelected?'selected':''}" onclick="selectSigWaybill('${i._type}', ${JSON.stringify(i.id)})">
         <div class="sig-wb-info">
@@ -9343,13 +9346,17 @@ function loadSigForWaybill(){
   _sigCurrentWaybill = { id: id, type: type };
   const item = _findItemByIdType(id, type);
   if(!item){ toast('Kayıt bulunamadı','error'); return; }
-  const cloudStatus = item._photoUrl
-    ? ' • <span style="color:#10b981;">☁️ Buluta Yüklü</span>'
-    : (item._photo ? ' • <span style="color:#f59e0b;">⚠️ Bulut linki yok</span>' : '');
+  const photos = _getPhotosArray(item);
+  const allUploaded = photos.length > 0 && photos.every(p => p.url);
+  const anyUploaded = photos.some(p => p.url);
+  const cloudStatus = allUploaded
+    ? ' • <span style="color:#10b981;">☁️ Tümü Yüklü</span>'
+    : (anyUploaded ? ' • <span style="color:#f59e0b;">⚠️ Bazıları yüklenmemiş</span>'
+    : (photos.length ? ' • <span style="color:#f59e0b;">⚠️ Bulut linki yok</span>' : ''));
   document.getElementById('sigSelectedInfo').innerHTML = `
     <i class="fas fa-check"></i> Seçili: <b style="color:var(--primary);">${item.no||''}</b> — ${item.model||item.urun||'-'} • ${item.atolye||item.firma||'-'} • ${item.tarih||'-'}
     ${item._signature?' • <span style="color:#10b981;">✍️ İmzalı</span>':''}
-    ${item._photo?' • <span style="color:#10b981;">📸 Fotoğraflı</span>':''}
+    ${photos.length?` • <span style="color:#10b981;">📸 ${photos.length} Fotoğraf</span>`:''}
     ${cloudStatus}
   `;
   // Mevcut imzayı yükle
@@ -9366,26 +9373,22 @@ function loadSigForWaybill(){
     };
     img.src = item._signature;
   }
-  // Fotoğrafı göster
-  _clearPhotoPreview();
-  if(item._photo){
-    const prev = document.getElementById('photoPreview');
-    prev.src = item._photo;
-    prev.style.display = 'block';
-  }
-  // Manuel fotoğraf URL'sini input'a yükle
+  // Fotoğraf galerisini göster
+  renderPhotoGallery();
+  // Manuel fotoğraf URL'sini input'a yükle (ilk fotoğrafın URL'si)
+  const firstPhoto = photos[0];
   const urlInput = document.getElementById('photoUrlInput');
   const urlStatus = document.getElementById('photoUrlStatus');
   if(urlInput){
-    urlInput.value = item._photoUrl || '';
+    urlInput.value = (firstPhoto && firstPhoto.url) || '';
     if(urlStatus){
-      if(item._photoUrl){
-        const manual = item._photoUrlManual ? ' (elle girildi)' : ' (otomatik yüklendi)';
+      if(firstPhoto && firstPhoto.url){
+        const manual = firstPhoto.urlManual ? ' (elle girildi)' : ' (otomatik yüklendi)';
         urlStatus.innerHTML = `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> Link kayıtlı${manual}</span>
-          <div style="margin-top:6px;font-size:11px;color:var(--text-muted);word-break:break-all;">${item._photoUrl}</div>
-          <div style="margin-top:6px;"><a href="${item._photoUrl}" target="_blank" rel="noopener" style="color:var(--primary);font-size:12px;"><i class="fas fa-external-link-alt"></i> Linki Test Et</a></div>`;
-      } else if(item._photo){
-        urlStatus.innerHTML = '<span style="color:#f59e0b;"><i class="fas fa-circle-exclamation"></i> Bu irsaliyede fotoğraf var ama internet linki yok. QR taranınca atölye fotoğrafı göremez. Fotoğrafı buluta yükleyip linki yapıştırın.</span>';
+          <div style="margin-top:6px;font-size:11px;color:var(--text-muted);word-break:break-all;">${firstPhoto.url}</div>
+          <div style="margin-top:6px;"><a href="${firstPhoto.url}" target="_blank" rel="noopener" style="color:var(--primary);font-size:12px;"><i class="fas fa-external-link-alt"></i> Linki Test Et</a></div>`;
+      } else if(photos.length){
+        urlStatus.innerHTML = '<span style="color:#f59e0b;"><i class="fas fa-circle-exclamation"></i> Fotoğraf var ama internet linki yok. QR taranınca atölye fotoğrafı göremez.</span>';
       } else {
         urlStatus.innerHTML = '';
       }
@@ -9471,38 +9474,47 @@ function capturePhoto(){
 
 function loadPhotoFromFile(e){
   if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); e.target.value=''; return; }
-  const f = e.target.files && e.target.files[0];
-  if(!f) return;
-  const r = new FileReader();
-  r.onload = (ev) => {
-    // Resize
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 900;
-      const w = Math.min(maxW, img.width);
-      const h = Math.round(img.height * (w/img.width));
-      const c = document.getElementById('photoCanvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = c.toDataURL('image/jpeg', 0.82);
-      _savePhotoToWaybill(dataUrl);
+  const files = Array.from(e.target.files || []);
+  if(!files.length) return;
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 900;
+        const w = Math.min(maxW, img.width);
+        const h = Math.round(img.height * (w/img.width));
+        const c = document.getElementById('photoCanvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = c.toDataURL('image/jpeg', 0.82);
+        _savePhotoToWaybill(dataUrl);
+      };
+      img.src = ev.target.result;
     };
-    img.src = ev.target.result;
-  };
-  r.readAsDataURL(f);
+    r.readAsDataURL(f);
+  });
   e.target.value = '';
 }
 
 function _savePhotoToWaybill(dataUrl){
-  const ok = _updateItem(_sigCurrentWaybill.id, _sigCurrentWaybill.type, (item)=>{ item._photo = dataUrl; item._photoAt = new Date().toISOString(); delete item._photoUrl; delete item._photoUrlAt; return item; });
+  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
+  let newIndex = 0;
+  const ok = _updateItem(_sigCurrentWaybill.id, _sigCurrentWaybill.type, (item)=>{
+    const existing = _getPhotosArray(item);
+    newIndex = existing.length;
+    existing.push({ data: dataUrl, at: new Date().toISOString(), url: '', urlAt: '', urlManual: false });
+    item._photos = existing;
+    item._photo = existing[0].data;
+    item._photoAt = existing[0].at;
+    return item;
+  });
   if(ok){
-    const prev = document.getElementById('photoPreview');
-    prev.src = dataUrl; prev.style.display = 'block';
-    toast('Fotoğraf kaydedildi — internete yükleniyor...','success');
+    toast('Fotoğraf eklendi (' + (newIndex+1) + '. fotoğraf) — yükleniyor...','success');
+    renderPhotoGallery();
     renderSigSavedList();
     refreshSignaturePage();
-    // Arka planda catbox.moe'a yükle — QR'da URL olarak kullanılacak
-    _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, dataUrl);
+    _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, dataUrl, newIndex);
   } else {
     toast('Fotoğraf kaydedilemedi','error');
   }
@@ -9610,24 +9622,31 @@ async function _uploadPhotoToCatbox(dataUrl){
   throw new Error('Yükleme yanıtı beklenmedik formatta');
 }
 
-function _uploadPhotoInBackground(id, type, dataUrl){
-  // Kullanıcı zaten manuel bir URL girmişse otomatik yüklemeyi atla
-  const item = _findItemByIdType(id, type);
-  if(item && item._photoUrlManual && item._photoUrl) return;
-
+function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
   _uploadPhotoToCatbox(dataUrl).then(url=>{
     const ok = _updateItem(id, type, (item)=>{
-      // Eğer bu arada elle URL girildiyse üzerine yazma
-      if(item._photoUrlManual) return item;
-      item._photoUrl = url;
-      item._photoUrlAt = new Date().toISOString();
-      item._photoUrlManual = false;
+      if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
+        item._photos[photoIndex].url = url;
+        item._photos[photoIndex].urlAt = new Date().toISOString();
+        item._photos[photoIndex].urlManual = false;
+        if(photoIndex === 0){
+          item._photoUrl = url;
+          item._photoUrlAt = item._photos[0].urlAt;
+          item._photoUrlManual = false;
+        }
+      } else {
+        if(item._photoUrlManual) return item;
+        item._photoUrl = url;
+        item._photoUrlAt = new Date().toISOString();
+        item._photoUrlManual = false;
+      }
       return item;
     });
     if(ok){
-      toast('✓ Fotoğraf buluta yüklendi — QR hazır','success');
+      const num = (photoIndex !== undefined) ? ' (' + (photoIndex+1) + '. foto)' : '';
+      toast('✓ Fotoğraf buluta yüklendi' + num + ' — QR hazır','success');
       if(_sigCurrentWaybill && String(_sigCurrentWaybill.id) === String(id) && _sigCurrentWaybill.type === type){
-        loadSigForWaybill();
+        renderPhotoGallery();
         renderSigSavedList();
       }
     }
@@ -9638,12 +9657,19 @@ function _uploadPhotoInBackground(id, type, dataUrl){
   });
 }
 
-// Elle yeniden upload denemesi (irsaliyede _photoUrl yoksa kullanıcı tetikleyebilir)
-function retryPhotoUpload(id, type){
+function retryPhotoUpload(id, type, photoIndex){
   const item = _findItemByIdType(id, type);
-  if(!item || !item._photo){ toast('Önce fotoğraf çekin','error'); return; }
-  toast('Yükleniyor...','info');
-  _uploadPhotoInBackground(id, type, item._photo);
+  if(!item){ toast('Kayıt bulunamadı','error'); return; }
+  const photos = _getPhotosArray(item);
+  if(photoIndex !== undefined){
+    if(!photos[photoIndex] || !photos[photoIndex].data){ toast('Fotoğraf bulunamadı','error'); return; }
+    toast('Yükleniyor...','info');
+    _uploadPhotoInBackground(id, type, photos[photoIndex].data, photoIndex);
+  } else {
+    if(!photos.length){ toast('Önce fotoğraf çekin','error'); return; }
+    toast('Yükleniyor...','info');
+    _uploadPhotoInBackground(id, type, photos[0].data, 0);
+  }
 }
 
 // ====================================================================
@@ -9721,39 +9747,128 @@ function saveManualPhotoUrl(rawUrl){
 }
 
 function _clearPhotoPreview(){
-  const prev = document.getElementById('photoPreview');
-  if(prev){ prev.src=''; prev.style.display='none'; }
+  const gallery = document.getElementById('photoGallery');
+  if(gallery){ gallery.style.display='none'; gallery.innerHTML=''; }
+  const badge = document.getElementById('photoCountBadge');
+  if(badge) badge.textContent = '';
+}
+
+function _getPhotosArray(item){
+  if(!item) return [];
+  if(Array.isArray(item._photos) && item._photos.length) return item._photos;
+  if(item._photo){
+    return [{ data: item._photo, at: item._photoAt||'', url: item._photoUrl||'', urlAt: item._photoUrlAt||'', urlManual: item._photoUrlManual||false }];
+  }
+  return [];
+}
+
+function renderPhotoGallery(){
+  const gallery = document.getElementById('photoGallery');
+  const badge = document.getElementById('photoCountBadge');
+  if(!gallery) return;
+  if(!_sigCurrentWaybill){ gallery.style.display='none'; gallery.innerHTML=''; if(badge) badge.textContent=''; return; }
+  const item = _findItemByIdType(_sigCurrentWaybill.id, _sigCurrentWaybill.type);
+  if(!item){ gallery.style.display='none'; gallery.innerHTML=''; if(badge) badge.textContent=''; return; }
+  const photos = _getPhotosArray(item);
+  if(!photos.length){ gallery.style.display='none'; gallery.innerHTML=''; if(badge) badge.textContent=''; return; }
+  if(badge) badge.textContent = '— ' + photos.length + ' adet';
+  const id = _sigCurrentWaybill.id;
+  const type = _sigCurrentWaybill.type;
+  gallery.style.display = 'block';
+  gallery.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">
+      ${photos.map((p, idx) => `
+        <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
+          <img src="${p.data}" style="width:90px;height:90px;object-fit:cover;display:block;cursor:pointer;" alt="foto ${idx+1}" onclick="openPhotoLightbox(${idx})">
+          <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;">${idx+1}</div>
+          <div style="position:absolute;bottom:3px;left:3px;font-size:12px;line-height:1;" title="${p.url?'Buluta yüklü':'Yüklenmemiş — dokunarak tekrar dene'}" onclick="${p.url?'':('retryPhotoUpload('+JSON.stringify(id)+',' + JSON.stringify(type) + ','+idx+')')}">${p.url?'☁️':'⚠️'}</div>
+          <button onclick="removePhotoAt(${idx})" title="Bu fotoğrafı sil" style="position:absolute;top:3px;right:3px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">✕</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function openPhotoLightbox(idx){
+  if(!_sigCurrentWaybill) return;
+  const item = _findItemByIdType(_sigCurrentWaybill.id, _sigCurrentWaybill.type);
+  if(!item) return;
+  const photos = _getPhotosArray(item);
+  if(!photos[idx]) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+  overlay.innerHTML = `<img src="${photos[idx].data}" style="max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,0.5);" alt="foto ${idx+1}">`;
+  overlay.onclick = () => document.body.removeChild(overlay);
+  document.body.appendChild(overlay);
+}
+
+function removePhotoAt(idx){
+  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
+  if(!confirm('Bu fotoğrafı silmek istiyor musunuz?')) return;
+  const ok = _updateItem(_sigCurrentWaybill.id, _sigCurrentWaybill.type, (item)=>{
+    const photos = _getPhotosArray(item);
+    photos.splice(idx, 1);
+    if(photos.length){
+      item._photos = photos;
+      item._photo = photos[0].data;
+      item._photoAt = photos[0].at;
+      item._photoUrl = photos[0].url || '';
+      item._photoUrlAt = photos[0].urlAt || '';
+      item._photoUrlManual = photos[0].urlManual || false;
+    } else {
+      delete item._photos; delete item._photo; delete item._photoAt;
+      delete item._photoUrl; delete item._photoUrlAt; delete item._photoUrlManual;
+    }
+    return item;
+  });
+  if(ok){ renderPhotoGallery(); renderSigSavedList(); refreshSignaturePage(); toast('Fotoğraf silindi','info'); }
+}
+
+function removeAllPhotos(){
+  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
+  const item = _findItemByIdType(_sigCurrentWaybill.id, _sigCurrentWaybill.type);
+  const count = _getPhotosArray(item).length;
+  if(!count){ toast('Bu irsaliyede fotoğraf yok','info'); return; }
+  if(!confirm(`Bu irsaliyenin tüm fotoğraflarını (${count} adet) silmek istiyor musunuz?`)) return;
+  const ok = _updateItem(_sigCurrentWaybill.id, _sigCurrentWaybill.type, (item)=>{
+    delete item._photos; delete item._photo; delete item._photoAt;
+    delete item._photoUrl; delete item._photoUrlAt; delete item._photoUrlManual;
+    return item;
+  });
+  if(ok){ _clearPhotoPreview(); _clearPhotoUrlInput(); toast('Tüm fotoğraflar silindi','info'); renderSigSavedList(); refreshSignaturePage(); }
 }
 
 function removePhoto(){
-  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
-  if(!confirm('Bu irsaliyenin fotoğrafını silmek istiyor musunuz?')) return;
-  const ok = _updateItem(_sigCurrentWaybill.id, _sigCurrentWaybill.type, (item)=>{ delete item._photo; delete item._photoAt; delete item._photoUrl; delete item._photoUrlAt; delete item._photoUrlManual; return item; });
-  if(ok){ _clearPhotoPreview(); _clearPhotoUrlInput(); toast('Fotoğraf silindi','info'); renderSigSavedList(); refreshSignaturePage(); }
+  removeAllPhotos();
 }
 
 function renderSigSavedList(){
   const host = document.getElementById('sigSavedList');
   if(!host) return;
-  const all = _getAllUnifiedWithType().filter(i=>i._signature||i._photo);
+  const all = _getAllUnifiedWithType().filter(i=>i._signature||i._photo||(Array.isArray(i._photos)&&i._photos.length));
   if(!all.length){
     host.innerHTML = '<div class="empty-state" style="padding:20px;"><i class="fas fa-inbox"></i><p>Henüz imza/fotoğraf eklenmemiş.</p></div>';
     return;
   }
-  host.innerHTML = all.map(i=>`
+  host.innerHTML = all.map(i=>{
+    const photos = _getPhotosArray(i);
+    const photoCount = photos.length;
+    const firstPhoto = photos[0];
+    return `
     <div class="sig-list-item">
       ${i._signature?`<img class="sig-thumb" src="${i._signature}" alt="imza">`:'<div class="sig-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-pen-fancy" style="color:#ccc;"></i></div>'}
-      ${i._photo?`<img class="sig-thumb" src="${i._photo}" alt="foto">`:'<div class="sig-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="color:#ccc;"></i></div>'}
+      ${firstPhoto?`<div style="position:relative;display:inline-block;"><img class="sig-thumb" src="${firstPhoto.data}" alt="foto"><span style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;border-radius:4px;padding:1px 4px;">${photoCount}</span></div>`:'<div class="sig-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="color:#ccc;"></i></div>'}
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;color:var(--primary);font-size:13px;">${i.no||'-'}</div>
         <div style="font-size:11px;color:var(--text-muted);">${TYPE_LABEL_MAP[i._type]} • ${i.model||i.urun||'-'} • ${i.atolye||i.firma||'-'}</div>
+        ${photoCount>0?`<div style="font-size:10px;color:#3b82f6;margin-top:2px;">📸 ${photoCount} fotoğraf</div>`:''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-xs btn-secondary" onclick="editSigForItem('${i._type}',${i.id})"><i class="fas fa-pen"></i></button>
         <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function editSigForItem(type, id){
@@ -9792,7 +9907,8 @@ function copyWaybill(id, type){
   copy.id = Date.now();
   // Kopyalamada imza/foto taşınmasın
   delete copy._signature; delete copy._signatureAt;
-  delete copy._photo; delete copy._photoAt;
+  delete copy._photo; delete copy._photoAt; delete copy._photos;
+  delete copy._photoUrl; delete copy._photoUrlAt; delete copy._photoUrlManual;
   copy.durum = 'bekliyor';
   copy.tarih = new Date().toISOString().split('T')[0];
   copy.createdAt = new Date().toISOString();
