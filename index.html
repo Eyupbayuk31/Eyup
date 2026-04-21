@@ -3550,7 +3550,7 @@ body::after{
 
     <div class="nav-section">Yeni Özellikler</div>
     <a onclick="showPage('qr')"><i class="fas fa-qrcode"></i><span>QR / Barkod</span></a>
-    <a onclick="showPage('signature')"><i class="fas fa-signature"></i><span>İmza &amp; Foto</span></a>
+    <a onclick="showPage('signature')"><i class="fas fa-camera"></i><span>Fotoğraf</span></a>
     <a onclick="showPage('templates')"><i class="fas fa-clone"></i><span>Şablonlar</span></a>
   </nav>
   <div class="sidebar-footer">
@@ -4076,6 +4076,25 @@ body::after{
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Ortak form fotoğraf bölümü — JS ile aktif form sayfasına taşınır -->
+    <div id="newFormPhotoSection" style="display:none;margin-top:14px;">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-camera"></i> Fotoğraf Ekle <small style="font-weight:400;color:var(--text-muted);font-size:11px;">(isteğe bağlı — kaydedince irsaliyeye eklenir)</small></div>
+        <div id="nfGallery" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm btn-primary" id="nfCamBtn" onclick="startNewFormCamera()"><i class="fas fa-video"></i> Kamera</button>
+          <button type="button" class="btn btn-sm btn-success" id="nfCapBtn" onclick="captureNewFormPhoto()" style="display:none;"><i class="fas fa-camera"></i> Çek</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="nfStopBtn" onclick="stopNewFormCamera()" style="display:none;"><i class="fas fa-stop"></i> Kapat</button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('nfFileInput').click()"><i class="fas fa-image"></i> Galeriden</button>
+          <input type="file" id="nfFileInput" accept="image/*" multiple style="display:none;" onchange="loadNewFormPhotoFromFile(event)">
+        </div>
+        <div id="nfLiveBox" style="display:none;margin-top:8px;">
+          <video id="nfVideo" autoplay playsinline muted style="width:100%;max-width:300px;border-radius:8px;display:block;"></video>
+        </div>
+        <canvas id="nfCanvas" style="display:none;"></canvas>
       </div>
     </div>
 
@@ -4857,7 +4876,7 @@ body::after{
     <!-- ==== İMZA & FOTOĞRAF ==== -->
     <div class="page" id="page-signature">
       <div class="section-header">
-        <div><h2><i class="fas fa-signature" style="color:var(--primary);margin-right:8px;"></i>İmza &amp; Fotoğraf</h2><p>Teslim onayı için imza ve teslim fotoğrafı ekleyin</p></div>
+        <div><h2><i class="fas fa-camera" style="color:var(--primary);margin-right:8px;"></i>Fotoğraf</h2><p>İrsaliyeye teslim fotoğrafı ekleyin</p></div>
       </div>
 
       <div class="sig-wrap">
@@ -4867,29 +4886,12 @@ body::after{
         </div>
         <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
           <button type="button" class="sig-filter-chip active" data-sigfilter="all" onclick="setSigFilter('all')">Tümü</button>
-          <button type="button" class="sig-filter-chip" data-sigfilter="unsigned" onclick="setSigFilter('unsigned')">✍️ İmzasız</button>
-          <button type="button" class="sig-filter-chip" data-sigfilter="signed" onclick="setSigFilter('signed')">✓ İmzalı</button>
           <button type="button" class="sig-filter-chip" data-sigfilter="bekliyor" onclick="setSigFilter('bekliyor')">⏳ Bekleyen</button>
+          <button type="button" class="sig-filter-chip" data-sigfilter="signed" onclick="setSigFilter('signed')">📸 Fotoğraflı</button>
         </div>
         <div id="sigWaybillList" style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;background:var(--glass);"></div>
-        <!-- Geriye dönük uyumluluk için gizli select -->
         <select id="sigWaybillSelect" style="display:none;" onchange="loadSigForWaybill()"><option value="">— İrsaliye seçin —</option></select>
         <div id="sigSelectedInfo" style="font-size:12px;color:var(--text-muted);margin-top:10px;"></div>
-      </div>
-
-      <!-- Signature Pad -->
-      <div class="sig-wrap">
-        <div class="card-title"><i class="fas fa-pen-fancy"></i> İmza Alanı</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Parmak veya fare ile imza atın</div>
-        <div class="sig-canvas-wrap">
-          <canvas id="sigCanvas" class="sig-canvas"></canvas>
-          <div class="sig-placeholder" id="sigPlaceholder">İmza alanı — parmak veya fare ile çizin</div>
-        </div>
-        <div class="sig-actions">
-          <button class="btn btn-secondary" onclick="clearSignature()"><i class="fas fa-eraser"></i> Temizle</button>
-          <button class="btn btn-primary" onclick="saveSignature()"><i class="fas fa-save"></i> İmzayı Kaydet</button>
-          <button class="btn btn-danger" onclick="removeSignature()"><i class="fas fa-trash"></i> İmzayı Sil</button>
-        </div>
       </div>
 
       <!-- Photo Capture -->
@@ -4932,7 +4934,7 @@ body::after{
 
       <!-- Saved list -->
       <div class="sig-wrap">
-        <div class="card-title"><i class="fas fa-list-check"></i> Kayıtlı İmza &amp; Fotoğraflar</div>
+        <div class="card-title"><i class="fas fa-list-check"></i> Kayıtlı Fotoğraflar</div>
         <div id="sigSavedList"></div>
       </div>
     </div>
@@ -4986,7 +4988,7 @@ body::after{
         <button onclick="copyCurrentModalItem()" id="modalCopyBtn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Bu irsaliyeyi kopyala"><i class="fas fa-copy"></i> Kopyala</button>
         <button onclick="saveCurrentAsTemplate()" id="modalTplBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Şablon olarak kaydet"><i class="fas fa-bookmark"></i> Şablon</button>
         <button onclick="showQrForCurrentModal()" id="modalQrBtn" style="background:linear-gradient(135deg,#6366f1,#4338ca);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="QR Kod"><i class="fas fa-qrcode"></i> QR</button>
-        <button onclick="goSignatureForModal()" id="modalSigBtn" style="background:linear-gradient(135deg,#06b6d4,#0e7490);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="İmza/Foto ekle"><i class="fas fa-signature"></i> İmza</button>
+        <button onclick="goSignatureForModal()" id="modalSigBtn" style="background:linear-gradient(135deg,#06b6d4,#0e7490);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Fotoğraf ekle"><i class="fas fa-camera"></i> Foto</button>
         <button onclick="closeModal()" style="background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
       </div>
     </div>
@@ -5006,7 +5008,7 @@ function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',stok:'Stok Takibi',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'İmza & Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',stok:'Stok Takibi',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','reports','settings'];
 
 function showPage(page){
@@ -5028,6 +5030,24 @@ function showPage(page){
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
   
   if(window.innerWidth<=768)closeSidebar();
+  // Form sayfalarında fotoğraf bölümünü taşı
+  const _nfFormPages = ['new','fermuar','lastik','dugme'];
+  const _nfSection = document.getElementById('newFormPhotoSection');
+  if(_nfSection){
+    if(_nfFormPages.includes(page)){
+      const pageEl = document.getElementById('page-'+page);
+      if(pageEl && _nfSection.parentElement !== pageEl){
+        stopNewFormCamera(true);
+        if(page !== (window._nfLastPage||null)){ _newFormPhotos=[]; renderNewFormPhotoGallery(); }
+        pageEl.appendChild(_nfSection);
+      }
+      _nfSection.style.display='block';
+      window._nfLastPage = page;
+    } else {
+      _nfSection.style.display='none';
+      stopNewFormCamera(true);
+    }
+  }
   refreshPage(page);
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -5369,7 +5389,9 @@ function saveIrsaliye(){
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan)return toast('Zorunlu alanları doldurun','error');
   const no=getNextNo();
   const item={id:Date.now(),no:'IRS-'+String(no).padStart(3,'0'),type:'standart',model,tarih,atolye,teslimEden,teslimAlan,termin:document.getElementById('iTermin').value,durum:document.getElementById('iDurum').value,aciklama:document.getElementById('iAciklama').value.trim(),sizes:{s30:+(document.getElementById('s30').value||0),s35:+(document.getElementById('s35').value||0),s40:+(document.getElementById('s40').value||0),s50:+(document.getElementById('s50').value||0),s60:+(document.getElementById('s60').value||0),s100:+(document.getElementById('s100').value||0)},bant:{genis:+(document.getElementById('bGenis').value||0),dar:+(document.getElementById('bDar').value||0),kilcik:+(document.getElementById('bKilcik').value||0)},createdAt:new Date().toISOString()};
+  _attachNfPhotosToItem(item,'standart');
   const list=getData('irsaliyeler');list.unshift(item);setData('irsaliyeler',list);incNextNo();
+  _uploadNfPhotosInBackground(item.id,'standart');
   ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('iDurum').value='bekliyor';
   const today=new Date().toISOString().split('T')[0];document.getElementById('iTarih').value=today;
@@ -5890,7 +5912,9 @@ function saveFermuar(){
   sizes.forEach(s=>{const cm=+(document.getElementById('fer_'+s+'cm').value||0);const adet=+(document.getElementById('fer_'+s+'a').value||0);if(adet>0)beden[s]={cm,adet};total+=adet;});
   const no=getNextNo();
   const item={id:Date.now(),no:'FER-'+String(no).padStart(3,'0'),type:'fermuar',model,tarih,atolye,teslimEden,teslimAlan,renk,termin:document.getElementById('fTermin').value,aciklama:document.getElementById('fAciklama').value.trim(),beden,totalAdet:total,durum:'bekliyor',createdAt:new Date().toISOString()};
+  _attachNfPhotosToItem(item,'fermuar');
   const list=getData('fermuarlar');list.unshift(item);setData('fermuarlar',list);incNextNo();
+  _uploadNfPhotosInBackground(item.id,'fermuar');
   ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>document.getElementById(id).value='');
   sizes.forEach(s=>{document.getElementById('fer_'+s+'cm').value='';document.getElementById('fer_'+s+'a').value='';});
   document.getElementById('ferToplam').textContent='0';
@@ -5911,7 +5935,9 @@ function saveLastik(){
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!cm||!metre)return toast('Zorunlu alanları doldurun (CM ve Metre)','error');
   const no=getNextNo();
   const item={id:Date.now(),no:'LAS-'+String(no).padStart(3,'0'),type:'lastik',model,tarih,atolye,teslimEden,teslimAlan,termin:document.getElementById('lTermin').value,aciklama:document.getElementById('lAciklama').value.trim(),cm,metre,durum:'bekliyor',createdAt:new Date().toISOString()};
+  _attachNfPhotosToItem(item,'lastik');
   const list=getData('lastikler');list.unshift(item);setData('lastikler',list);incNextNo();
+  _uploadNfPhotosInBackground(item.id,'lastik');
   ['lModel','lTarih','lAtolye','lTeslimEden','lTeslimAlan','lTermin','lAciklama','lCm','lMetre'].forEach(id=>document.getElementById(id).value='');
   const today=new Date().toISOString().split('T')[0];document.getElementById('lTarih').value=today;
   refreshLastikList();toast('Lastik irsaliyesi kaydedildi: '+item.no);refreshHome();
@@ -5941,7 +5967,9 @@ function saveDugme(){
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!adet)return toast('Zorunlu alanları doldurun','error');
   const no=getNextNo();
   const item={id:Date.now(),no:'DUG-'+String(no).padStart(3,'0'),type:'dugme',model,tarih,atolye,teslimEden,teslimAlan,termin:document.getElementById('dTermin').value,aciklama:document.getElementById('dAciklama').value.trim(),adet,durum:'bekliyor',createdAt:new Date().toISOString()};
+  _attachNfPhotosToItem(item,'dugme');
   const list=getData('dugmeler');list.unshift(item);setData('dugmeler',list);incNextNo();
+  _uploadNfPhotosInBackground(item.id,'dugme');
   ['dModel','dTarih','dAtolye','dTeslimEden','dTeslimAlan','dTermin','dAciklama','dAdet'].forEach(id=>document.getElementById(id).value='');
   const today=new Date().toISOString().split('T')[0];document.getElementById('dTarih').value=today;
   toast('Düğme irsaliyesi kaydedildi: '+item.no);refreshHome();
@@ -9192,6 +9220,8 @@ function showQrForCurrentModal(){
 let _sigCtx = null, _sigDrawing = false, _sigHasInk = false;
 let _photoStream = null;
 let _sigCurrentWaybill = null; // { id, type }
+let _newFormPhotos = []; // form kaydedilmeden önce tutulan fotoğraflar
+let _nfStream = null;
 
 let _sigFilter = 'all'; // all | unsigned | signed | bekliyor
 
@@ -9216,8 +9246,6 @@ function refreshSignaturePage(){
   // Aranabilir listeyi çiz
   renderSigWaybillList();
   renderSigSavedList();
-  // Canvas boyutunu sayfa tam görünür olduktan sonra hesapla
-  requestAnimationFrame(() => { requestAnimationFrame(() => { _initSigCanvas(); }); });
 }
 
 function setSigFilter(f){
@@ -9237,8 +9265,7 @@ function renderSigWaybillList(){
   let list = _getAllUnifiedWithType().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
   // Filtre uygula
-  if(_sigFilter === 'unsigned')  list = list.filter(i => !i._signature);
-  else if(_sigFilter === 'signed')   list = list.filter(i => !!i._signature);
+  if(_sigFilter === 'signed')   list = list.filter(i => _getPhotosArray(i).length > 0);
   else if(_sigFilter === 'bekliyor') list = list.filter(i => (i.durum||'bekliyor') === 'bekliyor');
 
   // Arama uygula
@@ -9778,6 +9805,105 @@ function saveManualPhotoUrl(rawUrl){
   }
 }
 
+// ====================================================================
+// YENİ FORM FOTOĞRAF — irsaliye kaydedilmeden fotoğraf ekleme
+// ====================================================================
+function renderNewFormPhotoGallery(){
+  const host = document.getElementById('nfGallery');
+  if(!host) return;
+  if(!_newFormPhotos.length){ host.innerHTML=''; return; }
+  host.innerHTML = _newFormPhotos.map((p,i)=>`
+    <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
+      <img src="${p.data}" style="width:80px;height:80px;object-fit:cover;display:block;" alt="foto ${i+1}">
+      <div style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;border-radius:4px;padding:1px 4px;font-weight:700;">${i+1}</div>
+      <button onclick="removeNfPhotoAt(${i})" style="position:absolute;top:2px;right:2px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeNfPhotoAt(idx){
+  _newFormPhotos.splice(idx,1);
+  renderNewFormPhotoGallery();
+}
+
+function addNfPhoto(dataUrl){
+  const maxW = 900;
+  const img = new Image();
+  img.onload = () => {
+    const w = Math.min(maxW, img.width);
+    const h = Math.round(img.height*(w/img.width));
+    const c = document.getElementById('nfCanvas');
+    if(!c) return;
+    c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const resized = c.toDataURL('image/jpeg',0.82);
+    _newFormPhotos.push({ data: resized, at: new Date().toISOString() });
+    renderNewFormPhotoGallery();
+    toast('Fotoğraf eklendi ('+_newFormPhotos.length+'. foto)','success');
+  };
+  img.src = dataUrl;
+}
+
+function loadNewFormPhotoFromFile(e){
+  const files = Array.from(e.target.files||[]);
+  files.forEach(f=>{ const r=new FileReader(); r.onload=ev=>addNfPhoto(ev.target.result); r.readAsDataURL(f); });
+  e.target.value='';
+}
+
+async function startNewFormCamera(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast('Kamera desteklenmiyor','error'); return; }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    _nfStream = stream;
+    const v = document.getElementById('nfVideo'); if(v){ v.srcObject=stream; }
+    const lb = document.getElementById('nfLiveBox'); if(lb) lb.style.display='block';
+    const cb = document.getElementById('nfCamBtn'); if(cb) cb.style.display='none';
+    const cp = document.getElementById('nfCapBtn'); if(cp) cp.style.display='inline-flex';
+    const st = document.getElementById('nfStopBtn'); if(st) st.style.display='inline-flex';
+  }catch(e){ toast('Kamera açılamadı: '+(e.message||e),'error'); }
+}
+
+function stopNewFormCamera(silent){
+  if(_nfStream){ try{_nfStream.getTracks().forEach(t=>t.stop());}catch(e){} _nfStream=null; }
+  const v=document.getElementById('nfVideo'); if(v) v.srcObject=null;
+  const lb=document.getElementById('nfLiveBox'); if(lb) lb.style.display='none';
+  const cb=document.getElementById('nfCamBtn'); if(cb) cb.style.display='inline-flex';
+  const cp=document.getElementById('nfCapBtn'); if(cp) cp.style.display='none';
+  const st=document.getElementById('nfStopBtn'); if(st) st.style.display='none';
+  if(!silent) toast('Kamera kapatıldı','info');
+}
+
+function captureNewFormPhoto(){
+  const v = document.getElementById('nfVideo');
+  if(!v||!v.videoWidth){ toast('Video hazır değil','error'); return; }
+  const c = document.getElementById('nfCanvas');
+  const maxW=900; const w=Math.min(maxW,v.videoWidth); const h=Math.round(v.videoHeight*(w/v.videoWidth));
+  c.width=w; c.height=h;
+  c.getContext('2d').drawImage(v,0,0,w,h);
+  const dataUrl = c.toDataURL('image/jpeg',0.82);
+  _newFormPhotos.push({ data: dataUrl, at: new Date().toISOString() });
+  renderNewFormPhotoGallery();
+  toast('Fotoğraf çekildi ('+_newFormPhotos.length+'. foto)','success');
+}
+
+function _attachNfPhotosToItem(item, type){
+  if(!_newFormPhotos.length) return;
+  const photos = _newFormPhotos.map(p=>({ data:p.data, at:p.at, url:'', urlAt:'', urlManual:false }));
+  item._photos = photos;
+  item._photo = photos[0].data;
+  item._photoAt = photos[0].at;
+}
+
+function _uploadNfPhotosInBackground(savedId, type){
+  if(!_newFormPhotos.length) return;
+  const photoCopies = _newFormPhotos.slice();
+  photoCopies.forEach((p,idx)=>{
+    _uploadPhotoInBackground(savedId, type, p.data, idx);
+  });
+  _newFormPhotos = [];
+  renderNewFormPhotoGallery();
+}
+
 function _clearPhotoPreview(){
   const gallery = document.getElementById('photoGallery');
   if(gallery){ gallery.style.display='none'; gallery.innerHTML=''; }
@@ -9877,9 +10003,9 @@ function removePhoto(){
 function renderSigSavedList(){
   const host = document.getElementById('sigSavedList');
   if(!host) return;
-  const all = _getAllUnifiedWithType().filter(i=>i._signature||i._photo||(Array.isArray(i._photos)&&i._photos.length));
+  const all = _getAllUnifiedWithType().filter(i=>_getPhotosArray(i).length > 0);
   if(!all.length){
-    host.innerHTML = '<div class="empty-state" style="padding:20px;"><i class="fas fa-inbox"></i><p>Henüz imza/fotoğraf eklenmemiş.</p></div>';
+    host.innerHTML = '<div class="empty-state" style="padding:20px;"><i class="fas fa-inbox"></i><p>Henüz fotoğraf eklenmemiş.</p></div>';
     return;
   }
   host.innerHTML = all.map(i=>{
@@ -9888,12 +10014,11 @@ function renderSigSavedList(){
     const firstPhoto = photos[0];
     return `
     <div class="sig-list-item">
-      ${i._signature?`<img class="sig-thumb" src="${i._signature}" alt="imza">`:'<div class="sig-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-pen-fancy" style="color:#ccc;"></i></div>'}
       ${firstPhoto?`<div style="position:relative;display:inline-block;"><img class="sig-thumb" src="${firstPhoto.data}" alt="foto"><span style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;border-radius:4px;padding:1px 4px;">${photoCount}</span></div>`:'<div class="sig-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="color:#ccc;"></i></div>'}
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;color:var(--primary);font-size:13px;">${i.no||'-'}</div>
         <div style="font-size:11px;color:var(--text-muted);">${TYPE_LABEL_MAP[i._type]} • ${i.model||i.urun||'-'} • ${i.atolye||i.firma||'-'}</div>
-        ${photoCount>0?`<div style="font-size:10px;color:#3b82f6;margin-top:2px;">📸 ${photoCount} fotoğraf</div>`:''}
+        <div style="font-size:10px;color:#3b82f6;margin-top:2px;">📸 ${photoCount} fotoğraf</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-xs btn-secondary" onclick="editSigForItem('${i._type}',${i.id})"><i class="fas fa-pen"></i></button>
