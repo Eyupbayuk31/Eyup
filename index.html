@@ -7516,12 +7516,12 @@ function updateSelDash(checks){
         const a=(+it[b+'a']||0);
         const c=(+it[b+'cm']||0);
         if(a>0||c>0){
-          html+=`<td class="sd-cell-value" style="padding:${tdPadding};">${a>0?a:'-'}${c>0?' <span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">('+c+'cm)</span>':''}</td>`;
+          html+=`<td class="sd-cell-value" style="padding:${tdPadding};">${a>0?a:'-'}${c>0?` <span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">(${c}cm)</span>`:''}</td>`;
         }else{
           html+=`<td class="sd-cell-empty" style="padding:${tdPadding};">-</td>`;
         }
       });
-      html+=`<td class="sd-total-col" style="padding:${tdPadding};"><strong>${rowAdet>0?rowAdet+' adet':'-'}</strong>${rowCm>0?'<br><span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">'+rowCm+'cm</span>':''}</td></tr>`;
+      html+=`<td class="sd-total-col" style="padding:${tdPadding};"><strong>${rowAdet>0?rowAdet+' adet':'-'}</strong>${rowCm>0?`<br><span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">${rowCm}cm</span>`:''}</td></tr>`;
     });
     html+='</tbody></table></div></div>';
   }
