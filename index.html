@@ -4366,6 +4366,8 @@ body::after{
         <button class="btn btn-sm btn-secondary" onclick="showReportTab('olcu',this)">📏 Ölçü/Renk</button>
         <button class="btn btn-sm btn-secondary" onclick="showReportTab('termin',this)">⏱️ Termin</button>
         <button class="btn btn-sm btn-secondary" onclick="showReportTab('heatmap',this)">🗓️ Haftanın Günleri</button>
+        <button class="btn btn-sm btn-secondary" onclick="showReportTab('compare',this)">📊 Aylık Karşılaştırma</button>
+        <button class="btn btn-sm btn-secondary" onclick="showReportTab('firms',this)">🏆 Top Firmalar</button>
       </div>
 
       <!-- Zaman Trendi -->
@@ -4409,6 +4411,36 @@ body::after{
       <!-- Heatmap -->
       <div class="rep-tab" id="rep-heatmap" style="display:none;">
         <div class="card"><div class="card-title"><i class="fas fa-calendar-week"></i> Haftanın Günlerine Göre Yoğunluk</div><div id="weekHeatmap"></div></div>
+      </div>
+
+      <!-- Aylık Karşılaştırma -->
+      <div class="rep-tab" id="rep-compare" style="display:none;">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title"><i class="fas fa-chart-line"></i> Aylık Karşılaştırma (Son 6 Ay)</div>
+          <div style="position:relative;height:280px;"><canvas id="chartCompare"></canvas></div>
+        </div>
+        <div class="grid-auto">
+          <div class="card">
+            <div class="card-title"><i class="fas fa-calendar-check"></i> Bu Ay</div>
+            <div id="compareThisMonth"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-calendar"></i> Geçen Ay</div>
+            <div id="compareLastMonth"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Firmalar -->
+      <div class="rep-tab" id="rep-firms" style="display:none;">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title"><i class="fas fa-chart-bar"></i> En Çok İş Yapılan Firmalar (Top 10)</div>
+          <div style="position:relative;height:280px;"><canvas id="chartFirms"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-trophy"></i> Firma Performans Tablosu</div>
+          <div id="firmsTable"></div>
+        </div>
       </div>
     </div>
 
@@ -6807,6 +6839,8 @@ function renderReportTab(tab){
   else if(tab==='olcu') renderOlcuRenk();
   else if(tab==='termin') renderTerminAnalysis();
   else if(tab==='heatmap') renderWeekHeatmap();
+  else if(tab==='compare') renderMonthlyCompare();
+  else if(tab==='firms') renderTopFirms();
 }
 
 function renderRepKpis(){
@@ -7048,6 +7082,195 @@ function renderWeekHeatmap(){
       }).join('')}
     </div>
     <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:12px;">En yoğun: <strong>${days[counts.indexOf(Math.max(...counts))]}</strong></p>`;
+}
+
+// ========== AYLIK KARŞILAŞTIRMA ==========
+function renderMonthlyCompare(){
+  const allData = getUnifiedList();
+  const now = new Date();
+  const months = [];
+
+  // Son 6 ay
+  for(let i=5; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({
+      label: d.toLocaleDateString('tr-TR', {month:'short', year:'numeric'}),
+      year: d.getFullYear(),
+      month: d.getMonth()
+    });
+  }
+
+  const monthData = months.map(m=>{
+    const items = allData.filter(i=>{
+      const d = new Date(i.tarih||i.createdAt||0);
+      return d.getFullYear()===m.year && d.getMonth()===m.month;
+    });
+    return {
+      label: m.label,
+      count: items.length,
+      teslim: items.filter(i=>i.durum==='teslim'||i.durum==='Tamamlandı').length
+    };
+  });
+
+  // Grafik
+  const ctx = document.getElementById('chartCompare');
+  if(!ctx) return;
+  if(window.chartCompareObj) window.chartCompareObj.destroy();
+  window.chartCompareObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: monthData.map(m=>m.label),
+      datasets: [{
+        label: 'Toplam İrsaliye',
+        data: monthData.map(m=>m.count),
+        backgroundColor: 'rgba(124,58,237,0.7)',
+        borderColor: '#7c3aed',
+        borderWidth: 2
+      },{
+        label: 'Teslim Edildi',
+        data: monthData.map(m=>m.teslim),
+        backgroundColor: 'rgba(16,185,129,0.7)',
+        borderColor: '#10b981',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {legend: {display: true, position: 'top'}},
+      scales: {y: {beginAtZero: true, ticks: {stepSize: 1}}}
+    }
+  });
+
+  // Bu ay vs geçen ay
+  const thisMonth = monthData[monthData.length-1];
+  const lastMonth = monthData[monthData.length-2];
+
+  const thisMonthItems = allData.filter(i=>{
+    const d = new Date(i.tarih||i.createdAt||0);
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  });
+
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonthItems = allData.filter(i=>{
+    const d = new Date(i.tarih||i.createdAt||0);
+    return d.getFullYear()===lastMonthDate.getFullYear() && d.getMonth()===lastMonthDate.getMonth();
+  });
+
+  const diff = thisMonth.count - lastMonth.count;
+  const diffPercent = lastMonth.count > 0 ? ((diff / lastMonth.count) * 100).toFixed(1) : 0;
+  const diffIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+  const diffColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#6b7280';
+
+  document.getElementById('compareThisMonth').innerHTML = `
+    <div style="padding:16px;">
+      <div style="font-size:48px;font-weight:800;color:var(--primary);text-align:center;">${thisMonth.count}</div>
+      <div style="text-align:center;color:var(--text-muted);font-size:13px;margin-top:4px;">Toplam İrsaliye</div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;">
+          <span style="color:var(--text-muted);">Teslim Edildi:</span>
+          <strong style="color:#10b981;">${thisMonth.teslim}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--text-muted);">Bekliyor:</span>
+          <strong style="color:#f59e0b;">${thisMonth.count - thisMonth.teslim}</strong>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('compareLastMonth').innerHTML = `
+    <div style="padding:16px;">
+      <div style="font-size:48px;font-weight:800;color:var(--text-muted);text-align:center;">${lastMonth.count}</div>
+      <div style="text-align:center;color:var(--text-muted);font-size:13px;margin-top:4px;">Toplam İrsaliye</div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="text-align:center;font-size:14px;font-weight:600;color:${diffColor};">
+          ${diffIcon} ${diff > 0 ? '+' : ''}${diff} (${diffPercent > 0 ? '+' : ''}${diffPercent}%)
+        </div>
+        <div style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:4px;">Geçen aya göre</div>
+      </div>
+    </div>`;
+}
+
+// ========== TOP FİRMALAR ==========
+function renderTopFirms(){
+  const allData = getUnifiedList();
+  const firmMap = {};
+
+  allData.forEach(i=>{
+    const firma = i.firma || i.atolye || 'Belirtilmemiş';
+    if(!firmMap[firma]) firmMap[firma] = {count:0, teslim:0, bekliyor:0};
+    firmMap[firma].count++;
+    if(i.durum==='teslim'||i.durum==='Tamamlandı') firmMap[firma].teslim++;
+    else firmMap[firma].bekliyor++;
+  });
+
+  const firms = Object.keys(firmMap).map(k=>({
+    name: k,
+    count: firmMap[k].count,
+    teslim: firmMap[k].teslim,
+    bekliyor: firmMap[k].bekliyor,
+    rate: firmMap[k].count > 0 ? ((firmMap[k].teslim / firmMap[k].count) * 100).toFixed(1) : 0
+  })).sort((a,b)=>b.count-a.count);
+
+  const top10 = firms.slice(0,10);
+
+  // Grafik
+  const ctx = document.getElementById('chartFirms');
+  if(!ctx) return;
+  if(window.chartFirmsObj) window.chartFirmsObj.destroy();
+  window.chartFirmsObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10.map(f=>f.name.length>15 ? f.name.substring(0,15)+'...' : f.name),
+      datasets: [{
+        label: 'Toplam İş',
+        data: top10.map(f=>f.count),
+        backgroundColor: 'rgba(124,58,237,0.7)',
+        borderColor: '#7c3aed',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {legend: {display: false}},
+      scales: {x: {beginAtZero: true, ticks: {stepSize: 1}}}
+    }
+  });
+
+  // Tablo
+  document.getElementById('firmsTable').innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="width:100%;font-size:13px;">
+        <thead>
+          <tr style="background:var(--glass);border-bottom:2px solid var(--border);">
+            <th style="padding:10px;text-align:left;">Sıra</th>
+            <th style="padding:10px;text-align:left;">Firma/Atölye</th>
+            <th style="padding:10px;text-align:center;">Toplam İş</th>
+            <th style="padding:10px;text-align:center;">Teslim</th>
+            <th style="padding:10px;text-align:center;">Bekliyor</th>
+            <th style="padding:10px;text-align:center;">Teslim Oranı</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${firms.map((f,i)=>`
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:10px;font-weight:700;color:${i<3?'var(--primary)':'var(--text-muted)'};">${i+1}</td>
+              <td style="padding:10px;font-weight:600;">${f.name}</td>
+              <td style="padding:10px;text-align:center;font-weight:700;color:var(--primary);">${f.count}</td>
+              <td style="padding:10px;text-align:center;color:#10b981;">${f.teslim}</td>
+              <td style="padding:10px;text-align:center;color:#f59e0b;">${f.bekliyor}</td>
+              <td style="padding:10px;text-align:center;">
+                <div style="display:inline-block;padding:4px 10px;border-radius:12px;background:${f.rate>=80?'rgba(16,185,129,0.15)':f.rate>=50?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.15)'};color:${f.rate>=80?'#10b981':f.rate>=50?'#f59e0b':'#ef4444'};font-weight:700;font-size:12px;">
+                  ${f.rate}%
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function printReports(){
