@@ -5020,7 +5020,7 @@ body::after{
     <a class="active" onclick="showPage('home')" data-nav="home"><i class="fas fa-home"></i><span>Ana</span></a>
     <a onclick="showPage('new')" data-nav="new"><i class="fas fa-plus-circle"></i><span>Yeni</span></a>
     <a onclick="showPage('list')" data-nav="list"><i class="fas fa-list"></i><span>Liste</span></a>
-    <a onclick="showPage('reports')" data-nav="reports"><i class="fas fa-chart-bar"></i><span>Rapor</span></a>
+    <a onclick="showPage('aksesuar')" data-nav="aksesuar"><i class="fas fa-tags"></i><span>Aksesuar</span></a>
     <a onclick="showPage('settings')" data-nav="settings"><i class="fas fa-cog"></i><span>Ayar</span></a>
   </div>
 </nav>
@@ -5060,7 +5060,7 @@ function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(va
 
 // ==================== NAVIGATION ====================
 const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
-const bottomNavPages=['home','new','list','reports','settings'];
+const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
