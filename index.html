@@ -356,7 +356,7 @@
 
     // ── Baslat
     async function boot(){
-      toast('☁️ Firestore v10 baglandi');
+      toast('☁️ Data Sunucusuna bağlandı');
       try {
         await bootRead();
       } finally {
@@ -3524,7 +3524,6 @@ body::after{
       <div class="logo-icon"><i class="fas fa-file-invoice"></i></div>
       <div>
         <div class="logo-text">İrsaliye Pro</div>
-        <div class="logo-ver">v7.0 — Premium</div>
       </div>
     </div>
   </div>
@@ -3557,7 +3556,6 @@ body::after{
     <a onclick="showPage('templates')"><i class="fas fa-clone"></i><span>Şablonlar</span></a>
   </nav>
   <div class="sidebar-footer">
-    <div class="sf-row"><i class="fas fa-code"></i><span style="font-weight:600;">v7.0 — Premium</span></div>
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
     <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
       <i class="fas fa-right-from-bracket"></i> Çıkış Yap
@@ -4470,28 +4468,6 @@ body::after{
           </div>
         </div>
 
-        <div class="s-card">
-          <div class="s-card-head">
-            <div class="s-ico" style="background:linear-gradient(135deg,#6366f1,#4338ca);"><i class="fas fa-link"></i></div>
-            <div>
-              <h3>QR Yayın URL'si</h3>
-              <p>QR taranınca atölyenin açacağı public sayfa adresi</p>
-            </div>
-          </div>
-          <div class="s-body">
-            <div class="form-group">
-              <input class="form-input" type="url" id="publishUrl" placeholder="örn: https://eyup.github.io/irsaliye/index.html" onchange="savePublishUrl(this.value)">
-              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;">
-                <i class="fas fa-circle-info" style="color:var(--primary);"></i>
-                Bu HTML dosyasını nereye yayınladıysanız o URL'yi girin (GitHub Pages, Netlify, kendi siteniz vb.).
-                QR taranınca tarayıcı otomatik bu adresi açar ve şifresiz olarak irsaliyeyi gösterir.
-                Boş bırakılırsa mevcut sayfa URL'si kullanılır.
-              </div>
-              <div id="publishUrlPreview" style="font-size:11px;color:#10b981;margin-top:6px;"></div>
-            </div>
-          </div>
-        </div>
-
         <div class="s-card" id="githubConfigCard">
           <div class="s-card-head">
             <div class="s-ico" style="background:linear-gradient(135deg,#1f2937,#111827);"><i class="fab fa-github"></i></div>
@@ -4708,8 +4684,7 @@ body::after{
           <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#5b21b6);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 10px 30px rgba(124,58,237,0.3);">
             <i class="fas fa-file-invoice" style="color:#fff;font-size:32px;"></i>
           </div>
-          <h3 style="font-size:22px;font-weight:800;margin-bottom:4px;">İrsaliye Pro</h3>
-          <div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Versiyon 14.0 · 2026</div>
+          <h3 style="font-size:22px;font-weight:800;margin-bottom:16px;">İrsaliye Pro</h3>
           <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
             <span class="s-badge"><i class="fas fa-box"></i> İrsaliye Yönetimi</span>
             <span class="s-badge"><i class="fas fa-warehouse"></i> Stok Takibi</span>
