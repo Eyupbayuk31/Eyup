@@ -5580,8 +5580,10 @@ function deductStockFromIrsaliye(irsaliye) {
       const adet = irsaliye.sizes[key];
       if (adet > 0) {
         const posetAdi = posetMap[key];
+        // Hem × hem x ile eşleşsin
+        const posetAdiAlt = posetAdi.replace('×', 'x');
         const stokItem = stoklar.find(s =>
-          s.kategori === 'Poşet' && s.ad.includes(posetAdi)
+          s.kategori === 'Poşet' && (s.ad.includes(posetAdi) || s.ad.includes(posetAdiAlt))
         );
         if (stokItem) {
           if (stokItem.miktar >= adet) {
@@ -5886,8 +5888,10 @@ function returnStockFromIrsaliye(irsaliye) {
       const adet = irsaliye.sizes[key];
       if (adet > 0) {
         const posetAdi = posetMap[key];
+        // Hem × hem x ile eşleşsin
+        const posetAdiAlt = posetAdi.replace('×', 'x');
         const stokItem = stoklar.find(s =>
-          s.kategori === 'Poşet' && s.ad.includes(posetAdi)
+          s.kategori === 'Poşet' && (s.ad.includes(posetAdi) || s.ad.includes(posetAdiAlt))
         );
         if (stokItem) {
           stokItem.miktar += adet;
