@@ -4252,34 +4252,34 @@ body::after{
 
       <!-- Zaman Trendi -->
       <div class="rep-tab" id="rep-trend">
-        <div class="card"><div class="card-title"><i class="fas fa-chart-line"></i> İrsaliye Sayısı / Adet Trendi</div><canvas id="chartTrend" height="250"></canvas></div>
+        <div class="card"><div class="card-title"><i class="fas fa-chart-line"></i> İrsaliye Sayısı / Adet Trendi</div><div style="position:relative;height:250px;"><canvas id="chartTrend"></canvas></div></div>
       </div>
 
       <!-- Durum -->
       <div class="rep-tab" id="rep-durum" style="display:none;">
         <div class="grid-auto">
-          <div class="card"><div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dağılımı</div><canvas id="chartDurum" height="250"></canvas></div>
+          <div class="card"><div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dağılımı</div><div style="position:relative;height:250px;"><canvas id="chartDurum"></canvas></div></div>
           <div class="card"><div class="card-title"><i class="fas fa-list-check"></i> Özet</div><div id="durumOzet"></div></div>
         </div>
       </div>
 
       <!-- Atölye -->
       <div class="rep-tab" id="rep-atolye" style="display:none;">
-        <div class="card" style="margin-bottom:16px;"><div class="card-title"><i class="fas fa-chart-bar"></i> Atölye Bazlı İrsaliye Sayısı</div><canvas id="chartAtolye" height="250"></canvas></div>
+        <div class="card" style="margin-bottom:16px;"><div class="card-title"><i class="fas fa-chart-bar"></i> Atölye Bazlı İrsaliye Sayısı</div><div style="position:relative;height:250px;"><canvas id="chartAtolye"></canvas></div></div>
         <div class="card"><div class="card-title"><i class="fas fa-trophy"></i> Atölye Performans Tablosu</div><div id="atolyePerf"></div></div>
       </div>
 
       <!-- Model -->
       <div class="rep-tab" id="rep-model" style="display:none;">
-        <div class="card" style="margin-bottom:16px;"><div class="card-title"><i class="fas fa-star"></i> Top 10 Model</div><canvas id="chartModel" height="280"></canvas></div>
+        <div class="card" style="margin-bottom:16px;"><div class="card-title"><i class="fas fa-star"></i> Top 10 Model</div><div style="position:relative;height:280px;"><canvas id="chartModel"></canvas></div></div>
         <div class="card"><div class="card-title"><i class="fas fa-list-ol"></i> Model Sıralaması</div><div id="modelTable"></div></div>
       </div>
 
       <!-- Ölçü / Renk -->
       <div class="rep-tab" id="rep-olcu" style="display:none;">
         <div class="grid-auto">
-          <div class="card"><div class="card-title"><i class="fas fa-ruler"></i> Ölçü Dağılımı</div><canvas id="chartOlcu" height="250"></canvas></div>
-          <div class="card"><div class="card-title"><i class="fas fa-palette"></i> Renk Dağılımı</div><canvas id="chartRenk" height="250"></canvas></div>
+          <div class="card"><div class="card-title"><i class="fas fa-ruler"></i> Ölçü Dağılımı</div><div style="position:relative;height:250px;"><canvas id="chartOlcu"></canvas></div></div>
+          <div class="card"><div class="card-title"><i class="fas fa-palette"></i> Renk Dağılımı</div><div style="position:relative;height:250px;"><canvas id="chartRenk"></canvas></div></div>
         </div>
       </div>
 
@@ -6740,7 +6740,7 @@ function refreshPage(page){
   else if(page==='takvim')renderCalendar();
   else if(page==='lastik')refreshLastikList();
   else if(page==='toptan')refreshToptanList();
-  else if(page==='reports'){renderReportCharts();renderTerminAnalysis();}
+  else if(page==='reports'){renderAllReports();}
   else if(page==='geridonusum')renderRecycleBin();
   else if(page==='settings')loadSettings();
   // Yeni özellik sayfaları
@@ -8217,7 +8217,7 @@ setTimeout(updateOnlineStatus, 1000);
       const obs = new IntersectionObserver((entries) => {
         entries.forEach(e => {
           if (e.isIntersecting && reportsPage.classList.contains('active')) {
-            if (typeof renderReportCharts === 'function') renderReportCharts();
+            if (typeof renderAllReports === 'function') renderAllReports();
             obs.disconnect();
           }
         });
