@@ -4222,6 +4222,7 @@ body::after{
           <div class="card-title"><i class="fas fa-building"></i> Firma Bilgisi</div>
           <div class="form-group"><label>Firma / Atölye Adı *</label><input class="form-input" id="tFirma" placeholder="Firma adı"></div>
           <div class="form-group"><label>Ürün Kodu</label><input class="form-input" id="tUrun" placeholder="Ürün kodu"></div>
+          <div class="form-group"><label>Renk</label><input class="form-input" id="tRenk" placeholder="Örn: Siyah, Beyaz, Lacivert"></div>
           <div class="form-group"><label>Not</label><textarea class="form-input" id="tNot" placeholder="Sipariş notu" rows="2"></textarea></div>
         </div>
         <div class="card">
@@ -6186,7 +6187,8 @@ function generatePDF(id, type) {
 
   if (type === 'toptan' && item.beden) {
     const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    html += `<div class="section-title">📦 Beden Detayları</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
+    html += `<div class="section-title">📦 Beden Detayları${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
     for (let k in item.beden) { html += `<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`; }
     html += `</tbody></table><div class="total-row">Toplam Adet: ${item.total||0}</div>`;
     // Toptan sipariş için otomatik açıklama
@@ -6322,9 +6324,9 @@ function saveToptan(){
   if(!firma)return toast('Firma adı gerekli','error');
   const sizes=['xxs','xs','s','m','l','xl','xxl','3xl'];const beden={};let total=0;
   sizes.forEach(s=>{const v=+(document.getElementById('t_'+s+'a').value||0);if(v>0)beden[s]=v;total+=v;});
-  const item={id:Date.now(),firma,urun:document.getElementById('tUrun').value.trim(),not:document.getElementById('tNot').value.trim(),beden,total,tarih:new Date().toISOString().split('T')[0],createdAt:new Date().toISOString()};
+  const item={id:Date.now(),firma,urun:document.getElementById('tUrun').value.trim(),renk:document.getElementById('tRenk').value.trim(),not:document.getElementById('tNot').value.trim(),beden,total,tarih:new Date().toISOString().split('T')[0],createdAt:new Date().toISOString()};
   const list=getData('toptanlar');list.unshift(item);setData('toptanlar',list);
-  ['tFirma','tUrun','tNot'].forEach(id=>document.getElementById(id).value='');
+  ['tFirma','tUrun','tRenk','tNot'].forEach(id=>document.getElementById(id).value='');
   sizes.forEach(s=>document.getElementById('t_'+s+'a').value='');
   document.getElementById('tToplam').textContent='0';
   refreshToptanList();toast('Sipariş kaydedildi');
