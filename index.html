@@ -5558,6 +5558,128 @@ function renderStokList(){
 // Close stok modal on overlay click
 document.getElementById('stokModal').addEventListener('click', function(e){ if(e.target===this) closeStokModal(); });
 
+// ==================== STOK DÜŞÜRME SİSTEMİ ====================
+function deductStockFromIrsaliye(irsaliye) {
+  const stoklar = getData('stoklar');
+  let updated = false;
+  const warnings = [];
+
+  // Poşet ölçüleri mapping
+  const posetMap = {
+    s30: '30×40',
+    s35: '35×45',
+    s40: '40×60',
+    s50: '50×70',
+    s60: '60×90',
+    s100: '100×100'
+  };
+
+  // Poşetleri düş
+  if (irsaliye.sizes) {
+    for (let key in irsaliye.sizes) {
+      const adet = irsaliye.sizes[key];
+      if (adet > 0) {
+        const posetAdi = posetMap[key];
+        const stokItem = stoklar.find(s =>
+          s.kategori === 'Poşet' && s.ad.includes(posetAdi)
+        );
+        if (stokItem) {
+          if (stokItem.miktar >= adet) {
+            stokItem.miktar -= adet;
+            stokItem.updatedAt = new Date().toISOString();
+            updated = true;
+          } else {
+            warnings.push(`${posetAdi} Poşet yetersiz (Stok: ${stokItem.miktar}, İhtiyaç: ${adet})`);
+          }
+        }
+      }
+    }
+  }
+
+  // Bantları düş
+  if (irsaliye.bant) {
+    const bantMap = {
+      genis: 'Bant Geniş',
+      dar: 'Bant Dar',
+      kilcik: 'Kılçık'
+    };
+    for (let key in irsaliye.bant) {
+      const adet = irsaliye.bant[key];
+      if (adet > 0) {
+        const bantKategori = bantMap[key];
+        const stokItem = stoklar.find(s => s.kategori === bantKategori);
+        if (stokItem) {
+          if (stokItem.miktar >= adet) {
+            stokItem.miktar -= adet;
+            stokItem.updatedAt = new Date().toISOString();
+            updated = true;
+          } else {
+            warnings.push(`${bantKategori} yetersiz (Stok: ${stokItem.miktar}, İhtiyaç: ${adet})`);
+          }
+        }
+      }
+    }
+  }
+
+  if (updated) {
+    setData('stoklar', stoklar);
+    // Stok hareketi kaydet
+    recordStockMovement(irsaliye);
+  }
+
+  if (warnings.length > 0) {
+    toast('⚠️ Stok Uyarısı: ' + warnings.join(', '), 'error');
+  }
+
+  return updated;
+}
+
+function recordStockMovement(irsaliye) {
+  const movements = getData('stokHareketler') || [];
+  const movement = {
+    id: Date.now(),
+    irsaliyeNo: irsaliye.no,
+    irsaliyeId: irsaliye.id,
+    tarih: new Date().toISOString(),
+    tip: 'cikis',
+    aciklama: `İrsaliye: ${irsaliye.no} - ${irsaliye.atolye}`,
+    items: []
+  };
+
+  // Poşetleri kaydet
+  const posetMap = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+  if (irsaliye.sizes) {
+    for (let key in irsaliye.sizes) {
+      if (irsaliye.sizes[key] > 0) {
+        movement.items.push({
+          ad: posetMap[key] + ' Poşet',
+          kategori: 'Poşet',
+          miktar: irsaliye.sizes[key]
+        });
+      }
+    }
+  }
+
+  // Bantları kaydet
+  const bantMap = {genis:'Bant Geniş',dar:'Bant Dar',kilcik:'Kılçık'};
+  if (irsaliye.bant) {
+    for (let key in irsaliye.bant) {
+      if (irsaliye.bant[key] > 0) {
+        movement.items.push({
+          ad: bantMap[key],
+          kategori: bantMap[key],
+          miktar: irsaliye.bant[key]
+        });
+      }
+    }
+  }
+
+  if (movement.items.length > 0) {
+    movements.unshift(movement);
+    setData('stokHareketler', movements);
+  }
+}
+
 // ==================== AKSESUAR TAKİP ====================
 
 function addNewAksesuarRow(){
@@ -5720,6 +5842,10 @@ function saveIrsaliye(){
   _attachNfPhotosToItem(item,'standart');
   const list=getData('irsaliyeler');list.unshift(item);setData('irsaliyeler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'standart');
+
+  // Stoktan düş
+  deductStockFromIrsaliye(item);
+
   ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('iDurum').value='bekliyor';
   const today=new Date().toISOString().split('T')[0];document.getElementById('iTarih').value=today;
@@ -5728,8 +5854,74 @@ function saveIrsaliye(){
 
 function deleteIrsaliye(id){
   if(!confirm('Bu irsaliyeyi silmek istediğinize emin misiniz?'))return;
-  let list=getData('irsaliyeler');list=list.filter(i=>i.id!==id);setData('irsaliyeler',list);
+  let list=getData('irsaliyeler');
+  const item=list.find(i=>i.id===id);
+
+  // Stoku geri ekle
+  if(item){
+    returnStockFromIrsaliye(item);
+  }
+
+  list=list.filter(i=>i.id!==id);setData('irsaliyeler',list);
   applyFilters();refreshHome();toast('İrsaliye silindi','info');
+}
+
+function returnStockFromIrsaliye(irsaliye) {
+  const stoklar = getData('stoklar');
+  let updated = false;
+
+  // Poşet ölçüleri mapping
+  const posetMap = {
+    s30: '30×40',
+    s35: '35×45',
+    s40: '40×60',
+    s50: '50×70',
+    s60: '60×90',
+    s100: '100×100'
+  };
+
+  // Poşetleri geri ekle
+  if (irsaliye.sizes) {
+    for (let key in irsaliye.sizes) {
+      const adet = irsaliye.sizes[key];
+      if (adet > 0) {
+        const posetAdi = posetMap[key];
+        const stokItem = stoklar.find(s =>
+          s.kategori === 'Poşet' && s.ad.includes(posetAdi)
+        );
+        if (stokItem) {
+          stokItem.miktar += adet;
+          stokItem.updatedAt = new Date().toISOString();
+          updated = true;
+        }
+      }
+    }
+  }
+
+  // Bantları geri ekle
+  if (irsaliye.bant) {
+    const bantMap = {
+      genis: 'Bant Geniş',
+      dar: 'Bant Dar',
+      kilcik: 'Kılçık'
+    };
+    for (let key in irsaliye.bant) {
+      const adet = irsaliye.bant[key];
+      if (adet > 0) {
+        const bantKategori = bantMap[key];
+        const stokItem = stoklar.find(s => s.kategori === bantKategori);
+        if (stokItem) {
+          stokItem.miktar += adet;
+          stokItem.updatedAt = new Date().toISOString();
+          updated = true;
+        }
+      }
+    }
+  }
+
+  if (updated) {
+    setData('stoklar', stoklar);
+  }
 }
 
 function toggleDurum(id){
