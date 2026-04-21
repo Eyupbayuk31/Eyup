@@ -10385,10 +10385,55 @@ function captureNewFormPhoto(){
 
 function _attachNfPhotosToItem(item, type){
   if(!_newFormPhotos.length) return;
-  const photos = _newFormPhotos.map(p=>({ data:p.data, at:p.at, url:'', urlAt:'', urlManual:false }));
+  // Fotoğrafları localStorage'e KAYDETME - sadece GitHub'a yüklenecek
+  // Base64 data'yı item'a ekleme, sadece placeholder
+  const photos = _newFormPhotos.map(p=>({ data:'', at:p.at, url:'', urlAt:'', urlManual:false }));
   item._photos = photos;
-  item._photo = photos[0].data;
-  item._photoAt = photos[0].at;
+  // _photo ve _photoAt alanlarını boş bırak - localStorage'i şişirmesin
+  item._photo = '';
+  item._photoAt = _newFormPhotos[0]?.at || '';
+}
+
+// Eski kayıtlardaki base64 fotoğrafları temizle (localStorage'i boşalt)
+function cleanupLocalStoragePhotos(){
+  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar'];
+  let cleaned = 0;
+
+  keys.forEach(key => {
+    const list = getData(key);
+    let modified = false;
+
+    list.forEach(item => {
+      if(item._photo && item._photo.startsWith('data:image')){
+        item._photo = '';
+        modified = true;
+        cleaned++;
+      }
+      if(item._photos && Array.isArray(item._photos)){
+        item._photos.forEach(p => {
+          if(p.data && p.data.startsWith('data:image')){
+            p.data = '';
+            modified = true;
+          }
+        });
+      }
+    });
+
+    if(modified){
+      setData(key, list);
+    }
+  });
+
+  if(cleaned > 0){
+    console.log(`✅ ${cleaned} fotoğraf localStorage'den temizlendi`);
+  }
+}
+
+// Sayfa yüklendiğinde otomatik temizlik
+if(typeof window !== 'undefined'){
+  window.addEventListener('load', function(){
+    setTimeout(cleanupLocalStoragePhotos, 2000);
+  });
 }
 
 function _uploadNfPhotosInBackground(savedId, type){
