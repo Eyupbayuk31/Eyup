@@ -7719,85 +7719,117 @@ function _bulkGetSelectedItems(){
   return items;
 }
 
+function _singleItemPdfHtml(item, type){
+  const typeLabels={standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş'};
+  const typeLabel=typeLabels[type]||'İrsaliye';
+  const printDate=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR');
+  const qrScanUrl=(typeof _buildQrScanUrl==='function')?_buildQrScanUrl(item,type):'';
+  const qrDataUrl=(typeof _buildQrDataUrl==='function'&&qrScanUrl)?_buildQrDataUrl(qrScanUrl):'';
+  const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:72px;height:72px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;"><div style="font-size:9px;color:#6b7280;margin-top:2px;">📱 Tara</div></div>`:'';
+  let h=`<div class="irsaliye-page">
+  <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${item.no||'—'}</div><div class="pdate">Tarih: ${printDate}</div>${qrBlock}</div></div>
+  <div class="ig">
+    <div class="ib"><div class="il">Tarih</div><div class="iv">${item.tarih||'—'}</div></div>
+    <div class="ib"><div class="il">Durum</div><div class="iv"><span class="sb ${item.durum==='teslim'?'sb-teslim':'sb-bekliyor'}">${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}</span></div></div>
+    <div class="ib"><div class="il">Model / Ürün</div><div class="iv">${item.model||item.urun||'—'}</div></div>
+    <div class="ib"><div class="il">Atölye / Firma</div><div class="iv">${item.atolye||item.firma||'—'}</div></div>
+    ${item.teslimEden?`<div class="ib"><div class="il">Teslim Eden</div><div class="iv">${item.teslimEden}</div></div>`:''}
+    ${item.teslimAlan?`<div class="ib"><div class="il">Teslim Alan</div><div class="iv">${item.teslimAlan}</div></div>`:''}
+    ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${item.termin}</div></div>`:''}
+    ${(type==='fermuar'&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${item.renk}</div></div>`:''}
+  </div>`;
+
+  if(type==='standart'&&item.sizes){
+    const sn={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+    const bn={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
+    if(Object.values(item.sizes).some(v=>v>0)){
+      h+=`<div class="st">📦 Poşet Ölçüleri</div><table><thead><tr><th>Ölçü</th><th>Adet</th></tr></thead><tbody>`;
+      for(let k in item.sizes){if(item.sizes[k]>0)h+=`<tr><td><b>${sn[k]||k}</b></td><td>${item.sizes[k]}</td></tr>`;}
+      h+=`</tbody></table><div class="tr2">Toplam Poşet: ${Object.values(item.sizes).reduce((a,b)=>a+b,0)}</div>`;
+    }
+    if(item.bant&&Object.values(item.bant).some(v=>v>0)){
+      h+=`<div class="st">🎀 Bant & Kılçık</div><table><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>`;
+      for(let k in item.bant){if(item.bant[k]>0)h+=`<tr><td><b>${bn[k]||k}</b></td><td>${item.bant[k]}</td></tr>`;}
+      h+=`</tbody></table>`;
+    }
+  }
+  if(type==='fermuar'&&item.beden){
+    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
+    h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
+    for(let k in item.beden)h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k].cm} cm</td><td>${item.beden[k].adet}</td></tr>`;
+    h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
+  }
+  if(type==='lastik'){
+    h+=`<div class="st">📏 Lastik Miktarı</div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div></div>`;
+  }
+  if(type==='dugme'){
+    h+=`<div class="st">🔘 Düğme Miktarı</div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:13px;color:#6b7280;font-weight:600;">ADET</div></div>`;
+  }
+  if(type==='toptan'&&item.beden){
+    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    h+=`<div class="st">📦 Beden Detayları</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
+    for(let k in item.beden)h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`;
+    h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
+  }
+  if(item.aciklama||item.not)h+=`<div class="nb">📝 <b>Not:</b> ${item.aciklama||item.not}</div>`;
+
+  h+=`<div class="sigs">
+    <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+item.teslimEden:''}</div></div>
+    <div class="sb2"><div style="height:70px;"></div><div class="sl">Teslim Alan${item.teslimAlan?': '+item.teslimAlan:''}</div></div>
+  </div>
+  <div class="pf"><span>İrsaliye Pro — Eyüp</span><span>Yazdırma: ${printDate}</span></div>
+  </div>`;
+  return h;
+}
+
 function _buildBulkHTML(items){
   const today=new Date().toLocaleDateString('tr-TR');
-  const typeLabel={standart:'İrsaliye',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan'};
-  let rows=items.map((x,i)=>{
-    const it=x.item;
-    const no=it.no||'-';
-    const firma=it.firma||it.musteri||'-';
-    const model=it.model||it.urun||'-';
-    const adet=it.adet||it.miktar||'-';
-    const termin=it.termin||'-';
-    const atolye=it.atolye||'-';
-    const durum=it.durum||'-';
-    const tarih=it.tarih||'-';
-    return `<tr>
-      <td style="text-align:center;">${i+1}</td>
-      <td><strong>${no}</strong></td>
-      <td>${typeLabel[x.type]||x.type}</td>
-      <td>${firma}</td>
-      <td>${model}</td>
-      <td style="text-align:center;">${adet}</td>
-      <td>${atolye}</td>
-      <td>${tarih}</td>
-      <td>${termin}</td>
-      <td><span style="padding:3px 8px;border-radius:4px;background:#eef;font-size:11px;">${durum}</span></td>
-    </tr>`;
-  }).join('');
+  const pages=items.map(x=>_singleItemPdfHtml(x.item,x.type)).join('');
   return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
-<title>İrsaliye Raporu - ${today}</title>
+<title>İrsaliye PDF — ${today}</title>
 <style>
-  @page{size:A4 landscape;margin:12mm;}
-  *{box-sizing:border-box;}
-  body{font-family:'Segoe UI',Arial,sans-serif;color:#222;margin:0;padding:20px;font-size:12px;}
-  .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #2563eb;padding-bottom:12px;margin-bottom:18px;}
-  .header h1{margin:0;color:#2563eb;font-size:22px;}
-  .header .meta{text-align:right;color:#666;font-size:11px;}
-  .summary{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-  .summary .box{flex:1;min-width:140px;background:#f5f7fb;padding:10px 14px;border-radius:8px;border-left:4px solid #2563eb;}
-  .summary .box .lbl{color:#666;font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
-  .summary .box .val{font-size:18px;font-weight:700;color:#1e293b;margin-top:2px;}
-  table{width:100%;border-collapse:collapse;font-size:11px;}
-  thead{background:#2563eb;color:#fff;}
-  th{padding:8px 6px;text-align:left;font-weight:600;font-size:11px;}
-  td{padding:7px 6px;border-bottom:1px solid #e5e7eb;}
-  tbody tr:nth-child(even){background:#f9fafb;}
-  .footer{margin-top:20px;padding-top:10px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;color:#888;font-size:10px;}
-  @media print{.no-print{display:none;}}
-  .no-print{position:fixed;top:10px;right:10px;display:flex;gap:8px;}
-  .no-print button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;}
-  .btn-pdf{background:#dc3545;color:#fff;}
-  .btn-print{background:#2563eb;color:#fff;}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @page{size:A4 portrait;margin:12mm;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',Arial,sans-serif;color:#1a1a2e;font-size:13px;}
+  .irsaliye-page{padding:24px;max-width:760px;margin:0 auto;page-break-after:always;}
+  .irsaliye-page:last-child{page-break-after:auto;}
+  .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #7c3aed;padding-bottom:14px;margin-bottom:18px;}
+  .ph-left h1{font-size:20px;font-weight:800;color:#7c3aed;}
+  .ph-left p{font-size:11px;color:#6b7280;margin-top:2px;}
+  .ph-right{text-align:right;}
+  .pno{font-size:18px;font-weight:800;color:#1a1a2e;}
+  .pdate{font-size:11px;color:#6b7280;}
+  .ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .ib{background:#f8f7fc;border:1px solid #e5e7eb;border-radius:8px;padding:9px 12px;}
+  .il{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;font-weight:700;margin-bottom:2px;}
+  .iv{font-size:13px;font-weight:600;color:#1a1a2e;}
+  .st{font-size:13px;font-weight:700;color:#7c3aed;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid #e5e7eb;}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+  th{background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:7px 10px;text-align:left;font-weight:700;}
+  td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;}
+  .sb{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+  .sb-bekliyor{background:#fef3c7;color:#92400e;}
+  .sb-teslim{background:#d1fae5;color:#065f46;}
+  .tr2{text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;border-top:2px solid #7c3aed;margin-top:8px;}
+  .nb{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin-top:14px;font-size:12px;color:#92400e;}
+  .sigs{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:36px;}
+  .sb2{text-align:center;}
+  .sl{border-top:1px solid #1a1a2e;margin-top:46px;padding-top:5px;font-size:11px;color:#6b7280;}
+  .pf{margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;}
+  @media print{.no-print{display:none;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+  .no-print{position:fixed;top:10px;right:10px;display:flex;gap:8px;z-index:999;}
+  .no-print button{padding:9px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;}
+  .btn-pdf{background:#dc2626;color:#fff;}
+  .btn-close{background:#6b7280;color:#fff;}
 </style></head><body>
 <div class="no-print">
-  <button class="btn-pdf" onclick="window.print()">🖨️ PDF / Yazdır</button>
-  <button onclick="window.close()">✕ Kapat</button>
+  <button class="btn-pdf" onclick="window.print()">🖨️ PDF Kaydet / Yazdır</button>
+  <button class="btn-close" onclick="window.close()">✕ Kapat</button>
 </div>
-<div class="header">
-  <div><h1>📋 İrsaliye Raporu</h1><div style="color:#666;font-size:12px;margin-top:4px;">Toplu Döküm — ${items.length} kayıt</div></div>
-  <div class="meta"><strong>İrsaliye Pro</strong><br>${today}<br>${new Date().toLocaleTimeString('tr-TR')}</div>
-</div>
-<div class="summary">
-  <div class="box"><div class="lbl">Toplam Kayıt</div><div class="val">${items.length}</div></div>
-  <div class="box"><div class="lbl">Standart</div><div class="val">${items.filter(x=>x.type==='standart').length}</div></div>
-  <div class="box"><div class="lbl">Fermuar</div><div class="val">${items.filter(x=>x.type==='fermuar').length}</div></div>
-  <div class="box"><div class="lbl">Lastik</div><div class="val">${items.filter(x=>x.type==='lastik').length}</div></div>
-  <div class="box"><div class="lbl">Düğme</div><div class="val">${items.filter(x=>x.type==='dugme').length}</div></div>
-  <div class="box"><div class="lbl">Toptan</div><div class="val">${items.filter(x=>x.type==='toptan').length}</div></div>
-</div>
-<table>
-  <thead><tr>
-    <th style="width:30px;">#</th><th>No</th><th>Tür</th><th>Firma/Müşteri</th><th>Model/Ürün</th>
-    <th style="width:50px;">Adet</th><th>Atölye</th><th>Tarih</th><th>Termin</th><th>Durum</th>
-  </tr></thead>
-  <tbody>${rows}</tbody>
-</table>
-<div class="footer">
-  <div>İrsaliye Pro — Otomatik oluşturuldu</div>
-  <div>Sayfa 1 / ${Math.ceil(items.length/30)}</div>
-</div>
-<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),500));<\/script>
+${pages}
+<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),600));<\/script>
 </body></html>`;
 }
 
@@ -10297,6 +10329,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
 // ============ PDF YAZDIRMA (Liste) ============
 function printListPDF(){
+  // Önce seçili kayıtları kontrol et — varsa tam detaylı PDF
+  const selected = _bulkGetSelectedItems();
+  if(selected.length){
+    const w=window.open('','_blank','width=1000,height=700');
+    if(!w){ toast('Popup engellendi! İzin verin.','error'); return; }
+    w.document.open();
+    w.document.write(_buildBulkHTML(selected));
+    w.document.close();
+    toast(selected.length+' irsaliye için PDF hazırlanıyor','success');
+    return;
+  }
   const list = window._lastFilteredList || [];
   if(!list.length){ alert('Yazdırılacak irsaliye bulunamadı. Filtreleri kontrol edin.'); return; }
 
