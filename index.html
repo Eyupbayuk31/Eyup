@@ -4329,28 +4329,28 @@ body::after{
         <button class="btn btn-primary" onclick="addNewAksesuarRow()"><i class="fas fa-plus"></i> Yeni Satır Ekle</button>
       </div>
       <div class="search-bar" style="margin-bottom:12px;"><i class="fas fa-search"></i><input type="text" id="aksesuarSearch" placeholder="Model kodu veya marka ara..." oninput="renderAksesuarTable()"></div>
-      <div class="card" style="padding:0;overflow-x:auto;">
-        <div class="table-wrap">
-          <table style="min-width:1400px;">
+      <div class="card" style="padding:0;">
+        <div style="overflow-x:auto;max-width:100%;">
+          <table style="width:100%;table-layout:auto;">
             <thead>
               <tr>
-                <th style="min-width:100px;">Model Kodu</th>
-                <th style="min-width:100px;">Çıkış (Dikim)</th>
-                <th style="min-width:80px;">Koli No</th>
-                <th style="min-width:100px;">Termin</th>
-                <th style="min-width:80px;">Adet</th>
-                <th style="min-width:100px;">Marka Etiketi</th>
+                <th style="min-width:120px;position:sticky;left:0;background:var(--card);z-index:10;">Model Kodu</th>
+                <th style="min-width:110px;">Çıkış (Dikim)</th>
+                <th style="min-width:90px;">Koli No</th>
+                <th style="min-width:110px;">Termin</th>
+                <th style="min-width:70px;">Adet</th>
+                <th style="min-width:110px;">Marka Etiketi</th>
                 <th style="min-width:100px;">İç Barkod</th>
                 <th style="min-width:120px;">Yıkama Talimatı</th>
                 <th style="min-width:120px;">Yıkama (Toptan)</th>
                 <th style="min-width:80px;">Ecom</th>
-                <th style="min-width:100px;">İstanbul Sticker</th>
+                <th style="min-width:120px;">İstanbul Sticker</th>
                 <th style="min-width:100px;">Süs Etiketi</th>
                 <th style="min-width:100px;">Süs Kartı</th>
                 <th style="min-width:100px;">Lisans Kartı</th>
-                <th style="min-width:100px;">Raf (Ütüpaket)</th>
-                <th style="min-width:100px;">Çıkış (Ütüpaket)</th>
-                <th style="min-width:80px;">İşlem</th>
+                <th style="min-width:110px;">Raf (Ütüpaket)</th>
+                <th style="min-width:120px;">Çıkış (Ütüpaket)</th>
+                <th style="min-width:70px;position:sticky;right:0;background:var(--card);z-index:10;">İşlem</th>
               </tr>
             </thead>
             <tbody id="aksesuarTable"></tbody>
@@ -5679,7 +5679,7 @@ function renderAksesuarTable(){
     };
 
     return `<tr>
-      <td>${renderTextInput('modelKodu', 'Model Kodu')}</td>
+      <td style="position:sticky;left:0;background:var(--card);z-index:5;">${renderTextInput('modelKodu', 'Model Kodu')}</td>
       <td>${renderDateInput('cikisDikim')}</td>
       <td>${renderTextInput('koliNo', 'K-001')}</td>
       <td>${renderDateInput('termin')}</td>
@@ -5695,7 +5695,7 @@ function renderAksesuarTable(){
       <td>${renderCounter('lisansKarti')}</td>
       <td>${renderTextInput('raf', 'Raf No')}</td>
       <td>${renderDateInput('cikisUtupaket')}</td>
-      <td>
+      <td style="position:sticky;right:0;background:var(--card);z-index:5;">
         <button onclick="deleteAksesuar(${item.id})" class="btn-icon" title="Sil" style="color:#ef4444;"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`;
