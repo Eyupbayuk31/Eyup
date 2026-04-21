@@ -10455,9 +10455,25 @@ function _clearPhotoPreview(){
 
 function _getPhotosArray(item){
   if(!item) return [];
-  if(Array.isArray(item._photos) && item._photos.length) return item._photos;
-  if(item._photo){
-    return [{ data: item._photo, at: item._photoAt||'', url: item._photoUrl||'', urlAt: item._photoUrlAt||'', urlManual: item._photoUrlManual||false }];
+  if(Array.isArray(item._photos) && item._photos.length) {
+    // Fotoğraf array'i varsa, her birinde önce URL'yi kontrol et
+    return item._photos.map(p => ({
+      data: p.url || p.data || '',
+      at: p.at || '',
+      url: p.url || '',
+      urlAt: p.urlAt || '',
+      urlManual: p.urlManual || false
+    }));
+  }
+  // Tek fotoğraf varsa
+  if(item._photoUrl || item._photo){
+    return [{
+      data: item._photoUrl || item._photo || '',
+      at: item._photoAt || '',
+      url: item._photoUrl || '',
+      urlAt: item._photoUrlAt || '',
+      urlManual: item._photoUrlManual || false
+    }];
   }
   return [];
 }
