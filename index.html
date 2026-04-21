@@ -4221,7 +4221,7 @@ body::after{
         <div class="card">
           <div class="card-title"><i class="fas fa-building"></i> Firma Bilgisi</div>
           <div class="form-group"><label>Firma / Atölye Adı *</label><input class="form-input" id="tFirma" placeholder="Firma adı"></div>
-          <div class="form-group"><label>Ürün / Açıklama</label><input class="form-input" id="tUrun" placeholder="Ürün açıklaması"></div>
+          <div class="form-group"><label>Ürün Kodu</label><input class="form-input" id="tUrun" placeholder="Ürün kodu"></div>
           <div class="form-group"><label>Not</label><textarea class="form-input" id="tNot" placeholder="Sipariş notu" rows="2"></textarea></div>
         </div>
         <div class="card">
@@ -6189,6 +6189,10 @@ function generatePDF(id, type) {
     html += `<div class="section-title">📦 Beden Detayları</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
     for (let k in item.beden) { html += `<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`; }
     html += `</tbody></table><div class="total-row">Toplam Adet: ${item.total||0}</div>`;
+    // Toptan sipariş için otomatik açıklama
+    html += `<div class="note-box" style="background:#fef3c7;border-color:#fbbf24;margin-top:16px;">
+      ⚠️ <b>ÖNEMLİ:</b> Toptan siparişler yıkama talimatı ayrı dikilir, sarı renktedir. Bu adetlerde firmaya teslim etmeniz gerekir.
+    </div>`;
   }
 
   if (item.aciklama || item.not) {
