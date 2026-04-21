@@ -4325,8 +4325,8 @@ body::after{
     <!-- ========== AKSESUAR TAKİP ========== -->
     <div class="page" id="page-aksesuar">
       <div class="section-header">
-        <div><h2><i class="fas fa-tags" style="color:var(--primary);margin-right:8px;"></i>Aksesuar Takip</h2><p>Model aksesuarlarını takip edin</p></div>
-        <button class="btn btn-primary" onclick="openAksesuarModal()"><i class="fas fa-plus"></i> Yeni Model Ekle</button>
+        <div><h2><i class="fas fa-tags" style="color:var(--primary);margin-right:8px;"></i>Aksesuar Takip</h2><p>Model aksesuarlarını takip edin - Excel gibi direkt yazın</p></div>
+        <button class="btn btn-primary" onclick="addNewAksesuarRow()"><i class="fas fa-plus"></i> Yeni Satır Ekle</button>
       </div>
       <div class="search-bar" style="margin-bottom:12px;"><i class="fas fa-search"></i><input type="text" id="aksesuarSearch" placeholder="Model kodu veya marka ara..." oninput="renderAksesuarTable()"></div>
       <div class="card" style="padding:0;overflow-x:auto;">
@@ -4358,30 +4358,7 @@ body::after{
         </div>
         <div class="empty-state" id="aksesuarEmpty" style="display:none;">
           <i class="fas fa-tags"></i>
-          <p>Henüz aksesuar kaydı yok.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Aksesuar Modal -->
-    <div class="modal-overlay" id="aksesuarModal">
-      <div class="modal" style="max-width:600px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-          <h3 style="font-weight:700;font-size:17px;" id="aksesuarModalTitle">Yeni Model Ekle</h3>
-          <button onclick="closeAksesuarModal()" style="background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="aksesuarModelKodu" placeholder="Örn: MDL-2024-001"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="form-group"><label>Çıkış Tarihi (Dikim)</label><input type="date" class="form-input" id="aksesuarCikisDikim"></div>
-          <div class="form-group"><label>Koli No</label><input class="form-input" id="aksesuarKoliNo" placeholder="Örn: K-001"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="form-group"><label>Termin Tarihi</label><input type="date" class="form-input" id="aksesuarTermin"></div>
-          <div class="form-group"><label>Model Adeti</label><input type="number" class="form-input" id="aksesuarAdet" placeholder="0"></div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:16px;">
-          <button class="btn btn-primary" onclick="saveAksesuar()" style="flex:1;"><i class="fas fa-save"></i> Kaydet</button>
-          <button class="btn btn-secondary" onclick="closeAksesuarModal()" style="flex:1;">İptal</button>
+          <p>Henüz aksesuar kaydı yok. "Yeni Satır Ekle" butonuna tıklayın.</p>
         </div>
       </div>
     </div>
@@ -5581,51 +5558,15 @@ function renderStokList(){
 document.getElementById('stokModal').addEventListener('click', function(e){ if(e.target===this) closeStokModal(); });
 
 // ==================== AKSESUAR TAKİP ====================
-let _editingAksesuarId = null;
 
-function openAksesuarModal(id){
-  _editingAksesuarId = id;
-  const modal = document.getElementById('aksesuarModal');
-  const title = document.getElementById('aksesuarModalTitle');
-
-  if(id){
-    title.textContent = 'Aksesuar Düzenle';
-    const list = getData('aksesuarlar');
-    const item = list.find(a => a.id === id);
-    if(item){
-      document.getElementById('aksesuarModelKodu').value = item.modelKodu || '';
-      document.getElementById('aksesuarCikisDikim').value = item.cikisDikim || '';
-      document.getElementById('aksesuarKoliNo').value = item.koliNo || '';
-      document.getElementById('aksesuarTermin').value = item.termin || '';
-      document.getElementById('aksesuarAdet').value = item.adet || '';
-    }
-  } else {
-    title.textContent = 'Yeni Model Ekle';
-    document.getElementById('aksesuarModelKodu').value = '';
-    document.getElementById('aksesuarCikisDikim').value = '';
-    document.getElementById('aksesuarKoliNo').value = '';
-    document.getElementById('aksesuarTermin').value = '';
-    document.getElementById('aksesuarAdet').value = '';
-  }
-  modal.classList.add('show');
-}
-
-function closeAksesuarModal(){
-  document.getElementById('aksesuarModal').classList.remove('show');
-  _editingAksesuarId = null;
-}
-
-function saveAksesuar(){
-  const modelKodu = document.getElementById('aksesuarModelKodu').value.trim();
-  if(!modelKodu) return toast('Model kodu zorunludur','error');
-
+function addNewAksesuarRow(){
   const item = {
-    id: _editingAksesuarId || Date.now(),
-    modelKodu,
-    cikisDikim: document.getElementById('aksesuarCikisDikim').value,
-    koliNo: document.getElementById('aksesuarKoliNo').value.trim(),
-    termin: document.getElementById('aksesuarTermin').value,
-    adet: +(document.getElementById('aksesuarAdet').value || 0),
+    id: Date.now(),
+    modelKodu: '',
+    cikisDikim: '',
+    koliNo: '',
+    termin: '',
+    adet: 0,
     markaEtiketi: 0,
     icBarkod: 0,
     yikamaTalimati: 0,
@@ -5637,21 +5578,19 @@ function saveAksesuar(){
     lisansKarti: 0,
     raf: '',
     cikisUtupaket: '',
-    createdAt: _editingAksesuarId ? undefined : new Date().toISOString()
+    createdAt: new Date().toISOString()
   };
 
   let list = getData('aksesuarlar');
-  if(_editingAksesuarId){
-    const idx = list.findIndex(a => a.id === _editingAksesuarId);
-    if(idx >= 0) list[idx] = {...list[idx], ...item};
-  } else {
-    list.unshift(item);
-  }
-
+  list.unshift(item);
   setData('aksesuarlar', list);
-  closeAksesuarModal();
   renderAksesuarTable();
-  toast(_editingAksesuarId ? 'Aksesuar güncellendi' : 'Aksesuar eklendi');
+
+  // Focus on model kodu input
+  setTimeout(() => {
+    const input = document.querySelector(`#aksesuarTable input[data-id="${item.id}"][data-field="modelKodu"]`);
+    if(input) input.focus();
+  }, 100);
 }
 
 function deleteAksesuar(id){
@@ -5694,7 +5633,7 @@ function updateAksesuarField(id, field, value){
 
 function renderAksesuarTable(){
   let list = getData('aksesuarlar');
-  const search = document.getElementById('aksesuarSearch').value.toLowerCase();
+  const search = document.getElementById('aksesuarSearch')?.value.toLowerCase() || '';
 
   if(search){
     list = list.filter(a =>
@@ -5726,20 +5665,25 @@ function renderAksesuarTable(){
 
     const renderDateInput = (field) => {
       const val = item[field] || '';
-      return `<input type="date" value="${val}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+      return `<input type="date" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
     };
 
     const renderTextInput = (field, placeholder = '') => {
       const val = item[field] || '';
-      return `<input type="text" value="${val}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" placeholder="${placeholder}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+      return `<input type="text" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" placeholder="${placeholder}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+    };
+
+    const renderNumberInput = (field) => {
+      const val = item[field] || 0;
+      return `<input type="number" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',+this.value)" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
     };
 
     return `<tr>
-      <td><strong>${item.modelKodu}</strong></td>
+      <td>${renderTextInput('modelKodu', 'Model Kodu')}</td>
       <td>${renderDateInput('cikisDikim')}</td>
       <td>${renderTextInput('koliNo', 'K-001')}</td>
       <td>${renderDateInput('termin')}</td>
-      <td>${item.adet || 0}</td>
+      <td>${renderNumberInput('adet')}</td>
       <td>${renderCounter('markaEtiketi')}</td>
       <td>${renderCounter('icBarkod')}</td>
       <td>${renderCounter('yikamaTalimati')}</td>
@@ -5752,16 +5696,11 @@ function renderAksesuarTable(){
       <td>${renderTextInput('raf', 'Raf No')}</td>
       <td>${renderDateInput('cikisUtupaket')}</td>
       <td>
-        <div style="display:flex;gap:4px;justify-content:center;">
-          <button onclick="openAksesuarModal(${item.id})" class="btn-icon" title="Düzenle"><i class="fas fa-edit"></i></button>
-          <button onclick="deleteAksesuar(${item.id})" class="btn-icon" title="Sil" style="color:#ef4444;"><i class="fas fa-trash"></i></button>
-        </div>
+        <button onclick="deleteAksesuar(${item.id})" class="btn-icon" title="Sil" style="color:#ef4444;"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`;
   }).join('');
 }
-
-document.getElementById('aksesuarModal').addEventListener('click', function(e){ if(e.target===this) closeAksesuarModal(); });
 
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
