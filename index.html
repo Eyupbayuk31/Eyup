@@ -568,12 +568,27 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root {
+  /* ===== SPACING SYSTEM ===== */
+  --space-xs:4px;--space-sm:8px;--space-md:12px;--space-lg:16px;--space-xl:24px;--space-2xl:32px;--space-3xl:48px;
+
+  /* ===== TRANSITIONS ===== */
+  --transition-fast:0.15s cubic-bezier(0.4,0,0.2,1);
+  --transition-base:0.2s cubic-bezier(0.4,0,0.2,1);
+  --transition-slow:0.3s cubic-bezier(0.4,0,0.2,1);
+
+  /* ===== Z-INDEX SCALE ===== */
+  --z-base:1;--z-dropdown:10;--z-sticky:20;--z-overlay:50;--z-modal:100;--z-toast:200;
+
+  /* ===== COLORS ===== */
   --primary:#7c3aed;--primary-light:#a78bfa;--primary-dark:#5b21b6;--primary-glow:rgba(124,58,237,0.25);
   --accent:#f59e0b;--bg-main:#0b0713;--bg-card:rgba(22,15,40,0.85);--bg-card-solid:#160f28;
   --bg-card-hover:#231740;--bg-sidebar:#0e0a1a;--bg-input:rgba(15,10,26,0.8);
   --text-main:#f1f0f5;--text-muted:#8b8a94;--text-dim:#5a586a;
   --border:rgba(124,58,237,0.12);--border-solid:#2d2145;
-  --success:#10b981;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+  --success:#10b981;--success-light:#34d399;--success-dark:#059669;
+  --danger:#ef4444;--danger-light:#f87171;--danger-dark:#dc2626;
+  --warning:#f59e0b;--warning-light:#fbbf24;--warning-dark:#d97706;
+  --info:#3b82f6;--info-light:#60a5fa;--info-dark:#2563eb;
   --glass:rgba(255,255,255,0.03);--glass-border:rgba(255,255,255,0.06);
   --radius:16px;--radius-sm:10px;--radius-xs:6px;
   --shadow:0 4px 24px rgba(0,0,0,0.4);--shadow-lg:0 8px 40px rgba(0,0,0,0.5);
@@ -971,6 +986,13 @@ th{background:var(--bg-input);padding:10px 14px;text-align:left;font-size:11px;t
 td{padding:10px 14px;border-top:1px solid var(--border);font-size:13px;}
 tr:hover td{background:var(--glass);}
 
+/* Table actions with hover reveal */
+.table-actions{display:flex;gap:4px;align-items:center;}
+.table-actions-more{display:flex;gap:4px;opacity:0;transform:translateX(-10px);transition:all 0.25s cubic-bezier(0.4,0,0.2,1);pointer-events:none;}
+tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:auto;}
+.table-actions .btn{transition:all 0.2s;}
+.table-actions .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+
 /* ===== CHIPS ===== */
 .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;}
 .chip:hover{filter:brightness(1.2);}
@@ -985,15 +1007,48 @@ tr:hover td{background:var(--glass);}
 .modal{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;animation:modalIn 0.3s cubic-bezier(0.4,0,0.2,1);}
 @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
+/* Enhanced Detail Modal */
+.modal-detail{padding:0;max-width:600px;display:flex;flex-direction:column;max-height:90vh;}
+.modal-header-new{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-card-solid);z-index:10;}
+.modal-header-new h3{font-size:18px;font-weight:700;color:var(--text-main);margin:0;}
+.modal-close-btn{width:36px;height:36px;border-radius:8px;background:var(--glass);border:1px solid var(--border);color:var(--text-muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;font-size:16px;}
+.modal-close-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+.modal-close-btn:active{transform:scale(0.95);}
+
+.modal-body-new{padding:24px;flex:1;overflow-y:auto;}
+
+.modal-actions-new{padding:16px 24px;border-top:1px solid var(--border);background:var(--bg-card-solid);position:sticky;bottom:0;z-index:10;}
+.modal-actions-primary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.modal-actions-secondary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+
+.modal-action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;font-family:inherit;font-weight:600;}
+.modal-action-btn i{font-size:20px;}
+.modal-action-btn span{font-size:12px;}
+.modal-action-btn:active{transform:scale(0.96);}
+
+.modal-action-btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 2px 12px var(--primary-glow);}
+.modal-action-btn.primary:hover{box-shadow:0 4px 20px var(--primary-glow);transform:translateY(-2px);}
+
+.modal-action-btn.secondary{background:var(--glass);color:var(--text-main);border:1px solid var(--border);}
+.modal-action-btn.secondary:hover{border-color:var(--primary);background:var(--bg-card-hover);transform:translateY(-2px);}
+
+@media(max-width:640px){
+  .modal-detail{max-width:100%;max-height:95vh;border-radius:16px 16px 0 0;}
+  .modal-actions-secondary{grid-template-columns:repeat(2,1fr);}
+  .modal-action-btn span{font-size:11px;}
+  .modal-action-btn i{font-size:18px;}
+  .modal-action-btn{padding:10px 6px;}
+}
+
 /* ===== TOAST ===== */
 /* ========== LOADING & SKELETON SCREENS ========== */
 /* Global Loading Overlay */
 .global-loading{
   position:fixed;inset:0;z-index:9999;
-  background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
   display:flex;align-items:center;justify-content:center;
   opacity:0;pointer-events:none;
-  transition:opacity 0.3s;
+  transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 .global-loading.show{opacity:1;pointer-events:auto;}
 .loading-spinner{
@@ -1003,6 +1058,27 @@ tr:hover td{background:var(--glass);}
   animation:spin 0.8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* Enhanced Loading Spinner with pulse */
+.loading-spinner-enhanced{
+  position:relative;
+  width:60px;height:60px;
+}
+.loading-spinner-enhanced::before{
+  content:'';position:absolute;inset:0;
+  border-radius:50%;border:4px solid var(--primary);
+  opacity:0.2;animation:pulse 1.5s ease-in-out infinite;
+}
+.loading-spinner-enhanced::after{
+  content:'';position:absolute;inset:0;
+  border-radius:50%;border:4px solid transparent;
+  border-top-color:var(--primary);
+  animation:spin 0.8s linear infinite;
+}
+@keyframes pulse{
+  0%, 100%{transform:scale(1);opacity:0.2;}
+  50%{transform:scale(1.2);opacity:0;}
+}
 
 /* Skeleton Screens */
 .skeleton{
@@ -1048,6 +1124,47 @@ tr:hover td{background:var(--glass);}
   animation:spin 0.6s linear infinite;
 }
 
+/* Smooth transitions for all interactive elements */
+.btn, .chip, .card, .modal-action-btn, .action-btn-primary, .action-btn-menu,
+.sidebar nav a, .type-chip, .filter-select, input, textarea, select{
+  transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Micro-interactions */
+.btn:active, .chip:active, .modal-action-btn:active{
+  transform:scale(0.96);
+}
+
+/* Fade in animation for cards */
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.uni-mobile-card, .stat-card, .card{
+  animation:fadeInUp 0.4s cubic-bezier(0.4,0,0.2,1) backwards;
+}
+.uni-mobile-card:nth-child(1){animation-delay:0.05s;}
+.uni-mobile-card:nth-child(2){animation-delay:0.1s;}
+.uni-mobile-card:nth-child(3){animation-delay:0.15s;}
+.uni-mobile-card:nth-child(4){animation-delay:0.2s;}
+.uni-mobile-card:nth-child(5){animation-delay:0.25s;}
+
+/* Success/Error feedback animations */
+@keyframes successPulse{
+  0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7);}
+  70%{box-shadow:0 0 0 10px rgba(16,185,129,0);}
+  100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}
+}
+@keyframes errorShake{
+  0%, 100%{transform:translateX(0);}
+  10%, 30%, 50%, 70%, 90%{transform:translateX(-4px);}
+  20%, 40%, 60%, 80%{transform:translateX(4px);}
+}
+.success-feedback{animation:successPulse 0.6s;}
+.error-feedback{animation:errorShake 0.5s;}
+  animation:spin 0.6s linear infinite;
+}
+
 /* Pull to Refresh */
 .ptr-container{
   position:absolute;top:-60px;left:0;right:0;
@@ -1086,13 +1203,46 @@ tr:hover td{background:var(--glass);}
 }
 .swipe-action i{font-size:18px;}
 
-.toast-container{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:350px;}
-.toast{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;animation:toastIn 0.35s cubic-bezier(0.4,0,0.2,1);box-shadow:var(--shadow-lg);position:relative;overflow:hidden;}
-.toast::after{content:'';position:absolute;bottom:0;left:0;height:3px;background:rgba(255,255,255,0.3);animation:toastProgress 3s linear forwards;}
+.toast-container{position:fixed;top:20px;right:20px;z-index:var(--z-toast,200);display:flex;flex-direction:column;gap:12px;max-width:420px;pointer-events:none;}
+.toast-container .toast{pointer-events:auto;}
+/* ===== TOAST NOTIFICATIONS ===== */
+.toast{
+  padding:0;border-radius:var(--radius-sm);font-size:13px;font-weight:500;
+  display:flex;align-items:center;gap:0;
+  box-shadow:var(--shadow-lg);position:relative;overflow:hidden;
+  backdrop-filter:blur(20px);border:1px solid var(--border);
+  min-width:320px;max-width:420px;
+  opacity:0;transform:translateX(100px);
+  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.toast-icon{
+  padding:14px 16px;font-size:20px;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.1);
+}
+.toast-content{
+  flex:1;padding:14px 12px;
+}
+.toast-message{
+  font-weight:600;line-height:1.4;
+}
+.toast-close{
+  padding:14px 16px;background:transparent;border:none;color:currentColor;
+  cursor:pointer;opacity:0.6;transition:opacity 0.2s;font-size:14px;
+}
+.toast-close:hover{opacity:1;}
+
+.toast::after{
+  content:'';position:absolute;bottom:0;left:0;height:3px;
+  background:currentColor;opacity:0.3;
+  animation:toastProgress 4s linear forwards;
+}
 @keyframes toastProgress{from{width:100%}to{width:0%}}
-.toast-success{background:#065f46;color:#d1fae5;}
-.toast-error{background:#7f1d1d;color:#fecaca;}
-.toast-info{background:#1e3a5f;color:#bfdbfe;}
+
+.toast-success{background:rgba(5,150,105,0.15);color:#34d399;border-color:rgba(5,150,105,0.3);}
+.toast-error{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3);}
+.toast-info{background:rgba(59,130,246,0.15);color:#60a5fa;border-color:rgba(59,130,246,0.3);}
+.toast-warning{background:rgba(245,158,11,0.15);color:#fbbf24;border-color:rgba(245,158,11,0.3);}
+
 @keyframes toastIn{from{opacity:0;transform:translateX(100px)}to{opacity:1;transform:translateX(0)}}
 
 /* ===== THEME BUTTONS ===== */
@@ -1120,13 +1270,47 @@ tr:hover td{background:var(--glass);}
 }
 
 /* ===== MOBILE CARDS (for table alternative) ===== */
-.mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s;}
+.mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s;position:relative;overflow:hidden;}
 .mobile-card:active{transform:scale(0.99);}
 .mc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .mc-title{font-weight:700;color:var(--primary);font-size:14px;}
 .mc-meta{font-size:12px;color:var(--text-muted);margin-bottom:4px;display:flex;gap:12px;flex-wrap:wrap;}
 .mc-meta span{display:flex;align-items:center;gap:4px;}
 .mc-actions{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+
+/* ===== SWIPE GESTURE SYSTEM ===== */
+.swipe-container{position:relative;overflow:hidden;touch-action:pan-y;}
+.swipe-content{position:relative;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);z-index:2;background:var(--bg-card);}
+.swipe-content.swiping{transition:none;}
+.swipe-actions{position:absolute;top:0;bottom:0;right:0;display:flex;align-items:stretch;z-index:1;}
+.swipe-action{display:flex;align-items:center;justify-content:center;padding:0 20px;min-width:70px;color:#fff;font-size:18px;cursor:pointer;transition:all 0.2s;}
+.swipe-action.delete{background:linear-gradient(135deg,#ef4444,#dc2626);}
+.swipe-action.toggle{background:linear-gradient(135deg,#10b981,#059669);}
+.swipe-action:active{filter:brightness(0.9);}
+
+/* ===== DROPDOWN MENU ===== */
+.dropdown-menu{position:absolute;top:100%;right:0;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:180px;z-index:50;opacity:0;transform:translateY(-10px) scale(0.95);pointer-events:none;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);margin-top:4px;}
+.dropdown-menu.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+.dropdown-item{display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text-main);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border-bottom:1px solid var(--border);}
+.dropdown-item:last-child{border-bottom:none;}
+.dropdown-item:hover{background:var(--glass);color:var(--primary);}
+.dropdown-item:active{transform:scale(0.98);}
+.dropdown-item i{width:18px;text-align:center;font-size:14px;}
+.dropdown-item.danger{color:#ef4444;}
+.dropdown-item.danger:hover{background:rgba(239,68,68,0.1);}
+
+/* ===== CONTEXT MENU (Desktop) ===== */
+.context-menu{position:fixed;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:200px;z-index:200;opacity:0;transform:scale(0.95);pointer-events:none;transition:all 0.15s cubic-bezier(0.4,0,0.2,1);backdrop-filter:blur(20px);}
+.context-menu.show{opacity:1;transform:scale(1);pointer-events:auto;}
+.context-menu-item{display:flex;align-items:center;gap:12px;padding:10px 16px;color:var(--text-main);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border-bottom:1px solid var(--border);}
+.context-menu-item:last-child{border-bottom:none;}
+.context-menu-item:hover{background:var(--glass);color:var(--primary);}
+.context-menu-item:active{transform:scale(0.98);}
+.context-menu-item i{width:20px;text-align:center;font-size:14px;}
+.context-menu-item .shortcut{margin-left:auto;font-size:11px;color:var(--text-dim);font-weight:400;}
+.context-menu-item.danger{color:#ef4444;}
+.context-menu-item.danger:hover{background:rgba(239,68,68,0.1);}
+.context-menu-divider{height:1px;background:var(--border);margin:4px 0;}
 
 /* ===== FAB ===== */
 .fab{display:none;position:fixed;bottom:80px;right:20px;z-index:50;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 20px var(--primary-glow);transition:all 0.3s;}
@@ -1181,8 +1365,13 @@ tr:hover td{background:var(--glass);}
   .form-grid-span2{grid-column:span 1!important;}
   .table-desktop{display:none;}
   .table-mobile{display:block!important;}
-  .toast-container{left:14px;right:14px;max-width:none;}
+  .toast-container{left:14px;right:14px;max-width:none;top:auto;bottom:90px;}
   .modal{max-width:100%;margin:0 8px;max-height:90vh;}
+
+  /* Mobile optimizations for new components */
+  .dropdown-menu{min-width:200px;max-width:calc(100vw - 32px);}
+  .context-menu{display:none!important;} /* Disable context menu on mobile */
+  .table-actions-more{opacity:1!important;transform:translateX(0)!important;pointer-events:auto!important;} /* Always show on mobile */
 }
 @media(max-width:380px){
   .stats-grid{grid-template-columns:1fr 1fr;gap:8px;}
@@ -1228,12 +1417,25 @@ tr:hover td{background:var(--glass);}
 .result-info strong{color:var(--primary);}
 
 /* Enhanced mobile cards for unified list */
-.uni-mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s;border-left:3px solid var(--primary);}
+.uni-mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:0;margin-bottom:10px;transition:all 0.2s;border-left:3px solid var(--primary);position:relative;overflow:hidden;}
 .uni-mobile-card.type-fermuar{border-left-color:#3b82f6;}
 .uni-mobile-card.type-lastik{border-left-color:#10b981;}
 .uni-mobile-card.type-dugme{border-left-color:#f59e0b;}
 .uni-mobile-card.type-toptan{border-left-color:#ec4899;}
 .uni-mobile-card:active{transform:scale(0.99);}
+.uni-mobile-card .card-inner{padding:14px;position:relative;z-index:2;background:var(--bg-card);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);}
+.uni-mobile-card.swiping .card-inner{transition:none;}
+.uni-mobile-card .swipe-bg{position:absolute;top:0;bottom:0;right:0;display:flex;z-index:1;}
+.uni-mobile-card .swipe-bg-action{display:flex;align-items:center;justify-content:center;width:80px;color:#fff;font-size:20px;}
+.uni-mobile-card .swipe-bg-action.delete{background:linear-gradient(135deg,#ef4444,#dc2626);}
+.uni-mobile-card .swipe-bg-action.toggle{background:linear-gradient(135deg,#10b981,#059669);}
+
+/* Mobile card action buttons - improved */
+.uni-mobile-card .mc-actions-new{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.uni-mobile-card .action-btn-primary{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.uni-mobile-card .action-btn-primary:active{transform:scale(0.96);}
+.uni-mobile-card .action-btn-menu{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:18px;cursor:pointer;transition:all 0.2s;position:relative;}
+.uni-mobile-card .action-btn-menu:active{transform:scale(0.96);}
 
 /* ===== MISC ===== */
 .clickable{cursor:pointer;transition:all 0.2s;}
@@ -5465,20 +5667,44 @@ body::after{
 
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detailModal">
-  <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px;">
-      <h3 style="font-weight:700;font-size:17px;" id="modalTitle">İrsaliye Detayı</h3>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button onclick="openShareFromModal()" id="modalShareBtn" style="background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="fas fa-share-alt"></i> Paylaş</button>
-        <button onclick="generatePDFFromModal()" id="modalPdfBtn" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="fas fa-file-pdf"></i> PDF</button>
-        <button onclick="copyCurrentModalItem()" id="modalCopyBtn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Bu irsaliyeyi kopyala"><i class="fas fa-copy"></i> Kopyala</button>
-        <button onclick="saveCurrentAsTemplate()" id="modalTplBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Şablon olarak kaydet"><i class="fas fa-bookmark"></i> Şablon</button>
-        <button onclick="showQrForCurrentModal()" id="modalQrBtn" style="background:linear-gradient(135deg,#6366f1,#4338ca);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="QR Kod"><i class="fas fa-qrcode"></i> QR</button>
-        <button onclick="goSignatureForModal()" id="modalSigBtn" style="background:linear-gradient(135deg,#06b6d4,#0e7490);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Fotoğraf ekle"><i class="fas fa-camera"></i> Foto</button>
-        <button onclick="closeModal()" style="background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
+  <div class="modal modal-detail">
+    <div class="modal-header-new">
+      <h3 id="modalTitle">İrsaliye Detayı</h3>
+      <button class="modal-close-btn" onclick="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div id="modalContent" class="modal-body-new"></div>
+    <div class="modal-actions-new">
+      <div class="modal-actions-primary">
+        <button class="modal-action-btn primary" onclick="openShareFromModal()" id="modalShareBtn">
+          <i class="fas fa-share-alt"></i>
+          <span>Paylaş</span>
+        </button>
+        <button class="modal-action-btn primary" onclick="generatePDFFromModal()" id="modalPdfBtn">
+          <i class="fas fa-file-pdf"></i>
+          <span>PDF</span>
+        </button>
+      </div>
+      <div class="modal-actions-secondary">
+        <button class="modal-action-btn secondary" onclick="copyCurrentModalItem()" id="modalCopyBtn" title="Bu irsaliyeyi kopyala">
+          <i class="fas fa-copy"></i>
+          <span>Kopyala</span>
+        </button>
+        <button class="modal-action-btn secondary" onclick="saveCurrentAsTemplate()" id="modalTplBtn" title="Şablon olarak kaydet">
+          <i class="fas fa-bookmark"></i>
+          <span>Şablon</span>
+        </button>
+        <button class="modal-action-btn secondary" onclick="showQrForCurrentModal()" id="modalQrBtn" title="QR Kod">
+          <i class="fas fa-qrcode"></i>
+          <span>QR</span>
+        </button>
+        <button class="modal-action-btn secondary" onclick="goSignatureForModal()" id="modalSigBtn" title="Fotoğraf ekle">
+          <i class="fas fa-camera"></i>
+          <span>Foto</span>
+        </button>
       </div>
     </div>
-    <div id="modalContent"></div>
   </div>
 </div>
 
@@ -5599,10 +5825,38 @@ function toast(msg,type='success'){
   const c=document.getElementById('toastContainer');
   const t=document.createElement('div');
   t.className='toast toast-'+type;
-  const icons={success:'check-circle',error:'exclamation-circle',info:'info-circle'};
-  t.innerHTML='<i class="fas fa-'+(icons[type]||'info-circle')+'"></i> '+msg;
+  const icons={success:'check-circle',error:'exclamation-circle',info:'info-circle',warning:'exclamation-triangle'};
+  const colors={success:'var(--success)',error:'var(--danger)',info:'var(--info)',warning:'var(--warning)'};
+  t.innerHTML=`
+    <div class="toast-icon" style="color:${colors[type]||'var(--info)'}">
+      <i class="fas fa-${icons[type]||'info-circle'}"></i>
+    </div>
+    <div class="toast-content">
+      <div class="toast-message">${msg}</div>
+    </div>
+    <button class="toast-close" onclick="this.parentElement.remove()">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
   c.appendChild(t);
-  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(60px)';t.style.transition='all 0.3s';setTimeout(()=>t.remove(),300);},3200);
+
+  // Animate in
+  requestAnimationFrame(()=>{
+    t.style.opacity='1';
+    t.style.transform='translateX(0)';
+  });
+
+  // Auto dismiss
+  const dismissTimer = setTimeout(()=>{
+    t.style.opacity='0';
+    t.style.transform='translateX(100px)';
+    setTimeout(()=>t.remove(),300);
+  },4000);
+
+  // Clear timer on manual close
+  t.querySelector('.toast-close').addEventListener('click',()=>{
+    clearTimeout(dismissTimer);
+  });
 }
 
 // ==================== ATÖLYE ====================
@@ -6528,7 +6782,7 @@ function renderFilteredList(list){
 
   // Desktop table
   tbody.innerHTML=list.map(i=>`
-    <tr>
+    <tr data-id="${i.id}" data-type="${i._type}" oncontextmenu="showContextMenu(event, ${i.id}, '${i._type}'); return false;">
       <td><input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()"></td>
       <td>${getTypeBadge(i._type)}</td>
       <td style="font-weight:700;color:var(--primary);white-space:nowrap;">${i.no}</td>
@@ -6538,43 +6792,80 @@ function renderFilteredList(list){
       <td style="font-size:11px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getItemDetail(i)}</td>
       <td><span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'} clickable" onclick="toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'✓ Teslim':'⏳ Bekliyor'}</span></td>
       <td style="white-space:nowrap;font-size:12px;">${i.termin||'-'}</td>
-      <td><div style="display:flex;gap:4px;flex-wrap:wrap;">
-        <button class="btn btn-xs btn-secondary" onclick="showDetailUni(${i.id},'${i._type}')" title="Detay"><i class="fas fa-eye"></i></button>
-        <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" title="PDF İndir"><i class="fas fa-file-pdf"></i></button>
-        <button class="btn btn-xs btn-secondary" onclick="copyWaybill(${i.id},'${i._type}')" title="Kopyala" style="color:#3b82f6;"><i class="fas fa-copy"></i></button>
-        <button class="btn btn-xs btn-secondary" onclick="saveAsTemplate(${i.id},'${i._type}')" title="Şablon Kaydet" style="color:#f59e0b;"><i class="fas fa-bookmark"></i></button>
-        <button class="btn btn-xs btn-danger" onclick="deleteItemUni(${i.id},'${i._type}')" title="Sil"><i class="fas fa-trash"></i></button>
-      </div></td>
+      <td>
+        <div class="table-actions">
+          <button class="btn btn-xs btn-primary" onclick="showDetailUni(${i.id},'${i._type}')" title="Detay (Enter)">
+            <i class="fas fa-eye"></i>
+          </button>
+          <div class="table-actions-more">
+            <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" title="PDF İndir (Ctrl+P)"><i class="fas fa-file-pdf"></i></button>
+            <button class="btn btn-xs btn-secondary" onclick="copyWaybill(${i.id},'${i._type}')" title="Kopyala (Ctrl+D)" style="color:#3b82f6;"><i class="fas fa-copy"></i></button>
+            <button class="btn btn-xs btn-secondary" onclick="saveAsTemplate(${i.id},'${i._type}')" title="Şablon Kaydet" style="color:#f59e0b;"><i class="fas fa-bookmark"></i></button>
+            <button class="btn btn-xs btn-danger" onclick="deleteItemUni(${i.id},'${i._type}')" title="Sil (Del)"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      </td>
     </tr>
   `).join('');
 
-  // Mobile cards
+  // Mobile cards with swipe and dropdown
   mobileEl.innerHTML=list.map(i=>`
-    <div class="uni-mobile-card type-${i._type}">
-      <div class="mc-header">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()">
-          ${getTypeBadge(i._type)}
-          <span class="mc-title">${i.no}</span>
+    <div class="uni-mobile-card type-${i._type}" data-id="${i.id}" data-type="${i._type}">
+      <div class="swipe-bg">
+        <div class="swipe-bg-action toggle" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')">
+          <i class="fas fa-${i.durum==='teslim'?'undo':'check'}"></i>
         </div>
-        <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" onclick="toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'✓':'⏳'}</span>
+        <div class="swipe-bg-action delete" onclick="event.stopPropagation();deleteItemUni(${i.id},'${i._type}')">
+          <i class="fas fa-trash"></i>
+        </div>
       </div>
-      <div class="mc-meta" style="margin-top:6px;">
-        <span><i class="fas fa-cube"></i> ${i.model||i.urun||'-'}</span>
-        <span><i class="fas fa-industry"></i> ${i.atolye||i.firma||'-'}</span>
-        <span><i class="fas fa-calendar"></i> ${i.tarih}</span>
-      </div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${getItemDetail(i)}</div>
-      ${i.termin?'<div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><i class="fas fa-clock"></i> Termin: '+i.termin+'</div>':''}
-      <div class="mc-actions" style="flex-wrap:wrap;">
-        <button class="btn btn-xs btn-secondary" onclick="showDetailUni(${i.id},'${i._type}')" style="flex:1;"><i class="fas fa-eye"></i> Detay</button>
-        <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" style="flex:1;"><i class="fas fa-file-pdf"></i> PDF</button>
-        <button class="btn btn-xs btn-secondary" onclick="copyWaybill(${i.id},'${i._type}')" style="color:#3b82f6;" title="Kopyala"><i class="fas fa-copy"></i></button>
-        <button class="btn btn-xs btn-secondary" onclick="saveAsTemplate(${i.id},'${i._type}')" style="color:#f59e0b;" title="Şablon"><i class="fas fa-bookmark"></i></button>
-        <button class="btn btn-xs btn-danger" onclick="deleteItemUni(${i.id},'${i._type}')"><i class="fas fa-trash"></i></button>
+      <div class="card-inner">
+        <div class="mc-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()" onclick="event.stopPropagation()">
+            ${getTypeBadge(i._type)}
+            <span class="mc-title">${i.no}</span>
+          </div>
+          <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'✓':'⏳'}</span>
+        </div>
+        <div class="mc-meta" style="margin-top:6px;">
+          <span><i class="fas fa-cube"></i> ${i.model||i.urun||'-'}</span>
+          <span><i class="fas fa-industry"></i> ${i.atolye||i.firma||'-'}</span>
+          <span><i class="fas fa-calendar"></i> ${i.tarih}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${getItemDetail(i)}</div>
+        ${i.termin?'<div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><i class="fas fa-clock"></i> Termin: '+i.termin+'</div>':''}
+        <div class="mc-actions-new">
+          <button class="action-btn-primary" onclick="event.stopPropagation();showDetailUni(${i.id},'${i._type}')">
+            <i class="fas fa-eye"></i> Detay
+          </button>
+          <div class="action-btn-menu" onclick="event.stopPropagation();toggleCardMenu(this, ${i.id}, '${i._type}')">
+            <i class="fas fa-ellipsis-v"></i>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" onclick="event.stopPropagation();generatePDF(${i.id},'${i._type}');closeAllMenus()">
+                <i class="fas fa-file-pdf"></i> PDF İndir
+              </div>
+              <div class="dropdown-item" onclick="event.stopPropagation();copyWaybill(${i.id},'${i._type}');closeAllMenus()">
+                <i class="fas fa-copy"></i> Kopyala
+              </div>
+              <div class="dropdown-item" onclick="event.stopPropagation();saveAsTemplate(${i.id},'${i._type}');closeAllMenus()">
+                <i class="fas fa-bookmark"></i> Şablon Kaydet
+              </div>
+              <div class="dropdown-item" onclick="event.stopPropagation();openShareFromCard(${i.id},'${i._type}');closeAllMenus()">
+                <i class="fas fa-share-alt"></i> Paylaş
+              </div>
+              <div class="dropdown-item danger" onclick="event.stopPropagation();deleteItemUni(${i.id},'${i._type}');closeAllMenus()">
+                <i class="fas fa-trash"></i> Sil
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `).join('');
+
+  // Initialize swipe gestures
+  initSwipeGestures();
 }
 
 function toggleDurumUni(id,type){
@@ -8652,6 +8943,150 @@ document.addEventListener('DOMContentLoaded',()=>{
 // Modal close on overlay
 document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
+// ===== SWIPE GESTURE SYSTEM =====
+function initSwipeGestures(){
+  const cards = document.querySelectorAll('.uni-mobile-card');
+  cards.forEach(card => {
+    const inner = card.querySelector('.card-inner');
+    if(!inner) return;
+
+    let startX = 0, currentX = 0, isDragging = false;
+
+    inner.addEventListener('touchstart', (e) => {
+      // Don't swipe if touching checkbox or buttons
+      if(e.target.closest('input, button, .chip, .action-btn-menu')) return;
+      startX = e.touches[0].clientX;
+      isDragging = true;
+      card.classList.add('swiping');
+    }, {passive: true});
+
+    inner.addEventListener('touchmove', (e) => {
+      if(!isDragging) return;
+      currentX = e.touches[0].clientX;
+      const diff = startX - currentX;
+
+      // Only allow left swipe (reveal actions on right)
+      if(diff > 0 && diff <= 160) {
+        inner.style.transform = `translateX(-${diff}px)`;
+      }
+    }, {passive: true});
+
+    inner.addEventListener('touchend', () => {
+      if(!isDragging) return;
+      isDragging = false;
+      card.classList.remove('swiping');
+
+      const diff = startX - currentX;
+
+      // Snap to position
+      if(diff > 80) {
+        inner.style.transform = 'translateX(-160px)'; // Show both actions
+      } else {
+        inner.style.transform = 'translateX(0)';
+      }
+
+      startX = 0;
+      currentX = 0;
+    });
+  });
+}
+
+// ===== DROPDOWN MENU SYSTEM =====
+function toggleCardMenu(btn, id, type){
+  const menu = btn.querySelector('.dropdown-menu');
+  const isOpen = menu.classList.contains('show');
+
+  // Close all other menus
+  closeAllMenus();
+
+  if(!isOpen){
+    menu.classList.add('show');
+    // Store current item for menu actions
+    window._currentMenuId = id;
+    window._currentMenuType = type;
+  }
+}
+
+function closeAllMenus(){
+  document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+  document.querySelectorAll('.context-menu').forEach(m => m.classList.remove('show'));
+}
+
+function openShareFromCard(id, type){
+  window._currentMenuId = id;
+  window._currentMenuType = type;
+  if(typeof openShareFromModal === 'function'){
+    currentModalItem = {id};
+    currentModalType = type;
+    openShareFromModal();
+  }
+}
+
+// Close menus on outside click
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.action-btn-menu') && !e.target.closest('.dropdown-menu')){
+    closeAllMenus();
+  }
+});
+
+// ===== CONTEXT MENU (Desktop) =====
+let contextMenuElement = null;
+
+function showContextMenu(e, id, type){
+  e.preventDefault();
+
+  if(!contextMenuElement){
+    contextMenuElement = document.createElement('div');
+    contextMenuElement.className = 'context-menu';
+    contextMenuElement.innerHTML = `
+      <div class="context-menu-item" onclick="contextAction('detail')">
+        <i class="fas fa-eye"></i> Detay <span class="shortcut">Enter</span>
+      </div>
+      <div class="context-menu-item" onclick="contextAction('pdf')">
+        <i class="fas fa-file-pdf"></i> PDF İndir <span class="shortcut">Ctrl+P</span>
+      </div>
+      <div class="context-menu-item" onclick="contextAction('copy')">
+        <i class="fas fa-copy"></i> Kopyala <span class="shortcut">Ctrl+D</span>
+      </div>
+      <div class="context-menu-item" onclick="contextAction('template')">
+        <i class="fas fa-bookmark"></i> Şablon Kaydet
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" onclick="contextAction('toggle')">
+        <i class="fas fa-exchange-alt"></i> Durumu Değiştir <span class="shortcut">Space</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item danger" onclick="contextAction('delete')">
+        <i class="fas fa-trash"></i> Sil <span class="shortcut">Del</span>
+      </div>
+    `;
+    document.body.appendChild(contextMenuElement);
+  }
+
+  window._contextMenuId = id;
+  window._contextMenuType = type;
+
+  contextMenuElement.style.left = e.pageX + 'px';
+  contextMenuElement.style.top = e.pageY + 'px';
+  contextMenuElement.classList.add('show');
+}
+
+function contextAction(action){
+  const id = window._contextMenuId;
+  const type = window._contextMenuType;
+
+  closeAllMenus();
+
+  switch(action){
+    case 'detail': showDetailUni(id, type); break;
+    case 'pdf': generatePDF(id, type); break;
+    case 'copy': copyWaybill(id, type); break;
+    case 'template': saveAsTemplate(id, type); break;
+    case 'toggle': toggleDurumUni(id, type); break;
+    case 'delete': deleteItemUni(id, type); break;
+  }
+}
+
 // Close sidebar on outside click (desktop)
 document.addEventListener('click',function(e){
   const sidebar=document.getElementById('sidebar');
@@ -8660,7 +9095,35 @@ document.addEventListener('click',function(e){
 
 // Keyboard shortcut: Escape to close modal
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){closeModal();closeSidebar();}
+  if(e.key==='Escape'){closeModal();closeSidebar();closeAllMenus();}
+
+  // Keyboard shortcuts for selected row (desktop)
+  const selectedRow = document.querySelector('tr:hover[data-id]');
+  if(selectedRow && !e.target.matches('input, textarea, select')){
+    const id = parseInt(selectedRow.dataset.id);
+    const type = selectedRow.dataset.type;
+
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      showDetailUni(id, type);
+    }
+    else if(e.key === 'Delete'){
+      e.preventDefault();
+      deleteItemUni(id, type);
+    }
+    else if(e.key === ' '){
+      e.preventDefault();
+      toggleDurumUni(id, type);
+    }
+    else if(e.ctrlKey && e.key === 'p'){
+      e.preventDefault();
+      generatePDF(id, type);
+    }
+    else if(e.ctrlKey && e.key === 'd'){
+      e.preventDefault();
+      copyWaybill(id, type);
+    }
+  }
 });
 
 // Handle form-grid-2 span on mobile
