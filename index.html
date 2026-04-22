@@ -1593,6 +1593,25 @@ tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:au
   width:6px;height:6px;border-radius:50%;flex-shrink:0;
 }
 
+/* COMPACT SUMMARY — Single row stats */
+.sd-summary-compact{
+  display:flex;gap:16px;padding:12px 16px;
+  flex-wrap:wrap;align-items:center;
+  border-bottom:1px solid var(--border);
+}
+.sd-stat{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;
+}
+.sd-stat-label{
+  color:var(--text-muted);font-weight:500;
+}
+.sd-stat-value{
+  color:var(--text-main);font-weight:800;font-size:16px;
+}
+.sd-stat-success .sd-stat-value{color:#10b981;}
+.sd-stat-warning .sd-stat-value{color:#f59e0b;}
+
 /* GRID — Compact */
 .sel-dash-grid, .sd-summary-row{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
@@ -8378,27 +8397,33 @@ function updateSelDash(checks){
     totalKilcik+=gN(it,'bant.kilcik');
   });
   
-  html+='<div class="sd-summary-row">';
-  html+=`<div class="sel-dash-card sd-total"><div class="sd-icon">📋</div><div class="sd-value">${items.length}</div><div class="sd-label">Secili</div></div>`;
-  html+=`<div class="sel-dash-card sd-green"><div class="sd-icon">✅</div><div class="sd-value">${durumler.teslim}</div><div class="sd-label">Teslim</div></div>`;
-  html+=`<div class="sel-dash-card sd-amber"><div class="sd-icon">⏳</div><div class="sd-value">${durumler.bekliyor}</div><div class="sd-label">Bekliyor</div></div>`;
+  html+='<div class="sd-summary-compact">';
+  html+=`<div class="sd-stat"><span class="sd-stat-label">Seçili:</span><span class="sd-stat-value">${items.length}</span></div>`;
+  html+=`<div class="sd-stat sd-stat-success"><span class="sd-stat-label">✓ Teslim:</span><span class="sd-stat-value">${durumler.teslim}</span></div>`;
+  html+=`<div class="sd-stat sd-stat-warning"><span class="sd-stat-label">⏳ Bekliyor:</span><span class="sd-stat-value">${durumler.bekliyor}</span></div>`;
   if(standartItems.length>0){
-    html+='<div class="sel-dash-card sd-purple"><div class="sd-icon">\u{1F4E6}</div><div class="sd-value">'+totalPoset.toLocaleString('tr')+'</div><div class="sd-label">Toplam Poset</div></div>';
-    var sizeMapSD={s30:'30x40',s35:'35x45',s40:'40x60',s50:'50x70',s60:'60x90',s100:'100x100'};
-    sizeKeys.forEach(function(sk){
-      var sv2=standartItems.reduce(function(sum,it){return sum+gN(it,'sizes.'+sk);},0);
-      if(sv2>0){html+='<div class="sel-dash-card sd-purple" style="opacity:0.8"><div class="sd-icon" style="font-size:11px;font-weight:800;color:var(--primary)">'+sizeMapSD[sk]+'</div><div class="sd-value">'+sv2.toLocaleString('tr')+'</div><div class="sd-label">'+sizeMapSD[sk]+' Poset</div></div>';}
-    });
-    html+='<div class="sel-dash-card sd-pink"><div class="sd-icon">\u{1F380}</div><div class="sd-value">'+(totalGenisBant+totalDarBant).toLocaleString('tr')+'</div><div class="sd-label">Toplam Bant</div></div>';
-    if(totalGenisBant>0){html+='<div class="sel-dash-card sd-pink" style="opacity:0.8"><div class="sd-icon" style="font-size:10px;font-weight:800">GENIS</div><div class="sd-value">'+totalGenisBant.toLocaleString('tr')+'</div><div class="sd-label">Genis Bant</div></div>';}
-    if(totalDarBant>0){html+='<div class="sel-dash-card sd-pink" style="opacity:0.8"><div class="sd-icon" style="font-size:10px;font-weight:800">DAR</div><div class="sd-value">'+totalDarBant.toLocaleString('tr')+'</div><div class="sd-label">Dar Bant</div></div>';}
-    html+='<div class="sel-dash-card sd-teal"><div class="sd-icon">\u{1F4CC}</div><div class="sd-value">'+totalKilcik.toLocaleString('tr')+'</div><div class="sd-label">Toplam Kilcik</div></div>';
+    html+=`<div class="sd-stat"><span class="sd-stat-label">📦 Poşet:</span><span class="sd-stat-value">${totalPoset.toLocaleString('tr')}</span></div>`;
+    const totalBant = totalGenisBant+totalDarBant;
+    if(totalBant>0){
+      html+=`<div class="sd-stat"><span class="sd-stat-label">🎀 Bant:</span><span class="sd-stat-value">${totalBant.toLocaleString('tr')}</span></div>`;
+    }
+    if(totalKilcik>0){
+      html+=`<div class="sd-stat"><span class="sd-stat-label">📌 Kılçık:</span><span class="sd-stat-value">${totalKilcik.toLocaleString('tr')}</span></div>`;
+    }
   }
   if(fermuarItems.length>0){
     const totalFermuar=fermuarItems.reduce((s,it)=>{const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];return s+beds.reduce((ss,b)=>ss+(+it[b+'a']||0),0);},0);
-    html+=`<div class="sel-dash-card sd-blue"><div class="sd-icon">🔗</div><div class="sd-value">${totalFermuar.toLocaleString('tr')}</div><div class="sd-label">Toplam Fermuar</div></div>`;
+    html+=`<div class="sd-stat"><span class="sd-stat-label">🔗 Fermuar:</span><span class="sd-stat-value">${totalFermuar.toLocaleString('tr')}</span></div>`;
   }
   html+='</div>';
+
+  // Detay butonu
+  html+='<div style="padding:12px 16px;border-top:1px solid var(--border);text-align:center;">';
+  html+='<button class="btn btn-sm btn-secondary" onclick="toggleSelDashDetail()" id="selDashDetailBtn"><i class="fas fa-chevron-down"></i> Detaylı Görünüm</button>';
+  html+='</div>';
+
+  // Detaylı görünüm (gizli)
+  html+='<div id="selDashDetail" style="display:none;">';
   
   // === POShET OLcU DETAY TABLOSU ===
   const sizeMap={s30:'30x40',s35:'35x45',s40:'40x60',s50:'50x70',s60:'60x90',s100:'100x100'};
@@ -8596,13 +8621,29 @@ function updateSelDash(checks){
   if(modeller.size>0){
     footerHtml+=`<span><i class="fas fa-cube"></i> Modeller: <strong>${[...modeller].join(', ')}</strong></span>`;
   }
+
+  // Detay bölümünü kapat
+  html+='</div>'; // selDashDetail kapanış
+
   if(footer)footer.innerHTML=footerHtml;
-  
+
+  grid.innerHTML=html;
+
   dash.classList.add('show');
   dash.style.display='block';
-  
+
   // Dashboard'a scroll
   setTimeout(()=>{dash.scrollIntoView({behavior:'smooth',block:'start'});},150);
+}
+
+function toggleSelDashDetail(){
+  const detail = document.getElementById('selDashDetail');
+  const btn = document.getElementById('selDashDetailBtn');
+  if(!detail || !btn) return;
+
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'block';
+  btn.innerHTML = isOpen ? '<i class="fas fa-chevron-down"></i> Detaylı Görünüm' : '<i class="fas fa-chevron-up"></i> Özet Görünüm';
 }
 
 function hideSelDash(){
