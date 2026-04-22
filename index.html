@@ -10654,8 +10654,8 @@ function generatePDF(id, type) {
   const qrDataUrl = _buildQrDataUrl(qrScanUrl);
   const qrHeaderBlock = qrDataUrl
     ? `<div style="margin-top:6px;text-align:right;">
-         <img src="${qrDataUrl}" alt="QR" style="width:60px;height:60px;border:1px solid #e5e7eb;border-radius:4px;padding:2px;background:#fff;">
-         <div style="font-size:8px;color:#6b7280;margin-top:2px;">📱 Telefon ile Tara</div>
+         <img src="${qrDataUrl}" alt="QR" style="width:120px;height:120px;border:1px solid #e5e7eb;border-radius:6px;padding:4px;background:#fff;">
+         <div style="font-size:10px;color:#6b7280;margin-top:4px;font-weight:600;">📱 Telefon ile Tara</div>
        </div>`
     : '';
 
