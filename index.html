@@ -12458,6 +12458,13 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     document.body.classList.add('v9-theme-changing');
     document.body.setAttribute('data-theme', id);
     document.documentElement.setAttribute('data-theme', id);
+
+    // CSS değişkenlerini dinamik olarak set et
+    const root = document.documentElement;
+    root.style.setProperty('--primary', t.c1);
+    root.style.setProperty('--primary-dark', t.c2);
+    root.style.setProperty('--accent', t.c3);
+
     if(typeof setConfig==='function') setConfig('theme', id);
     v9SyncActive();
     // Sayfa ilk açılışında bildirim gösterme, sadece kullanıcı seçince göster
