@@ -749,7 +749,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 .topbar-avatar{width:36px;height:36px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;box-shadow:0 2px 10px var(--primary-glow);}
 
 /* ===== CONTENT ===== */
-.content{padding:20px 24px 100px;max-width:1400px;}
+.content{padding:20px 24px 100px;max-width:1400px;position:relative;overflow-y:auto;}
 
 /* ===== PAGE TRANSITIONS ===== */
 .page{display:none;}
@@ -823,6 +823,106 @@ tr:hover td{background:var(--glass);}
 @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
 /* ===== TOAST ===== */
+/* ========== LOADING & SKELETON SCREENS ========== */
+/* Global Loading Overlay */
+.global-loading{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.3s;
+}
+.global-loading.show{opacity:1;pointer-events:auto;}
+.loading-spinner{
+  width:60px;height:60px;border-radius:50%;
+  border:4px solid rgba(255,255,255,0.2);
+  border-top-color:var(--primary);
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Skeleton Screens */
+.skeleton{
+  background:linear-gradient(90deg, var(--bg-card) 25%, color-mix(in oklab, var(--primary) 8%, var(--bg-card)) 50%, var(--bg-card) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s infinite;
+  border-radius:var(--radius-sm);
+}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+.skeleton-card{
+  padding:20px;border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:12px;
+}
+.skeleton-line{
+  height:16px;margin-bottom:10px;border-radius:4px;
+}
+.skeleton-line.short{width:60%;}
+.skeleton-line.medium{width:80%;}
+.skeleton-line.long{width:100%;}
+.skeleton-title{height:24px;width:40%;margin-bottom:16px;border-radius:6px;}
+.skeleton-circle{width:48px;height:48px;border-radius:50%;}
+.skeleton-rect{height:120px;border-radius:var(--radius-sm);}
+
+/* Skeleton KPI Card */
+.skeleton-kpi{
+  display:flex;align-items:center;gap:16px;
+  padding:20px;border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+.skeleton-kpi .skeleton-circle{flex-shrink:0;}
+.skeleton-kpi-body{flex:1;}
+
+/* Button Loading State */
+.btn.loading{position:relative;color:transparent !important;pointer-events:none;}
+.btn.loading::after{
+  content:'';position:absolute;
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;border-radius:50%;
+  top:50%;left:50%;
+  margin:-8px 0 0 -8px;
+  animation:spin 0.6s linear infinite;
+}
+
+/* Pull to Refresh */
+.ptr-container{
+  position:absolute;top:-60px;left:0;right:0;
+  height:60px;display:flex;align-items:center;justify-content:center;
+  transition:transform 0.3s;
+}
+.ptr-container.pulling{transform:translateY(60px);}
+.ptr-container.refreshing{transform:translateY(60px);}
+.ptr-icon{
+  font-size:24px;color:var(--primary);
+  transition:transform 0.3s;
+}
+.ptr-container.pulling .ptr-icon{transform:rotate(180deg);}
+.ptr-container.refreshing .ptr-icon{animation:spin 1s linear infinite;}
+
+/* Swipe Gestures */
+.swipe-actions{
+  position:absolute;top:0;bottom:0;
+  width:80px;display:flex;align-items:center;
+  z-index:1;pointer-events:none;
+}
+.swipe-action{
+  width:80px;height:100%;
+  display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:4px;
+  font-size:11px;font-weight:700;
+  border-radius:var(--radius-sm);
+}
+.swipe-delete{
+  background:linear-gradient(135deg, #ef4444, #dc2626);
+  color:#fff;
+}
+.swipe-edit{
+  background:linear-gradient(135deg, #3b82f6, #2563eb);
+  color:#fff;
+}
+.swipe-action i{font-size:18px;}
+
 .toast-container{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:350px;}
 .toast{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;animation:toastIn 0.35s cubic-bezier(0.4,0,0.2,1);box-shadow:var(--shadow-lg);position:relative;overflow:hidden;}
 .toast::after{content:'';position:absolute;bottom:0;left:0;height:3px;background:rgba(255,255,255,0.3);animation:toastProgress 3s linear forwards;}
@@ -3712,6 +3812,15 @@ body::after{
 
 <!-- Main -->
 <div class="main" id="mainContent">
+  <!-- Pull to Refresh Container -->
+  <div class="ptr-container" id="ptrContainer">
+    <div class="ptr-icon" id="ptrIcon">↓</div>
+  </div>
+
+  <!-- Global Loading Overlay -->
+  <div class="global-loading" id="globalLoading">
+    <div class="loading-spinner"></div>
+  </div>
   <!-- Topbar -->
   <div class="topbar">
     <div class="topbar-left">
@@ -13695,6 +13804,203 @@ function _renderPublicViewer(d){
 function _escapeHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+// ========== LOADING & SKELETON SCREENS ==========
+window.showLoading = function(){
+  const el = document.getElementById('globalLoading');
+  if(el) el.classList.add('show');
+};
+
+window.hideLoading = function(){
+  const el = document.getElementById('globalLoading');
+  if(el) el.classList.remove('show');
+};
+
+// Sayfa geçişlerinde loading göster
+const _origShowPage = window.showPage;
+if(_origShowPage){
+  window.showPage = function(page){
+    showLoading();
+    setTimeout(()=>{
+      _origShowPage(page);
+      hideLoading();
+    }, 300);
+  };
+}
+
+// ========== PULL TO REFRESH ==========
+(function(){
+  let startY = 0;
+  let currentY = 0;
+  let pulling = false;
+  let refreshing = false;
+
+  const ptrContainer = document.getElementById('ptrContainer');
+  const ptrIcon = document.getElementById('ptrIcon');
+  const content = document.querySelector('.content');
+
+  if(!ptrContainer || !content) return;
+
+  const threshold = 80;
+  const refreshablePages = ['home', 'list', 'reports'];
+
+  function canRefresh(){
+    const activePage = document.querySelector('.page.active');
+    if(!activePage) return false;
+    const pageId = activePage.id.replace('page-', '');
+    return refreshablePages.includes(pageId);
+  }
+
+  content.addEventListener('touchstart', function(e){
+    if(refreshing || !canRefresh()) return;
+    if(content.scrollTop === 0){
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }
+  }, {passive: true});
+
+  content.addEventListener('touchmove', function(e){
+    if(!pulling || refreshing) return;
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+
+    if(diff > 0 && diff < threshold * 2){
+      ptrContainer.style.transform = `translateY(${Math.min(diff, threshold)}px)`;
+      if(diff > threshold){
+        ptrContainer.classList.add('pulling');
+        ptrIcon.textContent = '↑';
+      } else {
+        ptrContainer.classList.remove('pulling');
+        ptrIcon.textContent = '↓';
+      }
+    }
+  }, {passive: true});
+
+  content.addEventListener('touchend', function(){
+    if(!pulling) return;
+    const diff = currentY - startY;
+
+    if(diff > threshold && !refreshing){
+      refreshing = true;
+      ptrContainer.classList.add('refreshing');
+      ptrContainer.classList.remove('pulling');
+      ptrIcon.textContent = '⟳';
+
+      // Haptic feedback
+      if(navigator.vibrate) navigator.vibrate(50);
+
+      // Refresh current page
+      const activePage = document.querySelector('.page.active');
+      const pageId = activePage ? activePage.id.replace('page-', '') : 'home';
+
+      setTimeout(()=>{
+        if(pageId === 'home') refreshHome();
+        else if(pageId === 'list') applyFilters();
+        else if(pageId === 'reports') renderAllReports();
+
+        if(typeof toast === 'function') toast('Yenilendi', 'success');
+
+        setTimeout(()=>{
+          ptrContainer.style.transform = '';
+          ptrContainer.classList.remove('refreshing');
+          ptrIcon.textContent = '↓';
+          refreshing = false;
+        }, 300);
+      }, 800);
+    } else {
+      ptrContainer.style.transform = '';
+      ptrContainer.classList.remove('pulling');
+      ptrIcon.textContent = '↓';
+    }
+
+    pulling = false;
+    startY = 0;
+    currentY = 0;
+  });
+})();
+
+// ========== SWIPE GESTURES ==========
+(function(){
+  let startX = 0;
+  let currentX = 0;
+  let swiping = false;
+  let swipeTarget = null;
+
+  document.addEventListener('touchstart', function(e){
+    const target = e.target.closest('.uni-mobile-card, .db-recent-item');
+    if(!target) return;
+
+    swipeTarget = target;
+    startX = e.touches[0].clientX;
+    swiping = true;
+
+    // Swipe container oluştur
+    if(!target.querySelector('.swipe-actions')){
+      const actions = document.createElement('div');
+      actions.className = 'swipe-actions';
+      actions.innerHTML = `
+        <div class="swipe-action swipe-delete"><i class="fas fa-trash"></i> Sil</div>
+        <div class="swipe-action swipe-edit"><i class="fas fa-pen"></i> Düzenle</div>
+      `;
+      target.appendChild(actions);
+      target.style.position = 'relative';
+    }
+  }, {passive: true});
+
+  document.addEventListener('touchmove', function(e){
+    if(!swiping || !swipeTarget) return;
+    currentX = e.touches[0].clientX;
+    const diff = currentX - startX;
+
+    if(Math.abs(diff) > 10){
+      e.preventDefault();
+      swipeTarget.style.transform = `translateX(${diff}px)`;
+
+      const actions = swipeTarget.querySelector('.swipe-actions');
+      if(actions){
+        if(diff < -50){
+          actions.style.right = '0';
+          actions.style.left = 'auto';
+          actions.querySelector('.swipe-delete').style.display = 'flex';
+          actions.querySelector('.swipe-edit').style.display = 'none';
+        } else if(diff > 50){
+          actions.style.left = '0';
+          actions.style.right = 'auto';
+          actions.querySelector('.swipe-edit').style.display = 'flex';
+          actions.querySelector('.swipe-delete').style.display = 'none';
+        }
+      }
+    }
+  });
+
+  document.addEventListener('touchend', function(){
+    if(!swiping || !swipeTarget) return;
+    const diff = currentX - startX;
+
+    if(diff < -100){
+      // Sağa kaydır - Sil
+      if(navigator.vibrate) navigator.vibrate([50, 50, 50]);
+      const id = swipeTarget.dataset.id;
+      const type = swipeTarget.dataset.type || 'standart';
+      if(id && confirm('Silmek istediğinize emin misiniz?')){
+        deleteItemUni(id, type);
+      }
+    } else if(diff > 100){
+      // Sola kaydır - Düzenle
+      if(navigator.vibrate) navigator.vibrate(50);
+      const id = swipeTarget.dataset.id;
+      const type = swipeTarget.dataset.type || 'standart';
+      if(id) showDetailUni(id, type);
+    }
+
+    // Reset
+    swipeTarget.style.transform = '';
+    swiping = false;
+    swipeTarget = null;
+    startX = 0;
+    currentX = 0;
+  });
+})();
 </script>
 <!-- ==================== /ARANABILIR SELECT ==================== -->
 
