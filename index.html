@@ -105,7 +105,7 @@
           el = document.createElement('div');
           el.id = '_fsToast';
           el.style.cssText = [
-            'position:fixed','right:12px','bottom:78px','z-index:999999',
+            'position:fixed','right:12px','bottom:78px','z-index:var(--z-toast)',
             'padding:8px 12px','border-radius:8px','font-size:12px',
             'font-family:system-ui,sans-serif','color:#fff','max-width:340px',
             'word-break:break-word','box-shadow:0 4px 16px rgba(0,0,0,0.4)',
@@ -603,7 +603,27 @@
   --transition-spring:400ms cubic-bezier(0.34,1.56,0.64,1);
 
   /* ===== Z-INDEX SCALE ===== */
-  --z-base:1;--z-dropdown:10;--z-sticky:20;--z-overlay:50;--z-modal:100;--z-toast:200;
+  --z-base:1;
+  --z-dropdown:10;
+  --z-sticky:20;
+  --z-overlay:50;
+  --z-modal:100;
+  --z-toast:200;
+  --z-lightbox:300;
+  --z-max:400;
+
+  /* ===== TYPOGRAPHY SYSTEM ===== */
+  --font-body:'Plus Jakarta Sans','Inter',system-ui,-apple-system,sans-serif;
+  --font-display:'Plus Jakarta Sans','Inter',system-ui,-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono','Fira Code','Courier New',monospace;
+  --font-serif:'Instrument Serif',Georgia,serif;
+
+  /* ===== EASING FUNCTIONS ===== */
+  --ease-smooth:cubic-bezier(0.4,0,0.2,1);
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+
+  /* ===== DYNAMIC COLORS ===== */
+  --kpi-color:var(--primary);
 
   /* ===== FLAT DESIGN - NO HEAVY SHADOWS ===== */
   --shadow-xs:0 1px 2px rgba(0,0,0,0.4);
@@ -664,7 +684,7 @@
   --glass-border:rgba(124,58,237,0.25);
   --glass-blur:12px;
 }
-/* ═══════════════ DARK MODE THEME ═══════════════ */
+
 /* ═══════════════ DARK MODE THEME ═══════════════ */
 [data-theme="dark"] {
   --primary:#475569;
@@ -1725,7 +1745,7 @@ body::after{
   display:none;
 }
 
-::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar{width:8px;height:8px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px;}
 
@@ -2872,7 +2892,7 @@ tr:hover .table-actions-more{
 /* ========== LOADING & SKELETON SCREENS ========== */
 /* Global Loading Overlay */
 .global-loading{
-  position:fixed;inset:0;z-index:9999;
+  position:fixed;inset:0;z-index:var(--z-modal);
   background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
   display:flex;align-items:center;justify-content:center;
   opacity:0;pointer-events:none;
@@ -3735,7 +3755,7 @@ tr:hover .table-actions-more{
 .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
 .cal-header h3{font-size:18px;font-weight:800;}
 .cal-nav{display:flex;gap:6px;}
-.cal-nav button{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--border);color:var(--text-main);font-size:14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+.cal-nav button{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--border);color:var(--text-main);font-size:14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
 .cal-nav button:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
 .cal-day-name{text-align:center;font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;padding:8px 0;}
@@ -3765,7 +3785,7 @@ tr:hover .table-actions-more{
 .notif-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;transition:all 0.2s;cursor:pointer;}
 .notif-item:hover{background:var(--glass);}
 .notif-item:last-child{border-bottom:none;}
-.notif-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.notif-icon{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .notif-icon.danger{background:rgba(239,68,68,0.12);color:#ef4444;}
 .notif-icon.warning{background:rgba(245,158,11,0.12);color:#f59e0b;}
 .notif-icon.info{background:rgba(59,130,246,0.12);color:#3b82f6;}
@@ -3812,7 +3832,7 @@ tr:hover .table-actions-more{
 .sel-dash-close{
   background:rgba(255,255,255,0.2);
   border:none;color:#fff;
-  width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;
+  width:44px;height:44px;min-width:44px;min-height:44px;border-radius:8px;cursor:pointer;font-size:14px;
   display:flex;align-items:center;justify-content:center;
   transition:all 0.2s;margin-left:auto;
 }
@@ -5106,7 +5126,7 @@ body::after{
 [data-theme="light"] body::after{ opacity: 0.02; }
 
 /* === 3. ENHANCED SCROLLBAR === */
-::-webkit-scrollbar{ width: 6px; height: 6px; }
+::-webkit-scrollbar{ width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb{
   background: linear-gradient(180deg, var(--primary-light), var(--primary));
   border-radius: 10px;
@@ -14312,7 +14332,7 @@ function openPhotoLightbox(idx){
   const photos = _getPhotosArray(item);
   if(!photos[idx]) return;
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
   overlay.innerHTML = `<img src="${photos[idx].data}" style="max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,0.5);" alt="foto ${idx+1}">`;
   overlay.onclick = () => document.body.removeChild(overlay);
   document.body.appendChild(overlay);
@@ -14632,7 +14652,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <!-- ==== GLOBAL SEARCH (Ctrl+K) ==== -->
 <style>
-  .gs-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:99999;display:none;align-items:flex-start;justify-content:center;padding-top:10vh;}
+  .gs-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:var(--z-modal)9;display:none;align-items:flex-start;justify-content:center;padding-top:10vh;}
   .gs-overlay.show{display:flex;}
   .gs-box{width:min(680px,92vw);background:var(--bg-card,#fff);color:var(--text,#111);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;border:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;max-height:80vh;}
   .gs-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border,#e5e7eb);}
@@ -15616,7 +15636,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
    LOGIN — v7 Premium Glassmorphism
    ========================================================= */
 #loginOverlay{
-  position:fixed; inset:0; z-index:999999;
+  position:fixed; inset:0; z-index:var(--z-modal)99;
   display:flex; align-items:center; justify-content:center;
   font-family:'Inter','Outfit',system-ui,sans-serif;
   padding:24px; overflow:auto;
@@ -16558,7 +16578,7 @@ body.logged-out { overflow:hidden !important; }
   background: var(--card-bg, #fff); color: var(--text,#1a1a2e);
   border:1px solid var(--border,#d1d5db); border-radius:10px;
   box-shadow: 0 12px 30px rgba(0,0,0,.15);
-  z-index:99999;
+  z-index:var(--z-modal)9;
   max-height: 280px; overflow:auto;
   display:none;
 }
