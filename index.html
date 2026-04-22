@@ -1015,7 +1015,7 @@ tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:au
 .modal-close-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
 .modal-close-btn:active{transform:scale(0.95);}
 
-.modal-body-new{padding:24px;flex:1;overflow-y:auto;}
+.modal-body-new{padding:24px;flex:1;overflow-y:auto;max-height:50vh;}
 
 .modal-actions-new{padding:16px 24px;border-top:1px solid var(--border);background:var(--bg-card-solid);position:sticky;bottom:0;z-index:10;}
 .modal-actions-primary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
@@ -1033,13 +1033,16 @@ tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:au
 .modal-action-btn.secondary:hover{border-color:var(--primary);background:var(--bg-card-hover);transform:translateY(-2px);}
 
 @media(max-width:640px){
-  .modal-detail{max-width:100%;max-height:95vh;border-radius:16px 16px 0 0;margin:0;}
+  .modal-detail{max-width:100%;max-height:80vh;border-radius:16px 16px 0 0;margin:0;}
   .modal-actions-secondary{grid-template-columns:repeat(2,1fr);}
   .modal-action-btn span{font-size:11px;}
   .modal-action-btn i{font-size:18px;}
   .modal-action-btn{padding:10px 6px;}
-  .modal-overlay{padding:0;align-items:flex-end;}
-  .modal-overlay .modal-detail{width:100%;border-radius:16px 16px 0 0;}
+  .modal-overlay{padding:0!important;align-items:flex-end!important;}
+  .modal-overlay .modal-detail{width:100%!important;border-radius:16px 16px 0 0!important;}
+  .modal-body-new{max-height:40vh!important;padding:16px!important;}
+  .modal-header-new{padding:16px 20px!important;}
+  .modal-actions-new{padding:12px 16px!important;}
 }
 
 /* ===== TOAST ===== */
@@ -4179,11 +4182,6 @@ body::after{
 
 <!-- Main -->
 <div class="main" id="mainContent">
-  <!-- Pull to Refresh Container -->
-  <div class="ptr-container" id="ptrContainer">
-    <div class="ptr-icon" id="ptrIcon">↓</div>
-  </div>
-
   <!-- Global Loading Overlay -->
   <div class="global-loading" id="globalLoading">
     <div class="loading-spinner"></div>
