@@ -10344,37 +10344,214 @@ function _buildBulkHTML(items){
 <title>İrsaliye PDF — ${today}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-  @page{size:A4 portrait;margin:12mm;}
+  @page{size:A4 portrait;margin:10mm;}
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Inter',Arial,sans-serif;color:#1a1a2e;font-size:13px;}
-  .irsaliye-page{padding:24px;max-width:760px;margin:0 auto;page-break-after:always;}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:#1a1a2e;
+    font-size:12px;
+    line-height:1.5;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .irsaliye-page{
+    padding:20px;
+    max-width:100%;
+    margin:0 auto;
+    page-break-after:always;
+    min-height:277mm;
+    display:flex;
+    flex-direction:column;
+  }
   .irsaliye-page:last-child{page-break-after:auto;}
-  .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #7c3aed;padding-bottom:14px;margin-bottom:18px;}
-  .ph-left h1{font-size:20px;font-weight:800;color:#7c3aed;}
-  .ph-left p{font-size:11px;color:#6b7280;margin-top:2px;}
+
+  /* Modern Header */
+  .ph{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    border-bottom:2px solid #7c3aed;
+    padding-bottom:12px;
+    margin-bottom:16px;
+    background:linear-gradient(135deg,rgba(124,58,237,0.05),transparent);
+    padding:12px;
+    border-radius:8px 8px 0 0;
+  }
+  .ph-left h1{
+    font-size:22px;
+    font-weight:800;
+    color:#7c3aed;
+    letter-spacing:-0.5px;
+  }
+  .ph-left p{
+    font-size:10px;
+    color:#6b7280;
+    margin-top:3px;
+    font-weight:500;
+  }
   .ph-right{text-align:right;}
-  .pno{font-size:18px;font-weight:800;color:#1a1a2e;}
-  .pdate{font-size:11px;color:#6b7280;}
-  .ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
-  .ib{background:#f8f7fc;border:1px solid #e5e7eb;border-radius:8px;padding:9px 12px;}
-  .il{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;font-weight:700;margin-bottom:2px;}
-  .iv{font-size:13px;font-weight:600;color:#1a1a2e;}
-  .st{font-size:13px;font-weight:700;color:#7c3aed;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid #e5e7eb;}
-  table{width:100%;border-collapse:collapse;margin-bottom:14px;}
-  th{background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:7px 10px;text-align:left;font-weight:700;}
-  td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;}
-  .sb{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+  .pno{
+    font-size:20px;
+    font-weight:800;
+    color:#1a1a2e;
+    letter-spacing:-0.5px;
+  }
+  .pdate{
+    font-size:10px;
+    color:#6b7280;
+    margin-top:2px;
+    font-weight:500;
+  }
+
+  /* Info Grid - Compact */
+  .ig{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .ib{
+    background:#f8f7fc;
+    border:1px solid #e5e7eb;
+    border-radius:6px;
+    padding:8px 10px;
+  }
+  .il{
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:#6b7280;
+    font-weight:700;
+    margin-bottom:2px;
+  }
+  .iv{
+    font-size:12px;
+    font-weight:600;
+    color:#1a1a2e;
+    line-height:1.3;
+  }
+
+  /* Section Title */
+  .st{
+    font-size:12px;
+    font-weight:700;
+    color:#7c3aed;
+    margin:12px 0 6px;
+    padding-bottom:4px;
+    border-bottom:1px solid #e5e7eb;
+  }
+
+  /* Table - Compact */
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:10px;
+    font-size:11px;
+  }
+  th{
+    background:#f3f0ff;
+    color:#5b21b6;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    padding:6px 8px;
+    text-align:left;
+    font-weight:700;
+    border-bottom:2px solid #7c3aed;
+  }
+  td{
+    padding:5px 8px;
+    border-bottom:1px solid #f3f4f6;
+    font-size:11px;
+    line-height:1.4;
+  }
+  tr:last-child td{border-bottom:none;}
+
+  /* Status Badge */
+  .sb{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:12px;
+    font-size:10px;
+    font-weight:700;
+  }
   .sb-bekliyor{background:#fef3c7;color:#92400e;}
   .sb-teslim{background:#d1fae5;color:#065f46;}
-  .tr2{text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;border-top:2px solid #7c3aed;margin-top:8px;}
-  .nb{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin-top:14px;font-size:12px;color:#92400e;}
-  .sigs{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:36px;}
+
+  /* Total Row */
+  .tr2{
+    text-align:right;
+    font-size:14px;
+    font-weight:800;
+    color:#7c3aed;
+    padding:8px 0;
+    border-top:2px solid #7c3aed;
+    margin-top:6px;
+  }
+
+  /* Note Box */
+  .nb{
+    background:#fffbeb;
+    border:1px solid #fde68a;
+    border-radius:6px;
+    padding:8px 10px;
+    margin-top:10px;
+    font-size:11px;
+    color:#92400e;
+    line-height:1.4;
+  }
+
+  /* Signatures - Compact */
+  .sigs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+    margin-top:24px;
+  }
   .sb2{text-align:center;}
-  .sl{border-top:1px solid #1a1a2e;margin-top:46px;padding-top:5px;font-size:11px;color:#6b7280;}
-  .pf{margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;}
-  @media print{.no-print{display:none;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-  .no-print{position:fixed;top:10px;right:10px;display:flex;gap:8px;z-index:999;}
-  .no-print button{padding:9px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;}
+  .sl{
+    border-top:1px solid #1a1a2e;
+    margin-top:36px;
+    padding-top:4px;
+    font-size:10px;
+    color:#6b7280;
+  }
+
+  /* Footer */
+  .pf{
+    margin-top:auto;
+    padding-top:10px;
+    border-top:1px solid #e5e7eb;
+    display:flex;
+    justify-content:space-between;
+    font-size:9px;
+    color:#9ca3af;
+  }
+
+  @media print{
+    .no-print{display:none;}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .irsaliye-page{page-break-inside:avoid;}
+  }
+
+  .no-print{
+    position:fixed;
+    top:10px;
+    right:10px;
+    display:flex;
+    gap:8px;
+    z-index:999;
+  }
+  .no-print button{
+    padding:10px 18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+    transition:all 0.2s;
+  }
+  .no-print button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
   .btn-pdf{background:#dc2626;color:#fff;}
   .btn-close{background:#6b7280;color:#fff;}
 </style></head><body>
