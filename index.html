@@ -1275,23 +1275,13 @@ tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:au
 }
 
 /* ===== MOBILE CARDS (for table alternative) ===== */
-.mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s;position:relative;overflow:hidden;}
+.mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s;position:relative;}
 .mobile-card:active{transform:scale(0.99);}
 .mc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .mc-title{font-weight:700;color:var(--primary);font-size:14px;}
 .mc-meta{font-size:12px;color:var(--text-muted);margin-bottom:4px;display:flex;gap:12px;flex-wrap:wrap;}
 .mc-meta span{display:flex;align-items:center;gap:4px;}
 .mc-actions{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
-
-/* ===== SWIPE GESTURE SYSTEM ===== */
-.swipe-container{position:relative;overflow:hidden;touch-action:pan-y;}
-.swipe-content{position:relative;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);z-index:2;background:var(--bg-card);}
-.swipe-content.swiping{transition:none;}
-.swipe-actions{position:absolute;top:0;bottom:0;right:0;display:flex;align-items:stretch;z-index:1;}
-.swipe-action{display:flex;align-items:center;justify-content:center;padding:0 20px;min-width:70px;color:#fff;font-size:18px;cursor:pointer;transition:all 0.2s;}
-.swipe-action.delete{background:linear-gradient(135deg,#ef4444,#dc2626);}
-.swipe-action.toggle{background:linear-gradient(135deg,#10b981,#059669);}
-.swipe-action:active{filter:brightness(0.9);}
 
 /* ===== DROPDOWN MENU ===== */
 .dropdown-menu{position:absolute;top:100%;right:0;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:180px;z-index:50;opacity:0;transform:translateY(-10px) scale(0.95);pointer-events:none;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);margin-top:4px;}
@@ -1422,25 +1412,40 @@ tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:au
 .result-info strong{color:var(--primary);}
 
 /* Enhanced mobile cards for unified list */
-.uni-mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:0;margin-bottom:10px;transition:all 0.2s;border-left:3px solid var(--primary);position:relative;overflow:hidden;}
+.uni-mobile-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:all 0.2s;border-left:3px solid var(--primary);position:relative;}
 .uni-mobile-card.type-fermuar{border-left-color:#3b82f6;}
 .uni-mobile-card.type-lastik{border-left-color:#10b981;}
 .uni-mobile-card.type-dugme{border-left-color:#f59e0b;}
 .uni-mobile-card.type-toptan{border-left-color:#ec4899;}
 .uni-mobile-card:active{transform:scale(0.99);}
-.uni-mobile-card .card-inner{padding:14px;position:relative;z-index:2;background:var(--bg-card);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);}
-.uni-mobile-card.swiping .card-inner{transition:none;}
-.uni-mobile-card .swipe-bg{position:absolute;top:0;bottom:0;right:0;display:flex;z-index:1;}
-.uni-mobile-card .swipe-bg-action{display:flex;align-items:center;justify-content:center;width:80px;color:#fff;font-size:20px;}
-.uni-mobile-card .swipe-bg-action.delete{background:linear-gradient(135deg,#ef4444,#dc2626);}
-.uni-mobile-card .swipe-bg-action.toggle{background:linear-gradient(135deg,#10b981,#059669);}
 
 /* Mobile card action buttons - improved */
 .uni-mobile-card .mc-actions-new{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-.uni-mobile-card .action-btn-primary{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.uni-mobile-card .action-btn-primary{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
 .uni-mobile-card .action-btn-primary:active{transform:scale(0.96);}
-.uni-mobile-card .action-btn-menu{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:18px;cursor:pointer;transition:all 0.2s;position:relative;}
+.uni-mobile-card .action-btn-menu{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-size:18px;cursor:pointer;transition:all 0.2s;position:relative;}
 .uni-mobile-card .action-btn-menu:active{transform:scale(0.96);}
+
+/* Card dropdown menu - positioned relative to card */
+.card-dropdown-menu{
+  position:absolute;
+  bottom:70px;right:14px;
+  background:var(--bg-card-solid);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  box-shadow:0 8px 24px rgba(0,0,0,0.3);
+  min-width:200px;
+  z-index:50;
+  opacity:0;
+  transform:translateY(10px) scale(0.95);
+  pointer-events:none;
+  transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.card-dropdown-menu.show{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  pointer-events:auto;
+}
 
 /* ===== MISC ===== */
 .clickable{cursor:pointer;transition:all 0.2s;}
@@ -6808,17 +6813,9 @@ function renderFilteredList(list){
     </tr>
   `).join('');
 
-  // Mobile cards with swipe and dropdown
+  // Mobile cards - simplified without swipe
   mobileEl.innerHTML=list.map(i=>`
     <div class="uni-mobile-card type-${i._type}" data-id="${i.id}" data-type="${i._type}">
-      <div class="swipe-bg">
-        <div class="swipe-bg-action toggle" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')">
-          <i class="fas fa-${i.durum==='teslim'?'undo':'check'}"></i>
-        </div>
-        <div class="swipe-bg-action delete" onclick="event.stopPropagation();deleteItemUni(${i.id},'${i._type}')">
-          <i class="fas fa-trash"></i>
-        </div>
-      </div>
       <div class="card-inner">
         <div class="mc-header">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -6841,31 +6838,28 @@ function renderFilteredList(list){
           </button>
           <div class="action-btn-menu" onclick="event.stopPropagation();toggleCardMenu(this, ${i.id}, '${i._type}')">
             <i class="fas fa-ellipsis-v"></i>
-            <div class="dropdown-menu">
-              <div class="dropdown-item" onclick="event.stopPropagation();generatePDF(${i.id},'${i._type}');closeAllMenus()">
-                <i class="fas fa-file-pdf"></i> PDF İndir
-              </div>
-              <div class="dropdown-item" onclick="event.stopPropagation();copyWaybill(${i.id},'${i._type}');closeAllMenus()">
-                <i class="fas fa-copy"></i> Kopyala
-              </div>
-              <div class="dropdown-item" onclick="event.stopPropagation();saveAsTemplate(${i.id},'${i._type}');closeAllMenus()">
-                <i class="fas fa-bookmark"></i> Şablon Kaydet
-              </div>
-              <div class="dropdown-item" onclick="event.stopPropagation();openShareFromCard(${i.id},'${i._type}');closeAllMenus()">
-                <i class="fas fa-share-alt"></i> Paylaş
-              </div>
-              <div class="dropdown-item danger" onclick="event.stopPropagation();deleteItemUni(${i.id},'${i._type}');closeAllMenus()">
-                <i class="fas fa-trash"></i> Sil
-              </div>
-            </div>
           </div>
+        </div>
+      </div>
+      <div class="card-dropdown-menu">
+        <div class="dropdown-item" onclick="event.stopPropagation();generatePDF(${i.id},'${i._type}');closeAllMenus()">
+          <i class="fas fa-file-pdf"></i> PDF İndir
+        </div>
+        <div class="dropdown-item" onclick="event.stopPropagation();copyWaybill(${i.id},'${i._type}');closeAllMenus()">
+          <i class="fas fa-copy"></i> Kopyala
+        </div>
+        <div class="dropdown-item" onclick="event.stopPropagation();saveAsTemplate(${i.id},'${i._type}');closeAllMenus()">
+          <i class="fas fa-bookmark"></i> Şablon Kaydet
+        </div>
+        <div class="dropdown-item" onclick="event.stopPropagation();openShareFromCard(${i.id},'${i._type}');closeAllMenus()">
+          <i class="fas fa-share-alt"></i> Paylaş
+        </div>
+        <div class="dropdown-item danger" onclick="event.stopPropagation();deleteItemUni(${i.id},'${i._type}');closeAllMenus()">
+          <i class="fas fa-trash"></i> Sil
         </div>
       </div>
     </div>
   `).join('');
-
-  // Initialize swipe gestures
-  initSwipeGestures();
 }
 
 function toggleDurumUni(id,type){
@@ -8944,56 +8938,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // ===== SWIPE GESTURE SYSTEM =====
-function initSwipeGestures(){
-  const cards = document.querySelectorAll('.uni-mobile-card');
-  cards.forEach(card => {
-    const inner = card.querySelector('.card-inner');
-    if(!inner) return;
-
-    let startX = 0, currentX = 0, isDragging = false;
-
-    inner.addEventListener('touchstart', (e) => {
-      // Don't swipe if touching checkbox or buttons
-      if(e.target.closest('input, button, .chip, .action-btn-menu')) return;
-      startX = e.touches[0].clientX;
-      isDragging = true;
-      card.classList.add('swiping');
-    }, {passive: true});
-
-    inner.addEventListener('touchmove', (e) => {
-      if(!isDragging) return;
-      currentX = e.touches[0].clientX;
-      const diff = startX - currentX;
-
-      // Only allow left swipe (reveal actions on right)
-      if(diff > 0 && diff <= 160) {
-        inner.style.transform = `translateX(-${diff}px)`;
-      }
-    }, {passive: true});
-
-    inner.addEventListener('touchend', () => {
-      if(!isDragging) return;
-      isDragging = false;
-      card.classList.remove('swiping');
-
-      const diff = startX - currentX;
-
-      // Snap to position
-      if(diff > 80) {
-        inner.style.transform = 'translateX(-160px)'; // Show both actions
-      } else {
-        inner.style.transform = 'translateX(0)';
-      }
-
-      startX = 0;
-      currentX = 0;
-    });
-  });
-}
-
 // ===== DROPDOWN MENU SYSTEM =====
 function toggleCardMenu(btn, id, type){
-  const menu = btn.querySelector('.dropdown-menu');
+  const card = btn.closest('.uni-mobile-card');
+  const menu = card.querySelector('.card-dropdown-menu');
   const isOpen = menu.classList.contains('show');
 
   // Close all other menus
@@ -9008,6 +8956,7 @@ function toggleCardMenu(btn, id, type){
 }
 
 function closeAllMenus(){
+  document.querySelectorAll('.card-dropdown-menu').forEach(m => m.classList.remove('show'));
   document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
   document.querySelectorAll('.context-menu').forEach(m => m.classList.remove('show'));
 }
@@ -9024,7 +8973,7 @@ function openShareFromCard(id, type){
 
 // Close menus on outside click
 document.addEventListener('click', (e) => {
-  if(!e.target.closest('.action-btn-menu') && !e.target.closest('.dropdown-menu')){
+  if(!e.target.closest('.action-btn-menu') && !e.target.closest('.card-dropdown-menu') && !e.target.closest('.dropdown-menu')){
     closeAllMenus();
   }
 });
