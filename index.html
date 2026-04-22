@@ -197,24 +197,56 @@
       return { upserts: upserts.length, deletes: deletes.length };
     }
 
-    // ── getData: localStorage cache (hizli UI)
+    // ========== IN-MEMORY CACHE ==========
+    const _dataCache = new Map();
+    window._dataCache = _dataCache;
+
+    window.invalidateCache = function(key){
+      if(key) _dataCache.delete(key);
+      else _dataCache.clear();
+    };
+
+    // ── getData: in-memory cache + localStorage
     window.getData = function(key){
+      // Cache'den oku
+      if(_dataCache.has(key)) return _dataCache.get(key);
+
+      // Cache miss - localStorage'dan oku
       try {
         const v = JSON.parse(localStorage.getItem(key));
-        if(Array.isArray(v)) return v;
-      } catch(e){}
+        if(Array.isArray(v)){
+          _dataCache.set(key, v);
+          return v;
+        }
+      } catch(e){
+        logError('getData', e, {key});
+      }
       return [];
     };
 
-    // ── setData: optimistik localStorage + arka planda Firestore
+    // ── setData: cache + localStorage + Firestore
     window.setData = function(key, val){
+      // Cache'i güncelle
+      _dataCache.set(key, val);
+
       // prev'i DOGRUDAN localStorage'dan oku (varsa ust katmandaki wrapper'lari atla)
       let prev = [];
       try {
         const raw = JSON.parse(localStorage.getItem(key));
         if(Array.isArray(raw)) prev = raw;
-      } catch(e){}
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
+      } catch(e){
+        logError('setData-read', e, {key});
+      }
+
+      try {
+        localStorage.setItem(key, JSON.stringify(val));
+        checkStorageQuota(); // Quota kontrolü
+      } catch(e){
+        logError('setData-write', e, {key, size: JSON.stringify(val).length});
+        if(e.name === 'QuotaExceededError'){
+          toast('⚠️ Depolama alanı dolu! Eski kayıtları temizleyin.', 'error');
+        }
+      }
 
       if(!FS_KEYS.includes(key)) return;
 
@@ -227,6 +259,7 @@
             console.log('[fs]', key, '+' + res.upserts, '-' + res.deletes);
           }
         } catch(err){
+          logError('firestore-sync', err, {key});
           console.warn('[fs] write err:', key, err);
           toast('⚠️ ' + key + ' yazilamadi: ' + (err && err.message || err), true);
         }
@@ -370,6 +403,74 @@
       setTimeout(function(){
         if(!window._fs) toast('⚠️ Firebase SDK yuklenemedi (internet?)', true);
       }, 5000);
+    }
+
+    // ========== ERROR LOGGING ==========
+    window.logError = function(context, error, meta = {}){
+      try {
+        const errorLog = JSON.parse(localStorage.getItem('_errorLog') || '[]');
+        errorLog.unshift({
+          timestamp: new Date().toISOString(),
+          context,
+          message: error?.message || String(error),
+          stack: error?.stack || '',
+          meta,
+          userAgent: navigator.userAgent
+        });
+        // Son 50 hatayı sakla
+        if(errorLog.length > 50) errorLog.length = 50;
+        localStorage.setItem('_errorLog', JSON.stringify(errorLog));
+      } catch(e){
+        console.error('[logError] failed:', e);
+      }
+    };
+
+    window.getErrorLog = function(){
+      try {
+        return JSON.parse(localStorage.getItem('_errorLog') || '[]');
+      } catch(e){
+        return [];
+      }
+    };
+
+    window.clearErrorLog = function(){
+      localStorage.removeItem('_errorLog');
+      if(typeof toast === 'function') toast('Hata logu temizlendi', 'success');
+    };
+
+    // ========== QUOTA MONITORING ==========
+    window.checkStorageQuota = function(){
+      try {
+        let used = 0;
+        for(let key in localStorage){
+          if(localStorage.hasOwnProperty(key)){
+            used += localStorage[key].length + key.length;
+          }
+        }
+        const usedMB = (used / 1024 / 1024).toFixed(2);
+        const limitMB = 5; // Tarayıcıya göre 5-10MB
+        const percent = (used / (limitMB * 1024 * 1024) * 100).toFixed(1);
+
+        // %80 dolunca uyar
+        if(percent > 80 && !window._quotaWarned){
+          window._quotaWarned = true;
+          if(typeof toast === 'function'){
+            toast('⚠️ Depolama alanı %' + percent + ' dolu! Eski kayıtları temizleyin.', 'error');
+          }
+        }
+
+        return {used: usedMB, percent, limit: limitMB};
+      } catch(e){
+        if(typeof logError === 'function') logError('checkStorageQuota', e);
+        return {used: 0, percent: 0, limit: 5};
+      }
+    };
+
+    // Sayfa yüklendiğinde quota kontrol et
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', checkStorageQuota);
+    } else {
+      setTimeout(checkStorageQuota, 1000);
     }
 
   })();
@@ -4948,6 +5049,49 @@ body::after{
           </div>
         </div>
 
+        <div class="s-card">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);"><i class="fas fa-database"></i></div>
+            <div>
+              <h3>Depolama Kullanımı</h3>
+              <p>LocalStorage kullanım durumu</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+                <span style="color:var(--text-muted);">Kullanılan Alan:</span>
+                <strong id="storageUsed" style="color:var(--primary);">0 MB</strong>
+              </div>
+              <div style="background:var(--glass);border-radius:10px;height:24px;overflow:hidden;border:1px solid var(--border);">
+                <div id="storageBar" style="height:100%;background:linear-gradient(90deg,var(--primary),#a78bfa);transition:width 0.5s;width:0%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-weight:700;font-size:11px;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text-dim);">
+                <span>0%</span>
+                <span>Limit: ~5 MB</span>
+              </div>
+            </div>
+            <button class="btn btn-secondary" onclick="updateStorageDisplay()" style="width:100%;justify-content:center;"><i class="fas fa-sync-alt"></i> Yenile</button>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-bug"></i></div>
+            <div>
+              <h3>Hata Logu</h3>
+              <p>Son 50 hata kaydı</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div id="errorLogDisplay" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary" onclick="displayErrorLog()" style="flex:1;justify-content:center;"><i class="fas fa-eye"></i> Göster</button>
+              <button class="btn btn-danger" onclick="clearErrorLog()" style="flex:1;justify-content:center;"><i class="fas fa-trash"></i> Temizle</button>
+            </div>
+          </div>
+        </div>
+
         <div class="s-card danger-zone">
           <div class="s-card-head">
             <div class="s-ico" style="background:linear-gradient(135deg,#ef4444,#b91c1c);"><i class="fas fa-skull-crossbones"></i></div>
@@ -9041,8 +9185,73 @@ function clearAllData() {
   });
   // Firestore'la ilgisi olmayan yerel config key'leri
   ['pinnedItems','dailyGoal','pinnedIrsaliye','v8_daily_goal'].forEach(k => localStorage.removeItem(k));
+
+  // Cache'i temizle
+  if(typeof window.invalidateCache === 'function') window.invalidateCache();
+
   toast('Tüm veriler silindi','info');
   setTimeout(() => location.reload(), 1200);
+}
+
+// ========== STORAGE & ERROR LOG DISPLAY ==========
+function updateStorageDisplay(){
+  if(typeof checkStorageQuota !== 'function') return;
+  const quota = checkStorageQuota();
+
+  const usedEl = document.getElementById('storageUsed');
+  const barEl = document.getElementById('storageBar');
+
+  if(usedEl) usedEl.textContent = quota.used + ' MB';
+  if(barEl){
+    barEl.style.width = quota.percent + '%';
+    barEl.textContent = quota.percent + '%';
+
+    // Renk değiştir
+    if(quota.percent > 80){
+      barEl.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)';
+    } else if(quota.percent > 60){
+      barEl.style.background = 'linear-gradient(90deg,#f59e0b,#d97706)';
+    } else {
+      barEl.style.background = 'linear-gradient(90deg,var(--primary),#a78bfa)';
+    }
+  }
+
+  toast('Depolama bilgisi güncellendi', 'success');
+}
+
+function displayErrorLog(){
+  if(typeof getErrorLog !== 'function') return;
+  const errors = getErrorLog();
+  const el = document.getElementById('errorLogDisplay');
+
+  if(!el) return;
+
+  if(errors.length === 0){
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fas fa-check-circle" style="font-size:32px;color:#10b981;margin-bottom:8px;"></i><p>Hiç hata kaydı yok!</p></div>';
+    return;
+  }
+
+  let html = '<div style="font-size:12px;">';
+  errors.forEach((err, i) => {
+    const date = new Date(err.timestamp).toLocaleString('tr-TR');
+    const severity = err.context.includes('firestore') ? 'warning' : 'error';
+    const color = severity === 'warning' ? '#f59e0b' : '#ef4444';
+
+    html += `
+      <div style="padding:10px;margin-bottom:8px;background:var(--glass);border-left:3px solid ${color};border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <strong style="color:${color};">${err.context}</strong>
+          <span style="color:var(--text-dim);font-size:10px;">${date}</span>
+        </div>
+        <div style="color:var(--text-muted);margin-bottom:4px;">${err.message}</div>
+        ${err.meta && Object.keys(err.meta).length > 0 ? `<div style="font-size:10px;color:var(--text-dim);">Meta: ${JSON.stringify(err.meta)}</div>` : ''}
+      </div>
+    `;
+  });
+  html += '</div>';
+
+  el.innerHTML = html;
+  toast('Hata logu gösteriliyor (' + errors.length + ' kayıt)', 'info');
 }
 
 
