@@ -12479,6 +12479,21 @@ function exportFilteredCSV(){
 }
 
 // ==================== INIT ====================
+// QR viewer kontrolü - hemen çalıştır (DOMContentLoaded beklemeden)
+if(window.location.hash && window.location.hash.includes('v=')){
+  console.log('QR detected in URL, checking viewer...');
+  // Sayfa yüklenir yüklenmez kontrol et
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){
+      if(_checkAndRenderPublicViewer()){ return; }
+    });
+  } else {
+    if(_checkAndRenderPublicViewer()){
+      // Viewer açıldı, normal init'i çalıştırma
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   // ÖNCE public viewer kontrolü — URL hash #v=... içeriyorsa şifresiz görüntüleyici aç
   if(_checkAndRenderPublicViewer()){ return; }
@@ -18127,20 +18142,45 @@ body.logged-out { overflow:hidden !important; }
 function _parseViewerHash(){
   const h = (window.location.hash || '').replace(/^#/, '');
   if(!h) return null;
-  const params = new URLSearchParams(h);
-  const v = params.get('v');
+
+  // Hash formatı: v=BASE64_DATA veya v=BASE64_DATA&other=value
+  // URLSearchParams bazen hash'i doğru parse edemiyor, manuel parse edelim
+  let v = null;
+
+  // Önce URLSearchParams dene
+  try {
+    const params = new URLSearchParams(h);
+    v = params.get('v');
+  } catch(e) {
+    // Başarısız olursa manuel parse
+    const match = h.match(/[?&]?v=([^&]+)/);
+    if(match) v = match[1];
+  }
+
+  // Eğer hash direkt v= ile başlıyorsa (query string yok)
+  if(!v && h.startsWith('v=')) {
+    v = h.substring(2).split('&')[0];
+  }
+
   if(!v) return null;
+
   try {
     const json = _b64UrlDecode(v);
     const data = JSON.parse(json);
     if(data && data.app === 'irsaliyepro') return data;
-  } catch(e){}
+  } catch(e){
+    console.error('QR parse error:', e);
+  }
   return null;
 }
 
 function _checkAndRenderPublicViewer(){
   const data = _parseViewerHash();
-  if(!data) return false;
+  if(!data) {
+    console.log('QR viewer: No valid hash data found');
+    return false;
+  }
+  console.log('QR viewer: Rendering public view for:', data.no || data.id);
   _renderPublicViewer(data);
   return true;
 }
