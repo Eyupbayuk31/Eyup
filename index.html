@@ -16300,7 +16300,22 @@ body.logged-out { overflow:hidden !important; }
     } catch(e){}
   }
   function clearAuth(){
-    try { localStorage.removeItem(AUTH_KEY); sessionStorage.removeItem(AUTH_KEY); } catch(e){}
+    try {
+      // Auth key'i temizle
+      localStorage.removeItem(AUTH_KEY);
+      sessionStorage.removeItem(AUTH_KEY);
+
+      // In-memory cache'i temizle
+      if(typeof window._dataCache !== 'undefined'){
+        window._dataCache.clear();
+      }
+
+      // Session storage'ı tamamen temizle
+      sessionStorage.clear();
+
+    } catch(e){
+      console.error('clearAuth error:', e);
+    }
   }
 
   const overlay = document.getElementById('loginOverlay');
@@ -16545,9 +16560,21 @@ body.logged-out { overflow:hidden !important; }
 
   // Dışa açık: çıkış
   window.logout = function(){
+    // Cache'i temizle
     clearAuth();
+
+    // Firestore listener'ları durdur
+    if(typeof window.cleanupFirestore === 'function'){
+      window.cleanupFirestore();
+    }
+
+    // Toast göster
     if(typeof toast==='function') toast('Çıkış yapıldı','info');
-    setTimeout(()=>location.reload(), 300);
+
+    // Sayfayı yenile (cache temizlendikten sonra)
+    setTimeout(()=>{
+      location.reload(true); // Hard reload
+    }, 300);
   };
 })();
 </script>
