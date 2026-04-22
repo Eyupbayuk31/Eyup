@@ -2211,6 +2211,549 @@ body::after{
 .stat-change.up{background:rgba(16,185,129,0.15);color:#10b981;box-shadow:0 2px 8px rgba(16,185,129,0.2);}
 .stat-change.down{background:rgba(239,68,68,0.15);color:#ef4444;box-shadow:0 2px 8px rgba(239,68,68,0.2);}
 
+/* ===== AKSESUAR TAKİP - PRECISION INDUSTRIAL ===== */
+.aks-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:24px;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+.aks-header-left{
+  flex:1;
+  min-width:300px;
+}
+
+.aks-title-group{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.aks-icon-badge{
+  width:56px;
+  height:56px;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  color:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,0.15);
+  animation:aksPulse 3s ease-in-out infinite;
+}
+
+@keyframes aksPulse{
+  0%,100%{transform:scale(1);box-shadow:0 8px 24px rgba(0,0,0,0.15);}
+  50%{transform:scale(1.05);box-shadow:0 12px 32px rgba(0,0,0,0.2);}
+}
+
+.aks-title{
+  font-size:28px;
+  font-weight:800;
+  color:var(--text-main);
+  margin:0;
+  letter-spacing:-0.5px;
+}
+
+.aks-subtitle{
+  font-size:14px;
+  color:var(--text-muted);
+  margin:4px 0 0 0;
+  font-weight:500;
+}
+
+.aks-header-right{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.aks-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 20px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:600;
+  border:none;
+  cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+  position:relative;
+  overflow:hidden;
+}
+
+.aks-btn::before{
+  content:'';
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:0;
+  height:0;
+  border-radius:50%;
+  background:rgba(255,255,255,0.3);
+  transform:translate(-50%,-50%);
+  transition:width 0.6s,height 0.6s;
+}
+
+.aks-btn:hover::before{
+  width:300px;
+  height:300px;
+}
+
+.aks-btn-primary{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;
+  box-shadow:0 4px 16px rgba(0,0,0,0.15);
+}
+
+.aks-btn-primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,0.2);
+}
+
+.aks-btn-secondary{
+  background:var(--bg-card);
+  color:var(--text-main);
+  border:1px solid var(--border);
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.aks-btn-secondary:hover{
+  background:var(--bg-card-hover);
+  border-color:var(--primary);
+  transform:translateY(-2px);
+}
+
+.aks-toolbar{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+
+.aks-search-box{
+  flex:1;
+  min-width:300px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  background:var(--bg-card);
+  border:2px solid var(--border);
+  border-radius:12px;
+  padding:0 16px;
+  transition:all 0.3s ease;
+}
+
+.aks-search-box:focus-within{
+  border-color:var(--primary);
+  box-shadow:0 0 0 4px var(--primary-glow);
+}
+
+.aks-search-box i{
+  color:var(--text-muted);
+  font-size:16px;
+  margin-right:12px;
+}
+
+.aks-search-box input{
+  flex:1;
+  border:none;
+  background:transparent;
+  padding:14px 0;
+  font-size:14px;
+  color:var(--text-main);
+  outline:none;
+}
+
+.aks-search-box input::placeholder{
+  color:var(--text-muted);
+}
+
+.aks-search-badge{
+  padding:4px 12px;
+  background:var(--primary-glow);
+  color:var(--primary);
+  border-radius:20px;
+  font-size:12px;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+.aks-quick-stats{
+  display:flex;
+  gap:12px;
+}
+
+.aks-stat-mini{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 16px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-size:18px;
+  font-weight:700;
+  color:var(--text-main);
+  transition:all 0.3s ease;
+}
+
+.aks-stat-mini:hover{
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}
+
+.aks-stat-mini i{
+  font-size:20px;
+  color:var(--primary);
+}
+
+.aks-stat-success i{
+  color:#10b981;
+}
+
+.aks-stat-warning i{
+  color:#f59e0b;
+}
+
+.aks-table-container{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,0.08);
+}
+
+.aks-table-wrapper{
+  overflow-x:auto;
+  overflow-y:auto;
+  max-height:calc(100vh - 320px);
+  position:relative;
+}
+
+.aks-table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:13px;
+}
+
+.aks-thead{
+  position:sticky;
+  top:0;
+  z-index:100;
+  background:var(--bg-card);
+}
+
+.aks-th{
+  background:linear-gradient(180deg,var(--bg-card-hover),var(--bg-card));
+  border-bottom:2px solid var(--border-solid);
+  border-right:1px solid var(--border);
+  padding:16px 12px;
+  text-align:left;
+  font-weight:700;
+  font-size:12px;
+  color:var(--text-main);
+  white-space:nowrap;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+
+.aks-th:last-child{
+  border-right:none;
+}
+
+.aks-th-content{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.aks-th-content i{
+  color:var(--primary);
+  font-size:14px;
+  opacity:0.9;
+}
+
+.aks-th-sticky-left{
+  position:sticky;
+  left:0;
+  z-index:110;
+  box-shadow:4px 0 8px rgba(0,0,0,0.08);
+}
+
+.aks-th-sticky-right{
+  position:sticky;
+  right:0;
+  z-index:110;
+  box-shadow:-4px 0 8px rgba(0,0,0,0.08);
+}
+
+.aks-tbody{
+  background:var(--bg-card);
+}
+
+.aks-row{
+  transition:all 0.3s ease;
+  animation:aksRowFadeIn 0.5s ease forwards;
+  opacity:0;
+}
+
+@keyframes aksRowFadeIn{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.aks-row:hover{
+  background:var(--bg-card-hover);
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+
+.aks-td{
+  padding:12px;
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  vertical-align:middle;
+}
+
+.aks-td:last-child{
+  border-right:none;
+}
+
+.aks-td-sticky-left{
+  position:sticky;
+  left:0;
+  z-index:10;
+  background:var(--bg-card);
+  box-shadow:4px 0 8px rgba(0,0,0,0.06);
+}
+
+.aks-td-sticky-right{
+  position:sticky;
+  right:0;
+  z-index:10;
+  background:var(--bg-card);
+  box-shadow:-4px 0 8px rgba(0,0,0,0.06);
+  text-align:center;
+}
+
+.aks-row:hover .aks-td-sticky-left,
+.aks-row:hover .aks-td-sticky-right{
+  background:var(--bg-card-hover);
+}
+
+.aks-input{
+  width:100%;
+  padding:8px 12px;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:transparent;
+  color:var(--text-main);
+  font-size:13px;
+  font-family:inherit;
+  transition:all 0.2s ease;
+}
+
+.aks-input:hover{
+  background:var(--bg-input);
+  border-color:var(--border);
+}
+
+.aks-input:focus{
+  outline:none;
+  background:var(--bg-card);
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px var(--primary-glow);
+}
+
+.aks-input-number{
+  text-align:center;
+  font-weight:600;
+  color:var(--primary);
+}
+
+.aks-counter{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  justify-content:center;
+}
+
+.aks-counter-btn{
+  width:32px;
+  height:32px;
+  border:1px solid var(--border);
+  background:var(--bg-card-hover);
+  border-radius:8px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text-main);
+  transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+  font-size:12px;
+}
+
+.aks-counter-btn:hover{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+  transform:scale(1.1);
+}
+
+.aks-counter-btn:active{
+  transform:scale(0.95);
+}
+
+.aks-counter-minus:hover{
+  background:#ef4444;
+  border-color:#ef4444;
+}
+
+.aks-counter-plus:hover{
+  background:#10b981;
+  border-color:#10b981;
+}
+
+.aks-counter-value{
+  min-width:40px;
+  text-align:center;
+  font-weight:700;
+  font-size:15px;
+  color:var(--text-main);
+}
+
+.aks-delete-btn{
+  width:36px;
+  height:36px;
+  border:1px solid var(--border);
+  background:var(--bg-card-hover);
+  border-radius:8px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#ef4444;
+  transition:all 0.2s ease;
+}
+
+.aks-delete-btn:hover{
+  background:#ef4444;
+  color:#fff;
+  border-color:#ef4444;
+  transform:scale(1.1);
+}
+
+.aks-empty-state{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:80px 20px;
+  text-align:center;
+}
+
+.aks-empty-icon{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--primary-glow),rgba(0,0,0,0.02));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:48px;
+  color:var(--primary);
+  margin-bottom:24px;
+  animation:aksEmptyPulse 2s ease-in-out infinite;
+}
+
+@keyframes aksEmptyPulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.05);}
+}
+
+.aks-empty-state h3{
+  font-size:24px;
+  font-weight:700;
+  color:var(--text-main);
+  margin:0 0 8px 0;
+}
+
+.aks-empty-state p{
+  font-size:14px;
+  color:var(--text-muted);
+  margin:0 0 24px 0;
+}
+
+@media(max-width:768px){
+  .aks-header{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .aks-header-left{
+    min-width:100%;
+  }
+
+  .aks-header-right{
+    width:100%;
+  }
+
+  .aks-btn{
+    flex:1;
+    justify-content:center;
+  }
+
+  .aks-toolbar{
+    flex-direction:column;
+  }
+
+  .aks-search-box{
+    min-width:100%;
+  }
+
+  .aks-quick-stats{
+    width:100%;
+    justify-content:space-between;
+  }
+
+  .aks-stat-mini{
+    flex:1;
+    flex-direction:column;
+    gap:4px;
+    padding:12px 8px;
+  }
+
+  .aks-table-wrapper{
+    max-height:calc(100vh - 420px);
+  }
+
+  .aks-th{
+    padding:12px 8px;
+    font-size:11px;
+  }
+
+  .aks-td{
+    padding:8px;
+  }
+
+  .aks-input{
+    padding:6px 8px;
+    font-size:12px;
+  }
+
+  .aks-counter-btn{
+    width:28px;
+    height:28px;
+  }
+}
+
 /* ===== CARDS - ULTRA-MODERN 3D ===== */
 .card{
   background:var(--bg-card);
@@ -7456,41 +7999,174 @@ body::after{
 
     <!-- ========== AKSESUAR TAKİP ========== -->
     <div class="page" id="page-aksesuar">
-      <div class="section-header">
-        <div><h2><i class="fas fa-tags" style="color:var(--primary);margin-right:8px;"></i>Aksesuar Takip</h2><p>Model aksesuarlarını takip edin - Excel gibi direkt yazın</p></div>
-        <button class="btn btn-primary" onclick="addNewAksesuarRow()"><i class="fas fa-plus"></i> Yeni Satır Ekle</button>
+      <div class="aks-header">
+        <div class="aks-header-left">
+          <div class="aks-title-group">
+            <div class="aks-icon-badge">
+              <i class="fas fa-tags"></i>
+            </div>
+            <div>
+              <h2 class="aks-title">Aksesuar Takip Sistemi</h2>
+              <p class="aks-subtitle">Profesyonel envanter yönetimi - Hızlı, hassas, güvenilir</p>
+            </div>
+          </div>
+        </div>
+        <div class="aks-header-right">
+          <button class="aks-btn aks-btn-secondary" onclick="exportAksesuarToExcel()">
+            <i class="fas fa-file-excel"></i>
+            <span>Excel İndir</span>
+          </button>
+          <button class="aks-btn aks-btn-primary" onclick="addNewAksesuarRow()">
+            <i class="fas fa-plus"></i>
+            <span>Yeni Kayıt</span>
+          </button>
+        </div>
       </div>
-      <div class="search-bar" style="margin-bottom:12px;"><i class="fas fa-search"></i><input type="text" id="aksesuarSearch" placeholder="Model kodu veya marka ara..." oninput="renderAksesuarTable()"></div>
-      <div class="card" style="padding:0;">
-        <div style="overflow-x:auto;max-width:100%;">
-          <table style="width:100%;table-layout:auto;">
-            <thead>
+
+      <div class="aks-toolbar">
+        <div class="aks-search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="aksesuarSearch" placeholder="Model kodu, koli no veya raf ara..." oninput="renderAksesuarTable()">
+          <div class="aks-search-badge" id="aksesuarSearchCount">0 kayıt</div>
+        </div>
+        <div class="aks-quick-stats">
+          <div class="aks-stat-mini">
+            <i class="fas fa-box"></i>
+            <span id="aksesuarTotalCount">0</span>
+          </div>
+          <div class="aks-stat-mini aks-stat-success">
+            <i class="fas fa-check-circle"></i>
+            <span id="aksesuarCompleteCount">0</span>
+          </div>
+          <div class="aks-stat-mini aks-stat-warning">
+            <i class="fas fa-clock"></i>
+            <span id="aksesuarPendingCount">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="aks-table-container">
+        <div class="aks-table-wrapper">
+          <table class="aks-table">
+            <thead class="aks-thead">
               <tr>
-                <th style="min-width:120px;position:sticky;left:0;background:var(--card);z-index:10;">Model Kodu</th>
-                <th style="min-width:110px;">Çıkış (Dikim)</th>
-                <th style="min-width:90px;">Koli No</th>
-                <th style="min-width:110px;">Termin</th>
-                <th style="min-width:70px;">Adet</th>
-                <th style="min-width:110px;">Marka Etiketi</th>
-                <th style="min-width:100px;">İç Barkod</th>
-                <th style="min-width:120px;">Yıkama Talimatı</th>
-                <th style="min-width:120px;">Yıkama (Toptan)</th>
-                <th style="min-width:80px;">Ecom</th>
-                <th style="min-width:120px;">İstanbul Sticker</th>
-                <th style="min-width:100px;">Süs Etiketi</th>
-                <th style="min-width:100px;">Süs Kartı</th>
-                <th style="min-width:100px;">Lisans Kartı</th>
-                <th style="min-width:110px;">Raf (Ütüpaket)</th>
-                <th style="min-width:120px;">Çıkış (Ütüpaket)</th>
-                <th style="min-width:70px;position:sticky;right:0;background:var(--card);z-index:10;">İşlem</th>
+                <th class="aks-th aks-th-sticky-left" style="min-width:140px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-barcode"></i>
+                    <span>Model Kodu</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:160px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>Çıkış (Dikim)</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:110px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-box"></i>
+                    <span>Koli No</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:130px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-calendar"></i>
+                    <span>Termin</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:90px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-hashtag"></i>
+                    <span>Adet</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:130px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-tag"></i>
+                    <span>Marka Etiketi</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:120px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-qrcode"></i>
+                    <span>İç Barkod</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:140px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-tint"></i>
+                    <span>Yıkama Talimatı</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:140px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-water"></i>
+                    <span>Yıkama (Toptan)</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:100px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Ecom</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:140px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>İstanbul Sticker</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:120px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-star"></i>
+                    <span>Süs Etiketi</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:120px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-id-card"></i>
+                    <span>Süs Kartı</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:120px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-certificate"></i>
+                    <span>Lisans Kartı</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:130px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Raf (Ütüpaket)</span>
+                  </div>
+                </th>
+                <th class="aks-th" style="min-width:160px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-shipping-fast"></i>
+                    <span>Çıkış (Ütüpaket)</span>
+                  </div>
+                </th>
+                <th class="aks-th aks-th-sticky-right" style="min-width:80px;">
+                  <div class="aks-th-content">
+                    <i class="fas fa-cog"></i>
+                    <span>İşlem</span>
+                  </div>
+                </th>
               </tr>
             </thead>
-            <tbody id="aksesuarTable"></tbody>
+            <tbody class="aks-tbody" id="aksesuarTable"></tbody>
           </table>
         </div>
-        <div class="empty-state" id="aksesuarEmpty" style="display:none;">
-          <i class="fas fa-tags"></i>
-          <p>Henüz aksesuar kaydı yok. "Yeni Satır Ekle" butonuna tıklayın.</p>
+        <div class="aks-empty-state" id="aksesuarEmpty" style="display:none;">
+          <div class="aks-empty-icon">
+            <i class="fas fa-tags"></i>
+          </div>
+          <h3>Henüz aksesuar kaydı yok</h3>
+          <p>Yeni kayıt ekleyerek başlayın</p>
+          <button class="aks-btn aks-btn-primary" onclick="addNewAksesuarRow()">
+            <i class="fas fa-plus"></i>
+            <span>İlk Kaydı Oluştur</span>
+          </button>
         </div>
       </div>
     </div>
@@ -8916,17 +9592,33 @@ function renderAksesuarTable(){
   let list = getData('aksesuarlar');
   const search = document.getElementById('aksesuarSearch')?.value.toLowerCase() || '';
 
+  let filteredList = list;
   if(search){
-    list = list.filter(a =>
+    filteredList = list.filter(a =>
       (a.modelKodu || '').toLowerCase().includes(search) ||
-      (a.koliNo || '').toLowerCase().includes(search)
+      (a.koliNo || '').toLowerCase().includes(search) ||
+      (a.raf || '').toLowerCase().includes(search)
     );
   }
 
   const tbody = document.getElementById('aksesuarTable');
   const empty = document.getElementById('aksesuarEmpty');
+  const searchCount = document.getElementById('aksesuarSearchCount');
+  const totalCount = document.getElementById('aksesuarTotalCount');
+  const completeCount = document.getElementById('aksesuarCompleteCount');
+  const pendingCount = document.getElementById('aksesuarPendingCount');
 
-  if(list.length === 0){
+  // Update stats
+  if(searchCount) searchCount.textContent = `${filteredList.length} kayıt`;
+  if(totalCount) totalCount.textContent = list.length;
+
+  // Calculate complete/pending based on filled fields
+  const complete = list.filter(a => a.modelKodu && a.koliNo && a.adet > 0).length;
+  const pending = list.length - complete;
+  if(completeCount) completeCount.textContent = complete;
+  if(pendingCount) pendingCount.textContent = pending;
+
+  if(filteredList.length === 0){
     tbody.innerHTML = '';
     empty.style.display = 'flex';
     return;
@@ -8934,53 +9626,97 @@ function renderAksesuarTable(){
 
   empty.style.display = 'none';
 
-  tbody.innerHTML = list.map(item => {
+  tbody.innerHTML = filteredList.map((item, index) => {
     const renderCounter = (field) => {
       const val = item[field] || 0;
-      return `<div style="display:flex;align-items:center;gap:4px;justify-content:center;">
-        <button onclick="decrementAksesuar(${item.id},'${field}')" style="width:24px;height:24px;border:1px solid var(--border);background:var(--glass);border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--text);">−</button>
-        <span style="min-width:24px;text-align:center;font-weight:600;">${val}</span>
-        <button onclick="incrementAksesuar(${item.id},'${field}')" style="width:24px;height:24px;border:1px solid var(--border);background:var(--glass);border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--text);">+</button>
+      return `<div class="aks-counter">
+        <button class="aks-counter-btn aks-counter-minus" onclick="decrementAksesuar(${item.id},'${field}')" title="Azalt">
+          <i class="fas fa-minus"></i>
+        </button>
+        <span class="aks-counter-value">${val}</span>
+        <button class="aks-counter-btn aks-counter-plus" onclick="incrementAksesuar(${item.id},'${field}')" title="Artır">
+          <i class="fas fa-plus"></i>
+        </button>
       </div>`;
     };
 
-    const renderDateInput = (field) => {
-      const val = item[field] || '';
-      return `<input type="date" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
-    };
-
     const renderTextInput = (field, placeholder = '') => {
-      const val = item[field] || '';
-      return `<input type="text" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" placeholder="${placeholder}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+      const val = (item[field] || '').replace(/"/g, '&quot;');
+      return `<input type="text" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',this.value)" placeholder="${placeholder}" class="aks-input">`;
     };
 
     const renderNumberInput = (field) => {
       const val = item[field] || 0;
-      return `<input type="number" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',+this.value)" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--glass);color:var(--text);font-size:12px;">`;
+      return `<input type="number" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',+this.value)" class="aks-input aks-input-number" min="0">`;
     };
 
-    return `<tr>
-      <td style="position:sticky;left:0;background:var(--card);z-index:5;">${renderTextInput('modelKodu', 'Model Kodu')}</td>
-      <td>${renderTextInput('cikisDikim', '02.03.2026 Sür Tekstil')}</td>
-      <td>${renderTextInput('koliNo', 'K-001')}</td>
-      <td>${renderTextInput('termin', '15.04.2026')}</td>
-      <td>${renderNumberInput('adet')}</td>
-      <td>${renderCounter('markaEtiketi')}</td>
-      <td>${renderCounter('icBarkod')}</td>
-      <td>${renderCounter('yikamaTalimati')}</td>
-      <td>${renderCounter('yikamaToptan')}</td>
-      <td>${renderCounter('ecom')}</td>
-      <td>${renderCounter('istanbulSticker')}</td>
-      <td>${renderCounter('susEtiketi')}</td>
-      <td>${renderCounter('susKarti')}</td>
-      <td>${renderCounter('lisansKarti')}</td>
-      <td>${renderTextInput('raf', 'Raf No')}</td>
-      <td>${renderTextInput('cikisUtupaket', '20.04.2026')}</td>
-      <td style="position:sticky;right:0;background:var(--card);z-index:5;">
-        <button onclick="deleteAksesuar(${item.id})" class="btn-icon" title="Sil" style="color:#ef4444;"><i class="fas fa-trash"></i></button>
+    return `<tr class="aks-row" style="animation-delay:${index * 0.02}s;">
+      <td class="aks-td aks-td-sticky-left">${renderTextInput('modelKodu', 'z7069')}</td>
+      <td class="aks-td">${renderTextInput('cikisDikim', '02.03.2026 Sür Tekstil')}</td>
+      <td class="aks-td">${renderTextInput('koliNo', 'K-001')}</td>
+      <td class="aks-td">${renderTextInput('termin', '15.04.2026')}</td>
+      <td class="aks-td">${renderNumberInput('adet')}</td>
+      <td class="aks-td">${renderCounter('markaEtiketi')}</td>
+      <td class="aks-td">${renderCounter('icBarkod')}</td>
+      <td class="aks-td">${renderCounter('yikamaTalimati')}</td>
+      <td class="aks-td">${renderCounter('yikamaToptan')}</td>
+      <td class="aks-td">${renderCounter('ecom')}</td>
+      <td class="aks-td">${renderCounter('istanbulSticker')}</td>
+      <td class="aks-td">${renderCounter('susEtiketi')}</td>
+      <td class="aks-td">${renderCounter('susKarti')}</td>
+      <td class="aks-td">${renderCounter('lisansKarti')}</td>
+      <td class="aks-td">${renderTextInput('raf', 'A-12')}</td>
+      <td class="aks-td">${renderTextInput('cikisUtupaket', '20.04.2026')}</td>
+      <td class="aks-td aks-td-sticky-right">
+        <button onclick="deleteAksesuar(${item.id})" class="aks-delete-btn" title="Sil">
+          <i class="fas fa-trash"></i>
+        </button>
       </td>
     </tr>`;
   }).join('');
+}
+
+function exportAksesuarToExcel(){
+  const list = getData('aksesuarlar');
+  if(list.length === 0){
+    toast('Dışa aktarılacak veri yok','error');
+    return;
+  }
+
+  let csv = 'Model Kodu,Çıkış (Dikim),Koli No,Termin,Adet,Marka Etiketi,İç Barkod,Yıkama Talimatı,Yıkama (Toptan),Ecom,İstanbul Sticker,Süs Etiketi,Süs Kartı,Lisans Kartı,Raf,Çıkış (Ütüpaket)\n';
+
+  list.forEach(item => {
+    const row = [
+      item.modelKodu || '',
+      item.cikisDikim || '',
+      item.koliNo || '',
+      item.termin || '',
+      item.adet || 0,
+      item.markaEtiketi || 0,
+      item.icBarkod || 0,
+      item.yikamaTalimati || 0,
+      item.yikamaToptan || 0,
+      item.ecom || 0,
+      item.istanbulSticker || 0,
+      item.susEtiketi || 0,
+      item.susKarti || 0,
+      item.lisansKarti || 0,
+      item.raf || '',
+      item.cikisUtupaket || ''
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+    csv += row.join(',') + '\n';
+  });
+
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `aksesuar-takip-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast('Excel dosyası indirildi','success');
 }
 
 // ==================== İRSALİYE ====================
