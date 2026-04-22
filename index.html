@@ -1612,35 +1612,6 @@ tr:hover .table-actions-more{opacity:1;transform:translateX(0);pointer-events:au
 .sd-stat-success .sd-stat-value{color:#10b981;}
 .sd-stat-warning .sd-stat-value{color:#f59e0b;}
 
-/* SIZE GRID — Simple cards for sizes */
-.sd-size-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
-  gap:10px;padding:12px 16px;
-}
-.sd-size-card{
-  background:var(--bg-card);
-  border:1px solid var(--border);
-  border-radius:8px;padding:12px;
-  text-align:center;
-  transition:all 0.2s;
-}
-.sd-size-card:hover{
-  transform:translateY(-2px);
-  border-color:var(--primary);
-}
-.sd-size-name{
-  font-size:11px;color:var(--text-muted);font-weight:600;
-  margin-bottom:6px;
-}
-.sd-size-value{
-  font-size:22px;font-weight:800;color:var(--primary);
-  line-height:1;
-}
-.sd-size-label{
-  font-size:10px;color:var(--text-dim);
-  margin-top:4px;text-transform:uppercase;
-}
-
 /* GRID — Compact */
 .sel-dash-grid, .sd-summary-row{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
@@ -8454,59 +8425,61 @@ function updateSelDash(checks){
   // Detaylı görünüm (gizli)
   html+='<div id="selDashDetail" style="display:none;">';
   
-  // === POŞET ÖLÇÜ DETAYI - Basit Kartlar ===
-  const sizeMap={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
-
+  // === POShET OLcU DETAY TABLOSU ===
+  const sizeMap={s30:'30x40',s35:'35x45',s40:'40x60',s50:'50x70',s60:'60x90',s100:'100x100'};
+  
   if(standartItems.length>0){
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-box">📦</span> Poşet Ölçüleri</div>';
-    html+='<div class="sd-size-grid">';
-
-    sizeKeys.forEach(sk=>{
-      const total=standartItems.reduce((sum,it)=>sum+gN(it,'sizes.'+sk),0);
-      if(total>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">${sizeMap[sk]}</div>
-          <div class="sd-size-value">${total.toLocaleString('tr')}</div>
-          <div class="sd-size-label">adet</div>
-        </div>`;
-      }
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-box">📦</span> Poset Olcu Detayi</div>';
+    html+='<div class="sd-table-wrap"><table class="sd-table">';
+    html+='<thead><tr><th class="sd-th-first">Olcu</th>';
+    standartItems.forEach((it,idx)=>{
+      html+=`<th><div class="sd-th-no">${it.no||'IRS'}</div><div class="sd-th-model">${it.model||'-'}</div><div class="sd-th-atolye">${it.atolye||''}</div></th>`;
     });
-
-    html+='</div></div>';
-
-    // === BANT & KILÇIK - Basit Kartlar ===
-    const totalBant = totalGenisBant+totalDarBant;
-    if(totalBant>0 || totalKilcik>0){
-      html+='<div class="sd-section">';
-      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-bant">🎀</span> Bant & Kılçık</div>';
-      html+='<div class="sd-size-grid">';
-
-      if(totalGenisBant>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">Geniş Bant</div>
-          <div class="sd-size-value">${totalGenisBant.toLocaleString('tr')}</div>
-          <div class="sd-size-label">adet</div>
-        </div>`;
-      }
-      if(totalDarBant>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">Dar Bant</div>
-          <div class="sd-size-value">${totalDarBant.toLocaleString('tr')}</div>
-          <div class="sd-size-label">adet</div>
-        </div>`;
-      }
-      if(totalKilcik>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">Kılçık</div>
-          <div class="sd-size-value">${totalKilcik.toLocaleString('tr')}</div>
-          <div class="sd-size-label">adet</div>
-        </div>`;
-      }
-
-      html+='</div></div>';
-    }
-  }
+    html+='<th class="sd-total-col">TOPLAM</th></tr></thead><tbody>';
+    
+    let grandTotal=0;
+    sizeKeys.forEach(sk=>{
+      const rowTotal=standartItems.reduce((sum,it)=>sum+gN(it,'sizes.'+sk),0);
+      html+=`<tr><td class="sd-size-label"><span class="sd-size-badge">${sizeMap[sk]}</span></td>`;
+      standartItems.forEach(it=>{
+        const v=gN(it,'sizes.'+sk);
+        html+=`<td class="${v>0?'sd-cell-value':'sd-cell-empty'}">${v>0?v.toLocaleString('tr'):'-'}</td>`;
+      });
+      html+=`<td class="sd-total-col"><strong>${rowTotal>0?rowTotal.toLocaleString('tr'):'-'}</strong></td></tr>`;
+      grandTotal+=rowTotal;
+    });
+    
+    // Genel toplam satiri
+    html+=`<tr class="sd-grand-total"><td class="sd-size-label">📦 TOPLAM POsET</td>`;
+    standartItems.forEach(it=>{
+      let itemTotal=0;
+      sizeKeys.forEach(sk=>{itemTotal+=gN(it,'sizes.'+sk);});
+      html+=`<td><strong>${itemTotal>0?itemTotal.toLocaleString('tr'):'-'}</strong></td>`;
+    });
+    html+=`<td class="sd-total-col sd-grand-num">${grandTotal>0?grandTotal.toLocaleString('tr'):'-'}</td></tr>`;
+    
+    html+='</tbody></table></div></div>';
+    
+    // === BANT & KILcIK DETAY TABLOSU ===
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-bant">🎀</span> Bant & Kilcik Detayi</div>';
+    html+='<div class="sd-table-wrap"><table class="sd-table">';
+    html+='<thead><tr><th class="sd-th-first">Malzeme</th>';
+    standartItems.forEach(it=>{
+      html+=`<th><div class="sd-th-no">${it.no||'IRS'}</div><div class="sd-th-model">${it.model||'-'}</div></th>`;
+    });
+    html+='<th class="sd-total-col">TOPLAM</th></tr></thead><tbody>';
+    
+    const bantTypes=[
+      {key:'genis',label:'Genis Bant',emoji:'🎀',cls:'sd-bant-genis'},
+      {key:'dar',label:'Dar Bant',emoji:'🎗️',cls:'sd-bant-dar'},
+      {key:'kilcik',label:'Kilcik',emoji:'📌',cls:'sd-bant-kilcik'}
+    ];
+    
+    let bantGrandTotal=0;
+    bantTypes.forEach(bt=>{
+      const rowTotal=standartItems.reduce((sum,it)=>sum+gN(it,'bant.'+bt.key),0);
       bantGrandTotal+=rowTotal;
       html+=`<tr><td class="sd-size-label"><span class="${bt.cls}">${bt.emoji} ${bt.label}</span></td>`;
       standartItems.forEach(it=>{
@@ -8527,63 +8500,105 @@ function updateSelDash(checks){
     html+='</tbody></table></div></div>';
   }
   
-
-  // === FERMUAR DETAY - Basit Kartlar ===
+  // === FERMUAR DETAY TABLOSU ===
   if(fermuarItems.length>0){
-    const totalFermuar=fermuarItems.reduce((s,it)=>{const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];return s+beds.reduce((ss,b)=>ss+(+it[b+'a']||0),0);},0);
-    html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar">🔗</span> Fermuar</div>';
-    html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Fermuar</div>
-      <div class="sd-size-value">${totalFermuar.toLocaleString('tr')}</div>
-      <div class="sd-size-label">adet</div>
-    </div>`;
-    html+='</div></div>';
-  }
+    // Fermuar sayısına göre font boyutunu ayarla
+    const fermuarCount = fermuarItems.length;
+    const fontSize = fermuarCount >= 5 ? '9px' : fermuarCount >= 4 ? '10px' : fermuarCount >= 3 ? '11px' : '13px';
+    const thPadding = fermuarCount >= 5 ? '8px 6px' : fermuarCount >= 4 ? '10px 8px' : fermuarCount >= 3 ? '12px 10px' : '14px 16px';
+    const tdPadding = fermuarCount >= 5 ? '6px 4px' : fermuarCount >= 4 ? '8px 6px' : fermuarCount >= 3 ? '10px 8px' : '11px 16px';
+    const badgeFontSize = fermuarCount >= 5 ? '9px' : fermuarCount >= 4 ? '10px' : '11px';
 
-  // === LASTİK DETAY - Basit Kartlar ===
-  if(lastikItems.length>0){
-    const totalMetre=lastikItems.reduce((s,it)=>s+(+it.metre||0),0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-lastik">📏</span> Lastik</div>';
-    html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Lastik</div>
-      <div class="sd-size-value">${totalMetre.toLocaleString('tr')}</div>
-      <div class="sd-size-label">metre</div>
-    </div>`;
-    html+='</div></div>';
-  }
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar">🔗</span> Fermuar Detayi</div>';
+    html+=`<div class="sd-table-wrap"><table class="sd-table" style="font-size:${fontSize};">`;
+    html+=`<thead><tr><th class="sd-th-first" style="padding:${thPadding};">Beden</th>`;
+    fermuarItems.forEach(it=>{
+      html+=`<th style="padding:${thPadding};"><div class="sd-th-no" style="font-size:${badgeFontSize};">${it.no||'FZ'}</div><div class="sd-th-model" style="font-size:${fermuarCount >= 5 ? '8px' : '10px'};">${it.model||'-'}</div></th>`;
+    });
+    html+=`<th class="sd-total-col" style="padding:${thPadding};">TOPLAM</th></tr></thead><tbody>`;
 
-  // === DÜĞME DETAY - Basit Kartlar ===
-  if(dugmeItems.length>0){
-    const totalAdet=dugmeItems.reduce((s,it)=>s+(+it.adet||0),0);
-    html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dugme">🔘</span> Düğme</div>';
-    html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Düğme</div>
-      <div class="sd-size-value">${totalAdet.toLocaleString('tr')}</div>
-      <div class="sd-size-label">adet</div>
-    </div>`;
-    html+='</div></div>';
-  }
-
-  // === TOPTAN DETAY - Basit Kartlar ===
-  if(toptanItems.length>0){
     const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
-    const totalToptan=toptanItems.reduce((s,it)=>s+beds.reduce((ss,b)=>ss+(+it[b]||0),0),0);
-    html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan">🚚</span> Toptan</div>';
-    html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Toptan</div>
-      <div class="sd-size-value">${totalToptan.toLocaleString('tr')}</div>
-      <div class="sd-size-label">adet</div>
-    </div>`;
-    html+='</div></div>';
+    const bedLabels=['XXS','XS','S','M','L','XL','XXL','3XL'];
+    beds.forEach((b,idx)=>{
+      const rowAdet=fermuarItems.reduce((s,it)=>s+(+it[b+'a']||0),0);
+      const rowCm=fermuarItems.reduce((s,it)=>s+(+it[b+'cm']||0),0);
+      html+=`<tr><td class="sd-size-label" style="padding:${tdPadding};"><span class="sd-size-badge" style="font-size:${badgeFontSize};">${bedLabels[idx]}</span></td>`;
+      fermuarItems.forEach(it=>{
+        const a=(+it[b+'a']||0);
+        const c=(+it[b+'cm']||0);
+        if(a>0||c>0){
+          html+=`<td class="sd-cell-value" style="padding:${tdPadding};">${a>0?a:'-'}${c>0?` <span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">(${c}cm)</span>`:''}</td>`;
+        }else{
+          html+=`<td class="sd-cell-empty" style="padding:${tdPadding};">-</td>`;
+        }
+      });
+      html+=`<td class="sd-total-col" style="padding:${tdPadding};"><strong>${rowAdet>0?rowAdet+' adet':'-'}</strong>${rowCm>0?`<br><span class="sd-cm-info" style="font-size:${fermuarCount >= 5 ? '8px' : '9px'};">${rowCm}cm</span>`:''}</td></tr>`;
+    });
+    html+='</tbody></table></div></div>';
   }
+  
+  // === LASTiK DETAY ===
+  if(lastikItems.length>0){
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-lastik">📏</span> Lastik Detayi</div>';
+    html+='<div class="sd-table-wrap"><table class="sd-table">';
+    html+='<thead><tr><th class="sd-th-first">Olcu</th>';
+    lastikItems.forEach(it=>{
+      html+=`<th><div class="sd-th-no">${it.no||'LS'}</div><div class="sd-th-model">${it.model||'-'}</div></th>`;
+    });
+    html+='<th class="sd-total-col">TOPLAM</th></tr></thead><tbody>';
+    
+    const totalCm=lastikItems.reduce((s,it)=>s+(+it.cm||0),0);
+    const totalMetre=lastikItems.reduce((s,it)=>s+(+it.metre||0),0);
+    
+    html+=`<tr><td class="sd-size-label"><span class="sd-size-badge">📐 CM</span></td>`;
+    lastikItems.forEach(it=>{const v=(+it.cm||0);html+=`<td class="${v>0?'sd-cell-value':'sd-cell-empty'}">${v>0?v.toLocaleString('tr'):'-'}</td>`;});
+    html+=`<td class="sd-total-col"><strong>${totalCm>0?totalCm.toLocaleString('tr'):'-'}</strong></td></tr>`;
+    
+    html+=`<tr><td class="sd-size-label"><span class="sd-size-badge">📏 Metre</span></td>`;
+    lastikItems.forEach(it=>{const v=(+it.metre||0);html+=`<td class="${v>0?'sd-cell-value':'sd-cell-empty'}">${v>0?v.toLocaleString('tr'):'-'}</td>`;});
+    html+=`<td class="sd-total-col"><strong>${totalMetre>0?totalMetre.toLocaleString('tr'):'-'}</strong></td></tr>`;
+    
+    html+='</tbody></table></div></div>';
+  }
+  
+  // === DUGME DETAY ===
+  if(dugmeItems.length>0){
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dugme">🔘</span> Dugme Detayi</div>';
+    html+='<div class="sd-table-wrap"><table class="sd-table">';
+    html+='<thead><tr><th class="sd-th-first">Bilgi</th>';
+    dugmeItems.forEach(it=>{
+      html+=`<th><div class="sd-th-no">${it.no||'DG'}</div><div class="sd-th-model">${it.model||'-'}</div></th>`;
+    });
+    html+='<th class="sd-total-col">TOPLAM</th></tr></thead><tbody>';
+    
+    const totalAdet=dugmeItems.reduce((s,it)=>s+(+it.adet||0),0);
+    html+=`<tr><td class="sd-size-label"><span class="sd-size-badge">🔘 Adet</span></td>`;
+    dugmeItems.forEach(it=>{const v=(+it.adet||0);html+=`<td class="${v>0?'sd-cell-value':'sd-cell-empty'}">${v>0?v.toLocaleString('tr'):'-'}</td>`;});
+    html+=`<td class="sd-total-col"><strong>${totalAdet>0?totalAdet.toLocaleString('tr'):'-'}</strong></td></tr>`;
+    
+    html+='</tbody></table></div></div>';
+  }
+  
+  // === TOPTAN DETAY ===
+  if(toptanItems.length>0){
+    // Toptan sayısına göre font boyutunu ayarla
+    const toptanCount = toptanItems.length;
+    const fontSize = toptanCount >= 5 ? '9px' : toptanCount >= 4 ? '10px' : toptanCount >= 3 ? '11px' : '13px';
+    const thPadding = toptanCount >= 5 ? '8px 6px' : toptanCount >= 4 ? '10px 8px' : toptanCount >= 3 ? '12px 10px' : '14px 16px';
+    const tdPadding = toptanCount >= 5 ? '6px 4px' : toptanCount >= 4 ? '8px 6px' : toptanCount >= 3 ? '10px 8px' : '11px 16px';
+    const badgeFontSize = toptanCount >= 5 ? '9px' : toptanCount >= 4 ? '10px' : '11px';
+
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan">🚚</span> Toptan Siparis Detayi</div>';
+    html+=`<div class="sd-table-wrap"><table class="sd-table" style="font-size:${fontSize};">`;
+    html+=`<thead><tr><th class="sd-th-first" style="padding:${thPadding};">Beden</th>`;
+    toptanItems.forEach(it=>{
+      html+=`<th style="padding:${thPadding};"><div class="sd-th-no" style="font-size:${badgeFontSize};">${it.no||'TP'}</div><div class="sd-th-model" style="font-size:${toptanCount >= 5 ? '8px' : '10px'};">${it.urun||'-'}</div></th>`;
+    });
+    html+=`<th class="sd-total-col" style="padding:${thPadding};">TOPLAM</th></tr></thead><tbody>`;
 
     const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
     const bedLabels=['XXS','XS','S','M','L','XL','XXL','3XL'];
