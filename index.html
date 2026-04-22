@@ -10781,7 +10781,24 @@ function generatePDF(id, type) {
     html += `<div class="note-box">📝 <b>Not:</b> ${item.aciklama || item.not}</div>`;
   }
 
-  // === Fotoğraf PDF'e BASILMAZ (kanıt olarak sistemde saklanır) ===
+  // === Fotoğraflar PDF'e EKLENİR (kanıt olarak) ===
+  const photos = _getPhotosArray(item);
+  if (photos && photos.length > 0) {
+    html += `<div class="section-title" style="margin-top:16px;">📸 Kanıt Fotoğrafları</div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">`;
+    photos.forEach((photo, idx) => {
+      const photoSrc = photo.url || photo.data || '';
+      if (photoSrc) {
+        const timestamp = photo.at ? new Date(photo.at).toLocaleString('tr-TR') : '';
+        html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#f9fafb;">
+          <img src="${photoSrc}" style="width:100%;height:auto;max-height:200px;object-fit:contain;border-radius:6px;margin-bottom:6px;" alt="Fotoğraf ${idx+1}">
+          <div style="font-size:9px;color:#6b7280;text-align:center;">${timestamp || 'Fotoğraf '+(idx+1)}</div>
+        </div>`;
+      }
+    });
+    html += `</div>`;
+  }
+
   // === Dijital İmza SADECE TESLİM EDENE basılır — teslim alan elle imzalayacak ===
   html += `<div class="signatures">
     <div class="sig-box">
@@ -10804,15 +10821,33 @@ function generatePDF(id, type) {
 
   html += `</body></html>`;
 
-  // Open in new window and print
-  const printWindow = window.open('', '_blank');
+  // Open in new window with proper viewer controls
+  const printWindow = window.open('', '_blank', 'width=900,height=800');
   if (printWindow) {
     printWindow.document.write(html);
     printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-    toast('PDF hazırlanıyor — yazdır veya PDF olarak kaydet');
+
+    // Add print button and controls after content loads
+    printWindow.addEventListener('load', function() {
+      const controlsDiv = printWindow.document.createElement('div');
+      controlsDiv.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;';
+      controlsDiv.innerHTML = `
+        <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,0.3);display:flex;align-items:center;gap:6px;">
+          <span style="font-size:16px;">🖨️</span> PDF Kaydet / Yazdır
+        </button>
+        <button onclick="window.close()" style="background:#6b7280;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(107,115,128,0.3);">
+          ✕ Kapat
+        </button>
+      `;
+      printWindow.document.body.appendChild(controlsDiv);
+
+      // Hide controls when printing
+      const style = printWindow.document.createElement('style');
+      style.textContent = '@media print { div[style*="position:fixed"] { display:none !important; } }';
+      printWindow.document.head.appendChild(style);
+    });
+
+    toast('PDF önizleme açıldı — yazdır veya PDF olarak kaydet');
   } else {
     toast('Popup engellendi — lütfen izin verin', 'error');
   }
