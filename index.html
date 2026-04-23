@@ -12501,15 +12501,20 @@ function exportFilteredCSV(){
 
 // ==================== INIT ====================
 // QR viewer kontrolü - hemen çalıştır (DOMContentLoaded beklemeden)
+let _viewerRendered = false;
 if((window.location.hash && window.location.hash.includes('v=')) || (window.location.search && window.location.search.includes('v='))){
   console.log('QR detected in URL, checking viewer...');
   // Sayfa yüklenir yüklenmez kontrol et
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', function(){
-      if(_checkAndRenderPublicViewer()){ return; }
+      if(_checkAndRenderPublicViewer()){
+        _viewerRendered = true;
+        return;
+      }
     });
   } else {
     if(_checkAndRenderPublicViewer()){
+      _viewerRendered = true;
       // Viewer açıldı, normal init'i çalıştırma
     }
   }
@@ -12517,6 +12522,7 @@ if((window.location.hash && window.location.hash.includes('v=')) || (window.loca
 
 document.addEventListener('DOMContentLoaded',()=>{
   // ÖNCE public viewer kontrolü — URL hash #v=... içeriyorsa şifresiz görüntüleyici aç
+  if(_viewerRendered) return; // Zaten render edildi
   if(_checkAndRenderPublicViewer()){ return; }
 
   // QR yayın URL'sini otomatik ayarla (ilk açılışta veya localhost ise)
