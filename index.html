@@ -12501,7 +12501,7 @@ function exportFilteredCSV(){
 
 // ==================== INIT ====================
 // QR viewer kontrolü - hemen çalıştır (DOMContentLoaded beklemeden)
-if(window.location.hash && window.location.hash.includes('v=')){
+if((window.location.hash && window.location.hash.includes('v=')) || (window.location.search && window.location.search.includes('v='))){
   console.log('QR detected in URL, checking viewer...');
   // Sayfa yüklenir yüklenmez kontrol et
   if(document.readyState === 'loading'){
@@ -14618,7 +14618,8 @@ async function testGithubConnection(){
 function _buildQrScanUrl(item, type){
   const payload = _buildQrPayload(item, type);
   const base = _getPublishBaseUrl();
-  return base + '#v=' + _b64UrlEncode(JSON.stringify(payload));
+  // Query string kullan (?v=) - telefon kameraları hash'i (#v=) görmeyebilir
+  return base + '?v=' + _b64UrlEncode(JSON.stringify(payload));
 }
 
 function _buildQrPayload(item, type){
@@ -18171,12 +18172,28 @@ body.logged-out { overflow:hidden !important; }
 // fotoğrafı görür; menü, form, kayıt erişimi yoktur.
 
 function _parseViewerHash(){
+  let v = null;
+
+  // Önce query string kontrol et (?v=...) - telefon kameraları için
+  try {
+    const params = new URLSearchParams(window.location.search);
+    v = params.get('v');
+    if(v) {
+      console.log('QR viewer: Found v in query string');
+      const json = _b64UrlDecode(v);
+      const data = JSON.parse(json);
+      if(data && data.app === 'irsaliyepro') return data;
+    }
+  } catch(e) {
+    console.log('QR viewer: Query string parse failed', e);
+  }
+
+  // Sonra hash kontrol et (#v=...) - eski format için
   const h = (window.location.hash || '').replace(/^#/, '');
   if(!h) return null;
 
   // Hash formatı: v=BASE64_DATA veya v=BASE64_DATA&other=value
   // URLSearchParams bazen hash'i doğru parse edemiyor, manuel parse edelim
-  let v = null;
 
   // Önce URLSearchParams dene
   try {
