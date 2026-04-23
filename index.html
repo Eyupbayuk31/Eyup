@@ -10587,7 +10587,28 @@ function showDetailUni(id,type){
   if(item.aciklama||item.not){
     html+=`<div style="padding:10px;background:var(--glass);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--text-muted);margin-top:8px;"><i class="fas fa-sticky-note" style="margin-right:6px;"></i>${item.aciklama||item.not}</div>`;
   }
-  
+
+  // Fotoğrafları göster
+  if(item._photos && Array.isArray(item._photos) && item._photos.length > 0){
+    html+='<div style="font-weight:700;margin-top:16px;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-camera"></i> Kanıt Fotoğrafları</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px;">';
+    item._photos.forEach((photo,idx)=>{
+      const imgSrc = photo.url || photo.data || '';
+      if(imgSrc){
+        html+=`<div style="position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--glass);">
+          <img src="${imgSrc}" alt="Fotoğraf ${idx+1}" style="width:100%;height:150px;object-fit:cover;cursor:pointer;" onclick="window.open('${imgSrc}','_blank')">
+          <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#fff;padding:4px 8px;font-size:10px;text-align:center;">Fotoğraf ${idx+1}</div>
+        </div>`;
+      }
+    });
+    html+='</div>';
+  } else if(item._photoUrl){
+    html+='<div style="font-weight:700;margin-top:16px;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-camera"></i> Kanıt Fotoğrafı</div>';
+    html+=`<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--glass);max-width:300px;">
+      <img src="${item._photoUrl}" alt="Kanıt Fotoğrafı" style="width:100%;height:auto;cursor:pointer;" onclick="window.open('${item._photoUrl}','_blank')">
+    </div>`;
+  }
+
   document.getElementById('modalContent').innerHTML=html;
   currentModalItem = item;
   currentModalType = type;
@@ -14591,41 +14612,13 @@ function _buildQrScanUrl(item, type){
 }
 
 function _buildQrPayload(item, type){
-  // Çoklu fotoğraf desteği - sadece yüklenmiş URL'leri gönder
-  const photos = _getPhotosArray(item);
-  const photoUrls = photos.filter(p => p.url).map(p => ({
-    url: p.url,
-    at: p.at || ''
-  }));
-
+  // QR kod boyutunu küçültmek için sadece ID ve type gönder
+  // Viewer sayfası Firebase'den tüm veriyi çekecek
   return {
     app: 'irsaliyepro',
-    v: 2, // Version 2 - çoklu fotoğraf desteği
+    v: 3, // Version 3 - minimal payload, Firebase'den veri çekme
     id: item.id,
-    type: type,
-    no: item.no || '',
-    model: item.model || item.urun || '',
-    atolye: item.atolye || item.firma || '',
-    firma: item.firma || '',
-    tarih: item.tarih || '',
-    termin: item.termin || '',
-    teslimEden: item.teslimEden || '',
-    teslimAlan: item.teslimAlan || '',
-    durum: item.durum || '',
-    sizes: item.sizes || undefined,
-    bant: item.bant || undefined,
-    beden: item.beden || undefined,
-    cm: item.cm || undefined,
-    metre: item.metre || undefined,
-    adet: item.adet || undefined,
-    total: item.total || undefined,
-    totalAdet: item.totalAdet || undefined,
-    renk: item.renk || undefined,
-    aciklama: item.aciklama || item.not || '',
-    // Çoklu fotoğraf URL'leri
-    photos: photoUrls.length > 0 ? photoUrls : undefined,
-    // Geriye uyumluluk için tek fotoğraf
-    photoUrl: photoUrls.length > 0 ? photoUrls[0].url : (item._photoUrl || '')
+    type: type
   };
 }
 
@@ -18181,8 +18174,114 @@ function _checkAndRenderPublicViewer(){
     return false;
   }
   console.log('QR viewer: Rendering public view for:', data.no || data.id);
+
+  // v3: Minimal payload - Firebase'den veri çek
+  if(data.v === 3 && data.id && data.type){
+    _renderPublicViewerFromFirebase(data.id, data.type);
+    return true;
+  }
+
+  // v1/v2: Eski format - tüm veri QR'da
   _renderPublicViewer(data);
   return true;
+}
+
+async function _renderPublicViewerFromFirebase(id, type){
+  // Loading göster
+  document.body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#f5f3ff;">
+      <div style="text-align:center;">
+        <div style="font-size:48px;margin-bottom:16px;">📦</div>
+        <div style="font-size:18px;font-weight:600;color:#7c3aed;">İrsaliye yükleniyor...</div>
+        <div style="font-size:14px;color:#6b7280;margin-top:8px;">Firebase'den veri çekiliyor</div>
+      </div>
+    </div>
+  `;
+
+  try {
+    // Firebase'in hazır olmasını bekle
+    if(!window._fs || !window._fs.db){
+      await new Promise((resolve) => {
+        window.addEventListener('firebase-ready', resolve, {once: true});
+        setTimeout(() => resolve(), 5000); // 5 saniye timeout
+      });
+    }
+
+    if(!window._fs || !window._fs.db){
+      throw new Error('Firebase bağlantısı kurulamadı');
+    }
+
+    // Firebase'den veri çek
+    const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar'};
+    const key = keyMap[type];
+    if(!key){
+      throw new Error('Geçersiz irsaliye tipi: ' + type);
+    }
+
+    const { db, collection, getDocs } = window._fs;
+    const colRef = collection(db, 'appdata', key, 'items');
+    const snapshot = await getDocs(colRef);
+
+    let item = null;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if(data.id === id){
+        item = data;
+      }
+    });
+
+    if(!item){
+      throw new Error('İrsaliye bulunamadı: ' + id);
+    }
+
+    // Fotoğrafları ekle
+    const photos = _getPhotosArray(item);
+
+    // Viewer'ı render et
+    const payload = {
+      app: 'irsaliyepro',
+      v: 2,
+      id: item.id,
+      type: type,
+      no: item.no || '',
+      model: item.model || item.urun || '',
+      atolye: item.atolye || item.firma || '',
+      firma: item.firma || '',
+      tarih: item.tarih || '',
+      termin: item.termin || '',
+      teslimEden: item.teslimEden || '',
+      teslimAlan: item.teslimAlan || '',
+      durum: item.durum || '',
+      sizes: item.sizes,
+      bant: item.bant,
+      beden: item.beden,
+      cm: item.cm,
+      metre: item.metre,
+      adet: item.adet,
+      total: item.total,
+      totalAdet: item.totalAdet,
+      renk: item.renk,
+      aciklama: item.aciklama || item.not || '',
+      photos: photos.filter(p => p.url).map(p => ({url: p.url, at: p.at}))
+    };
+
+    _renderPublicViewer(payload);
+
+  } catch(error) {
+    console.error('Firebase veri çekme hatası:', error);
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;">
+        <div style="text-align:center;max-width:400px;padding:20px;">
+          <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+          <div style="font-size:18px;font-weight:600;color:#dc2626;margin-bottom:8px;">İrsaliye Yüklenemedi</div>
+          <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">${error.message}</div>
+          <button onclick="window.location.reload()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+            🔄 Tekrar Dene
+          </button>
+        </div>
+      </div>
+    `;
+  }
 }
 
 function _renderPublicViewer(d){
