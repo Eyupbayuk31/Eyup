@@ -12519,6 +12519,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   // ÖNCE public viewer kontrolü — URL hash #v=... içeriyorsa şifresiz görüntüleyici aç
   if(_checkAndRenderPublicViewer()){ return; }
 
+  // QR yayın URL'sini otomatik ayarla (ilk açılışta veya localhost ise)
+  (function(){
+    const settings = getData('settings') || {};
+    if(!settings.publishUrl || settings.publishUrl.includes('localhost')){
+      settings.publishUrl = 'https://eyupybr.com';
+      setData('settings', settings);
+      console.log('QR yayın URL\'si otomatik ayarlandı: https://eyupybr.com');
+    }
+  })();
+
   const today=new Date().toISOString().split('T')[0];
   ['iTarih','fTarih','lTarih','dTarih'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
   const theme=getConfig('theme','default');setTheme(theme);
