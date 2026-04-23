@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR Viewer Test</title>
+</head>
+<body style="font-family:system-ui;padding:20px;max-width:800px;margin:0 auto;">
+<h1>QR Viewer Debug Test</h1>
+<div id="output"></div>
+
+<script>
+const output = document.getElementById('output');
+
+// URL'den v parametresini al
+const params = new URLSearchParams(window.location.search);
+const v = params.get('v');
+
+output.innerHTML += '<h3>1. URL Kontrolü</h3>';
+output.innerHTML += '<p>Full URL: ' + window.location.href + '</p>';
+output.innerHTML += '<p>Search: ' + window.location.search + '</p>';
+output.innerHTML += '<p>v parameter: ' + (v ? v.substring(0, 50) + '...' : 'YOK!') + '</p>';
+
+if(!v) {
+  output.innerHTML += '<p style="color:red;font-weight:bold;">❌ v parametresi bulunamadı!</p>';
+} else {
+  output.innerHTML += '<h3>2. Base64 Decode</h3>';
+  
+  // Base64 decode
+  function _b64UrlDecode(b64url){
+    try{
+      let b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+      while(b64.length % 4) b64 += '=';
+      return decodeURIComponent(escape(atob(b64)));
+    }catch(e){ 
+      return 'DECODE ERROR: ' + e.message; 
+    }
+  }
+  
+  const decoded = _b64UrlDecode(v);
+  output.innerHTML += '<p>Decoded: ' + decoded.substring(0, 200) + '...</p>';
+  
+  output.innerHTML += '<h3>3. JSON Parse</h3>';
+  try {
+    const data = JSON.parse(decoded);
+    output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+    
+    if(data.app === 'irsaliyepro') {
+      output.innerHTML += '<p style="color:green;font-weight:bold;">✅ Geçerli irsaliye verisi!</p>';
+      output.innerHTML += '<p>İrsaliye No: ' + data.no + '</p>';
+      output.innerHTML += '<p>Model: ' + data.model + '</p>';
+      output.innerHTML += '<p>Fotoğraf sayısı: ' + (data.photos ? data.photos.length : 0) + '</p>';
+    } else {
+      output.innerHTML += '<p style="color:red;">❌ app !== irsaliyepro</p>';
+    }
+  } catch(e) {
+    output.innerHTML += '<p style="color:red;">❌ JSON parse hatası: ' + e.message + '</p>';
+  }
+}
+</script>
+</body>
+</html>
