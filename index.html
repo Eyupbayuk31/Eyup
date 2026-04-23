@@ -14612,13 +14612,41 @@ function _buildQrScanUrl(item, type){
 }
 
 function _buildQrPayload(item, type){
-  // QR kod boyutunu küçültmek için sadece ID ve type gönder
-  // Viewer sayfası Firebase'den tüm veriyi çekecek
+  // Çoklu fotoğraf desteği - sadece yüklenmiş URL'leri gönder
+  const photos = _getPhotosArray(item);
+  const photoUrls = photos.filter(p => p.url).map(p => ({
+    url: p.url,
+    at: p.at || ''
+  }));
+
   return {
     app: 'irsaliyepro',
-    v: 3, // Version 3 - minimal payload, Firebase'den veri çekme
+    v: 2, // Version 2 - çoklu fotoğraf desteği
     id: item.id,
-    type: type
+    type: type,
+    no: item.no || '',
+    model: item.model || item.urun || '',
+    atolye: item.atolye || item.firma || '',
+    firma: item.firma || '',
+    tarih: item.tarih || '',
+    termin: item.termin || '',
+    teslimEden: item.teslimEden || '',
+    teslimAlan: item.teslimAlan || '',
+    durum: item.durum || '',
+    sizes: item.sizes || undefined,
+    bant: item.bant || undefined,
+    beden: item.beden || undefined,
+    cm: item.cm || undefined,
+    metre: item.metre || undefined,
+    adet: item.adet || undefined,
+    total: item.total || undefined,
+    totalAdet: item.totalAdet || undefined,
+    renk: item.renk || undefined,
+    aciklama: item.aciklama || item.not || '',
+    // Çoklu fotoğraf URL'leri
+    photos: photoUrls.length > 0 ? photoUrls : undefined,
+    // Geriye uyumluluk için tek fotoğraf
+    photoUrl: photoUrls.length > 0 ? photoUrls[0].url : (item._photoUrl || '')
   };
 }
 
