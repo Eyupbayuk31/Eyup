@@ -338,6 +338,7 @@
 
     // ── UI yenile
     function refreshUI(){
+      if(window._isViewerUrl) return; // Viewer URL'de app DOM'una dokunma
       try { if(typeof refreshAll === 'function')     refreshAll(); } catch(e){}
       try { if(typeof applyFilters === 'function')   applyFilters(); } catch(e){}
       try { if(typeof renderUserList === 'function') renderUserList(); } catch(e){}
@@ -443,11 +444,11 @@
 
     // ── Baslat
     async function boot(){
-      toast('☁️ Data Sunucusuna bağlandı');
+      if(!window._isViewerUrl) toast('☁️ Data Sunucusuna bağlandı');
       try {
         await bootRead();
       } finally {
-        startLive();
+        if(!window._isViewerUrl) startLive();
       }
     }
     if(window._fs){
@@ -455,7 +456,7 @@
     } else {
       window.addEventListener('firebase-ready', boot, { once: true });
       setTimeout(function(){
-        if(!window._fs) toast('⚠️ Firebase SDK yuklenemedi (internet?)', true);
+        if(!window._fs && !window._isViewerUrl) toast('⚠️ Firebase SDK yuklenemedi (internet?)', true);
       }, 5000);
     }
 
