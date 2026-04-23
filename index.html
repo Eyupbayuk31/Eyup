@@ -18194,18 +18194,28 @@ function _parseViewerHash(){
     const params = new URLSearchParams(window.location.search);
     v = params.get('v');
     if(v) {
-      console.log('QR viewer: Found v in query string');
+      console.log('QR viewer: Found v in query string:', v.substring(0, 50) + '...');
       const json = _b64UrlDecode(v);
+      console.log('QR viewer: Decoded JSON:', json.substring(0, 100) + '...');
       const data = JSON.parse(json);
-      if(data && data.app === 'irsaliyepro') return data;
+      console.log('QR viewer: Parsed data:', data);
+      if(data && data.app === 'irsaliyepro') {
+        console.log('QR viewer: Valid irsaliyepro data found!');
+        return data;
+      }
     }
   } catch(e) {
-    console.log('QR viewer: Query string parse failed', e);
+    console.error('QR viewer: Query string parse failed', e);
   }
 
   // Sonra hash kontrol et (#v=...) - eski format için
   const h = (window.location.hash || '').replace(/^#/, '');
-  if(!h) return null;
+  if(!h) {
+    console.log('QR viewer: No hash found');
+    return null;
+  }
+
+  console.log('QR viewer: Checking hash:', h.substring(0, 50) + '...');
 
   // Hash formatı: v=BASE64_DATA veya v=BASE64_DATA&other=value
   // URLSearchParams bazen hash'i doğru parse edemiyor, manuel parse edelim
@@ -18225,7 +18235,10 @@ function _parseViewerHash(){
     v = h.substring(2).split('&')[0];
   }
 
-  if(!v) return null;
+  if(!v) {
+    console.log('QR viewer: No v parameter found');
+    return null;
+  }
 
   try {
     const json = _b64UrlDecode(v);
