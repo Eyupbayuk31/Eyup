@@ -6,11 +6,26 @@
   <meta http-equiv="Expires" content="0">
   <meta name="app-version" content="fs-v10-clean-2026-04-20">
   <script>
-    // QR viewer URL'si tespiti — sadece flag set et, DOM'u gizleme
+    // QR viewer URL'si tespiti — flag set et + ilk DOMContentLoaded'ı buraya kaydet
     (function(){
-      if(window.location.search.includes('v=') || window.location.hash.includes('v=')){
-        window._isViewerUrl = true;
-      }
+      var _hasV = window.location.search.includes('v=') || window.location.hash.includes('v=');
+      if(!_hasV) return;
+      window._isViewerUrl = true;
+
+      // Bu DOMContentLoaded tüm script'lerden ÖNCE kayıt edildiği için EN ÖNCE çalışır.
+      // Tüm fonksiyonlar parse edilmiş olacak (DOMContentLoaded garantisi).
+      document.addEventListener('DOMContentLoaded', function _earlyViewerCheck(){
+        try {
+          if(typeof _checkAndRenderPublicViewer === 'function'){
+            var ok = _checkAndRenderPublicViewer();
+            if(!ok){
+              document.documentElement.innerHTML = '<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hatalı QR</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef2f2;margin:0;"><div style="text-align:center;padding:32px;"><div style="font-size:52px;">&#x26A0;</div><div style="font-size:20px;font-weight:700;color:#dc2626;margin:12px 0 8px;">QR Kod Hatalı</div><div style="font-size:14px;color:#6b7280;">Bu QR kod okunamadı.<br>Yeni bir PDF oluşturup tekrar deneyin.</div></div></body></html>';
+            }
+          }
+        } catch(e) {
+          console.error('Viewer early check error:', e);
+        }
+      });
     })();
   </script>
   <!--
@@ -12039,6 +12054,7 @@ function refreshPage(page){
 }
 
 function refreshAll(){
+  if(window._isViewerUrl) return;
   loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();renderCalendar();refreshLastikList();refreshToptanList();renderRecycleBin();
 }
 
