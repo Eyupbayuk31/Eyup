@@ -17829,8 +17829,8 @@ body.logged-out { overflow:hidden !important; }
     }, 450);
   });
 
-  // İlk yükleme
-  if(!isAuthed()) showLogin();
+  // İlk yükleme - ama viewer render edildiyse login gösterme
+  if(!_viewerRendered && !isAuthed()) showLogin();
 
   // Dışa açık: çıkış
   window.logout = function(){
