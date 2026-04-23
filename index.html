@@ -6,11 +6,10 @@
   <meta http-equiv="Expires" content="0">
   <meta name="app-version" content="fs-v10-clean-2026-04-20">
   <script>
-    // QR viewer URL'si tespit edilirse uygulamayı GİZLE — viewer render eder
+    // QR viewer URL'si tespiti — sadece flag set et, DOM'u gizleme
     (function(){
       if(window.location.search.includes('v=') || window.location.hash.includes('v=')){
         window._isViewerUrl = true;
-        document.documentElement.style.visibility = 'hidden';
       }
     })();
   </script>
@@ -12529,7 +12528,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(window._isViewerUrl){
     if(!_checkAndRenderPublicViewer()){
       // Viewer parse edilemedi — hata göster, asla uygulamayı açma
-      document.documentElement.style.visibility = 'visible';
       document.documentElement.innerHTML = `
         <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <title>Hatalı QR Kod</title></head>
@@ -18303,8 +18301,6 @@ function _checkAndRenderPublicViewer(){
 }
 
 async function _renderPublicViewerFromFirebase(id, type){
-  // Visibility'yi aç (head'de hidden yapılmıştı)
-  document.documentElement.style.visibility = 'visible';
   // Loading göster
   document.body.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#f5f3ff;">
@@ -18510,8 +18506,7 @@ function _renderPublicViewer(d){
 
   const printDate = new Date().toLocaleString('tr-TR');
 
-  // Tüm sayfayı değiştir — visibility'yi aç (head'de hidden yapılmıştı)
-  document.documentElement.style.visibility = 'visible';
+  // Tüm sayfayı değiştir
   document.documentElement.innerHTML = `
     <head>
       <meta charset="UTF-8">
