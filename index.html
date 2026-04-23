@@ -10802,8 +10802,23 @@ function generatePDF(id, type) {
     html += `<div class="note-box">📝 <b>Not:</b> ${item.aciklama || item.not}</div>`;
   }
 
-  // === Fotoğraflar PDF'e EKLENMİYOR — QR kod tarandığında görüntülenecek ===
-  // QR kod zaten header'da var, tarayan kişi fotoğrafları web sayfasında görecek
+  // === Kanıt Fotoğrafları ===
+  const _pdfPhotos = _getPhotosArray(item).filter(p => p.url || p.data);
+  if (_pdfPhotos.length > 0) {
+    html += `<div class="section-title">📸 Kanıt Fotoğrafları</div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px;">`;
+    _pdfPhotos.forEach((photo, idx) => {
+      const src = photo.url || photo.data || '';
+      const ts = photo.at ? new Date(photo.at).toLocaleDateString('tr-TR') : '';
+      html += `<div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;text-align:center;">
+        <img src="${src}" alt="Fotoğraf ${idx+1}" style="width:100%;height:120px;object-fit:cover;display:block;"
+             onerror="this.style.display='none';this.nextSibling.style.display='flex';">
+        <div style="display:none;height:120px;align-items:center;justify-content:center;background:#f3f4f6;font-size:10px;color:#9ca3af;">Yüklenemedi</div>
+        ${ts ? `<div style="font-size:9px;color:#6b7280;padding:3px;">${ts}</div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
 
   // === Dijital İmza SADECE TESLİM EDENE basılır — teslim alan elle imzalayacak ===
   html += `<div class="signatures">
@@ -17810,8 +17825,9 @@ body.logged-out { overflow:hidden !important; }
     }, 450);
   });
 
-  // İlk yükleme - ama viewer render edildiyse login gösterme
-  if(!_viewerRendered && !isAuthed()) showLogin();
+  // İlk yükleme - QR viewer URL'si varsa veya viewer render edildiyse login gösterme
+  const _hasViewerParam = window.location.search.includes('v=') || window.location.hash.includes('v=');
+  if(!_viewerRendered && !_hasViewerParam && !isAuthed()) showLogin();
 
   // Dışa açık: çıkış
   window.logout = function(){
