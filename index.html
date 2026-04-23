@@ -14206,19 +14206,34 @@ function handleQrResult(text){
   _qrLastResult = { text: text, parsed: null, matchedItem: null, matchedType: null };
   let parsed = null;
 
-  // ÖNCE: yeni format — URL içinde #v=BASE64 barındırır
+  // ÖNCE: yeni format — URL içinde ?v=BASE64 veya #v=BASE64 barındırır
   try {
-    if(/^https?:\/\//i.test(text) && text.indexOf('#v=') > -1){
-      const hashPart = text.split('#')[1] || '';
-      const params = new URLSearchParams(hashPart);
-      const v = params.get('v');
+    if(/^https?:\/\//i.test(text)){
+      let v = null;
+
+      // Query string kontrol et (?v=...)
+      if(text.indexOf('?v=') > -1){
+        const queryPart = text.split('?')[1] || '';
+        const params = new URLSearchParams(queryPart.split('#')[0]); // hash'i temizle
+        v = params.get('v');
+      }
+
+      // Hash kontrol et (#v=...) - eski format
+      if(!v && text.indexOf('#v=') > -1){
+        const hashPart = text.split('#')[1] || '';
+        const params = new URLSearchParams(hashPart);
+        v = params.get('v');
+      }
+
       if(v){
         const json = _b64UrlDecode(v);
         const data = JSON.parse(json);
         if(data && data.app === 'irsaliyepro') parsed = data;
       }
     }
-  } catch(e){}
+  } catch(e){
+    console.log('QR parse error:', e);
+  }
 
   // Eski format — düz JSON metin (geriye dönük uyumluluk)
   if(!parsed){
