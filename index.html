@@ -12500,29 +12500,10 @@ function exportFilteredCSV(){
 }
 
 // ==================== INIT ====================
-// QR viewer kontrolü - hemen çalıştır (DOMContentLoaded beklemeden)
-let _viewerRendered = false;
-if((window.location.hash && window.location.hash.includes('v=')) || (window.location.search && window.location.search.includes('v='))){
-  console.log('QR detected in URL, checking viewer...');
-  // Sayfa yüklenir yüklenmez kontrol et
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){
-      if(_checkAndRenderPublicViewer()){
-        _viewerRendered = true;
-        return;
-      }
-    });
-  } else {
-    if(_checkAndRenderPublicViewer()){
-      _viewerRendered = true;
-      // Viewer açıldı, normal init'i çalıştırma
-    }
-  }
-}
+// QR viewer kontrolü - DOMContentLoaded'da yapılacak (fonksiyonlar tanımlandıktan sonra)
 
 document.addEventListener('DOMContentLoaded',()=>{
-  // ÖNCE public viewer kontrolü — URL hash #v=... içeriyorsa şifresiz görüntüleyici aç
-  if(_viewerRendered) return; // Zaten render edildi
+  // ÖNCE public viewer kontrolü — URL hash #v=... veya ?v=... içeriyorsa şifresiz görüntüleyici aç
   if(_checkAndRenderPublicViewer()){ return; }
 
   // QR yayın URL'sini otomatik ayarla (ilk açılışta veya localhost ise)
@@ -18195,20 +18176,26 @@ body.logged-out { overflow:hidden !important; }
 function _parseViewerHash(){
   let v = null;
 
+  console.log('QR viewer: Starting parse - URL:', window.location.href);
+
   // Önce query string kontrol et (?v=...) - telefon kameraları için
   try {
     const params = new URLSearchParams(window.location.search);
     v = params.get('v');
     if(v) {
-      console.log('QR viewer: Found v in query string:', v.substring(0, 50) + '...');
+      console.log('QR viewer: Found v in query string, length:', v.length);
       const json = _b64UrlDecode(v);
-      console.log('QR viewer: Decoded JSON:', json.substring(0, 100) + '...');
+      console.log('QR viewer: Decoded JSON length:', json.length);
       const data = JSON.parse(json);
-      console.log('QR viewer: Parsed data:', data);
+      console.log('QR viewer: Parsed data successfully:', data);
       if(data && data.app === 'irsaliyepro') {
-        console.log('QR viewer: Valid irsaliyepro data found!');
+        console.log('QR viewer: ✅ Valid irsaliyepro data found!');
         return data;
+      } else {
+        console.warn('QR viewer: Data found but not irsaliyepro format');
       }
+    } else {
+      console.log('QR viewer: No v parameter in query string');
     }
   } catch(e) {
     console.error('QR viewer: Query string parse failed', e);
@@ -18760,6 +18747,15 @@ if(_origShowPage){
     startX = 0;
     currentX = 0;
   });
+})();
+
+// ==================== QR VIEWER EARLY CHECK ====================
+// Tüm fonksiyonlar tanımlandıktan sonra, sayfa yüklenmeden önce QR kontrolü yap
+(function(){
+  if((window.location.hash && window.location.hash.includes('v=')) || (window.location.search && window.location.search.includes('v='))){
+    console.log('QR detected in URL - will check viewer on DOMContentLoaded');
+    // DOMContentLoaded'da zaten kontrol ediliyor, burada sadece log
+  }
 })();
 </script>
 <!-- ==================== /ARANABILIR SELECT ==================== -->

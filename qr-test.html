@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>QR Test - Public Viewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f3ff;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1 { color: #7c3aed; margin-bottom: 20px; }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8f7fc;
+      border-radius: 8px;
+      border: 1px solid #ede9fe;
+    }
+    .test-section h2 {
+      font-size: 16px;
+      color: #5b21b6;
+      margin-bottom: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+    button {
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    button:hover { background: #6d28d9; }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      word-break: break-all;
+    }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .photo-item img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid #ede9fe;
+    }
+    .success { color: #10b981; font-weight: 600; }
+    .error { color: #ef4444; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 QR Public Viewer Test</h1>
+
+    <div class="test-section">
+      <h2>1. URL'den QR Verisi Çözümle</h2>
+      <p>Tarayıcı URL'sini buraya yapıştırın (query string veya hash ile):</p>
+      <input type="text" id="testUrl" placeholder="https://eyupybr.com?v=eyJhcHAiOiJpcnNhbGl5ZXBybyIsInYiOjIsLi4ufQ">
+      <button onclick="testParseUrl()">Çözümle</button>
+      <div id="parseResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Test QR Verisi Oluştur</h2>
+      <p>Örnek irsaliye verisi ile QR URL'si oluştur:</p>
+      <button onclick="generateTestQr()">Test QR Oluştur</button>
+      <div id="qrResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Public Viewer Önizleme</h2>
+      <p>Oluşturulan QR verisini görüntüle:</p>
+      <button onclick="previewViewer()">Önizleme Göster</button>
+      <div id="viewerPreview" style="margin-top:15px;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Base64 URL encode/decode fonksiyonları
+    function _b64UrlEncode(str){
+      const b64 = btoa(unescape(encodeURIComponent(str)));
+      return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+
+    function _b64UrlDecode(b64url){
+      try{
+        let b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+        while(b64.length % 4) b64 += '=';
+        return decodeURIComponent(escape(atob(b64)));
+      }catch(e){ return ''; }
+    }
+
+    // URL'den QR verisini parse et
+    function testParseUrl(){
+      const url = document.getElementById('testUrl').value.trim();
+      const resultDiv = document.getElementById('parseResult');
+
+      if(!url){
+        resultDiv.innerHTML = '<span class="error">❌ URL girin</span>';
+        resultDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        // Query string kontrol (?v=...)
+        let v = null;
+        const urlObj = new URL(url);
+        v = urlObj.searchParams.get('v');
+
+        // Hash kontrol (#v=...)
+        if(!v && urlObj.hash){
+          const h = urlObj.hash.replace(/^#/, '');
+          if(h.startsWith('v=')){
+            v = h.substring(2).split('&')[0];
+          } else {
+            const match = h.match(/[?&]?v=([^&]+)/);
+            if(match) v = match[1];
+          }
+        }
+
+        if(!v){
+          resultDiv.innerHTML = '<span class="error">❌ URL\'de v parametresi bulunamadı</span>';
+          resultDiv.style.display = 'block';
+          return;
+        }
+
+        const json = _b64UrlDecode(v);
+        const data = JSON.parse(json);
+
+        if(data && data.app === 'irsaliyepro'){
+          let html = '<span class="success">✅ Geçerli QR verisi bulundu!</span><br><br>';
+          html += '<strong>İrsaliye No:</strong> ' + (data.no || '-') + '<br>';
+          html += '<strong>Model:</strong> ' + (data.model || '-') + '<br>';
+          html += '<strong>Atölye:</strong> ' + (data.atolye || '-') + '<br>';
+          html += '<strong>Tarih:</strong> ' + (data.tarih || '-') + '<br>';
+
+          if(data.photos && data.photos.length > 0){
+            html += '<br><strong>📸 Fotoğraflar (' + data.photos.length + '):</strong>';
+            html += '<div class="photo-grid">';
+            data.photos.forEach((photo, idx) => {
+              html += '<div class="photo-item">';
+              html += '<img src="' + photo.url + '" alt="Foto ' + (idx+1) + '" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23fee%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23c00%22%3EYüklenemedi%3C/text%3E%3C/svg%3E\'">';
+              html += '<div style="font-size:11px;color:#666;margin-top:5px;">Foto ' + (idx+1) + '</div>';
+              html += '</div>';
+            });
+            html += '</div>';
+          } else if(data.photoUrl){
+            html += '<br><strong>📸 Fotoğraf:</strong><br>';
+            html += '<img src="' + data.photoUrl + '" style="max-width:300px;border-radius:8px;margin-top:10px;" onerror="this.alt=\'Yüklenemedi\'">';
+          } else {
+            html += '<br><span style="color:#f59e0b;">⚠️ Fotoğraf yok</span>';
+          }
+
+          html += '<br><br><strong>Ham JSON:</strong><br>';
+          html += '<textarea readonly style="height:150px;font-family:monospace;font-size:11px;">' + JSON.stringify(data, null, 2) + '</textarea>';
+
+          resultDiv.innerHTML = html;
+          window._testData = data; // Önizleme için sakla
+        } else {
+          resultDiv.innerHTML = '<span class="error">❌ Geçersiz veri formatı</span>';
+        }
+
+        resultDiv.style.display = 'block';
+      } catch(e) {
+        resultDiv.innerHTML = '<span class="error">❌ Parse hatası: ' + e.message + '</span>';
+        resultDiv.style.display = 'block';
+      }
+    }
+
+    // Test QR verisi oluştur
+    function generateTestQr(){
+      const testData = {
+        app: 'irsaliyepro',
+        v: 2,
+        id: 'test_' + Date.now(),
+        type: 'standart',
+        no: 'TEST-001',
+        model: 'Test Model Poşet',
+        atolye: 'Test Atölyesi',
+        firma: 'Test Firma',
+        tarih: new Date().toISOString().split('T')[0],
+        termin: new Date().toISOString().split('T')[0],
+        teslimEden: 'Test Teslim Eden',
+        teslimAlan: 'Test Teslim Alan',
+        durum: 'bekliyor',
+        aciklama: 'Bu bir test irsaliyesidir',
+        photos: [
+          {
+            url: 'https://raw.githubusercontent.com/eyupybr/irsaliye-kanitlar/main/test-photo.jpg',
+            at: new Date().toISOString()
+          }
+        ]
+      };
+
+      const encoded = _b64UrlEncode(JSON.stringify(testData));
+      const baseUrl = window.location.origin + window.location.pathname.replace('qr-test.html', 'index.html');
+      const qrUrl = baseUrl + '?v=' + encoded;
+
+      const resultDiv = document.getElementById('qrResult');
+      let html = '<span class="success">✅ Test QR URL\'si oluşturuldu!</span><br><br>';
+      html += '<strong>QR URL (kopyalayın):</strong><br>';
+      html += '<textarea readonly style="height:100px;font-size:11px;">' + qrUrl + '</textarea><br>';
+      html += '<button onclick="navigator.clipboard.writeText(\'' + qrUrl.replace(/'/g, "\\'") + '\').then(()=>alert(\'Kopyalandı!\'))">📋 Kopyala</button> ';
+      html += '<button onclick="window.open(\'' + qrUrl.replace(/'/g, "\\'") + '\', \'_blank\')">🔗 Yeni Sekmede Aç</button>';
+
+      resultDiv.innerHTML = html;
+      resultDiv.style.display = 'block';
+      window._testData = testData;
+    }
+
+    // Viewer önizlemesi
+    function previewViewer(){
+      if(!window._testData){
+        alert('Önce bir test QR oluşturun veya URL çözümleyin');
+        return;
+      }
+
+      const d = window._testData;
+      const previewDiv = document.getElementById('viewerPreview');
+
+      let html = '<div style="background:white;border:2px solid #7c3aed;border-radius:12px;padding:20px;margin-top:15px;">';
+      html += '<h3 style="color:#7c3aed;margin-bottom:15px;">📦 ' + (d.no || 'İrsaliye') + '</h3>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">';
+      html += '<div><strong>Model:</strong> ' + (d.model || '-') + '</div>';
+      html += '<div><strong>Atölye:</strong> ' + (d.atolye || '-') + '</div>';
+      html += '<div><strong>Tarih:</strong> ' + (d.tarih || '-') + '</div>';
+      html += '<div><strong>Durum:</strong> ' + (d.durum || '-') + '</div>';
+      html += '</div>';
+
+      if(d.photos && d.photos.length > 0){
+        html += '<h4 style="color:#7c3aed;margin:15px 0 10px;">📸 Fotoğraflar (' + d.photos.length + ')</h4>';
+        html += '<div class="photo-grid">';
+        d.photos.forEach((photo, idx) => {
+          html += '<div class="photo-item">';
+          html += '<a href="' + photo.url + '" target="_blank">';
+          html += '<img src="' + photo.url + '" alt="Foto ' + (idx+1) + '">';
+          html += '</a>';
+          if(photo.at){
+            const date = new Date(photo.at).toLocaleString('tr-TR');
+            html += '<div style="font-size:10px;color:#888;margin-top:5px;">' + date + '</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      } else if(d.photoUrl){
+        html += '<h4 style="color:#7c3aed;margin:15px 0 10px;">📸 Fotoğraf</h4>';
+        html += '<a href="' + d.photoUrl + '" target="_blank">';
+        html += '<img src="' + d.photoUrl + '" style="max-width:100%;border-radius:8px;">';
+        html += '</a>';
+      }
+
+      html += '</div>';
+      previewDiv.innerHTML = html;
+    }
+
+    // Sayfa yüklendiğinde URL'yi otomatik kontrol et
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('v');
+      if(v){
+        document.getElementById('testUrl').value = window.location.href;
+        testParseUrl();
+      }
+    });
+  </script>
+</body>
+</html>

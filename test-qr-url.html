@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>QR URL Test Generator</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f3ff;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1 { color: #7c3aed; }
+    button {
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 10px 5px;
+    }
+    button:hover { background: #6d28d9; }
+    .url-box {
+      background: #f8f7fc;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 12px;
+      border: 2px solid #7c3aed;
+    }
+    .success { color: #10b981; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔗 QR URL Test Generator</h1>
+    <p>GitHub'daki gerçek fotoğraflarla test QR URL'si oluştur</p>
+
+    <button onclick="generateTestUrl()">Test URL Oluştur</button>
+    <button onclick="openInNewTab()">Yeni Sekmede Aç</button>
+    <button onclick="copyUrl()">Kopyala</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    let generatedUrl = '';
+
+    function _b64UrlEncode(str){
+      const b64 = btoa(unescape(encodeURIComponent(str)));
+      return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+
+    function generateTestUrl(){
+      // GitHub'daki gerçek fotoğrafları kullan
+      const testData = {
+        app: 'irsaliyepro',
+        v: 2,
+        id: 'test_' + Date.now(),
+        type: 'standart',
+        no: 'TEST-' + Math.floor(Math.random() * 1000),
+        model: 'Test Poşet Model',
+        atolye: 'Test Atölyesi',
+        firma: 'Test Firma',
+        tarih: new Date().toISOString().split('T')[0],
+        termin: new Date().toISOString().split('T')[0],
+        teslimEden: 'Eyüp',
+        teslimAlan: 'Müşteri',
+        durum: 'bekliyor',
+        aciklama: 'Bu bir test irsaliyesidir - QR viewer testi için oluşturuldu',
+        photos: [
+          {
+            url: 'https://raw.githubusercontent.com/eyupybr/irsaliye-kanitlar/main/irsaliye_1776612727860_pjl114.jpg',
+            at: new Date().toISOString()
+          },
+          {
+            url: 'https://raw.githubusercontent.com/eyupybr/irsaliye-kanitlar/main/irsaliye_1776614524862_mt6aym.jpg',
+            at: new Date().toISOString()
+          }
+        ]
+      };
+
+      const encoded = _b64UrlEncode(JSON.stringify(testData));
+      const baseUrl = window.location.origin + window.location.pathname.replace('test-qr-url.html', 'index.html');
+      generatedUrl = baseUrl + '?v=' + encoded;
+
+      document.getElementById('result').innerHTML = `
+        <div class="success">✅ Test URL oluşturuldu!</div>
+        <div class="url-box">${generatedUrl}</div>
+        <p><strong>İçerik:</strong></p>
+        <ul>
+          <li>İrsaliye No: ${testData.no}</li>
+          <li>Model: ${testData.model}</li>
+          <li>Atölye: ${testData.atolye}</li>
+          <li>Fotoğraf Sayısı: ${testData.photos.length}</li>
+        </ul>
+        <p style="color:#666;font-size:13px;">Bu URL'yi tarayıcıda açtığınızda public viewer açılmalı ve fotoğraflar görünmeli.</p>
+      `;
+    }
+
+    function openInNewTab(){
+      if(!generatedUrl){
+        alert('Önce URL oluşturun');
+        return;
+      }
+      window.open(generatedUrl, '_blank');
+    }
+
+    function copyUrl(){
+      if(!generatedUrl){
+        alert('Önce URL oluşturun');
+        return;
+      }
+      navigator.clipboard.writeText(generatedUrl).then(() => {
+        alert('✅ URL kopyalandı!');
+      }).catch(() => {
+        alert('❌ Kopyalanamadı');
+      });
+    }
+
+    // Sayfa yüklendiğinde otomatik oluştur
+    window.addEventListener('DOMContentLoaded', generateTestUrl);
+  </script>
+</body>
+</html>
