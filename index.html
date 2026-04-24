@@ -109,8 +109,14 @@
       photoHtml = '<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;margin-top:12px;">⚠️ Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.</div>';
     }
 
+    // HTML özel karakterlerini kaçır (XSS koruması)
+    function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
     // Info satırları
-    function infoItem(label, value){ if(!value) return ''; return '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-radius:10px;padding:10px 12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;word-break:break-word;">'+value+'</div></div>'; }
+    function infoItem(label, value){ if(!value) return ''; return '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-radius:10px;padding:10px 12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;word-break:break-word;">'+esc(value)+'</div></div>'; }
+
+    // adet/toplam: sadece boyut tablosunda gösterilmiyorsa info'da göster
+    var hasSizeTable = !!(d.sizes || d.bant || d.beden);
 
     var infoHtml = ''
       + infoItem('Tarih', d.tarih)
@@ -120,23 +126,20 @@
       + infoItem('Teslim Eden', d.teslimEden)
       + infoItem('Teslim Alan', d.teslimAlan)
       + infoItem('Termin', d.termin)
-      + infoItem('Adet', d.adet)
-      + infoItem('Toplam', d.total || d.totalAdet)
-      + (d.renk ? '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:10px;padding:10px 12px;grid-column:span 2;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">🎨 Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+d.renk+'</div></div>' : '');
-
-    var printDate = new Date().toLocaleString('tr-TR');
+      + (!hasSizeTable ? infoItem('Adet', d.adet) : '')
+      + (!hasSizeTable ? infoItem('Toplam', d.total || d.totalAdet) : '')
+      + (d.renk ? '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:10px;padding:10px 12px;grid-column:span 2;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">🎨 Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+esc(d.renk)+'</div></div>' : '');
 
     var html = '<!DOCTYPE html><html lang="tr"><head>'
       + '<meta charset="UTF-8">'
       + '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">'
-      + '<title>'+(d.no||'')+(d.no?' — ':'')+typeLabel+'</title>'
-      + '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">'
+      + '<title>'+esc(d.no||'')+(d.no?' — ':'')+typeLabel+'</title>'
       + '<style>'
       + '*{margin:0;padding:0;box-sizing:border-box;}'
       + 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f5f3ff;color:#1a1a2e;padding:16px;line-height:1.5;min-height:100vh;}'
       + '.wrap{max-width:720px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(124,58,237,.15);overflow:hidden;}'
       + '.hdr{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;padding:24px 20px;}'
-      + '.hdr h1{font-size:22px;font-weight:800;display:flex;align-items:center;gap:10px;}'
+      + '.hdr h1{font-size:22px;font-weight:800;}'
       + '.no{font-size:24px;font-weight:800;letter-spacing:.5px;}'
       + '.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}'
       + '.ftr{padding:16px 20px;background:#f8f7fc;border-top:1px solid #ede9fe;text-align:center;font-size:11px;color:#6b7280;}'
@@ -149,12 +152,12 @@
       + '<div class="hdr">'
       + '<h1>📦 '+typeLabel+'</h1>'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;flex-wrap:wrap;gap:8px;">'
-      + '<div class="no">'+(d.no||'—')+'</div>'
+      + '<div class="no">'+esc(d.no||'—')+'</div>'
       + '</div></div>'
       + '<div style="padding:20px;">'
       + '<div class="info-grid">'+infoHtml+'</div>'
       + sizesHtml
-      + (d.aciklama ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;color:#92400e;">📝 <b>Not:</b> '+d.aciklama+'</div>' : '')
+      + (d.aciklama ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;color:#92400e;">📝 <b>Not:</b> '+esc(d.aciklama)+'</div>' : '')
       + '<div style="margin-top:18px;">'+photoHtml+'</div>'
       + '</div>'
       + '<div class="ftr">İrsaliye Pro</div>'
