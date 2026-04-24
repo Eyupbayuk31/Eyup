@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v10-clean-2026-04-20">
+  <meta name="app-version" content="fs-v10-viewer-fix-2026-04-24">
   <script>
     // QR viewer URL'si tespiti — flag set et + ilk DOMContentLoaded'ı buraya kaydet
     (function(){
@@ -18523,8 +18523,7 @@ function _renderPublicViewer(d){
 
   const printDate = new Date().toLocaleString('tr-TR');
 
-  // Tüm sayfayı değiştir
-  document.documentElement.innerHTML = `
+  const fullHtml = `<!DOCTYPE html><html lang="tr">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
@@ -18563,6 +18562,9 @@ function _renderPublicViewer(d){
         .pv-photo-error{padding:20px;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;color:#991b1b;text-align:center;font-size:13px;}
         .pv-footer{padding:16px 20px;background:#f8f7fc;border-top:1px solid #ede9fe;text-align:center;font-size:11px;color:#6b7280;}
         .pv-read-only{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(124,58,237,0.1);color:#7c3aed;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:10px;}
+        .pv-print-bar{padding:16px;text-align:center;background:#f5f3ff;}
+        .pv-print-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(124,58,237,0.35);}
+        .pv-print-btn:active{transform:scale(0.97);}
         @media (max-width:600px){
           .pv-info{grid-template-columns:1fr;}
           .pv-header h1{font-size:18px;}
@@ -18573,6 +18575,7 @@ function _renderPublicViewer(d){
           body{background:#fff;padding:0;}
           .pv-wrap{box-shadow:none;border-radius:0;}
           .pv-footer{display:none;}
+          .pv-print-bar{display:none!important;}
         }
       </style>
     </head>
@@ -18609,16 +18612,19 @@ function _renderPublicViewer(d){
       <div class="pv-print-bar">
         <button onclick="window.print()" class="pv-print-btn">🖨️ PDF Kaydet / Yazdır</button>
       </div>
-      <style>
-        .pv-print-bar{padding:16px;text-align:center;background:#f5f3ff;}
-        .pv-print-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(124,58,237,0.35);}
-        .pv-print-btn:active{transform:scale(0.97);}
-        @media print{.pv-print-bar{display:none!important;}}
-      </style>
     </body>
-  `;
-  // <html> attribute'larını da temizle
-  document.documentElement.setAttribute('lang','tr');
+  </html>`;
+
+  // document.open/write/close: tüm eski handler'ları durdurur, temiz sayfa başlatır
+  try {
+    document.open('text/html', 'replace');
+    document.write(fullHtml);
+    document.close();
+  } catch(e) {
+    // Fallback
+    document.documentElement.innerHTML = fullHtml;
+    document.documentElement.setAttribute('lang','tr');
+  }
 }
 
 function _escapeHtml(s){
@@ -18834,5 +18840,14 @@ if(_origShowPage){
 <!-- ==================== /ARANABILIR SELECT ==================== -->
 
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
+<script>
+// SENKRON VIEWER KONTROL — DOMContentLoaded'dan ÖNCE çalışır, tüm fonksiyonlar hazır
+(function(){
+  if(!window._isViewerUrl) return;
+  if(typeof _checkAndRenderPublicViewer !== 'function') return;
+  try { _checkAndRenderPublicViewer(); } catch(e){ console.error('sync viewer check failed:', e); }
+})();
+</script>
 </body>
 </html>
