@@ -34,7 +34,7 @@
     window._isViewerUrl = true;
     window._viewerRendered = true;
 
-    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş'};
+    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi'};
     var SIZE_NAMES  = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     var BANT_NAMES  = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
     var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
@@ -252,7 +252,7 @@
 
     // Firestore'a senkronlanan key'ler. Bunun disindakiler sadece localStorage.
     const FS_KEYS = [
-      'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
+      'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler',
       'atolyeler','stoklar','stokHareketler','recycleBin',
       'irsaliye_users','sablonlar','takvimler','aksesuarlar',
       'irsaliye_github_cfg'  // admin'in token'i tum cihazlarda paylasilsin
@@ -7775,6 +7775,7 @@ body::after{
     <a href="javascript:void(0)" onclick="showPage('lastik')"><i class="fas fa-ruler"></i><span>Lastik İrsaliyesi</span></a>
     <a href="javascript:void(0)" onclick="showPage('dugme')"><i class="fas fa-circle-dot"></i><span>Düğme İrsaliyesi</span></a>
     <a href="javascript:void(0)" onclick="showPage('toptan')"><i class="fas fa-boxes-stacked"></i><span>Toptan Sipariş</span></a>
+    <a href="javascript:void(0)" onclick="showPage('satenaskilik')"><i class="fas fa-layer-group"></i><span>Saten Askılık</span></a>
 
     <div class="nav-section">Yönetim</div>
     <a href="javascript:void(0)" onclick="showPage('atolye')"><i class="fas fa-industry"></i><span>Atölyeler</span></a>
@@ -7994,6 +7995,11 @@ body::after{
       <div class="db-mini-icon" style="background:rgba(236,72,153,0.12);color:#ec4899"><i class="fas fa-boxes-stacked"></i></div>
       <div class="db-mini-val" id="miniToptan">0</div>
       <div class="db-mini-lbl">Toptan</div>
+    </div>
+    <div class="db-mini-card" onclick="showPage('satenaskilik')">
+      <div class="db-mini-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6"><i class="fas fa-layer-group"></i></div>
+      <div class="db-mini-val" id="miniSaten">0</div>
+      <div class="db-mini-lbl">Saten</div>
     </div>
     <div class="db-mini-card" onclick="showPage('atolye')">
       <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-industry"></i></div>
@@ -8332,6 +8338,43 @@ body::after{
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ========== SATEN ASKILIK ========== -->
+    <div class="page" id="page-satenaskilik">
+      <div class="section-header">
+        <div><h2>Saten Askılık İrsaliyesi</h2><p>Renk ve metre bazlı saten askılık sevki</p></div>
+        <button class="btn btn-primary" onclick="saveSatenaskilik()"><i class="fas fa-save"></i> Kaydet</button>
+      </div>
+      <div class="grid-auto">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-info-circle"></i> Sevk Bilgileri</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+            <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="saModel" placeholder="Örn: SA-001"></div>
+            <div class="form-group"><label>Tarih *</label><input class="form-input" id="saTarih" type="date"></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label><select class="form-input" id="saAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="saTeslimEden"></div>
+            <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="saTeslimAlan"></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="saRenk" placeholder="Örn: Siyah, Beyaz, Lacivert…"></div>
+            <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="saTermin" type="date"></div>
+            <div class="form-group"><label>Açıklama</label><input class="form-input" id="saAciklama"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-layer-group"></i> Miktar (Metre)</div>
+          <div class="form-group"><label>Toplam Metre *</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input class="form-input" type="number" id="saMetre" placeholder="0" min="0" step="0.01" style="flex:1;">
+              <span style="font-weight:700;color:var(--text-dim);font-size:12px;">METRE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title"><i class="fas fa-list"></i> Saten Askılık Kayıtları (<span id="satenaskilikCount">0</span>)</div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>Metre</th><th>İşlem</th></tr></thead><tbody id="satenaskilikTable"></tbody></table></div>
+        <div class="table-mobile" id="satenaskilikMobile" style="display:none;"></div>
       </div>
     </div>
 
@@ -9473,7 +9516,7 @@ function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 function showPage(page){
@@ -9483,7 +9526,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','atolye','aksesuar','stok','stok-utupaket','stok-dikim','takvim','reports','geridonusum','settings','qr','signature','templates'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','atolye','aksesuar','stok','stok-utupaket','stok-dikim','takvim','reports','geridonusum','settings','qr','signature','templates'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -9496,7 +9539,7 @@ function showPage(page){
   
   if(window.innerWidth<=768)closeSidebar();
   // Form sayfalarında fotoğraf bölümünü taşı
-  const _nfFormPages = ['new','fermuar','lastik','dugme'];
+  const _nfFormPages = ['new','fermuar','lastik','dugme','satenaskilik'];
   const _nfSection = document.getElementById('newFormPhotoSection');
   if(_nfSection){
     if(_nfFormPages.includes(page)){
@@ -9616,7 +9659,7 @@ function toast(msg,type='success'){
 function loadAtolyeSelects(){
   const atolyeler=getData('atolyeler');
   const opts='<option value="">Atölye Seçin</option>'+atolyeler.map(a=>'<option value="'+a.name+'">'+a.name+'</option>').join('');
-  ['iAtolye','fAtolye','lAtolye','dAtolye'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  ['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
 }
 
 function addAtolye(){
@@ -10449,14 +10492,15 @@ function getUnifiedList(){
   const lastik=getData('lastikler').map(i=>({...i,_type:'lastik'}));
   const dugme=getData('dugmeler').map(i=>({...i,_type:'dugme'}));
   const toptan=getData('toptanlar').map(i=>({...i,_type:'toptan',durum:i.durum||'bekliyor',teslimEden:'',teslimAlan:''}));
-  return [...standart,...fermuar,...lastik,...dugme,...toptan];
+  const satenaskilik=getData('satenaskilikler').map(i=>({...i,_type:'satenaskilik'}));
+  return [...standart,...fermuar,...lastik,...dugme,...toptan,...satenaskilik];
 }
 
 function renderTypeFilterBar(){
   const all=getUnifiedList();
   const counts={all:all.length};
-  ['standart','fermuar','lastik','dugme','toptan'].forEach(t=>{counts[t]=all.filter(i=>i._type===t).length;});
-  
+  ['standart','fermuar','lastik','dugme','toptan','satenaskilik'].forEach(t=>{counts[t]=all.filter(i=>i._type===t).length;});
+
   const types=[
     {key:'all',label:'Tümü',icon:'fas fa-layer-group'},
     {key:'standart',label:'Poşet',icon:'fas fa-box'},
@@ -10464,6 +10508,7 @@ function renderTypeFilterBar(){
     {key:'lastik',label:'Lastik',icon:'fas fa-ruler'},
     {key:'dugme',label:'Düğme',icon:'fas fa-circle-dot'},
     {key:'toptan',label:'Toptan',icon:'fas fa-boxes-stacked'},
+    {key:'satenaskilik',label:'Saten',icon:'fas fa-layer-group'},
   ];
   
   document.getElementById('typeFilterBar').innerHTML=types.map(t=>`
@@ -10554,7 +10599,7 @@ function applyFilters(){
 }
 
 function getTypeLabel(type){
-  const map={standart:'📦 Poşet',fermuar:'🔗 Fermuar',lastik:'📏 Lastik',dugme:'🔘 Düğme',toptan:'📦 Toptan'};
+  const map={standart:'📦 Poşet',fermuar:'🔗 Fermuar',lastik:'📏 Lastik',dugme:'🔘 Düğme',toptan:'📦 Toptan',satenaskilik:'🪢 Saten'};
   return map[type]||type;
 }
 
@@ -10575,6 +10620,7 @@ function getItemDetail(item){
   if(item._type==='lastik')return (item.cm?item.cm+' cm / ':'')+item.metre+' m';
   if(item._type==='dugme')return item.adet?item.adet+' adet':'—';
   if(item._type==='toptan')return item.total?item.total+' adet':'—';
+  if(item._type==='satenaskilik')return (item.renk?item.renk+' / ':'')+item.metre+' m';
   return '—';
 }
 
@@ -10671,14 +10717,14 @@ function renderFilteredList(list){
 }
 
 function toggleDurumUni(id,type){
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);const item=list.find(i=>i.id===id);
   if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';setData(key,list);applyFilters();toast('Durum güncellendi');}
 }
 
 function deleteItemUni(id,type){
   if(!confirm('Bu kaydı silmek istediğinize emin misiniz? (Geri dönüşüme taşınacak)'))return;
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);
   const item=list.find(i=>i.id===id);
   if(!item)return;
@@ -10691,7 +10737,7 @@ function deleteItemUni(id,type){
 }
 
 function showDetailUni(id,type){
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   const list=getData(key);const item=list.find(i=>i.id===id);if(!item)return;
   document.getElementById('modalTitle').textContent=(item.no||'Detay')+' — '+getTypeLabel(type);
   
@@ -10747,6 +10793,12 @@ function showDetailUni(id,type){
       <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;border-left:4px solid #7c3aed;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">🎨 Renk</div><div style="font-size:18px;font-weight:800;">${item.renk||'—'}</div></div>
     </div>`;
   }
+  if(type==='satenaskilik'){
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Toplam Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>
+      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;border-left:4px solid #7c3aed;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">🎨 Renk</div><div style="font-size:18px;font-weight:800;">${item.renk||'—'}</div></div>
+    </div>`;
+  }
   if(type==='toptan'&&item.beden){
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
@@ -10797,14 +10849,14 @@ function generatePDFFromModal() {
 }
 
 function generatePDF(id, type) {
-  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar'};
+  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler'};
   const key = keyMap[type];
   if (!key) return toast('PDF oluşturulamadı','error');
   const list = getData(key);
   const item = list.find(i => i.id === id);
   if (!item) return toast('Kayıt bulunamadı','error');
 
-  const typeLabels = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş'};
+  const typeLabels = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi'};
   const typeLabel = typeLabels[type] || 'İrsaliye';
   const now = new Date();
   const printDate = now.toLocaleDateString('tr-TR') + ' ' + now.toLocaleTimeString('tr-TR');
@@ -11153,6 +11205,40 @@ function refreshToptanList(){
   mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span style="font-weight:600;">${i.firma}</span><span class="chip chip-info">${i.total} adet</span></div><div class="mc-meta"><span><i class="fas fa-calendar"></i> ${i.tarih}</span>${i.urun?'<span><i class="fas fa-cube"></i> '+i.urun+'</span>':''}</div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
+// ==================== SATEN ASKILIK ====================
+function saveSatenaskilik(){
+  const model=document.getElementById('saModel').value.trim();const tarih=document.getElementById('saTarih').value;
+  const atolye=document.getElementById('saAtolye').value;const teslimEden=document.getElementById('saTeslimEden').value.trim();
+  const teslimAlan=document.getElementById('saTeslimAlan').value.trim();const metre=+(document.getElementById('saMetre').value||0);
+  const renk=document.getElementById('saRenk').value.trim();
+  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!metre||!renk)return toast('Zorunlu alanları doldurun (Renk ve Metre dahil)','error');
+  const no=getNextNo();
+  const item={id:Date.now(),no:'SAT-'+String(no).padStart(3,'0'),type:'satenaskilik',model,tarih,atolye,teslimEden,teslimAlan,renk,termin:document.getElementById('saTermin').value,aciklama:document.getElementById('saAciklama').value.trim(),metre,durum:'bekliyor',createdAt:new Date().toISOString()};
+  _attachNfPhotosToItem(item,'satenaskilik');
+  const list=getData('satenaskilikler');list.unshift(item);setData('satenaskilikler',list);incNextNo();
+  _uploadNfPhotosInBackground(item.id,'satenaskilik');
+  ['saModel','saTarih','saAtolye','saTeslimEden','saTeslimAlan','saRenk','saTermin','saAciklama','saMetre'].forEach(id=>document.getElementById(id).value='');
+  const today=new Date().toISOString().split('T')[0];document.getElementById('saTarih').value=today;
+  toast('Saten Askılık irsaliyesi kaydedildi: '+item.no);refreshHome();refreshSatenaskilikList();
+}
+
+function deleteSatenaskilik(id){if(!confirm('Silinsin mi?'))return;let list=getData('satenaskilikler');list=list.filter(i=>i.id!==id);setData('satenaskilikler',list);refreshSatenaskilikList();toast('Silindi','info');}
+
+function refreshSatenaskilikList(){
+  const list=getData('satenaskilikler');
+  const countEl=document.getElementById('satenaskilikCount');if(countEl)countEl.textContent=list.length;
+  const tbody=document.getElementById('satenaskilikTable');
+  const mobileEl=document.getElementById('satenaskilikMobile');
+  if(!tbody)return;
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
+    if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-layer-group"></i><p>Kayıt yok</p></div>';
+    return;
+  }
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${i.no}</td><td>${i.tarih}</td><td>${i.model}</td><td>${i.atolye}</td><td>${i.renk||'-'}</td><td>${i.metre} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${i.no}</span><span style="color:var(--primary);font-weight:700;">${i.renk||'-'} / ${i.metre} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${i.model}</span><span><i class="fas fa-industry"></i> ${i.atolye}</span><span><i class="fas fa-calendar"></i> ${i.tarih}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+}
+
 // Toptan total live
 document.querySelectorAll('[id^="t_"][id$="a"]').forEach(el=>{
   el.addEventListener('input',()=>{let t=0;['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{t+=+(document.getElementById('t_'+s+'a').value||0);});document.getElementById('tToplam').textContent=t;});
@@ -11166,6 +11252,7 @@ function refreshHome(){
   var lastikler=getData('lastikler')||[];
   var dugmeler=getData('dugmeler')||[];
   var toptanlar=getData('toptanlar')||[];
+  var satenaskilikler=getData('satenaskilikler')||[];
   var atolyeler=getData('atolyeler')||[];
 
   var dayNames=['Pazar','Pazartesi','Sali','Carsamba','Persembe','Cuma','Cumartesi'];
@@ -11183,6 +11270,7 @@ function refreshHome(){
   lastikler.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'lastik'}));});
   dugmeler.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'dugme'}));});
   toptanlar.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'toptan',durum:i.durum||'bekliyor'}));});
+  satenaskilikler.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'satenaskilik'}));});
 
   var todayStr=now.toISOString().split('T')[0];
   var monthStr=todayStr.substring(0,7);
@@ -11203,6 +11291,7 @@ function refreshHome(){
   sv('miniLastik',lastikler.length);
   sv('miniDugme',dugmeler.length);
   sv('miniToptan',toptanlar.length);
+  sv('miniSaten',satenaskilikler.length);
   sv('miniAtolye',atolyeler.length);
 
   // 7 gunluk aktivite grafigi
@@ -11913,7 +12002,7 @@ function setFontSize(val){document.body.style.fontSize=val+'px';setConfig('fontS
 function updateNextNo(){const val=+document.getElementById('nextNo').value;if(val>0){setConfig('nextIrsaliyeNo',val);updateBadge();}}
 
 function exportData(){
-  const data={irsaliyeler:getData('irsaliyeler'),fermuarlar:getData('fermuarlar'),lastikler:getData('lastikler'),dugmeler:getData('dugmeler'),atolyeler:getData('atolyeler'),toptanlar:getData('toptanlar'),stoklar:getData('stoklar'),stokHareketler:getData('stokHareketler'),recycleBin:getData('recycleBin'),config:{nextIrsaliyeNo:getConfig('nextIrsaliyeNo',1),theme:getConfig('theme','default'),fontSize:getConfig('fontSize',14)},exportDate:new Date().toISOString()};
+  const data={irsaliyeler:getData('irsaliyeler'),fermuarlar:getData('fermuarlar'),lastikler:getData('lastikler'),dugmeler:getData('dugmeler'),atolyeler:getData('atolyeler'),toptanlar:getData('toptanlar'),satenaskilikler:getData('satenaskilikler'),stoklar:getData('stoklar'),stokHareketler:getData('stokHareketler'),recycleBin:getData('recycleBin'),config:{nextIrsaliyeNo:getConfig('nextIrsaliyeNo',1),theme:getConfig('theme','default'),fontSize:getConfig('fontSize',14)},exportDate:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='irsaliye-pro-yedek-'+new Date().toISOString().split('T')[0]+'.json';
@@ -11927,7 +12016,7 @@ function importData(e){
     try{
       const data=JSON.parse(ev.target.result);
       // Tum FS_KEYS'i generik olarak yukle — eksik key kalmasin
-      const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
+      const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler',
                       'atolyeler','stoklar','stokHareketler','recycleBin',
                       'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
       fsKeys.forEach(k => { if(Array.isArray(data[k])) setData(k, data[k]); });
@@ -12142,7 +12231,7 @@ function restoreItem(id,type){
   delete cleanItem._type;
   delete cleanItem._deletedAt;
 
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);
   list.unshift(cleanItem);
   setData(key,list);
@@ -12188,6 +12277,7 @@ function refreshPage(page){
   else if(page==='takvim')renderCalendar();
   else if(page==='lastik')refreshLastikList();
   else if(page==='toptan')refreshToptanList();
+  else if(page==='satenaskilik')refreshSatenaskilikList();
   else if(page==='reports'){renderAllReports();}
   else if(page==='geridonusum')renderRecycleBin();
   else if(page==='settings')loadSettings();
@@ -12202,7 +12292,7 @@ function refreshPage(page){
 
 function refreshAll(){
   if(window._isViewerUrl) return;
-  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();renderCalendar();refreshLastikList();refreshToptanList();renderRecycleBin();
+  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();renderRecycleBin();
 }
 
 function loadSettings(){
@@ -12247,7 +12337,7 @@ function updateSelDash(checks){
     const id=cb.dataset.id;
     const type=cb.dataset.type;
     if(!id||!type)return;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     const list=getData(key)||[];
     const item=list.find(i=>String(i.id)===String(id));
     if(item)items.push({...item,_type:type});
@@ -12457,7 +12547,7 @@ function bulkDelete(){
   checks.forEach(cb=>{
     const id=+cb.dataset.id;
     const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     let list=getData(key);
     const item=list.find(i=>i.id===id);
     if(item){
@@ -12477,7 +12567,7 @@ function bulkDurum(durum){
   checks.forEach(cb=>{
     const id=+cb.dataset.id;
     const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     let list=getData(key);const item=list.find(i=>i.id===id);
     if(item){item.durum=durum;setData(key,list);}
   });
@@ -12718,7 +12808,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   })();
 
   const today=new Date().toISOString().split('T')[0];
-  ['iTarih','fTarih','lTarih','dTarih'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
+  ['iTarih','fTarih','lTarih','dTarih','saTarih'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
   const theme=getConfig('theme','default');setTheme(theme);
   const fs=getConfig('fontSize',14);setFontSize(fs);
   refreshAll();
@@ -13038,7 +13128,7 @@ let currentShareItem = null;
 let currentShareType = null;
 
 function openShareMenu(id, type) {
-  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar'};
+  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler'};
   const list = getData(keyMap[type]);
   const item = list.find(i => i.id === id);
   if (!item) return toast('Kayıt bulunamadı','error');
@@ -13060,7 +13150,7 @@ function closeShareMenu() {
 }
 
 function buildShareText(item, type) {
-  const typeLabels = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan'};
+  const typeLabels = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık'};
   let text = `📋 *${typeLabels[type]||'İrsaliye'}*\n`;
   text += `━━━━━━━━━━━━━\n`;
   if (item.no) text += `🔖 No: *${item.no}*\n`;
@@ -13087,6 +13177,7 @@ function buildShareText(item, type) {
   }
   if (type === 'lastik') text += `\n📏 ${item.cm||0} cm × ${item.metre||0} m\n`;
   if (type === 'dugme') text += `\n🔘 ${item.adet||0} adet\n`;
+  if (type === 'satenaskilik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.metre||0} m\n`; }
   if (item.teslimEden) text += `\n👤 Teslim Eden: ${item.teslimEden}`;
   if (item.teslimAlan) text += `\n👤 Teslim Alan: ${item.teslimAlan}`;
   if (item.aciklama || item.not) text += `\n\n📝 Not: ${item.aciklama || item.not}`;
@@ -13173,11 +13264,11 @@ function printCurrentList() {
 function bulkShareWhatsApp() {
   const checks = document.querySelectorAll('.bulk-check[data-id]:checked');
   if (!checks.length) return toast('En az 1 kayıt seçin','error');
-  const typeLabel = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan'};
+  const typeLabel = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık'};
   let text = `📋 *${checks.length} İrsaliye Detayı*\n━━━━━━━━━━━━━\n\n`;
   checks.forEach((cb, idx) => {
     const id = +cb.dataset.id; const type = cb.dataset.type;
-    const key = type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+    const key = type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     const item = getData(key).find(i => i.id === id);
     if (!item) return;
     // Başlık satırı
@@ -13217,6 +13308,10 @@ function bulkShareWhatsApp() {
       if (item.cap) text += `⭕ Çap: ${item.cap}\n`;
       text += `🔘 Adet: *${item.adet||0}*\n`;
     }
+    if (type === 'satenaskilik') {
+      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
+      text += `📏 Metre: *${item.metre||0} m*\n`;
+    }
     if (item.termin) text += `⏰ Termin: ${item.termin}\n`;
     if (item.durum) text += `📌 Durum: ${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}\n`;
     text += `\n`;
@@ -13233,7 +13328,7 @@ function _bulkGetSelectedItems(){
   const items=[];
   checks.forEach(cb=>{
     const id=+cb.dataset.id; const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     const item=getData(key).find(i=>i.id===id);
     if(item) items.push({item,type,key});
   });
@@ -13241,7 +13336,7 @@ function _bulkGetSelectedItems(){
 }
 
 function _singleItemPdfHtml(item, type){
-  const typeLabels={standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş'};
+  const typeLabels={standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi'};
   const typeLabel=typeLabels[type]||'İrsaliye';
   const printDate=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR');
   const qrScanUrl=(typeof _buildQrScanUrl==='function')?_buildQrScanUrl(item,type):'';
@@ -13257,7 +13352,7 @@ function _singleItemPdfHtml(item, type){
     ${item.teslimEden?`<div class="ib"><div class="il">Teslim Eden</div><div class="iv">${item.teslimEden}</div></div>`:''}
     ${item.teslimAlan?`<div class="ib"><div class="il">Teslim Alan</div><div class="iv">${item.teslimAlan}</div></div>`:''}
     ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${item.termin}</div></div>`:''}
-    ${((type==='fermuar'||type==='dugme')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${item.renk}</div></div>`:''}
+    ${((type==='fermuar'||type==='dugme'||type==='satenaskilik')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${item.renk}</div></div>`:''}
   </div>`;
 
   if(type==='standart'&&item.sizes){
@@ -13292,6 +13387,9 @@ function _singleItemPdfHtml(item, type){
     h+=`<div class="st">📦 Beden Detayları</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
     for(let k in item.beden)h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`;
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
+  }
+  if(type==='satenaskilik'){
+    h+=`<div class="st">🪢 Saten Askılık Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(item.aciklama||item.not)h+=`<div class="nb">📝 <b>Not:</b> ${item.aciklama||item.not}</div>`;
 
@@ -13556,7 +13654,7 @@ function bulkPrint(){
 
 // ==== BACKUP / RESTORE ====
 function exportBackup() {
-  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','atolyeler','stoklar','stokHareketler','recycleBin','pinnedItems','dailyGoal'];
+  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','atolyeler','stoklar','stokHareketler','recycleBin','pinnedItems','dailyGoal'];
   const backup = { _version: '1.0', _date: new Date().toISOString(), _app: 'irsaliye-pro', data: {} };
   keys.forEach(k => { backup.data[k] = getData(k); });
   // Configları da ekle
@@ -13621,7 +13719,7 @@ function clearAllData() {
   if (!confirm('⚠️ TÜM VERİLER silinecek! Bu işlem GERİ ALINAMAZ!\n\nDevam etmek için Tamam\'a basın.')) return;
   if (!confirm('Son uyarı: Tüm irsaliyeler, atölyeler, stoklar ve ayarlar silinecek. Emin misiniz?')) return;
   // Firestore ile senkron key'ler — bos dizi yazarak bulutta da siliniyor
-  const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
+  const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler',
                   'atolyeler','stoklar','stokHareketler','recycleBin',
                   'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
   fsKeys.forEach(k => {
@@ -14252,18 +14350,20 @@ document.addEventListener('DOMContentLoaded',function(){
 
 /* ----------------- PAYLAŞILAN YARDIMCILAR ----------------- */
 const TYPE_KEY_MAP = {
-  standart: 'irsaliyeler',
-  fermuar:  'fermuarlar',
-  lastik:   'lastikler',
-  dugme:    'dugmeler',
-  toptan:   'toptanlar'
+  standart:     'irsaliyeler',
+  fermuar:      'fermuarlar',
+  lastik:       'lastikler',
+  dugme:        'dugmeler',
+  toptan:       'toptanlar',
+  satenaskilik: 'satenaskilikler'
 };
 const TYPE_LABEL_MAP = {
-  standart: 'Poşet İrsaliyesi',
-  fermuar:  'Fermuar İrsaliyesi',
-  lastik:   'Lastik İrsaliyesi',
-  dugme:    'Düğme İrsaliyesi',
-  toptan:   'Toptan Sipariş'
+  standart:     'Poşet İrsaliyesi',
+  fermuar:      'Fermuar İrsaliyesi',
+  lastik:       'Lastik İrsaliyesi',
+  dugme:        'Düğme İrsaliyesi',
+  toptan:       'Toptan Sipariş',
+  satenaskilik: 'Saten Askılık İrsaliyesi'
 };
 function _findItemByIdType(id, type){
   const key = TYPE_KEY_MAP[type];
@@ -15672,7 +15772,7 @@ function _attachNfPhotosToItem(item, type){
 
 // Eski kayıtlardaki base64 fotoğrafları temizle (localStorage'i boşalt)
 function cleanupLocalStoragePhotos(){
-  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar'];
+  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler'];
   let cleaned = 0;
 
   keys.forEach(key => {
@@ -16954,7 +17054,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     try{ v8RenderAtolyeCompare(); }catch(e){console.warn('v8 atolye',e);}
     try{ v8RenderTopItems(); }catch(e){console.warn('v8 top',e);}
     // animate existing values
-    ['kpiTotal','kpiBekliyor','kpiTeslim','kpiGecmis','miniStandart','miniFermuar','miniLastik','miniDugme','miniToptan','miniAtolye'].forEach(id=>{
+    ['kpiTotal','kpiBekliyor','kpiTeslim','kpiGecmis','miniStandart','miniFermuar','miniLastik','miniDugme','miniToptan','miniSaten','miniAtolye'].forEach(id=>{
       const el = $(id); if(!el) return;
       const v = parseInt((el.textContent||'0').replace(/\D/g,''),10)||0;
       if(v && !el.dataset.v8poppedOnce){
