@@ -128,9 +128,8 @@
       + '</body></html>';
 
     // ANINDA YAZ — geri kalan HTML dosyasını okumayı DURDUR
-    document.open('text/html','replace');
     document.write(html);
-    document.close();
+    window.stop(); // Tarayıcı geri kalan HTML'i parse etmeyi durdurur
 
   } catch(e) {
     // Hata olursa normal uygulama yüklenir
