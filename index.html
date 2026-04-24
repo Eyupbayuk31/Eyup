@@ -9560,6 +9560,9 @@ function showPage(page){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// HTML escape — XSS koruması için kullanıcı verisini innerHTML'e yazmadan önce çalıştır
+function esc(s){ return s!=null ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
 function toggleSidebar(){
   const sb=document.getElementById('sidebar');
   const ov=document.getElementById('sidebarOverlay');
@@ -9658,7 +9661,7 @@ function toast(msg,type='success'){
 // ==================== ATÖLYE ====================
 function loadAtolyeSelects(){
   const atolyeler=getData('atolyeler');
-  const opts='<option value="">Atölye Seçin</option>'+atolyeler.map(a=>'<option value="'+a.name+'">'+a.name+'</option>').join('');
+  const opts='<option value="">Atölye Seçin</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
   ['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
 }
 
@@ -10535,7 +10538,7 @@ function loadAtolyeFilter(){
   const atolyeler=getData('atolyeler');
   const sel=document.getElementById('filterAtolye');
   const current=sel.value;
-  sel.innerHTML='<option value="all">🏭 Tüm Atölyeler</option>'+atolyeler.map(a=>'<option value="'+a.name+'">'+a.name+'</option>').join('');
+  sel.innerHTML='<option value="all">🏭 Tüm Atölyeler</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
   sel.value=current||'all';
 }
 
@@ -11154,8 +11157,8 @@ function refreshLastikList(){
     mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Kayıt yok</p></div>';
     return;
   }
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${i.no}</td><td>${i.tarih}</td><td>${i.model}</td><td>${i.atolye}</td><td>${i.cm||'-'} cm</td><td>${i.metre} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${i.no}</span><span style="color:var(--primary);font-weight:700;">${i.cm||'-'} cm / ${i.metre} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${i.model}</span><span><i class="fas fa-industry"></i> ${i.atolye}</span><span><i class="fas fa-calendar"></i> ${i.tarih}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
 // ==================== DÜĞME ====================
@@ -11201,8 +11204,8 @@ function refreshToptanList(){
     mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-boxes-stacked"></i><p>Kayıt yok</p></div>';
     return;
   }
-  tbody.innerHTML=list.map(i=>`<tr><td>${i.tarih}</td><td style="font-weight:600;">${i.firma}</td><td>${i.urun||'-'}</td><td><span class="chip chip-info">${i.total} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span style="font-weight:600;">${i.firma}</span><span class="chip chip-info">${i.total} adet</span></div><div class="mc-meta"><span><i class="fas fa-calendar"></i> ${i.tarih}</span>${i.urun?'<span><i class="fas fa-cube"></i> '+i.urun+'</span>':''}</div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td>${esc(i.tarih)}</td><td style="font-weight:600;">${esc(i.firma)}</td><td>${esc(i.urun)||'-'}</td><td><span class="chip chip-info">${+i.total||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span style="font-weight:600;">${esc(i.firma)}</span><span class="chip chip-info">${+i.total||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span>${i.urun?'<span><i class="fas fa-cube"></i> '+esc(i.urun)+'</span>':''}</div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
 // ==================== SATEN ASKILIK ====================
@@ -11235,8 +11238,8 @@ function refreshSatenaskilikList(){
     if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-layer-group"></i><p>Kayıt yok</p></div>';
     return;
   }
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${i.no}</td><td>${i.tarih}</td><td>${i.model}</td><td>${i.atolye}</td><td>${i.renk||'-'}</td><td>${i.metre} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${i.no}</span><span style="color:var(--primary);font-weight:700;">${i.renk||'-'} / ${i.metre} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${i.model}</span><span><i class="fas fa-industry"></i> ${i.atolye}</span><span><i class="fas fa-calendar"></i> ${i.tarih}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'} / ${esc(i.metre)} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
 // Toptan total live
@@ -12292,7 +12295,7 @@ function refreshPage(page){
 
 function refreshAll(){
   if(window._isViewerUrl) return;
-  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();renderRecycleBin();
+  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderStokUtuPaket();}catch(e){}try{renderStokDikim();}catch(e){}try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();renderRecycleBin();
 }
 
 function loadSettings(){
@@ -18590,7 +18593,7 @@ async function _renderPublicViewerFromFirebase(id, type){
     }
 
     // Firebase'den veri çek
-    const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar'};
+    const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler'};
     const key = keyMap[type];
     if(!key){
       throw new Error('Geçersiz irsaliye tipi: ' + type);
