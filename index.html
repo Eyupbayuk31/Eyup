@@ -6,27 +6,137 @@
   <meta http-equiv="Expires" content="0">
   <meta name="app-version" content="fs-v10-viewer-fix-2026-04-24">
   <script>
-    // QR viewer URL'si tespiti — flag set et + ilk DOMContentLoaded'ı buraya kaydet
-    (function(){
-      var _hasV = window.location.search.includes('v=') || window.location.hash.includes('v=');
-      if(!_hasV) return;
-      window._isViewerUrl = true;
+// ====================================================================
+// VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
+// QR URL tespit edilirse viewer HTML'i ANINDA yazılır, uygulama ASLA başlamaz
+// ====================================================================
+(function(){
+  try {
+    var search = window.location.search;
+    var hash   = window.location.hash || '';
+    var vParam = null;
 
-      // Bu DOMContentLoaded tüm script'lerden ÖNCE kayıt edildiği için EN ÖNCE çalışır.
-      // Tüm fonksiyonlar parse edilmiş olacak (DOMContentLoaded garantisi).
-      document.addEventListener('DOMContentLoaded', function _earlyViewerCheck(){
-        try {
-          if(typeof _checkAndRenderPublicViewer === 'function'){
-            var ok = _checkAndRenderPublicViewer();
-            if(!ok){
-              document.documentElement.innerHTML = '<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hatalı QR</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef2f2;margin:0;"><div style="text-align:center;padding:32px;"><div style="font-size:52px;">&#x26A0;</div><div style="font-size:20px;font-weight:700;color:#dc2626;margin:12px 0 8px;">QR Kod Hatalı</div><div style="font-size:14px;color:#6b7280;">Bu QR kod okunamadı.<br>Yeni bir PDF oluşturup tekrar deneyin.</div></div></body></html>';
-            }
-          }
-        } catch(e) {
-          console.error('Viewer early check error:', e);
-        }
-      });
-    })();
+    // Query string: ?v=...
+    var qMatch = search.match(/[?&]v=([^&]+)/);
+    if(qMatch) vParam = qMatch[1];
+    // Hash: #v=...
+    if(!vParam){ var hMatch = hash.match(/[#&]?v=([^&]+)/); if(hMatch) vParam = hMatch[1]; }
+    if(!vParam) return; // Normal sayfa — devam et
+
+    // Base64 decode
+    var b64 = vParam.replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length % 4) b64 += '=';
+    var json = decodeURIComponent(escape(atob(b64)));
+    var d    = JSON.parse(json);
+    if(!d || d.app !== 'irsaliyepro') return; // Yanlış format — devam et
+
+    // ✅ Geçerli viewer URL — viewer HTML'i yaz
+    window._isViewerUrl = true;
+    window._viewerRendered = true;
+
+    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş'};
+    var SIZE_NAMES = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+    var typeLabel  = TYPE_NAMES[d.type] || 'İrsaliye';
+    var durumBadge = d.durum === 'teslim'
+      ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">✓ Teslim Edildi</span>'
+      : '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;">⏳ Bekliyor</span>';
+
+    // Boyut tablosu
+    var sizesHtml = '';
+    if(d.sizes){
+      var rows = Object.keys(d.sizes).filter(function(k){return +d.sizes[k]>0;})
+        .map(function(k){return '<tr><td>'+(SIZE_NAMES[k]||k)+'</td><td>'+d.sizes[k]+'</td></tr>';}).join('');
+      if(rows){
+        var total = Object.values(d.sizes).reduce(function(a,b){return a+(+b||0);},0);
+        sizesHtml += '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">📦 Poşet Ölçüleri</h3><table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr><th style="background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700;">Ölçü</th><th style="background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700;">Adet</th></tr></thead><tbody>'+rows+'</tbody></table><div style="text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;border-top:2px solid #7c3aed;margin-top:8px;">Toplam: '+total+'</div>';
+      }
+    }
+
+    // Fotoğraflar
+    var photoHtml = '';
+    if(d.photos && Array.isArray(d.photos) && d.photos.length > 0){
+      var imgs = d.photos.map(function(p,i){
+        return '<div style="border:1px solid #ede9fe;border-radius:10px;padding:8px;background:#f9fafb;">'
+          +'<a href="'+p.url+'" target="_blank" rel="noopener">'
+          +'<img src="'+p.url+'" alt="Kanıt '+(i+1)+'" style="display:block;width:100%;height:auto;max-height:250px;object-fit:contain;border-radius:8px;cursor:zoom-in;" '
+          +'onerror="this.parentNode.parentNode.innerHTML=\'<div style=&quot;padding:16px;background:#fef2f2;color:#991b1b;text-align:center;&quot;>⚠️ Fotoğraf yüklenemedi</div>\'">'
+          +'</a></div>';
+      }).join('');
+      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">📸 Kanıt Fotoğrafları ('+d.photos.length+')</h3>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;">'+imgs+'</div>'
+        +'<div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>';
+    } else if(d.photoUrl){
+      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">📸 Ürün Fotoğrafı</h3>'
+        +'<a href="'+d.photoUrl+'" target="_blank" rel="noopener">'
+        +'<img src="'+d.photoUrl+'" alt="Fotoğraf" style="display:block;width:100%;height:auto;max-height:300px;object-fit:contain;border-radius:10px;">'
+        +'</a>';
+    } else {
+      photoHtml = '<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;margin-top:12px;">⚠️ Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.</div>';
+    }
+
+    // Info satırları
+    function infoItem(label, value){ if(!value) return ''; return '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-radius:10px;padding:10px 12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;word-break:break-word;">'+value+'</div></div>'; }
+
+    var infoHtml = ''
+      + infoItem('Tarih', d.tarih)
+      + '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-radius:10px;padding:10px 12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">Durum</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+durumBadge+'</div></div>'
+      + infoItem('Model / Ürün', d.model || d.urun)
+      + infoItem(d.atolye ? 'Atölye' : 'Firma', d.atolye || d.firma)
+      + infoItem('Teslim Eden', d.teslimEden)
+      + infoItem('Teslim Alan', d.teslimAlan)
+      + infoItem('Termin', d.termin);
+
+    var printDate = new Date().toLocaleString('tr-TR');
+
+    var html = '<!DOCTYPE html><html lang="tr"><head>'
+      + '<meta charset="UTF-8">'
+      + '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">'
+      + '<title>'+(d.no||'')+(d.no?' — ':'')+typeLabel+'</title>'
+      + '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">'
+      + '<style>'
+      + '*{margin:0;padding:0;box-sizing:border-box;}'
+      + 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f5f3ff;color:#1a1a2e;padding:16px;line-height:1.5;min-height:100vh;}'
+      + '.wrap{max-width:720px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(124,58,237,.15);overflow:hidden;}'
+      + '.hdr{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;padding:24px 20px;}'
+      + '.hdr h1{font-size:22px;font-weight:800;display:flex;align-items:center;gap:10px;}'
+      + '.no{font-size:24px;font-weight:800;letter-spacing:.5px;}'
+      + '.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}'
+      + '.ftr{padding:16px 20px;background:#f8f7fc;border-top:1px solid #ede9fe;text-align:center;font-size:11px;color:#6b7280;}'
+      + '.print-bar{padding:16px;text-align:center;background:#f5f3ff;}'
+      + '.print-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(124,58,237,.35);}'
+      + '@media(max-width:600px){.info-grid{grid-template-columns:1fr;}.hdr h1{font-size:18px;}.no{font-size:20px;}}'
+      + '@media print{body{background:#fff;padding:0;}.wrap{box-shadow:none;border-radius:0;}.print-bar{display:none!important;}}'
+      + '</style></head><body>'
+      + '<div class="wrap">'
+      + '<div class="hdr">'
+      + '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(124,58,237,.1);color:#c4b5fd;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:10px;"><i class="fas fa-eye"></i> Sadece Görüntüleme</div>'
+      + '<h1>📦 '+typeLabel+'</h1>'
+      + '<div style="font-size:12px;opacity:.85;margin-top:4px;">İrsaliye Pro — Eyüp</div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;flex-wrap:wrap;gap:8px;">'
+      + '<div class="no">'+(d.no||'—')+'</div>'
+      + '<div style="font-size:11px;opacity:.85;">Açılış: '+printDate+'</div>'
+      + '</div></div>'
+      + '<div style="padding:20px;">'
+      + '<div class="info-grid">'+infoHtml+'</div>'
+      + sizesHtml
+      + (d.aciklama ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;color:#92400e;">📝 <b>Not:</b> '+d.aciklama+'</div>' : '')
+      + '<div style="margin-top:18px;">'+photoHtml+'</div>'
+      + '</div>'
+      + '<div class="ftr">İrsaliye Pro v10 — QR ile açılan şifresiz görüntüleyici</div>'
+      + '</div>'
+      + '<div class="print-bar"><button onclick="window.print()" class="print-btn">🖨️ PDF Kaydet / Yazdır</button></div>'
+      + '</body></html>';
+
+    // ANINDA YAZ — geri kalan HTML dosyasını okumayı DURDUR
+    document.open('text/html','replace');
+    document.write(html);
+    document.close();
+
+  } catch(e) {
+    // Hata olursa normal uygulama yüklenir
+    console.error('Viewer interceptor failed:', e);
+  }
+})();
   </script>
   <!--
     ═══════════════════════════════════════════════════════════════════════
