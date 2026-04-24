@@ -35,22 +35,57 @@
     window._viewerRendered = true;
 
     var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş'};
-    var SIZE_NAMES = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+    var SIZE_NAMES  = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+    var BANT_NAMES  = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
+    var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
     var typeLabel  = TYPE_NAMES[d.type] || 'İrsaliye';
     var durumBadge = d.durum === 'teslim'
       ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">✓ Teslim Edildi</span>'
       : '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;">⏳ Bekliyor</span>';
 
-    // Boyut tablosu
+    function tbl(baslik, cols, rows, toplam){
+      if(!rows) return '';
+      return '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">'+baslik+'</h3>'
+        +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr>'
+        +cols.map(function(c){return '<th style="background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700;">'+c+'</th>';}).join('')
+        +'</tr></thead><tbody>'+rows+'</tbody></table>'
+        +(toplam!=null?'<div style="text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;border-top:2px solid #7c3aed;margin-top:8px;">Toplam: '+toplam+'</div>':'');
+    }
+
+    // Tüm irsaliye tipleri için boyut/detay tablosu
     var sizesHtml = '';
     if(d.sizes){
       var rows = Object.keys(d.sizes).filter(function(k){return +d.sizes[k]>0;})
-        .map(function(k){return '<tr><td>'+(SIZE_NAMES[k]||k)+'</td><td>'+d.sizes[k]+'</td></tr>';}).join('');
+        .map(function(k){return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(SIZE_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.sizes[k]+'</td></tr>';}).join('');
       if(rows){
         var total = Object.values(d.sizes).reduce(function(a,b){return a+(+b||0);},0);
-        sizesHtml += '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">📦 Poşet Ölçüleri</h3><table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr><th style="background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700;">Ölçü</th><th style="background:#f3f0ff;color:#5b21b6;font-size:11px;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700;">Adet</th></tr></thead><tbody>'+rows+'</tbody></table><div style="text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;border-top:2px solid #7c3aed;margin-top:8px;">Toplam: '+total+'</div>';
+        sizesHtml += tbl('📦 Poşet Ölçüleri',['Ölçü','Adet'],rows,total);
       }
     }
+    if(d.bant){
+      var rows2 = Object.keys(d.bant).filter(function(k){return +d.bant[k]>0;})
+        .map(function(k){return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BANT_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.bant[k]+'</td></tr>';}).join('');
+      if(rows2){
+        var total2 = Object.values(d.bant).reduce(function(a,b){return a+(+b||0);},0);
+        sizesHtml += tbl('🎀 Bant & Kılçık',['Ürün','Adet'],rows2,total2);
+      }
+    }
+    if(d.beden){
+      var rows3 = Object.keys(d.beden).map(function(k){
+        var v = d.beden[k];
+        if(typeof v === 'object') return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(v.cm||'-')+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(v.adet||0)+'</td></tr>';
+        return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td colspan="2" style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+v+'</td></tr>';
+      }).join('');
+      sizesHtml += tbl('🔗 Beden Detayları',['Beden','CM','Adet'],rows3, d.total||null);
+    }
+    if(d.cm || d.metre || d.adet){
+      var rows4 = '';
+      if(d.cm)    rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">CM</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.cm+'</td></tr>';
+      if(d.metre) rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">Metre</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.metre+'</td></tr>';
+      if(d.adet)  rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">Adet</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.adet+'</td></tr>';
+      sizesHtml += tbl('📏 Detaylar',['Alan','Değer'],rows4,null);
+    }
+    if(d.totalAdet) sizesHtml += '<div style="text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;">Toplam Adet: '+d.totalAdet+'</div>';
 
     // Fotoğraflar
     var photoHtml = '';
