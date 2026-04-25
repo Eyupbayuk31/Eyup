@@ -7783,7 +7783,7 @@ body::after{
     <a href="javascript:void(0)" onclick="showPage('dugme')"><i class="fas fa-circle-dot"></i><span>Düğme İrsaliyesi</span></a>
     <a href="javascript:void(0)" onclick="showPage('toptan')"><i class="fas fa-boxes-stacked"></i><span>Toptan Sipariş</span></a>
     <a href="javascript:void(0)" onclick="showPage('satenaskilik')"><i class="fas fa-layer-group"></i><span>Saten Askılık</span></a>
-    <a href="javascript:void(0)" onclick="showPage('kordon')"><i class="fas fa-rope"></i><span>Kordon İrsaliyesi</span></a>
+    <a href="javascript:void(0)" onclick="showPage('kordon')"><i class="fas fa-bezier-curve"></i><span>Kordon İrsaliyesi</span></a>
 
     <div class="nav-section">Stok Takibi</div>
     <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
@@ -8010,7 +8010,7 @@ body::after{
       <div class="db-mini-lbl">Saten</div>
     </div>
     <div class="db-mini-card" onclick="showPage('kordon')">
-      <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-rope"></i></div>
+      <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-bezier-curve"></i></div>
       <div class="db-mini-val" id="miniKordon">0</div>
       <div class="db-mini-lbl">Kordon</div>
     </div>
@@ -8412,7 +8412,7 @@ body::after{
           </div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="fas fa-rope"></i> Kordon Ölçüleri (CM &amp; Adet)</div>
+          <div class="card-title"><i class="fas fa-bezier-curve"></i> Kordon Ölçüleri (CM &amp; Adet)</div>
           <div class="table-wrap">
             <table style="min-width:auto;">
               <thead><tr><th>#</th><th>CM</th><th>Adet</th></tr></thead>
@@ -10575,7 +10575,7 @@ function renderTypeFilterBar(){
     {key:'dugme',label:'Düğme',icon:'fas fa-circle-dot'},
     {key:'toptan',label:'Toptan',icon:'fas fa-boxes-stacked'},
     {key:'satenaskilik',label:'Saten',icon:'fas fa-layer-group'},
-    {key:'kordon',label:'Kordon',icon:'fas fa-rope'},
+    {key:'kordon',label:'Kordon',icon:'fas fa-bezier-curve'},
   ];
   
   document.getElementById('typeFilterBar').innerHTML=types.map(t=>`
@@ -10869,7 +10869,7 @@ function showDetailUni(id,type){
   }
   if(type==='kordon'&&item.olcular&&item.olcular.length){
     if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid #7c3aed;border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
-    html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-rope"></i> Kordon Ölçüleri</div>';
+    html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-bezier-curve"></i> Kordon Ölçüleri</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     item.olcular.forEach(o=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;"><b>${o.cm} cm</b> → ${o.adet} adet</div>`;});
     html+='</div>';
@@ -11324,7 +11324,7 @@ function refreshKordonList(){
   if(!tbody)return;
   if(!list.length){
     tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
-    if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-rope"></i><p>Kayıt yok</p></div>';
+    if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-bezier-curve"></i><p>Kayıt yok</p></div>';
     return;
   }
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${i.totalAdet||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
