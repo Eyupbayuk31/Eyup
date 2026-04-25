@@ -8301,6 +8301,7 @@ body::after{
             <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label><select class="form-input" id="lAtolye"><option value="">Atölye Seçin</option></select></div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="lTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="lTeslimAlan"></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="lRenk" placeholder="Örn: Siyah, Beyaz, Ekru…"></div>
             <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="lTermin" type="date"></div>
             <div class="form-group"><label>Açıklama</label><input class="form-input" id="lAciklama"></div>
           </div>
@@ -8323,7 +8324,7 @@ body::after{
       </div>
       <div class="card" style="margin-top:16px;">
         <div class="card-title"><i class="fas fa-list"></i> Lastik Kayıtları (<span id="lastikCount">0</span>)</div>
-        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>CM</th><th>Metre</th><th>İşlem</th></tr></thead><tbody id="lastikTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>CM</th><th>Metre</th><th>İşlem</th></tr></thead><tbody id="lastikTable"></tbody></table></div>
         <div class="table-mobile" id="lastikMobile" style="display:none;"></div>
       </div>
     </div>
@@ -10902,6 +10903,7 @@ function showDetailUni(id,type){
     html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.totalAdet||0} adet</div>`;
   }
   if(type==='lastik'){
+    if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid #7c3aed;border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
     html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Genişlik (CM)</div><div style="font-size:20px;font-weight:800;">${item.cm||'-'} cm</div></div>
       <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>
@@ -11117,11 +11119,18 @@ function generatePDF(id, type) {
   }
 
   if (type === 'lastik') {
-    html += `<div class="section-title">📏 Lastik Miktarı</div>
-    <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
-      <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
-      <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
-    </div>`;
+    html += `<div class="section-title">📏 Lastik Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.cm||0}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">CM</div>
+      </div>
+      <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
+      </div>
+    </div>
+    ${item.renk ? `<div style="margin-top:12px;background:#f3f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px;text-align:center;border-left:4px solid #7c3aed;"><div style="font-size:18px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div></div>` : ''}`;
   }
 
   if (type === 'dugme') {
@@ -11265,14 +11274,16 @@ document.querySelectorAll('[id^="fer_"][id$="a"]').forEach(el=>{
 function saveLastik(){
   const model=document.getElementById('lModel').value.trim();const tarih=document.getElementById('lTarih').value;
   const atolye=document.getElementById('lAtolye').value;const teslimEden=document.getElementById('lTeslimEden').value.trim();
-  const teslimAlan=document.getElementById('lTeslimAlan').value.trim();const cm=+(document.getElementById('lCm').value||0);const metre=+(document.getElementById('lMetre').value||0);
-  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!cm||!metre)return toast('Zorunlu alanları doldurun (CM ve Metre)','error');
+  const teslimAlan=document.getElementById('lTeslimAlan').value.trim();const renk=document.getElementById('lRenk').value.trim();
+  const cm=+(document.getElementById('lCm').value||0);const metre=+(document.getElementById('lMetre').value||0);
+  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
+  if(!cm||!metre)return toast('CM ve Metre alanları zorunludur','error');
   const no=getNextNo();
-  const item={id:Date.now(),no:'LAS-'+String(no).padStart(3,'0'),type:'lastik',model,tarih,atolye,teslimEden,teslimAlan,termin:document.getElementById('lTermin').value,aciklama:document.getElementById('lAciklama').value.trim(),cm,metre,durum:'bekliyor',createdAt:new Date().toISOString()};
+  const item={id:Date.now(),no:'LAS-'+String(no).padStart(3,'0'),type:'lastik',model,tarih,atolye,teslimEden,teslimAlan,renk,termin:document.getElementById('lTermin').value,aciklama:document.getElementById('lAciklama').value.trim(),cm,metre,durum:'bekliyor',createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'lastik');
   const list=getData('lastikler');list.unshift(item);setData('lastikler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'lastik');
-  ['lModel','lTarih','lAtolye','lTeslimEden','lTeslimAlan','lTermin','lAciklama','lCm','lMetre'].forEach(id=>document.getElementById(id).value='');
+  ['lModel','lTarih','lAtolye','lTeslimEden','lTeslimAlan','lRenk','lTermin','lAciklama','lCm','lMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const today=new Date().toISOString().split('T')[0];document.getElementById('lTarih').value=today;
   refreshLastikList();toast('Lastik irsaliyesi kaydedildi: '+item.no);refreshHome();
 }
@@ -11285,12 +11296,12 @@ function refreshLastikList(){
   const tbody=document.getElementById('lastikTable');
   const mobileEl=document.getElementById('lastikMobile');
   if(!list.length){
-    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Kayıt yok</p></div>';
     return;
   }
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">📐 ${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
 // ==================== DÜĞME ====================
@@ -13407,7 +13418,7 @@ function buildShareText(item, type) {
     const total = item.totalAdet || item.total || 0;
     if (total) text += `\n📊 Toplam: *${total} adet*\n`;
   }
-  if (type === 'lastik') text += `\n📏 ${item.cm||0} cm × ${item.metre||0} m\n`;
+  if (type === 'lastik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.cm||0} cm × ${item.metre||0} m\n`; }
   if (type === 'dugme') text += `\n🔘 ${item.adet||0} adet\n`;
   if (type === 'satenaskilik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.metre||0} m\n`; }
   if (type === 'kordon' && item.olcular) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Ölçüler:\n`+item.olcular.map(o=>`  • ${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `📊 Toplam: *${item.totalAdet||0} adet*\n`; }
@@ -14870,7 +14881,7 @@ function _fillPageFromData(page, data){
   const map = {
     new: { model:'iModel', tarih:'iTarih', atolye:'iAtolye', teslimEden:'iTeslimEden', teslimAlan:'iTeslimAlan', termin:'iTermin', durum:'iDurum', aciklama:'iAciklama' },
     fermuar: { model:'fModel', tarih:'fTarih', atolye:'fAtolye', teslimEden:'fTeslimEden', teslimAlan:'fTeslimAlan', termin:'fTermin', aciklama:'fAciklama' },
-    lastik: { model:'lModel', tarih:'lTarih', atolye:'lAtolye', teslimEden:'lTeslimEden', teslimAlan:'lTeslimAlan', termin:'lTermin', aciklama:'lAciklama', cm:'lCm', metre:'lMetre' },
+    lastik: { model:'lModel', tarih:'lTarih', atolye:'lAtolye', teslimEden:'lTeslimEden', teslimAlan:'lTeslimAlan', renk:'lRenk', termin:'lTermin', aciklama:'lAciklama', cm:'lCm', metre:'lMetre' },
     dugme:  { model:'dModel', tarih:'dTarih', atolye:'dAtolye', teslimEden:'dTeslimEden', teslimAlan:'dTeslimAlan', termin:'dTermin', aciklama:'dAciklama', adet:'dAdet' },
     toptan: { firma:'tFirma', urun:'tUrun', not:'tNot' }
   }[page] || {};
