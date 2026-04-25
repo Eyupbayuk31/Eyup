@@ -8450,7 +8450,7 @@ body::after{
     <!-- ========== DANTEL ========== -->
     <div class="page" id="page-dantel">
       <div class="section-header">
-        <div><h2>Dantel İrsaliyesi</h2><p>CM ve metre bazlı dantel sevki</p></div>
+        <div><h2>Dantel İrsaliyesi</h2><p>Metre bazlı dantel sevki</p></div>
         <button class="btn btn-primary" onclick="saveDantel()"><i class="fas fa-save"></i> Kaydet</button>
       </div>
       <div class="grid-auto">
@@ -8469,13 +8469,7 @@ body::after{
         </div>
         <div class="card">
           <div class="card-title"><i class="fas fa-border-all"></i> Dantel Ölçüleri</div>
-          <div class="form-group"><label>Genişlik (CM) *</label>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input class="form-input" type="number" id="danCm" placeholder="0" min="0" step="0.1" style="flex:1;">
-              <span style="font-weight:700;color:var(--text-dim);font-size:12px;">CM</span>
-            </div>
-          </div>
-          <div class="form-group" style="margin-top:12px;"><label>Toplam Metre *</label>
+          <div class="form-group"><label>Toplam Metre *</label>
             <div style="display:flex;align-items:center;gap:8px;">
               <input class="form-input" type="number" id="danMetre" placeholder="0" min="0" step="0.1" style="flex:1;">
               <span style="font-weight:700;color:var(--text-dim);font-size:12px;">METRE</span>
@@ -8485,7 +8479,7 @@ body::after{
       </div>
       <div class="card" style="margin-top:14px;">
         <div class="card-title"><i class="fas fa-list"></i> Dantel Kayıtları (<span id="dantelCount">0</span>)</div>
-        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>CM</th><th>Metre</th><th>İşlem</th></tr></thead><tbody id="dantelTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>Metre</th><th>İşlem</th></tr></thead><tbody id="dantelTable"></tbody></table></div>
         <div class="table-mobile" id="dantelMobile" style="display:none;"></div>
       </div>
     </div>
@@ -10741,7 +10735,7 @@ function getItemDetail(item){
   if(item._type==='toptan')return item.total?item.total+' adet':'—';
   if(item._type==='satenaskilik')return (item.renk?item.renk+' / ':'')+item.metre+' m';
   if(item._type==='kordon')return item.totalAdet?item.totalAdet+' adet':'—';
-  if(item._type==='dantel')return (item.cm?item.cm+' cm / ':'')+item.metre+' m';
+  if(item._type==='dantel')return item.metre+' m';
   return '—';
 }
 
@@ -10923,10 +10917,7 @@ function showDetailUni(id,type){
   }
   if(type==='dantel'){
     if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid #7c3aed;border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
-    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Genişlik (CM)</div><div style="font-size:20px;font-weight:800;">${item.cm||'-'} cm</div></div>
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>
-    </div>`;
+    html+=`<div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Toplam Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>`;
   }
   if(type==='kordon'&&item.olcular&&item.olcular.length){
     if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid #7c3aed;border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
@@ -11409,16 +11400,15 @@ function saveDantel(){
   const teslimEden=document.getElementById('danTeslimEden').value.trim();
   const teslimAlan=document.getElementById('danTeslimAlan').value.trim();
   const renk=document.getElementById('danRenk').value.trim();
-  const cm=+(document.getElementById('danCm').value||0);
   const metre=+(document.getElementById('danMetre').value||0);
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
-  if(!cm||!metre)return toast('CM ve Metre alanları zorunludur','error');
+  if(!metre)return toast('Metre alanı zorunludur','error');
   const no=getNextNo();
-  const item={id:Date.now(),no:'DAN-'+String(no).padStart(3,'0'),type:'dantel',model,tarih,atolye,teslimEden,teslimAlan,renk,cm,metre,termin:document.getElementById('danTermin').value,aciklama:document.getElementById('danAciklama').value.trim(),durum:'bekliyor',createdAt:new Date().toISOString()};
+  const item={id:Date.now(),no:'DAN-'+String(no).padStart(3,'0'),type:'dantel',model,tarih,atolye,teslimEden,teslimAlan,renk,metre,termin:document.getElementById('danTermin').value,aciklama:document.getElementById('danAciklama').value.trim(),durum:'bekliyor',createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'dantel');
   const list=getData('danteller');list.unshift(item);setData('danteller',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'dantel');
-  ['danModel','danTarih','danAtolye','danTeslimEden','danTeslimAlan','danRenk','danTermin','danAciklama','danCm','danMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['danModel','danTarih','danAtolye','danTeslimEden','danTeslimAlan','danRenk','danTermin','danAciklama','danMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('danTarih');if(dt)dt.value=today;
   toast('Dantel irsaliyesi kaydedildi: '+item.no);refreshHome();refreshDantelList();
 }
@@ -11432,12 +11422,12 @@ function refreshDantelList(){
   const mobileEl=document.getElementById('dantelMobile');
   if(!tbody)return;
   if(!list.length){
-    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-border-all"></i><p>Kayıt yok</p></div>';
     return;
   }
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">📐 ${esc(i.cm)} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">🕸️ ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
 // ==================== SATEN ASKILIK ====================
@@ -13422,7 +13412,7 @@ function buildShareText(item, type) {
   if (type === 'dugme') text += `\n🔘 ${item.adet||0} adet\n`;
   if (type === 'satenaskilik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.metre||0} m\n`; }
   if (type === 'kordon' && item.olcular) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Ölçüler:\n`+item.olcular.map(o=>`  • ${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `📊 Toplam: *${item.totalAdet||0} adet*\n`; }
-  if (type === 'dantel') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.cm||0} cm × ${item.metre||0} m\n`; }
+  if (type === 'dantel') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `🕸️ ${item.metre||0} m\n`; }
   if (item.teslimEden) text += `\n👤 Teslim Eden: ${item.teslimEden}`;
   if (item.teslimAlan) text += `\n👤 Teslim Alan: ${item.teslimAlan}`;
   if (item.aciklama || item.not) text += `\n\n📝 Not: ${item.aciklama || item.not}`;
@@ -13564,7 +13554,7 @@ function bulkShareWhatsApp() {
     }
     if (type === 'dantel') {
       if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
-      text += `🕸️ Ölçü: *${item.cm||0} cm × ${item.metre||0} m*\n`;
+      text += `🕸️ *${item.metre||0} m*\n`;
     }
     if (item.termin) text += `⏰ Termin: ${item.termin}\n`;
     if (item.durum) text += `📌 Durum: ${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}\n`;
@@ -13647,8 +13637,7 @@ function _singleItemPdfHtml(item, type){
   }
   if(type==='dantel'){
     h+=`<div class="st">🕸️ Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
-    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
-    if(item.renk)h+=`<div style="margin-top:10px;background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`;
+    h+=`<div style="display:grid;grid-template-columns:1fr ${item.renk?'1fr':''};gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='kordon'&&item.olcular&&item.olcular.length){
     h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
