@@ -34,7 +34,7 @@
     window._isViewerUrl = true;
     window._viewerRendered = true;
 
-    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi'};
+    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
     var SIZE_NAMES  = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     var BANT_NAMES  = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
     var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
@@ -259,7 +259,7 @@
 
     // Firestore'a senkronlanan key'ler. Bunun disindakiler sadece localStorage.
     const FS_KEYS = [
-      'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar',
+      'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
       'atolyeler','stoklar','stokHareketler','recycleBin',
       'irsaliye_users','sablonlar','takvimler','aksesuarlar',
       'irsaliye_github_cfg'  // admin'in token'i tum cihazlarda paylasilsin
@@ -7784,6 +7784,7 @@ body::after{
     <a href="javascript:void(0)" onclick="showPage('toptan')"><i class="fas fa-boxes-stacked"></i><span>Toptan Sipariş</span></a>
     <a href="javascript:void(0)" onclick="showPage('satenaskilik')"><i class="fas fa-layer-group"></i><span>Saten Askılık</span></a>
     <a href="javascript:void(0)" onclick="showPage('kordon')"><i class="fas fa-bezier-curve"></i><span>Kordon İrsaliyesi</span></a>
+    <a href="javascript:void(0)" onclick="showPage('dantel')"><i class="fas fa-border-all"></i><span>Dantel İrsaliyesi</span></a>
 
     <div class="nav-section">Stok Takibi</div>
     <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
@@ -8013,6 +8014,11 @@ body::after{
       <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-bezier-curve"></i></div>
       <div class="db-mini-val" id="miniKordon">0</div>
       <div class="db-mini-lbl">Kordon</div>
+    </div>
+    <div class="db-mini-card" onclick="showPage('dantel')">
+      <div class="db-mini-icon" style="background:rgba(99,102,241,0.12);color:#6366f1"><i class="fas fa-border-all"></i></div>
+      <div class="db-mini-val" id="miniDantel">0</div>
+      <div class="db-mini-lbl">Dantel</div>
     </div>
     <div class="db-mini-card" onclick="showPage('atolye')">
       <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-industry"></i></div>
@@ -8437,6 +8443,49 @@ body::after{
         <div class="card-title"><i class="fas fa-list"></i> Kordon Kayıtları (<span id="kordonCount">0</span>)</div>
         <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>Toplam Adet</th><th>İşlem</th></tr></thead><tbody id="kordonTable"></tbody></table></div>
         <div class="table-mobile" id="kordonMobile" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ========== DANTEL ========== -->
+    <div class="page" id="page-dantel">
+      <div class="section-header">
+        <div><h2>Dantel İrsaliyesi</h2><p>CM ve metre bazlı dantel sevki</p></div>
+        <button class="btn btn-primary" onclick="saveDantel()"><i class="fas fa-save"></i> Kaydet</button>
+      </div>
+      <div class="grid-auto">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-info-circle"></i> Sevk Bilgileri</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+            <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="danModel" placeholder="Örn: DAN-001"></div>
+            <div class="form-group"><label>Tarih *</label><input class="form-input" id="danTarih" type="date"></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label><select class="form-input" id="danAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="danTeslimEden"></div>
+            <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="danTeslimAlan"></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="danRenk" placeholder="Örn: Siyah, Beyaz, Ekru…"></div>
+            <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="danTermin" type="date"></div>
+            <div class="form-group"><label>Açıklama</label><input class="form-input" id="danAciklama"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-border-all"></i> Dantel Ölçüleri</div>
+          <div class="form-group"><label>Genişlik (CM) *</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input class="form-input" type="number" id="danCm" placeholder="0" min="0" step="0.1" style="flex:1;">
+              <span style="font-weight:700;color:var(--text-dim);font-size:12px;">CM</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px;"><label>Toplam Metre *</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input class="form-input" type="number" id="danMetre" placeholder="0" min="0" step="0.1" style="flex:1;">
+              <span style="font-weight:700;color:var(--text-dim);font-size:12px;">METRE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title"><i class="fas fa-list"></i> Dantel Kayıtları (<span id="dantelCount">0</span>)</div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>CM</th><th>Metre</th><th>İşlem</th></tr></thead><tbody id="dantelTable"></tbody></table></div>
+        <div class="table-mobile" id="dantelMobile" style="display:none;"></div>
       </div>
     </div>
 
@@ -9578,7 +9627,7 @@ function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 function showPage(page){
@@ -9588,7 +9637,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','stok','stok-utupaket','stok-dikim','aksesuar','atolye','takvim','reports','qr','signature','templates','geridonusum','settings'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','stok-utupaket','stok-dikim','aksesuar','atolye','takvim','reports','qr','signature','templates','geridonusum','settings'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -9601,7 +9650,7 @@ function showPage(page){
   
   if(window.innerWidth<=768)closeSidebar();
   // Form sayfalarında fotoğraf bölümünü taşı
-  const _nfFormPages = ['new','fermuar','lastik','dugme','satenaskilik','kordon'];
+  const _nfFormPages = ['new','fermuar','lastik','dugme','satenaskilik','kordon','dantel'];
   const _nfSection = document.getElementById('newFormPhotoSection');
   if(_nfSection){
     if(_nfFormPages.includes(page)){
@@ -9724,7 +9773,7 @@ function toast(msg,type='success'){
 function loadAtolyeSelects(){
   const atolyeler=getData('atolyeler');
   const opts='<option value="">Atölye Seçin</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
-  ['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye','korAtolye'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  ['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye','korAtolye','danAtolye'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
 }
 
 function addAtolye(){
@@ -10559,13 +10608,14 @@ function getUnifiedList(){
   const toptan=getData('toptanlar').map(i=>({...i,_type:'toptan',durum:i.durum||'bekliyor',teslimEden:'',teslimAlan:''}));
   const satenaskilik=getData('satenaskilikler').map(i=>({...i,_type:'satenaskilik'}));
   const kordon=getData('kordonlar').map(i=>({...i,_type:'kordon'}));
-  return [...standart,...fermuar,...lastik,...dugme,...toptan,...satenaskilik,...kordon];
+  const dantel=getData('danteller').map(i=>({...i,_type:'dantel'}));
+  return [...standart,...fermuar,...lastik,...dugme,...toptan,...satenaskilik,...kordon,...dantel];
 }
 
 function renderTypeFilterBar(){
   const all=getUnifiedList();
   const counts={all:all.length};
-  ['standart','fermuar','lastik','dugme','toptan','satenaskilik','kordon'].forEach(t=>{counts[t]=all.filter(i=>i._type===t).length;});
+  ['standart','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel'].forEach(t=>{counts[t]=all.filter(i=>i._type===t).length;});
 
   const types=[
     {key:'all',label:'Tümü',icon:'fas fa-layer-group'},
@@ -10576,6 +10626,7 @@ function renderTypeFilterBar(){
     {key:'toptan',label:'Toptan',icon:'fas fa-boxes-stacked'},
     {key:'satenaskilik',label:'Saten',icon:'fas fa-layer-group'},
     {key:'kordon',label:'Kordon',icon:'fas fa-bezier-curve'},
+    {key:'dantel',label:'Dantel',icon:'fas fa-border-all'},
   ];
   
   document.getElementById('typeFilterBar').innerHTML=types.map(t=>`
@@ -10666,7 +10717,7 @@ function applyFilters(){
 }
 
 function getTypeLabel(type){
-  const map={standart:'📦 Poşet',fermuar:'🔗 Fermuar',lastik:'📏 Lastik',dugme:'🔘 Düğme',toptan:'📦 Toptan',satenaskilik:'🪢 Saten',kordon:'🪢 Kordon'};
+  const map={standart:'📦 Poşet',fermuar:'🔗 Fermuar',lastik:'📏 Lastik',dugme:'🔘 Düğme',toptan:'📦 Toptan',satenaskilik:'🪢 Saten',kordon:'🪢 Kordon',dantel:'🕸️ Dantel'};
   return map[type]||type;
 }
 
@@ -10689,6 +10740,7 @@ function getItemDetail(item){
   if(item._type==='toptan')return item.total?item.total+' adet':'—';
   if(item._type==='satenaskilik')return (item.renk?item.renk+' / ':'')+item.metre+' m';
   if(item._type==='kordon')return item.totalAdet?item.totalAdet+' adet':'—';
+  if(item._type==='dantel')return (item.cm?item.cm+' cm / ':'')+item.metre+' m';
   return '—';
 }
 
@@ -10785,14 +10837,14 @@ function renderFilteredList(list){
 }
 
 function toggleDurumUni(id,type){
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);const item=list.find(i=>i.id===id);
   if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';setData(key,list);applyFilters();toast('Durum güncellendi');}
 }
 
 function deleteItemUni(id,type){
   if(!confirm('Bu kaydı silmek istediğinize emin misiniz? (Geri dönüşüme taşınacak)'))return;
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);
   const item=list.find(i=>i.id===id);
   if(!item)return;
@@ -10805,7 +10857,7 @@ function deleteItemUni(id,type){
 }
 
 function showDetailUni(id,type){
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   const list=getData(key);const item=list.find(i=>i.id===id);if(!item)return;
   document.getElementById('modalTitle').textContent=(item.no||'Detay')+' — '+getTypeLabel(type);
   
@@ -10867,6 +10919,13 @@ function showDetailUni(id,type){
       <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;border-left:4px solid #7c3aed;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">🎨 Renk</div><div style="font-size:18px;font-weight:800;">${item.renk||'—'}</div></div>
     </div>`;
   }
+  if(type==='dantel'){
+    if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid #7c3aed;border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Genişlik (CM)</div><div style="font-size:20px;font-weight:800;">${item.cm||'-'} cm</div></div>
+      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>
+    </div>`;
+  }
   if(type==='kordon'&&item.olcular&&item.olcular.length){
     if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid #7c3aed;border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-bezier-curve"></i> Kordon Ölçüleri</div>';
@@ -10925,14 +10984,14 @@ function generatePDFFromModal() {
 }
 
 function generatePDF(id, type) {
-  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar'};
+  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
   const key = keyMap[type];
   if (!key) return toast('PDF oluşturulamadı','error');
   const list = getData(key);
   const item = list.find(i => i.id === id);
   if (!item) return toast('Kayıt bulunamadı','error');
 
-  const typeLabels = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi'};
+  const typeLabels = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
   const typeLabel = typeLabels[type] || 'İrsaliye';
   const now = new Date();
   const printDate = now.toLocaleDateString('tr-TR') + ' ' + now.toLocaleTimeString('tr-TR');
@@ -11331,6 +11390,45 @@ function refreshKordonList(){
   if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${i.totalAdet||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">🎨 ${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
 }
 
+// ==================== DANTEL ====================
+function saveDantel(){
+  const model=document.getElementById('danModel').value.trim();
+  const tarih=document.getElementById('danTarih').value;
+  const atolye=document.getElementById('danAtolye').value;
+  const teslimEden=document.getElementById('danTeslimEden').value.trim();
+  const teslimAlan=document.getElementById('danTeslimAlan').value.trim();
+  const renk=document.getElementById('danRenk').value.trim();
+  const cm=+(document.getElementById('danCm').value||0);
+  const metre=+(document.getElementById('danMetre').value||0);
+  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
+  if(!cm||!metre)return toast('CM ve Metre alanları zorunludur','error');
+  const no=getNextNo();
+  const item={id:Date.now(),no:'DAN-'+String(no).padStart(3,'0'),type:'dantel',model,tarih,atolye,teslimEden,teslimAlan,renk,cm,metre,termin:document.getElementById('danTermin').value,aciklama:document.getElementById('danAciklama').value.trim(),durum:'bekliyor',createdAt:new Date().toISOString()};
+  _attachNfPhotosToItem(item,'dantel');
+  const list=getData('danteller');list.unshift(item);setData('danteller',list);incNextNo();
+  _uploadNfPhotosInBackground(item.id,'dantel');
+  ['danModel','danTarih','danAtolye','danTeslimEden','danTeslimAlan','danRenk','danTermin','danAciklama','danCm','danMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('danTarih');if(dt)dt.value=today;
+  toast('Dantel irsaliyesi kaydedildi: '+item.no);refreshHome();refreshDantelList();
+}
+
+function deleteDantel(id){if(!confirm('Silinsin mi?'))return;let list=getData('danteller');list=list.filter(i=>i.id!==id);setData('danteller',list);refreshDantelList();toast('Silindi','info');}
+
+function refreshDantelList(){
+  const list=getData('danteller');
+  const countEl=document.getElementById('dantelCount');if(countEl)countEl.textContent=list.length;
+  const tbody=document.getElementById('dantelTable');
+  const mobileEl=document.getElementById('dantelMobile');
+  if(!tbody)return;
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
+    if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-border-all"></i><p>Kayıt yok</p></div>';
+    return;
+  }
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">📐 ${esc(i.cm)} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+}
+
 // ==================== SATEN ASKILIK ====================
 function saveSatenaskilik(){
   const model=document.getElementById('saModel').value.trim();const tarih=document.getElementById('saTarih').value;
@@ -11380,6 +11478,7 @@ function refreshHome(){
   var toptanlar=getData('toptanlar')||[];
   var satenaskilikler=getData('satenaskilikler')||[];
   var kordonlar=getData('kordonlar')||[];
+  var danteller=getData('danteller')||[];
   var atolyeler=getData('atolyeler')||[];
 
   var dayNames=['Pazar','Pazartesi','Sali','Carsamba','Persembe','Cuma','Cumartesi'];
@@ -11399,6 +11498,7 @@ function refreshHome(){
   toptanlar.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'toptan',durum:i.durum||'bekliyor'}));});
   satenaskilikler.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'satenaskilik'}));});
   kordonlar.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'kordon'}));});
+  danteller.forEach(function(i){allUnified.push(Object.assign({},i,{_utype:'dantel'}));});
 
   var todayStr=now.toISOString().split('T')[0];
   var monthStr=todayStr.substring(0,7);
@@ -11421,6 +11521,7 @@ function refreshHome(){
   sv('miniToptan',toptanlar.length);
   sv('miniSaten',satenaskilikler.length);
   sv('miniKordon',kordonlar.length);
+  sv('miniDantel',danteller.length);
   sv('miniAtolye',atolyeler.length);
 
   // 7 gunluk aktivite grafigi
@@ -12131,7 +12232,7 @@ function setFontSize(val){document.body.style.fontSize=val+'px';setConfig('fontS
 function updateNextNo(){const val=+document.getElementById('nextNo').value;if(val>0){setConfig('nextIrsaliyeNo',val);updateBadge();}}
 
 function exportData(){
-  const data={irsaliyeler:getData('irsaliyeler'),fermuarlar:getData('fermuarlar'),lastikler:getData('lastikler'),dugmeler:getData('dugmeler'),atolyeler:getData('atolyeler'),toptanlar:getData('toptanlar'),satenaskilikler:getData('satenaskilikler'),kordonlar:getData('kordonlar'),stoklar:getData('stoklar'),stokHareketler:getData('stokHareketler'),recycleBin:getData('recycleBin'),config:{nextIrsaliyeNo:getConfig('nextIrsaliyeNo',1),theme:getConfig('theme','default'),fontSize:getConfig('fontSize',14)},exportDate:new Date().toISOString()};
+  const data={irsaliyeler:getData('irsaliyeler'),fermuarlar:getData('fermuarlar'),lastikler:getData('lastikler'),dugmeler:getData('dugmeler'),atolyeler:getData('atolyeler'),toptanlar:getData('toptanlar'),satenaskilikler:getData('satenaskilikler'),kordonlar:getData('kordonlar'),danteller:getData('danteller'),stoklar:getData('stoklar'),stokHareketler:getData('stokHareketler'),recycleBin:getData('recycleBin'),config:{nextIrsaliyeNo:getConfig('nextIrsaliyeNo',1),theme:getConfig('theme','default'),fontSize:getConfig('fontSize',14)},exportDate:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='irsaliye-pro-yedek-'+new Date().toISOString().split('T')[0]+'.json';
@@ -12145,7 +12246,7 @@ function importData(e){
     try{
       const data=JSON.parse(ev.target.result);
       // Tum FS_KEYS'i generik olarak yukle — eksik key kalmasin
-      const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar',
+      const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
                       'atolyeler','stoklar','stokHareketler','recycleBin',
                       'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
       fsKeys.forEach(k => { if(Array.isArray(data[k])) setData(k, data[k]); });
@@ -12360,7 +12461,7 @@ function restoreItem(id,type){
   delete cleanItem._type;
   delete cleanItem._deletedAt;
 
-  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+  const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);
   list.unshift(cleanItem);
   setData(key,list);
@@ -12408,6 +12509,7 @@ function refreshPage(page){
   else if(page==='toptan')refreshToptanList();
   else if(page==='satenaskilik')refreshSatenaskilikList();
   else if(page==='kordon')refreshKordonList();
+  else if(page==='dantel')refreshDantelList();
   else if(page==='reports'){renderAllReports();}
   else if(page==='geridonusum')renderRecycleBin();
   else if(page==='settings')loadSettings();
@@ -12422,7 +12524,7 @@ function refreshPage(page){
 
 function refreshAll(){
   if(window._isViewerUrl) return;
-  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderStokUtuPaket();}catch(e){}try{renderStokDikim();}catch(e){}try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();refreshKordonList();renderRecycleBin();
+  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderStokUtuPaket();}catch(e){}try{renderStokDikim();}catch(e){}try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();refreshKordonList();refreshDantelList();renderRecycleBin();
 }
 
 function loadSettings(){
@@ -12467,7 +12569,7 @@ function updateSelDash(checks){
     const id=cb.dataset.id;
     const type=cb.dataset.type;
     if(!id||!type)return;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     const list=getData(key)||[];
     const item=list.find(i=>String(i.id)===String(id));
     if(item)items.push({...item,_type:type});
@@ -12677,7 +12779,7 @@ function bulkDelete(){
   checks.forEach(cb=>{
     const id=+cb.dataset.id;
     const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     let list=getData(key);
     const item=list.find(i=>i.id===id);
     if(item){
@@ -12697,7 +12799,7 @@ function bulkDurum(durum){
   checks.forEach(cb=>{
     const id=+cb.dataset.id;
     const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     let list=getData(key);const item=list.find(i=>i.id===id);
     if(item){item.durum=durum;setData(key,list);}
   });
@@ -12938,7 +13040,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   })();
 
   const today=new Date().toISOString().split('T')[0];
-  ['iTarih','fTarih','lTarih','dTarih','saTarih','korTarih'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
+  ['iTarih','fTarih','lTarih','dTarih','saTarih','korTarih','danTarih'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
   const theme=getConfig('theme','default');setTheme(theme);
   const fs=getConfig('fontSize',14);setFontSize(fs);
   refreshAll();
@@ -13258,7 +13360,7 @@ let currentShareItem = null;
 let currentShareType = null;
 
 function openShareMenu(id, type) {
-  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar'};
+  const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
   const list = getData(keyMap[type]);
   const item = list.find(i => i.id === id);
   if (!item) return toast('Kayıt bulunamadı','error');
@@ -13280,7 +13382,7 @@ function closeShareMenu() {
 }
 
 function buildShareText(item, type) {
-  const typeLabels = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon'};
+  const typeLabels = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon',dantel:'Dantel'};
   let text = `📋 *${typeLabels[type]||'İrsaliye'}*\n`;
   text += `━━━━━━━━━━━━━\n`;
   if (item.no) text += `🔖 No: *${item.no}*\n`;
@@ -13309,6 +13411,7 @@ function buildShareText(item, type) {
   if (type === 'dugme') text += `\n🔘 ${item.adet||0} adet\n`;
   if (type === 'satenaskilik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.metre||0} m\n`; }
   if (type === 'kordon' && item.olcular) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Ölçüler:\n`+item.olcular.map(o=>`  • ${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `📊 Toplam: *${item.totalAdet||0} adet*\n`; }
+  if (type === 'dantel') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.cm||0} cm × ${item.metre||0} m\n`; }
   if (item.teslimEden) text += `\n👤 Teslim Eden: ${item.teslimEden}`;
   if (item.teslimAlan) text += `\n👤 Teslim Alan: ${item.teslimAlan}`;
   if (item.aciklama || item.not) text += `\n\n📝 Not: ${item.aciklama || item.not}`;
@@ -13395,11 +13498,11 @@ function printCurrentList() {
 function bulkShareWhatsApp() {
   const checks = document.querySelectorAll('.bulk-check[data-id]:checked');
   if (!checks.length) return toast('En az 1 kayıt seçin','error');
-  const typeLabel = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon'};
+  const typeLabel = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon',dantel:'Dantel'};
   let text = `📋 *${checks.length} İrsaliye Detayı*\n━━━━━━━━━━━━━\n\n`;
   checks.forEach((cb, idx) => {
     const id = +cb.dataset.id; const type = cb.dataset.type;
-    const key = type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const key = type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     const item = getData(key).find(i => i.id === id);
     if (!item) return;
     // Başlık satırı
@@ -13448,6 +13551,10 @@ function bulkShareWhatsApp() {
       text += `🪢 Ölçüler:\n` + item.olcular.map(o=>`   • ${o.cm} cm: *${o.adet} adet*`).join('\n') + `\n`;
       text += `   Σ Toplam: *${item.totalAdet||0} adet*\n`;
     }
+    if (type === 'dantel') {
+      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
+      text += `🕸️ Ölçü: *${item.cm||0} cm × ${item.metre||0} m*\n`;
+    }
     if (item.termin) text += `⏰ Termin: ${item.termin}\n`;
     if (item.durum) text += `📌 Durum: ${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}\n`;
     text += `\n`;
@@ -13464,7 +13571,7 @@ function _bulkGetSelectedItems(){
   const items=[];
   checks.forEach(cb=>{
     const id=+cb.dataset.id; const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     const item=getData(key).find(i=>i.id===id);
     if(item) items.push({item,type,key});
   });
@@ -13472,7 +13579,7 @@ function _bulkGetSelectedItems(){
 }
 
 function _singleItemPdfHtml(item, type){
-  const typeLabels={standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi'};
+  const typeLabels={standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
   const typeLabel=typeLabels[type]||'İrsaliye';
   const printDate=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR');
   const qrScanUrl=(typeof _buildQrScanUrl==='function')?_buildQrScanUrl(item,type):'';
@@ -13526,6 +13633,11 @@ function _singleItemPdfHtml(item, type){
   }
   if(type==='satenaskilik'){
     h+=`<div class="st">🪢 Saten Askılık Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
+  }
+  if(type==='dantel'){
+    h+=`<div class="st">🕸️ Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
+    if(item.renk)h+=`<div style="margin-top:10px;background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`;
   }
   if(type==='kordon'&&item.olcular&&item.olcular.length){
     h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
@@ -13796,7 +13908,7 @@ function bulkPrint(){
 
 // ==== BACKUP / RESTORE ====
 function exportBackup() {
-  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','atolyeler','stoklar','stokHareketler','recycleBin','pinnedItems','dailyGoal'];
+  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller','atolyeler','stoklar','stokHareketler','recycleBin','pinnedItems','dailyGoal'];
   const backup = { _version: '1.0', _date: new Date().toISOString(), _app: 'irsaliye-pro', data: {} };
   keys.forEach(k => { backup.data[k] = getData(k); });
   // Configları da ekle
@@ -13861,7 +13973,7 @@ function clearAllData() {
   if (!confirm('⚠️ TÜM VERİLER silinecek! Bu işlem GERİ ALINAMAZ!\n\nDevam etmek için Tamam\'a basın.')) return;
   if (!confirm('Son uyarı: Tüm irsaliyeler, atölyeler, stoklar ve ayarlar silinecek. Emin misiniz?')) return;
   // Firestore ile senkron key'ler — bos dizi yazarak bulutta da siliniyor
-  const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar',
+  const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
                   'atolyeler','stoklar','stokHareketler','recycleBin',
                   'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
   fsKeys.forEach(k => {
@@ -14498,7 +14610,8 @@ const TYPE_KEY_MAP = {
   dugme:        'dugmeler',
   toptan:       'toptanlar',
   satenaskilik: 'satenaskilikler',
-  kordon:       'kordonlar'
+  kordon:       'kordonlar',
+  dantel:       'danteller'
 };
 const TYPE_LABEL_MAP = {
   standart:     'Poşet İrsaliyesi',
@@ -14507,7 +14620,8 @@ const TYPE_LABEL_MAP = {
   dugme:        'Düğme İrsaliyesi',
   toptan:       'Toptan Sipariş',
   satenaskilik: 'Saten Askılık İrsaliyesi',
-  kordon:       'Kordon İrsaliyesi'
+  kordon:       'Kordon İrsaliyesi',
+  dantel:       'Dantel İrsaliyesi'
 };
 function _findItemByIdType(id, type){
   const key = TYPE_KEY_MAP[type];
@@ -15916,7 +16030,7 @@ function _attachNfPhotosToItem(item, type){
 
 // Eski kayıtlardaki base64 fotoğrafları temizle (localStorage'i boşalt)
 function cleanupLocalStoragePhotos(){
-  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar'];
+  const keys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller'];
   let cleaned = 0;
 
   keys.forEach(key => {
@@ -17198,7 +17312,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     try{ v8RenderAtolyeCompare(); }catch(e){console.warn('v8 atolye',e);}
     try{ v8RenderTopItems(); }catch(e){console.warn('v8 top',e);}
     // animate existing values
-    ['kpiTotal','kpiBekliyor','kpiTeslim','kpiGecmis','miniStandart','miniFermuar','miniLastik','miniDugme','miniToptan','miniSaten','miniKordon','miniAtolye'].forEach(id=>{
+    ['kpiTotal','kpiBekliyor','kpiTeslim','kpiGecmis','miniStandart','miniFermuar','miniLastik','miniDugme','miniToptan','miniSaten','miniKordon','miniDantel','miniAtolye'].forEach(id=>{
       const el = $(id); if(!el) return;
       const v = parseInt((el.textContent||'0').replace(/\D/g,''),10)||0;
       if(v && !el.dataset.v8poppedOnce){
@@ -18734,7 +18848,7 @@ async function _renderPublicViewerFromFirebase(id, type){
     }
 
     // Firebase'den veri çek
-    const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar'};
+    const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
     const key = keyMap[type];
     if(!key){
       throw new Error('Geçersiz irsaliye tipi: ' + type);
