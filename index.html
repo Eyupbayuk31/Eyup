@@ -261,8 +261,9 @@
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
       'atolyeler','stoklar','stokHareketler','recycleBin',
-      'irsaliye_users','sablonlar','takvimler','aksesuarlar',
-      'irsaliye_github_cfg'  // admin'in token'i tum cihazlarda paylasilsin
+      'irsaliye_users','aksesuarlar','waybillTemplates',
+      'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
+      'app_settings'         // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
     ];
     const RECENT_WRITE_MS = 5000;
     const PENDING_DELETE_MS = 5000;
@@ -12256,8 +12257,8 @@ function importData(e){
       const data=JSON.parse(ev.target.result);
       // Tum FS_KEYS'i generik olarak yukle — eksik key kalmasin
       const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
-                      'atolyeler','stoklar','stokHareketler','recycleBin',
-                      'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
+                      'atolyeler','stoklar','stokHareketler','recycleBin','aksesuarlar',
+                      'irsaliye_users','waybillTemplates','irsaliye_github_cfg','app_settings'];
       fsKeys.forEach(k => { if(Array.isArray(data[k])) setData(k, data[k]); });
       if(data.config){if(data.config.nextIrsaliyeNo)setConfig('nextIrsaliyeNo',data.config.nextIrsaliyeNo);if(data.config.theme)setTheme(data.config.theme);if(data.config.fontSize){setConfig('fontSize',data.config.fontSize);setFontSize(data.config.fontSize);}}
       toast('Veriler başarıyla içe aktarıldı');refreshAll();
@@ -13040,10 +13041,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Normal uygulama başlatma
   // QR yayın URL'sini otomatik ayarla (ilk açılışta veya localhost ise)
   (function(){
-    const settings = getData('settings') || {};
+    if(typeof _loadAppSettings !== 'function') return; // henüz yüklenmediyse atla
+    const settings = _loadAppSettings();
     if(!settings.publishUrl || settings.publishUrl.includes('localhost')){
       settings.publishUrl = 'https://eyupybr.com';
-      setData('settings', settings);
+      _saveAppSettings(settings);
       console.log('QR yayın URL\'si otomatik ayarlandı: https://eyupybr.com');
     }
   })();
@@ -14001,8 +14003,10 @@ function clearAllData() {
   if (!confirm('Son uyarı: Tüm irsaliyeler, atölyeler, stoklar ve ayarlar silinecek. Emin misiniz?')) return;
   // Firestore ile senkron key'ler — bos dizi yazarak bulutta da siliniyor
   const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
-                  'atolyeler','stoklar','stokHareketler','recycleBin',
-                  'irsaliye_users','sablonlar','takvimler','irsaliye_github_cfg'];
+                  'atolyeler','stoklar','stokHareketler','recycleBin','aksesuarlar',
+                  'irsaliye_users','waybillTemplates','irsaliye_github_cfg','app_settings'];
+  // Eski 'settings' anahtarini da temizle (app_settings'e migrate olduktan sonra artik kullanilmiyor)
+  try{ localStorage.removeItem('settings'); }catch(_){}
   fsKeys.forEach(k => {
     if (typeof window.setData === 'function') window.setData(k, []);
     else localStorage.removeItem(k);
@@ -15017,9 +15021,38 @@ function _b64UrlDecode(b64url){
   }
 }
 
+// ====================================================================
+// APP SETTINGS — Tum cihazlarda senkron uygulama ayarlari
+// getData/setData array bekliyor; bu yuzden tek-elemanli array sarmalayici
+// kullaniyoruz: [{id:'main', ...settings}]. GitHub config ile ayni desen.
+// Eski 'settings' (object) localStorage anahtari ilk yuklemede migrate edilir.
+// ====================================================================
+function _loadAppSettings(){
+  let arr = [];
+  try{ arr = getData('app_settings'); }catch(_){}
+  if(Array.isArray(arr) && arr[0] && typeof arr[0] === 'object'){
+    const o = Object.assign({}, arr[0]);
+    delete o.id;
+    return o;
+  }
+  // Eski 'settings' anahtarindan tek seferlik migrasyon
+  try{
+    const raw = JSON.parse(localStorage.getItem('settings'));
+    if(raw && typeof raw === 'object' && !Array.isArray(raw)){
+      _saveAppSettings(raw);
+      return Object.assign({}, raw);
+    }
+  }catch(_){}
+  return {};
+}
+function _saveAppSettings(obj){
+  const clean = Object.assign({}, obj || {});
+  setData('app_settings', [Object.assign({id:'main'}, clean)]);
+}
+
 function _getPublishBaseUrl(){
   // Ayarlardan gelen yayın URL'si, yoksa mevcut sayfa URL'si
-  const settings = getData('settings') || {};
+  const settings = _loadAppSettings();
   const custom = (settings.publishUrl || '').trim();
   if(custom){
     // Son # ve ? kısmını at
@@ -15031,9 +15064,9 @@ function _getPublishBaseUrl(){
 }
 
 function savePublishUrl(val){
-  const settings = getData('settings') || {};
+  const settings = _loadAppSettings();
   settings.publishUrl = (val || '').trim();
-  setData('settings', settings);
+  _saveAppSettings(settings);
   toast('QR yayın URL\'si kaydedildi','success');
   _refreshPublishUrlPreview();
 }
@@ -15042,7 +15075,7 @@ function _refreshPublishUrlPreview(){
   const el = document.getElementById('publishUrlPreview');
   if(!el) return;
   const base = _getPublishBaseUrl();
-  const settings = getData('settings') || {};
+  const settings = _loadAppSettings();
   if(settings.publishUrl){
     el.innerHTML = '<i class="fas fa-check-circle"></i> QR bu adresi açacak: <b>'+base+'</b>';
     el.style.color = '#10b981';
@@ -15055,7 +15088,7 @@ function _refreshPublishUrlPreview(){
 function loadPublishUrlIntoInput(){
   const input = document.getElementById('publishUrl');
   if(!input) return;
-  const settings = getData('settings') || {};
+  const settings = _loadAppSettings();
   input.value = settings.publishUrl || '';
   _refreshPublishUrlPreview();
 }
