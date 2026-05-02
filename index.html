@@ -15858,14 +15858,43 @@ const _BACKUP_FOLDER = 'backups';
 const _LAST_BACKUP_KEY = 'irsaliye_last_backup_date';
 
 // Tum senkron veriyi tek bir JSON objesine topla
+// Hassas alanlari yedekten temizle. GitHub'in secret scanner'i token gorurse
+// PUT'u "Repository rule violations: Secret detected" hatasiyla reddediyor.
+// Ayrica plaintext sifrelerin de yedekte yer almamasi guvenlik gereksinimi.
+function _redactSensitive(key, list){
+  if(!Array.isArray(list)) return [];
+  if(key === 'irsaliye_github_cfg'){
+    return list.map(o=>{
+      if(!o || typeof o !== 'object') return o;
+      const c = Object.assign({}, o);
+      // Token alanlarini sil — yedekten yenisi geri yuklenirse manuel girilmeli
+      delete c.githubToken; delete c.token;
+      c._tokenRedacted = true;
+      return c;
+    });
+  }
+  if(key === 'irsaliye_users'){
+    return list.map(o=>{
+      if(!o || typeof o !== 'object') return o;
+      const c = Object.assign({}, o);
+      // Sifre/hash alanlarini at — restore'da sifre sifirlanir
+      delete c.password; delete c.passwordHash; delete c.pass;
+      c._passwordRedacted = true;
+      return c;
+    });
+  }
+  return list;
+}
+
 function _buildFullBackup(){
   const out = {
     _meta: {
       app: 'irsaliyepro',
-      backupVersion: 1,
+      backupVersion: 2,
       createdAt: new Date().toISOString(),
       createdBy: (typeof localStorage !== 'undefined' ? localStorage.getItem('irsaliye_last_user') : '') || 'unknown',
-      fsKeys: []
+      fsKeys: [],
+      redacted: ['irsaliye_github_cfg.githubToken','irsaliye_users.password']
     }
   };
   try{
@@ -15878,7 +15907,8 @@ function _buildFullBackup(){
       try{
         // localStorage'dan ham veriyi al ki cache'ten degil, gercek veriden okusun
         const raw = JSON.parse(localStorage.getItem(k) || 'null');
-        out[k] = Array.isArray(raw) ? raw : [];
+        const list = Array.isArray(raw) ? raw : [];
+        out[k] = _redactSensitive(k, list);
         out._meta.fsKeys.push(k);
       }catch(_){ out[k] = []; }
     });
@@ -15911,18 +15941,43 @@ async function _ghGetFileSha(cfg, path){
   }catch(_){ return null; }
 }
 
+// GitHub'in secret scanner'inin tanidigi token pattern'larini metinden temizler.
+// Defense-in-depth: redact() fonksiyonu yapilandirilmis alanlari temizler ama
+// kullanici bir nota token yapistirmissa yine de yakalansin diye buradan da gecer.
+function _scrubSecretPatterns(s){
+  if(!s) return s;
+  // GitHub token formatlari: ghp_, gho_, ghu_, ghs_, ghr_, github_pat_
+  const patterns = [
+    /\bghp_[A-Za-z0-9]{30,}/g,
+    /\bgho_[A-Za-z0-9]{30,}/g,
+    /\bghu_[A-Za-z0-9]{30,}/g,
+    /\bghs_[A-Za-z0-9]{30,}/g,
+    /\bghr_[A-Za-z0-9]{30,}/g,
+    /\bgithub_pat_[A-Za-z0-9_]{60,}/g,
+    // OpenAI / Anthropic / generic Bearer formatlari (ek koruma)
+    /\bsk-[A-Za-z0-9_-]{30,}/g,
+    /\bsk-ant-[A-Za-z0-9_-]{30,}/g
+  ];
+  let out = s;
+  patterns.forEach(re=>{ out = out.replace(re, '[REDACTED]'); });
+  return out;
+}
+
 async function _uploadBackupToGitHub(jsonStr, dateStr){
   const cfg = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
   if(!cfg || !cfg.token || !cfg.owner || !cfg.repo){
     throw new Error('GitHub ayarlari eksik — Ayarlar > GitHub Bulut Yukleme bolumunu doldurun');
   }
+  // Son kale: olasi token kalintilarini regex ile sil. Boylece secret-scanner
+  // her zaman yesil isik versin.
+  const safeJson = _scrubSecretPatterns(jsonStr);
   const path = _BACKUP_FOLDER + '/' + dateStr + '.json';
   const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
     + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
   const sha = await _ghGetFileSha(cfg, path);
   const body = {
     message: 'Otomatik yedek: ' + dateStr,
-    content: _utf8ToBase64(jsonStr),
+    content: _utf8ToBase64(safeJson),
     branch: cfg.branch || 'main'
   };
   if(sha) body.sha = sha; // gunluk yedek varsa uzerine yaz
@@ -15934,7 +15989,10 @@ async function _uploadBackupToGitHub(jsonStr, dateStr){
   });
   if(!res.ok){
     const data = await res.json().catch(()=>({}));
-    const msg = (data && (data.message || data.error)) || ('HTTP '+res.status);
+    let msg = (data && (data.message || data.error)) || ('HTTP '+res.status);
+    if(/secret/i.test(msg) || /push protection/i.test(msg) || res.status === 422){
+      msg = 'GitHub secret-scanning yedegi reddetti (' + msg + '). Yedek icinde hala token benzeri bir desen olabilir; not/aciklama alanlarini kontrol edin.';
+    }
     throw new Error('Yedek yuklenemedi: ' + msg);
   }
   return path;
