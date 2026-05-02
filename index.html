@@ -14968,16 +14968,26 @@ function _buildQrDataUrl(payloadText){
 // çözümleyip "Public Viewer" modunda şifresiz olarak irsaliyeyi gösterir.
 
 function _b64UrlEncode(str){
-  // UTF-8 → base64 → URL-safe
-  const b64 = btoa(unescape(encodeURIComponent(str)));
+  // UTF-8 → base64 → URL-safe (modern: TextEncoder ile binary-safe)
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = btoa(bin);
   return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 function _b64UrlDecode(b64url){
   try{
-    let b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+    if(!b64url) return '';
+    let b64 = String(b64url).replace(/-/g,'+').replace(/_/g,'/');
     while(b64.length % 4) b64 += '=';
-    return decodeURIComponent(escape(atob(b64)));
-  }catch(e){ return ''; }
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8', {fatal:false}).decode(bytes);
+  }catch(e){
+    console.warn('_b64UrlDecode failed:', e);
+    return '';
+  }
 }
 
 function _getPublishBaseUrl(){
@@ -15813,12 +15823,23 @@ async function _uploadPhotoToCatbox(dataUrl){
 }
 
 function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
+  // Yüklemeyi başlatırken önceki hata flag'ini temizle
+  _updateItem(id, type, (item)=>{
+    if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
+      item._photos[photoIndex].uploadFailed = false;
+      item._photos[photoIndex].uploadError = '';
+    }
+    return item;
+  });
+
   _uploadPhotoToCatbox(dataUrl).then(url=>{
     const ok = _updateItem(id, type, (item)=>{
       if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
         item._photos[photoIndex].url = url;
         item._photos[photoIndex].urlAt = new Date().toISOString();
         item._photos[photoIndex].urlManual = false;
+        item._photos[photoIndex].uploadFailed = false;
+        item._photos[photoIndex].uploadError = '';
         if(photoIndex === 0){
           item._photoUrl = url;
           item._photoUrlAt = item._photos[0].urlAt;
@@ -15839,11 +15860,29 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
         renderPhotoGallery();
         renderSigSavedList();
       }
+    } else {
+      // _updateItem başarısız: kayıt artık yok ya da yazılamadı
+      console.warn('Upload başarılı ama _updateItem yazamadı:', id, type, photoIndex);
+      toast('⚠️ Yüklendi fakat kaydedilemedi — tekrar deneyin','error');
     }
   }).catch(err=>{
     console.warn('GitHub upload failed:', err);
     const msg = (err && err.message) ? err.message : 'Yükleme başarısız';
-    toast('⚠️ ' + msg, 'error');
+    // Hatayı kayda işle ki UI retry butonu gösterebilsin ve veri kaybolduğu sanılmasın
+    _updateItem(id, type, (item)=>{
+      if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
+        item._photos[photoIndex].uploadFailed = true;
+        item._photos[photoIndex].uploadError = msg;
+      } else {
+        item._photoUploadFailed = true;
+        item._photoUploadError = msg;
+      }
+      return item;
+    });
+    toast('⚠️ ' + msg + ' — "Tekrar Dene" ile yeniden yükleyin','error');
+    if(_sigCurrentWaybill && String(_sigCurrentWaybill.id) === String(id) && _sigCurrentWaybill.type === type){
+      try{ renderPhotoGallery(); renderSigSavedList(); }catch(_){}
+    }
   });
 }
 
@@ -18898,7 +18937,7 @@ async function _renderPublicViewerFromFirebase(id, type){
       totalAdet: item.totalAdet,
       renk: item.renk,
       aciklama: item.aciklama || item.not || '',
-      photos: photos.filter(p => p.url).map(p => ({url: p.url, at: p.at}))
+      photos: (photos || []).filter(p => p && p.url).map(p => ({url: p.url, at: p.at}))
     };
 
     _renderPublicViewer(payload);
