@@ -9092,6 +9092,27 @@ body::after{
           </div>
         </div>
 
+        <div class="s-card" id="backupCard">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#0ea5e9,#0369a1);"><i class="fas fa-shield-halved"></i></div>
+            <div>
+              <h3>Otomatik Yedekleme</h3>
+              <p>Tüm veriler her gün GitHub'a JSON olarak yedeklenir (backups/YYYY-MM-DD.json)</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#0369a1;line-height:1.6;">
+              <b>ℹ️ Bilgi:</b> Sistem her gün uygulamayı ilk açtığınızda sessizce yedek alır. GitHub'da <code>backups/</code> klasörüne tarih adıyla yazılır. Aynı gün içinde tekrar açarsanız üzerine yazılır (bant genişliği boşa harcanmaz).
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button class="btn btn-primary" onclick="runManualBackup()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-cloud-arrow-up"></i> Hemen Yedek Al</button>
+              <button class="btn btn-secondary" onclick="listBackupsFromGitHub()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-list"></i> Yedekleri Listele</button>
+            </div>
+            <div id="backupStatus" style="font-size:12px;margin:6px 0;display:none;"></div>
+            <div id="backupList" style="font-size:12px;margin-top:8px;display:none;"></div>
+          </div>
+        </div>
+
         <div class="s-card">
           <div class="s-card-head">
             <div class="s-ico" style="background:linear-gradient(135deg,#10b981,#059669);"><i class="fas fa-bell"></i></div>
@@ -13064,6 +13085,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(window._notifInterval){ clearInterval(window._notifInterval); window._notifInterval = null; }
     });
   }
+  // Gunluk otomatik yedek: sayfa yuklendikten 5 sn sonra (Firestore senkron tamamlansin diye)
+  setTimeout(()=>{ if(typeof _runDailyBackupIfNeeded === 'function') _runDailyBackupIfNeeded(); }, 5000);
 });
 
 // checkNotifications debounce sarmalayıcı: aynı anda birden fazla çağrı birikmesin
@@ -14660,14 +14683,36 @@ function _findItemByIdType(id, type){
   const list = getData(key);
   return list.find(i => String(i.id) === String(id)) || null;
 }
-function _updateItem(id, type, updater){
+function _updateItem(id, type, updater, opts){
   const key = TYPE_KEY_MAP[type];
   if(!key) return false;
   let list = getData(key);
   const idx = list.findIndex(i => String(i.id) === String(id));
   if(idx < 0) return false;
-  const updated = updater(list[idx]);
-  list[idx] = updated || list[idx];
+
+  // Konkurent yazim kontrolu: edit form acildiginda kaydedilen _updatedAt
+  // ile kaydetme aninda cache'te bulunan _updatedAt karsilastirilir.
+  // Eger baska bir cihaz aramizda kaydetmisse kullaniciya soruyoruz.
+  if(opts && typeof opts.expectedUpdatedAt === 'number'){
+    const currentTs = Number(list[idx]._updatedAt || 0);
+    if(currentTs && currentTs > opts.expectedUpdatedAt){
+      const by = list[idx]._updatedBy ? (' (' + list[idx]._updatedBy + ')') : '';
+      const ago = Math.max(1, Math.round((Date.now() - currentTs)/1000));
+      const msg = 'Bu kayit ' + ago + ' saniye once baska bir cihazda' + by + ' degistirildi.\n\nSizin degisikliklerinizi kaydedip o cihaztaki yeni veriyi UZERINE YAZMAK istiyor musunuz?\n\nIptal: kaydetmeyin, sayfayi yenileyip son hali gorun.';
+      if(typeof window.confirm === 'function' && !window.confirm(msg)){
+        return { conflict: true, aborted: true };
+      }
+    }
+  }
+
+  const updated = updater(list[idx]) || list[idx];
+  // Yazim damgasi: kim ve ne zaman yazdi
+  try{
+    updated._updatedAt = Date.now();
+    const u = (typeof localStorage !== 'undefined') ? localStorage.getItem('irsaliye_last_user') : '';
+    if(u) updated._updatedBy = u;
+  }catch(_){}
+  list[idx] = updated;
   setData(key, list);
   return true;
 }
@@ -15789,6 +15834,173 @@ function _savePhotoToWaybill(dataUrl){
     _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, dataUrl, newIndex);
   } else {
     toast('Fotoğraf kaydedilemedi','error');
+  }
+}
+
+// ====================================================================
+// OTOMATIK YEDEKLEME — Tum FS_KEYS verisini gunluk olarak GitHub'a atar
+// Konum: <repo>/backups/YYYY-MM-DD.json
+// Tetikleyici: gun icinde ilk app yuklemesinde otomatik (sessiz),
+//              ayrica Ayarlar ekranindan manuel calistirilabilir.
+// ====================================================================
+const _BACKUP_FOLDER = 'backups';
+const _LAST_BACKUP_KEY = 'irsaliye_last_backup_date';
+
+// Tum senkron veriyi tek bir JSON objesine topla
+function _buildFullBackup(){
+  const out = {
+    _meta: {
+      app: 'irsaliyepro',
+      backupVersion: 1,
+      createdAt: new Date().toISOString(),
+      createdBy: (typeof localStorage !== 'undefined' ? localStorage.getItem('irsaliye_last_user') : '') || 'unknown',
+      fsKeys: []
+    }
+  };
+  try{
+    const keys = (typeof FS_KEYS !== 'undefined' && Array.isArray(FS_KEYS)) ? FS_KEYS : [
+      'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
+      'atolyeler','stoklar','stokHareketler','recycleBin','aksesuarlar',
+      'irsaliye_users','waybillTemplates','irsaliye_github_cfg','app_settings'
+    ];
+    keys.forEach(k=>{
+      try{
+        // localStorage'dan ham veriyi al ki cache'ten degil, gercek veriden okusun
+        const raw = JSON.parse(localStorage.getItem(k) || 'null');
+        out[k] = Array.isArray(raw) ? raw : [];
+        out._meta.fsKeys.push(k);
+      }catch(_){ out[k] = []; }
+    });
+  }catch(_){}
+  return out;
+}
+
+// UTF-8 string -> base64 (Github API icin)
+function _utf8ToBase64(str){
+  try{
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }catch(e){
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+}
+
+// Belirli bir path'in mevcut SHA'sini cek (varsa) — PUT ile uzerine yazmak icin gerekli
+async function _ghGetFileSha(cfg, path){
+  const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+    + '/contents/' + path.split('/').map(encodeURIComponent).join('/')
+    + '?ref=' + encodeURIComponent(cfg.branch || 'main');
+  try{
+    const res = await fetch(url, { headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    if(!res.ok) return null;
+    const data = await res.json().catch(()=>null);
+    return (data && data.sha) ? data.sha : null;
+  }catch(_){ return null; }
+}
+
+async function _uploadBackupToGitHub(jsonStr, dateStr){
+  const cfg = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
+  if(!cfg || !cfg.token || !cfg.owner || !cfg.repo){
+    throw new Error('GitHub ayarlari eksik — Ayarlar > GitHub Bulut Yukleme bolumunu doldurun');
+  }
+  const path = _BACKUP_FOLDER + '/' + dateStr + '.json';
+  const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+    + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+  const sha = await _ghGetFileSha(cfg, path);
+  const body = {
+    message: 'Otomatik yedek: ' + dateStr,
+    content: _utf8ToBase64(jsonStr),
+    branch: cfg.branch || 'main'
+  };
+  if(sha) body.sha = sha; // gunluk yedek varsa uzerine yaz
+
+  const res = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const data = await res.json().catch(()=>({}));
+    const msg = (data && (data.message || data.error)) || ('HTTP '+res.status);
+    throw new Error('Yedek yuklenemedi: ' + msg);
+  }
+  return path;
+}
+
+async function runManualBackup(){
+  const status = document.getElementById('backupStatus');
+  const setStatus = (html, color) => { if(status){ status.style.display='block'; status.style.color=color||''; status.innerHTML = html; } };
+  setStatus('<i class="fas fa-spinner fa-spin"></i> Yedek hazirlaniyor...','#6b7280');
+  try{
+    const data = _buildFullBackup();
+    const dateStr = new Date().toISOString().slice(0,10);
+    const path = await _uploadBackupToGitHub(JSON.stringify(data), dateStr);
+    try{ localStorage.setItem(_LAST_BACKUP_KEY, dateStr); }catch(_){}
+    const counts = (data._meta && data._meta.fsKeys) ? data._meta.fsKeys.length : 0;
+    setStatus('<i class="fas fa-circle-check"></i> Yedek hazir: <b>'+path+'</b> ('+counts+' kategori)','#10b981');
+    if(typeof toast === 'function') toast('Yedek alindi: '+path,'success');
+  }catch(e){
+    console.warn('Manual backup err:', e);
+    setStatus('<i class="fas fa-circle-xmark"></i> '+(e.message||e),'#ef4444');
+    if(typeof toast === 'function') toast('Yedek alinamadi: '+(e.message||e),'error');
+  }
+}
+
+// Gun icinde bir kez sessiz otomatik yedek
+async function _runDailyBackupIfNeeded(){
+  try{
+    const cfg = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
+    if(!cfg || !cfg.token || !cfg.owner || !cfg.repo) return; // GitHub ayarlanmamissa atla
+    const today = new Date().toISOString().slice(0,10);
+    const last = localStorage.getItem(_LAST_BACKUP_KEY) || '';
+    if(last === today) return;
+    const data = _buildFullBackup();
+    // Veri cok azsa (henuz yuklenmediyse) atla — bos yedek ile yukleri ezmeyelim
+    const totalRecords = Object.keys(data).filter(k=>k!=='_meta').reduce((acc,k)=>acc+(Array.isArray(data[k])?data[k].length:0), 0);
+    if(totalRecords < 1) return;
+    await _uploadBackupToGitHub(JSON.stringify(data), today);
+    try{ localStorage.setItem(_LAST_BACKUP_KEY, today); }catch(_){}
+    console.log('[backup] Gunluk yedek alindi:', today);
+  }catch(e){
+    console.warn('[backup] Otomatik yedek hatasi:', e && e.message ? e.message : e);
+  }
+}
+
+// Yedek listesini GitHub'dan cek (Ayarlar paneli icin)
+async function listBackupsFromGitHub(){
+  const out = document.getElementById('backupList');
+  if(!out) return;
+  out.style.display = 'block';
+  out.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yedekler yukleniyor...';
+  try{
+    const cfg = _getGithubConfig();
+    if(!cfg || !cfg.token || !cfg.owner || !cfg.repo){
+      out.innerHTML = '<span style="color:#ef4444;">GitHub ayarlari eksik</span>';
+      return;
+    }
+    const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+      + '/contents/' + encodeURIComponent(_BACKUP_FOLDER) + '?ref=' + encodeURIComponent(cfg.branch || 'main');
+    const res = await fetch(url, { headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    if(!res.ok){
+      if(res.status === 404){ out.innerHTML = '<span style="color:#6b7280;">Henuz yedek yok. "Hemen Yedek Al" diyebilirsiniz.</span>'; return; }
+      out.innerHTML = '<span style="color:#ef4444;">Liste alinamadi (HTTP '+res.status+')</span>';
+      return;
+    }
+    const arr = await res.json();
+    if(!Array.isArray(arr) || !arr.length){ out.innerHTML = '<span style="color:#6b7280;">Henuz yedek yok.</span>'; return; }
+    const items = arr.filter(x=>x.name && x.name.endsWith('.json')).sort((a,b)=>a.name<b.name?1:-1);
+    out.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">Mevcut Yedekler ('+items.length+')</div>'
+      + items.slice(0,30).map(x=>{
+          const size = x.size ? ((x.size/1024).toFixed(1)+' KB') : '';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px;">'
+            + '<span><i class="fas fa-file-code" style="color:#6b7280;margin-right:6px;"></i>'+x.name+' <span style="color:var(--text-muted);">'+size+'</span></span>'
+            + '<a href="'+x.html_url+'" target="_blank" style="color:var(--primary);text-decoration:none;">Goruntule</a>'
+            + '</div>';
+        }).join('');
+  }catch(e){
+    out.innerHTML = '<span style="color:#ef4444;">Hata: '+(e.message||e)+'</span>';
   }
 }
 
