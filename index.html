@@ -666,10 +666,12 @@
     window.checkStorageQuota = function(){
       try {
         let used = 0;
-        for(let key in localStorage){
-          if(localStorage.hasOwnProperty(key)){
-            used += localStorage[key].length + key.length;
-          }
+        // Object.keys + length doğrudan iteration: for-in/hasOwnProperty zincirinden hızlı.
+        const keys = Object.keys(localStorage);
+        for(let i = 0; i < keys.length; i++){
+          const k = keys[i];
+          const v = localStorage.getItem(k);
+          used += (v ? v.length : 0) + k.length;
         }
         const usedMB = (used / 1024 / 1024).toFixed(2);
         const limitMB = 5; // Tarayıcıya göre 5-10MB
@@ -9739,7 +9741,7 @@ function toast(msg,type='success'){
     <div class="toast-content">
       <div class="toast-message">${msg}</div>
     </div>
-    <button class="toast-close" onclick="this.parentElement.remove()">
+    <button class="toast-close" type="button">
       <i class="fas fa-times"></i>
     </button>
   `;
@@ -9751,17 +9753,23 @@ function toast(msg,type='success'){
     t.style.transform='translateX(0)';
   });
 
-  // Auto dismiss
-  const dismissTimer = setTimeout(()=>{
+  // Tek bir cleanup yolu: hem auto-dismiss hem manuel kapat aynı path'i kullansın.
+  // Bu sayede detached DOM node, double-remove ve listener leak engellenir.
+  let removeTimer = null;
+  let removed = false;
+  const closeBtn = t.querySelector('.toast-close');
+  const cleanup = ()=>{
+    if(removed) return;
+    removed = true;
+    if(dismissTimer){ clearTimeout(dismissTimer); }
+    if(removeTimer){ clearTimeout(removeTimer); }
+    if(closeBtn) closeBtn.removeEventListener('click', cleanup);
     t.style.opacity='0';
     t.style.transform='translateX(100px)';
-    setTimeout(()=>t.remove(),300);
-  },4000);
-
-  // Clear timer on manual close
-  t.querySelector('.toast-close').addEventListener('click',()=>{
-    clearTimeout(dismissTimer);
-  });
+    removeTimer = setTimeout(()=>{ if(t.parentNode) t.parentNode.removeChild(t); }, 300);
+  };
+  if(closeBtn) closeBtn.addEventListener('click', cleanup);
+  const dismissTimer = setTimeout(cleanup, 4000);
 }
 
 // ==================== ATÖLYE ====================
@@ -13045,11 +13053,30 @@ document.addEventListener('DOMContentLoaded',()=>{
   const theme=getConfig('theme','default');setTheme(theme);
   const fs=getConfig('fontSize',14);setFontSize(fs);
   refreshAll();
-  // Check notifications on load
-  setTimeout(checkNotifications,500);
+  // Check notifications on load (debounced)
+  setTimeout(_checkNotificationsDebounced, 500);
   // Auto-check notifications every 5 minutes
-  setInterval(checkNotifications,300000);
+  if(!window._notifInterval){
+    window._notifInterval = setInterval(_checkNotificationsDebounced, 300000);
+    window.addEventListener('beforeunload', ()=>{
+      if(window._notifInterval){ clearInterval(window._notifInterval); window._notifInterval = null; }
+    });
+  }
 });
+
+// checkNotifications debounce sarmalayıcı: aynı anda birden fazla çağrı birikmesin
+let _notifLastRun = 0;
+let _notifRunning = false;
+function _checkNotificationsDebounced(){
+  if(_notifRunning) return;
+  const now = Date.now();
+  if(now - _notifLastRun < 5000) return; // 5sn içinde tekrar çalışma
+  _notifLastRun = now;
+  _notifRunning = true;
+  try{ checkNotifications(); }
+  catch(e){ console.warn('checkNotifications error:', e); }
+  finally{ _notifRunning = false; }
+}
 
 // Modal close on overlay
 document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
@@ -15065,19 +15092,23 @@ function _ghSave(obj){
   }catch(e){}
 }
 
-function saveGithubConfig(){
+function _readGithubInputs(){
   const ownerEl  = document.getElementById('githubOwner');
   const repoEl   = document.getElementById('githubRepo');
   const branchEl = document.getElementById('githubBranch');
   const folderEl = document.getElementById('githubFolder');
   const tokenEl  = document.getElementById('githubToken');
-
   const cfg = _ghLoad();
   if(ownerEl)  cfg.githubOwner  = ownerEl.value.trim();
   if(repoEl)   cfg.githubRepo   = repoEl.value.trim();
   if(branchEl) cfg.githubBranch = branchEl.value.trim() || 'main';
   if(folderEl) cfg.githubFolder = folderEl.value.trim() || 'kanitlar';
   if(tokenEl && tokenEl.value) cfg.githubToken = tokenEl.value.trim();
+  return cfg;
+}
+
+function saveGithubConfig(){
+  const cfg = _readGithubInputs();
   _ghSave(cfg);
 
   // Eski 'settings' key'indeki github alanlarını da temizle (migration)
@@ -15156,13 +15187,21 @@ function _toggleGithubTokenVisibility(){
 async function testGithubConnection(){
   const result = document.getElementById('githubTestResult');
   if(!result) return;
-  // Önce ayarları kaydet ki test güncel değerleri kullansın
-  saveGithubConfig();
-  const cfg = _getGithubConfig();
+  // DOM'dan doğrudan oku (localStorage/Firestore senkronizasyonunu beklemeye gerek yok)
+  const raw = _readGithubInputs();
+  const cfg = {
+    token:  (raw.githubToken  || '').trim(),
+    owner:  (raw.githubOwner  || '').trim(),
+    repo:   (raw.githubRepo   || '').trim(),
+    branch: (raw.githubBranch || 'main').trim(),
+    folder: (raw.githubFolder || 'kanitlar').trim().replace(/^\/+|\/+$/g,'')
+  };
   if(!cfg.token || !cfg.owner || !cfg.repo){
     result.innerHTML = '<span style="color:#ef4444;"><i class="fas fa-circle-exclamation"></i> Token, repo sahibi ve repo adı zorunlu</span>';
     return;
   }
+  // Test başarılı olsa da olmasa da kullanıcının girdiklerini kaydet
+  try{ _ghSave(raw); }catch(_){}
   result.innerHTML = '<span style="color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Test ediliyor...</span>';
   try{
     const res = await fetch('https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo), {
@@ -18216,8 +18255,18 @@ body.logged-out { overflow:hidden !important; }
     const p = n => String(n).padStart(2,'0');
     clockTxt.textContent = p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
   }
-  function startClock(){ updateClock(); clockInt = setInterval(updateClock, 1000); }
-  function stopClock(){ if(clockInt) clearInterval(clockInt); clockInt = null; }
+  function startClock(){
+    if(clockInt) return; // zaten çalışıyorsa duplicate başlatma
+    updateClock();
+    clockInt = setInterval(updateClock, 1000);
+  }
+  function stopClock(){ if(clockInt){ clearInterval(clockInt); clockInt = null; } }
+  // Sayfa kapanırken / arka plana giderken interval'i durdur
+  window.addEventListener('beforeunload', stopClock);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) stopClock();
+    else if(document.body.classList.contains('logged-out')) startClock();
+  });
 
   // Şifre güç barı
   function scorePass(p){
