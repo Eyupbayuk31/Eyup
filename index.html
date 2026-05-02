@@ -11052,11 +11052,12 @@ function generatePDF(id, type) {
 
   // === QR KOD — Header'ın içinde hazırla, no'nun altına bas ===
   // Bu QR taranınca atölye direkt şifresiz irsaliye sayfasına yönlenir
+  // PDF icin yuksek cozunurluk (1024px kaynak) + H correct level => netlik + scan toleransi
   const qrScanUrl = _buildQrScanUrl(item, type);
-  const qrDataUrl = _buildQrDataUrl(qrScanUrl);
+  const qrDataUrl = _buildQrDataUrl(qrScanUrl, { size: 1024, correctLevel: 'H' });
   const qrHeaderBlock = qrDataUrl
     ? `<div style="margin-top:6px;text-align:right;">
-         <img src="${qrDataUrl}" alt="QR" style="width:120px;height:120px;border:1px solid #e5e7eb;border-radius:6px;padding:4px;background:#fff;">
+         <img src="${qrDataUrl}" alt="QR" style="width:140px;height:140px;border:1px solid #e5e7eb;border-radius:6px;padding:4px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;">
          <div style="font-size:10px;color:#6b7280;margin-top:4px;font-weight:600;">📱 Telefon ile Tara</div>
        </div>`
     : '';
@@ -13636,8 +13637,9 @@ function _singleItemPdfHtml(item, type){
   const typeLabel=typeLabels[type]||'İrsaliye';
   const printDate=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR');
   const qrScanUrl=(typeof _buildQrScanUrl==='function')?_buildQrScanUrl(item,type):'';
-  const qrDataUrl=(typeof _buildQrDataUrl==='function'&&qrScanUrl)?_buildQrDataUrl(qrScanUrl):'';
-  const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:72px;height:72px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;"><div style="font-size:9px;color:#6b7280;margin-top:2px;">📱 Tara</div></div>`:'';
+  // Toplu PDF icin de yuksek cozunurluk + H seviyesi
+  const qrDataUrl=(typeof _buildQrDataUrl==='function'&&qrScanUrl)?_buildQrDataUrl(qrScanUrl,{size:1024,correctLevel:'H'}):'';
+  const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;"><div style="font-size:9px;color:#6b7280;margin-top:2px;">📱 Tara</div></div>`:'';
   let h=`<div class="irsaliye-page">
   <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${item.no||'—'}</div><div class="pdate">Tarih: ${printDate}</div>${qrBlock}</div></div>
   <div class="ig">
@@ -15010,20 +15012,29 @@ function renderQrGenList(){
 }
 
 // QR kod PNG dataURL üretir — PDF/yazdırmaya gömmek için (senkron)
-function _buildQrDataUrl(payloadText){
+function _buildQrDataUrl(payloadText, opts){
   if(typeof QRCode === 'undefined') return '';
+  // opts: { size:int=220, correctLevel:'L'|'M'|'Q'|'H'='M' }
+  // PDF/yazdirma icin yuksek cozunurlukte (orn. size: 1024) ve H correct level
+  // tercih edin — ekranda kucuk gorunse de print rasterize asamasinda netlik korunur.
+  const size = (opts && opts.size && opts.size > 0) ? Math.round(opts.size) : 220;
+  const lvName = (opts && opts.correctLevel) ? String(opts.correctLevel).toUpperCase() : '';
+  const lvMap  = { L: QRCode.CorrectLevel.L, M: QRCode.CorrectLevel.M, Q: QRCode.CorrectLevel.Q, H: QRCode.CorrectLevel.H };
+  // Tercih edilen level + fallback'lar (bazi uzun URL'lerde H seviyesi sigmaz, daha dusuge dusurulur)
+  const order = lvName && lvMap[lvName]
+    ? [lvMap[lvName], lvMap.Q, lvMap.M, lvMap.L]
+    : [lvMap.M, lvMap.L];
   try{
     const host = document.createElement('div');
     host.style.position = 'absolute';
     host.style.left = '-9999px';
     host.style.top = '-9999px';
     document.body.appendChild(host);
-    const levels = [QRCode.CorrectLevel.M, QRCode.CorrectLevel.L];
     let dataUrl = '';
-    for(const lv of levels){
+    for(const lv of order){
       try{
         host.innerHTML = '';
-        new QRCode(host, { text: payloadText, width: 220, height: 220, correctLevel: lv });
+        new QRCode(host, { text: payloadText, width: size, height: size, correctLevel: lv });
         const canvas = host.querySelector('canvas');
         const img    = host.querySelector('img');
         if(canvas){ dataUrl = canvas.toDataURL('image/png'); break; }
