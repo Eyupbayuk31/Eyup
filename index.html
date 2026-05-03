@@ -263,7 +263,8 @@
       'atolyeler','stoklar','stokHareketler','recycleBin',
       'irsaliye_users','aksesuarlar','waybillTemplates',
       'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
-      'app_settings'         // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
+      'app_settings',        // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
+      'audit_log'            // kim ne zaman ne yapti — iki cihazda da goruner
     ];
     const RECENT_WRITE_MS = 5000;
     const PENDING_DELETE_MS = 5000;
@@ -7887,6 +7888,30 @@ body::after{
     <div class="v8-srb amber"><div class="v8-srb-val" id="v8srbBugun">0</div><div class="v8-srb-lbl">Bugün</div></div>
   </div>
 
+  <!-- Aksiyon Widget'lari: tiklanabilir, filtrelenmis listeye gider -->
+  <div id="actionWidgets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px;">
+    <div onclick="goToOverdueList()" style="cursor:pointer;background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div style="display:flex;align-items:center;gap:8px;color:#ef4444;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-circle-exclamation"></i> Termini Geçen</div>
+      <div id="awOverdue" style="font-size:28px;font-weight:800;color:#ef4444;margin-top:4px;line-height:1;">0</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Acil takip edin</div>
+    </div>
+    <div onclick="goToTomorrowList()" style="cursor:pointer;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(245,158,11,0.04));border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div style="display:flex;align-items:center;gap:8px;color:#f59e0b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-clock"></i> Yarın Bitiyor</div>
+      <div id="awTomorrow" style="font-size:28px;font-weight:800;color:#f59e0b;margin-top:4px;line-height:1;">0</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Bugün hazırlayın</div>
+    </div>
+    <div onclick="goToWeekDoneList()" style="cursor:pointer;background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.04));border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div style="display:flex;align-items:center;gap:8px;color:#10b981;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-circle-check"></i> Bu Hafta Teslim</div>
+      <div id="awWeekDone" style="font-size:28px;font-weight:800;color:#10b981;margin-top:4px;line-height:1;">0</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Tamamlanan iş</div>
+    </div>
+    <div onclick="goToCriticalStock()" style="cursor:pointer;background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(168,85,247,0.04));border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div style="display:flex;align-items:center;gap:8px;color:#a855f7;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-boxes-stacked"></i> Kritik Stok</div>
+      <div id="awStock" style="font-size:28px;font-weight:800;color:#a855f7;margin-top:4px;line-height:1;">0</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">≤5 adet kalan</div>
+    </div>
+  </div>
+
   <!-- Durum Özeti Kartı (Hava Durumu Benzeri) -->
   <div class="db-status-card" id="dbStatusCard">
     <div class="db-status-icon" id="dbStatusIcon">☀️</div>
@@ -8511,13 +8536,18 @@ body::after{
       <div class="section-header"><h2>Atölyeler</h2></div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title"><i class="fas fa-plus"></i> Yeni Atölye Ekle</div>
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-          <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label>Atölye Adı *</label><input class="form-input" id="atolyeAdi" placeholder="Atölye adı girin"></div>
-          <button class="btn btn-primary" onclick="addAtolye()"><i class="fas fa-plus"></i> Ekle</button>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:flex-end;">
+          <div class="form-group" style="margin-bottom:0;"><label>Atölye Adı *</label><input class="form-input" id="atolyeAdi" placeholder="Atölye adı"></div>
+          <div class="form-group" style="margin-bottom:0;"><label>Telefon (WhatsApp)</label><input class="form-input" id="atolyeTel" placeholder="05xx xxx xx xx" inputmode="tel"></div>
+          <div class="form-group" style="margin-bottom:0;"><label>Birim Fiyat (₺)</label><input class="form-input" id="atolyeBirimFiyat" type="number" step="0.01" min="0" placeholder="örn: 12.50"></div>
+          <div style="display:flex;gap:6px;"><button class="btn btn-primary" onclick="addAtolye()" style="flex:1;justify-content:center;"><i class="fas fa-plus"></i> Ekle</button></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
+          <i class="fas fa-circle-info"></i> Telefon kayıtlıysa QR'lar tek tıkla WhatsApp'tan o atölyeye gönderilir. Birim fiyat girilirse cari hesap özetinde tahmini ciro hesaplanır.
         </div>
       </div>
       <div class="card">
-        <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>)</div>
+        <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>) <span id="atolyeCariSummary" style="float:right;font-weight:500;color:var(--text-muted);font-size:13px;"></span></div>
         <div id="atolyeList"></div>
       </div>
     </div>
@@ -9110,6 +9140,39 @@ body::after{
             </div>
             <div id="backupStatus" style="font-size:12px;margin:6px 0;display:none;"></div>
             <div id="backupList" style="font-size:12px;margin-top:8px;display:none;"></div>
+          </div>
+        </div>
+
+        <div class="s-card" id="auditLogCard">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#6366f1,#4338ca);"><i class="fas fa-clock-rotate-left"></i></div>
+            <div>
+              <h3>İşlem Geçmişi (Audit Log)</h3>
+              <p>Kim ne zaman ne yaptı — son 500 olay, iki cihazda da senkron</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <select id="auditFilterAction" class="form-input" style="flex:1;min-width:130px;" onchange="renderAuditLog()">
+                <option value="">Tüm işlemler</option>
+                <option value="create">Oluşturma</option>
+                <option value="update">Güncelleme</option>
+                <option value="remove">Silme (geri dönüşüme)</option>
+                <option value="delete">Kalıcı silme</option>
+                <option value="purge">Geri dönüşümden silme</option>
+                <option value="login">Giriş</option>
+                <option value="logout">Çıkış</option>
+                <option value="import">İçe aktarma</option>
+                <option value="restore">Geri yükleme</option>
+                <option value="backup">Yedekleme</option>
+              </select>
+              <select id="auditFilterUser" class="form-input" style="flex:1;min-width:130px;" onchange="renderAuditLog()">
+                <option value="">Tüm kullanıcılar</option>
+              </select>
+              <button class="btn btn-secondary" onclick="renderAuditLog()" style="min-width:100px;justify-content:center;"><i class="fas fa-rotate"></i> Yenile</button>
+              <button class="btn btn-danger btn-sm" onclick="clearAuditLog()" title="Tüm geçmişi sil" style="min-width:60px;justify-content:center;"><i class="fas fa-trash"></i></button>
+            </div>
+            <div id="auditLogList" style="font-size:12px;max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--glass);"></div>
           </div>
         </div>
 
@@ -9823,9 +9886,11 @@ function addAtolye(){
   if(!name)return toast('Atölye adı gerekli','error');
   const list=getData('atolyeler');
   if(list.find(a=>a.name.toLowerCase()===name.toLowerCase()))return toast('Bu atölye zaten var','error');
-  list.push({id:Date.now(),name});
+  const tel = (document.getElementById('atolyeTel')||{}).value || '';
+  const fiyat = parseFloat((document.getElementById('atolyeBirimFiyat')||{}).value || '0') || 0;
+  list.push({ id:Date.now(), name, telefon: tel.trim(), birimFiyat: fiyat });
   setData('atolyeler',list);
-  document.getElementById('atolyeAdi').value='';
+  ['atolyeAdi','atolyeTel','atolyeBirimFiyat'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   loadAtolyeSelects();refreshAtolyeList();
   toast('Atölye eklendi');
 }
@@ -9837,20 +9902,71 @@ function deleteAtolye(id){
   toast('Atölye silindi','info');
 }
 
+// Atolye bilgilerini inline guncelle (telefon / birim fiyat)
+function updateAtolyeField(id, field, value){
+  const list = getData('atolyeler');
+  const idx = list.findIndex(a=>a.id===id);
+  if(idx < 0) return;
+  if(field === 'birimFiyat') list[idx].birimFiyat = parseFloat(value) || 0;
+  else if(field === 'telefon') list[idx].telefon = String(value||'').trim();
+  setData('atolyeler', list);
+  refreshAtolyeList();
+}
+
+// Bir atolye icin yapilan toplam is sayisi (tum irsaliye tipleri)
+function _countAtolyeJobs(name){
+  if(!name) return 0;
+  const lc = name.toLowerCase();
+  let total = 0;
+  ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller'].forEach(k=>{
+    (getData(k)||[]).forEach(it=>{
+      const ad = ((it.atolye||it.firma||'')+'').toLowerCase();
+      if(ad === lc) total++;
+    });
+  });
+  return total;
+}
+
+function _formatTL(v){
+  if(!isFinite(v)) v = 0;
+  try{ return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v) + ' ₺'; }
+  catch(_){ return v.toFixed(2) + ' ₺'; }
+}
+
 function refreshAtolyeList(){
   const list=getData('atolyeler');
   document.getElementById('atolyeCount').textContent=list.length;
   const el=document.getElementById('atolyeList');
-  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';return;}
-  el.innerHTML=list.map(a=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;"><i class="fas fa-industry" style="color:#fff;font-size:13px;"></i></div>
-        <span style="font-weight:600;font-size:14px;">${a.name}</span>
+  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';
+    const sumEl=document.getElementById('atolyeCariSummary'); if(sumEl) sumEl.textContent='';
+    return;}
+  let grandJobs = 0, grandRevenue = 0;
+  el.innerHTML=list.map(a=>{
+    const jobs = _countAtolyeJobs(a.name);
+    const fiyat = parseFloat(a.birimFiyat||0) || 0;
+    const revenue = jobs * fiyat;
+    grandJobs += jobs; grandRevenue += revenue;
+    const tel = (a.telefon||'').replace(/[^\d+]/g,'');
+    const waBtn = tel ? '<a href="https://wa.me/'+_normalizePhoneForWa(tel)+'" target="_blank" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fab fa-whatsapp"></i></a>' : '';
+    return `
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;"><i class="fas fa-industry" style="color:#fff;font-size:13px;"></i></div>
+      <div style="min-width:0;">
+        <div style="font-weight:600;font-size:14px;">${esc(a.name)} ${waBtn}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;">
+          <span><i class="fas fa-briefcase" style="opacity:.6;"></i> ${jobs} iş</span>
+          ${fiyat>0 ? '<span><i class="fas fa-coins" style="opacity:.6;"></i> ~ '+_formatTL(revenue)+'</span>' : ''}
+        </div>
       </div>
+      <input class="form-input" placeholder="Telefon" value="${esc(a.telefon||'')}" style="max-width:130px;font-size:12px;padding:5px 8px;" onchange="updateAtolyeField(${a.id},'telefon',this.value)">
+      <input class="form-input" type="number" step="0.01" min="0" placeholder="Birim ₺" value="${fiyat||''}" style="max-width:90px;font-size:12px;padding:5px 8px;text-align:right;" onchange="updateAtolyeField(${a.id},'birimFiyat',this.value)">
       <button class="btn btn-sm btn-danger" onclick="deleteAtolye(${a.id})"><i class="fas fa-trash"></i></button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+  const sumEl=document.getElementById('atolyeCariSummary');
+  if(sumEl){
+    sumEl.textContent = 'Toplam ' + grandJobs + ' iş • Tahmini ciro ' + _formatTL(grandRevenue);
+  }
 }
 
 // ==================== STOK TAKİBİ ====================
@@ -10702,11 +10818,35 @@ function loadAtolyeFilter(){
 function applyFilters(){
   renderTypeFilterBar();
   loadAtolyeFilter();
-  
+
   let list=getUnifiedList();
   const now=new Date();
   const today=now.toISOString().split('T')[0];
-  
+
+  // Dashboard widget'tan gelen filtre (en once uygula, kullanici kapatmadikca aktif)
+  if(typeof window._dashFilter === 'function'){
+    list = list.filter(window._dashFilter);
+    // Bilgi banneri
+    setTimeout(function(){
+      var box = document.getElementById('dashFilterBanner');
+      if(!box){
+        var head = document.querySelector('#page-list .page-header') || document.getElementById('page-list');
+        if(head){
+          box = document.createElement('div');
+          box.id = 'dashFilterBanner';
+          box.style.cssText = 'background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:8px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;';
+          head.insertBefore(box, head.firstChild);
+        }
+      }
+      if(box){
+        box.innerHTML = '<span><i class="fas fa-filter" style="color:var(--primary);"></i> <b>Anasayfa filtresi aktif:</b> '+(window._dashFilterLabel||'Özel filtre')+' • <b>'+list.length+'</b> kayıt</span>'
+          + '<button onclick="window._dashFilter=null;window._dashFilterLabel=\'\';var b=document.getElementById(\'dashFilterBanner\');if(b)b.remove();applyFilters();" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;">✕ Filtreyi Kaldır</button>';
+      }
+    }, 30);
+  } else {
+    var b = document.getElementById('dashFilterBanner'); if(b) b.remove();
+  }
+
   // Type filter
   if(currentTypeFilter!=='all')list=list.filter(i=>i._type===currentTypeFilter);
   
@@ -11517,6 +11657,40 @@ document.querySelectorAll('[id^="t_"][id$="a"]').forEach(el=>{
   el.addEventListener('input',()=>{let t=0;['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{t+=+(document.getElementById('t_'+s+'a').value||0);});document.getElementById('tToplam').textContent=t;});
 });
 
+// ==================== DASHBOARD WIDGET NAVIGASYONU ==================
+function _gotoListWith(filterFn, label){
+  showPage('list');
+  // Liste sayfasi acildiktan sonra filtre kur
+  setTimeout(function(){
+    try{
+      // applyFilters yapildiginda override'imiz devreye girsin diye sade yaklasim:
+      // listSearch'a anahtar string degil, dogrudan unified listeye filter uygulayan
+      // bir global flag set ediyoruz. Bu zaten basit bir SPA, complex routing yok.
+      window._dashFilter = filterFn;
+      window._dashFilterLabel = label || '';
+      if(typeof applyFilters === 'function') applyFilters();
+    }catch(_){}
+  }, 50);
+}
+function goToOverdueList(){
+  var today = new Date().toISOString().split('T')[0];
+  _gotoListWith(function(i){ return i.termin && i.termin < today && i.durum!=='teslim'; }, 'Termini Geçen');
+}
+function goToTomorrowList(){
+  var tom = new Date(); tom.setDate(tom.getDate()+1);
+  var t = tom.toISOString().split('T')[0];
+  _gotoListWith(function(i){ return i.termin === t && i.durum!=='teslim'; }, 'Yarın Bitecek');
+}
+function goToWeekDoneList(){
+  var wa = new Date(); wa.setDate(wa.getDate()-7);
+  var ws = wa.toISOString().split('T')[0];
+  _gotoListWith(function(i){ return i.durum==='teslim' && i.tarih && i.tarih >= ws; }, 'Bu Hafta Teslim');
+}
+function goToCriticalStock(){
+  showPage('stok');
+  if(typeof toast === 'function') toast('Kritik stok kalemleri ≤5 adet','info');
+}
+
 // ==================== HOME / STATS ====================
 function refreshHome(){
   var now=new Date();
@@ -11572,6 +11746,27 @@ function refreshHome(){
   sv('miniKordon',kordonlar.length);
   sv('miniDantel',danteller.length);
   sv('miniAtolye',atolyeler.length);
+
+  // === Aksiyon widget'lari ===
+  // Yarinin tarih stringi
+  var tomorrow=new Date(now); tomorrow.setDate(now.getDate()+1);
+  var tomorrowStr=tomorrow.toISOString().split('T')[0];
+  // Hafta basi (7 gun once) - bu hafta tamamlanan icin
+  var weekAgo=new Date(now); weekAgo.setDate(now.getDate()-7);
+  var weekAgoStr=weekAgo.toISOString().split('T')[0];
+  var awOverdueN  = allUnified.filter(function(i){return i.termin && i.termin<todayStr && i.durum!=='teslim';}).length;
+  var awTomorrowN = allUnified.filter(function(i){return i.termin===tomorrowStr && i.durum!=='teslim';}).length;
+  var awWeekDoneN = allUnified.filter(function(i){return i.durum==='teslim' && i.tarih && i.tarih>=weekAgoStr;}).length;
+  // Kritik stok: stoklar tablosunda miktar<=5 olanlar
+  var stoklar = getData('stoklar') || [];
+  var awStockN = stoklar.filter(function(s){
+    var qty = (s && (typeof s.miktar==='number'?s.miktar:parseFloat(s.miktar)));
+    return !isNaN(qty) && qty<=5;
+  }).length;
+  sv('awOverdue',  awOverdueN);
+  sv('awTomorrow', awTomorrowN);
+  sv('awWeekDone', awWeekDoneN);
+  sv('awStock',    awStockN);
 
   // 7 gunluk aktivite grafigi
   var days7=[],day7Labels=[],day7Data=[];
@@ -12400,7 +12595,8 @@ function importData(e){
     const snapPath = await _backupBeforeImport();
     if(snapPath){ console.log('[import] Pre-import snapshot:', snapPath); }
 
-    // 2) Yaz
+    // 2) Yaz (audit log spam'i engellemek icin silent flag)
+    window._auditSilent = true;
     try{
       _IMPORT_KEYS.forEach(k => { if(Array.isArray(data[k])) setData(k, data[k]); });
       if(data.config){
@@ -12415,6 +12611,8 @@ function importData(e){
       console.error('[import] write hatasi:', err);
       toast('Import sirasinda hata: ' + (err.message||err) + (snapPath ? ' — snapshot mevcut: '+snapPath : ''), 'error');
     }finally{
+      window._auditSilent = false;
+      _logAudit('import', { label: totalRecords + ' kayit', details: 'Snapshot: ' + (snapPath||'-') });
       inputEl.value = '';
     }
   };
@@ -12473,7 +12671,13 @@ async function restoreFromBackup(filename){
     const snap = await _backupBeforeImport();
     setMsg('<i class="fas fa-spinner fa-spin"></i> Yedek geri yukleniyor...');
     let written = 0;
-    _IMPORT_KEYS.forEach(k => { if(Array.isArray(data[k])) { setData(k, data[k]); written++; } });
+    window._auditSilent = true;
+    try{
+      _IMPORT_KEYS.forEach(k => { if(Array.isArray(data[k])) { setData(k, data[k]); written++; } });
+    } finally {
+      window._auditSilent = false;
+    }
+    _logAudit('restore', { label: filename, details: written + ' kategori' });
     setMsg('<i class="fas fa-circle-check"></i> Geri yukleme tamamlandi: '+written+' kategori. '+(snap?('Snapshot: '+snap):''), '#10b981');
     if(typeof toast === 'function') toast('Geri yukleme tamamlandi: '+filename,'success');
     if(typeof refreshAll === 'function') refreshAll();
@@ -12711,6 +12915,9 @@ function permanentDelete(id){
   setData('recycleBin',recycle);
   renderRecycleBin();
   toast('Kayıt kalıcı olarak silindi','info');
+  if(typeof _logAudit === 'function' && target){
+    _logAudit('delete', { key:'recycleBin', type: target._type || '', itemId: id, itemNo: target.no || '', label: target.atolye || target.firma || '' });
+  }
   // GitHub'daki fotolari arka planda temizle (silme islemi bloklanmasin)
   if(target && typeof _deletePhotosForItem === 'function'){
     _deletePhotosForItem(target).then(r=>{
@@ -12727,6 +12934,9 @@ function emptyRecycleBin(){
   setData('recycleBin',[]);
   renderRecycleBin();
   toast('Geri dönüşüm kutusu boşaltıldı','info');
+  if(typeof _logAudit === 'function'){
+    _logAudit('delete-bulk', { key:'recycleBin', label: items.length + ' kayit', details: 'Geri donusum bosaltildi' });
+  }
   // Tum kayitlardaki fotolari arka planda repo'dan temizle
   if(typeof _deletePhotosForItem === 'function'){
     (async ()=>{
@@ -12782,8 +12992,84 @@ function loadSettings(){
   try{ loadPublishUrlIntoInput(); }catch(e){}
   // GitHub yükleme ayarlarını yükle (sadece admin)
   try{ loadGithubConfigIntoInputs(); }catch(e){}
+  // Audit log varsayilan olarak ilk acilista yuklensin
+  try{ if(typeof renderAuditLog === 'function') renderAuditLog(); }catch(e){}
   // Admin-only görünürlük uygula
   _applyAdminVisibility();
+}
+
+// === AUDIT LOG UI ===============================================
+function _formatAuditTime(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  const now = Date.now();
+  const diff = now - ts;
+  if(diff < 60000) return Math.floor(diff/1000) + ' sn önce';
+  if(diff < 3600000) return Math.floor(diff/60000) + ' dk önce';
+  if(diff < 86400000) return Math.floor(diff/3600000) + ' sa önce';
+  if(diff < 7*86400000) return Math.floor(diff/86400000) + ' gün önce';
+  return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+}
+function _auditActionMeta(action){
+  const map = {
+    create:    { lbl:'Oluşturma',         icon:'fa-plus',          color:'#10b981' },
+    update:    { lbl:'Güncelleme',        icon:'fa-pen',           color:'#0ea5e9' },
+    remove:    { lbl:'Geri dönüşüme',     icon:'fa-trash',         color:'#f59e0b' },
+    delete:    { lbl:'Kalıcı silme',      icon:'fa-trash-can',     color:'#ef4444' },
+    purge:     { lbl:'Geri dönüşümden sil',icon:'fa-fire',         color:'#ef4444' },
+    'delete-bulk':{ lbl:'Toplu silme',    icon:'fa-trash-arrow-up',color:'#ef4444' },
+    login:     { lbl:'Giriş',             icon:'fa-right-to-bracket',color:'#10b981' },
+    logout:    { lbl:'Çıkış',             icon:'fa-right-from-bracket',color:'#6b7280' },
+    import:    { lbl:'İçe aktarma',       icon:'fa-file-import',   color:'#a855f7' },
+    restore:   { lbl:'Geri yükleme',      icon:'fa-rotate-left',   color:'#a855f7' },
+    backup:    { lbl:'Yedekleme',         icon:'fa-cloud-arrow-up',color:'#0ea5e9' }
+  };
+  return map[action] || { lbl: action, icon:'fa-circle-info', color:'#6b7280' };
+}
+function renderAuditLog(){
+  const list = document.getElementById('auditLogList');
+  if(!list) return;
+  let log = [];
+  try{ log = (getData('audit_log') || []).slice(); }catch(_){}
+  const userSel = document.getElementById('auditFilterUser');
+  if(userSel){
+    const cur = userSel.value;
+    const users = Array.from(new Set(log.map(e=>e.by).filter(Boolean))).sort();
+    userSel.innerHTML = '<option value="">Tüm kullanıcılar</option>' + users.map(u=>'<option value="'+u+'">'+u+'</option>').join('');
+    if(cur && users.includes(cur)) userSel.value = cur;
+  }
+  const fa = document.getElementById('auditFilterAction');
+  const fu = document.getElementById('auditFilterUser');
+  const filterAct = fa ? fa.value : '';
+  const filterUsr = fu ? fu.value : '';
+  let rows = log;
+  if(filterAct) rows = rows.filter(e=>e.action === filterAct);
+  if(filterUsr) rows = rows.filter(e=>e.by === filterUsr);
+  if(!rows.length){
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">Kayıt yok</div>';
+    return;
+  }
+  list.innerHTML = rows.slice(0,300).map(e=>{
+    const m = _auditActionMeta(e.action);
+    const sub = [e.itemNo && ('#'+e.itemNo), e.label, e.type, e.details].filter(Boolean).join(' • ');
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);">'
+      + '<div style="width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:'+m.color+'18;color:'+m.color+';"><i class="fas '+m.icon+'"></i></div>'
+      + '<div style="flex:1;min-width:0;">'
+      +   '<div style="font-weight:600;color:var(--text-main);font-size:12px;">'+m.lbl+(e.key?' <span style="color:var(--text-muted);font-weight:400;">('+e.key+')</span>':'')+'</div>'
+      +   (sub ? '<div style="color:var(--text-muted);font-size:11px;margin-top:2px;word-break:break-word;">'+sub+'</div>' : '')
+      + '</div>'
+      + '<div style="text-align:right;flex-shrink:0;font-size:11px;color:var(--text-muted);">'
+      +   '<div style="font-weight:600;color:var(--text-main);">'+(e.by||'?')+'</div>'
+      +   '<div title="'+new Date(e.at).toLocaleString('tr-TR')+'">'+_formatAuditTime(e.at)+'</div>'
+      + '</div>'
+      + '</div>';
+  }).join('') + (rows.length>300 ? '<div style="padding:8px 12px;color:var(--text-muted);font-size:11px;text-align:center;">... +'+(rows.length-300)+' daha (filtre uygulayarak daraltın)</div>' : '');
+}
+function clearAuditLog(){
+  if(!confirm('Tüm işlem geçmişi silinecek (' + ((getData('audit_log')||[]).length) + ' kayıt). Devam edilsin mi?')) return;
+  try{ setData('audit_log', []); }catch(_){}
+  renderAuditLog();
+  if(typeof toast === 'function') toast('İşlem geçmişi temizlendi','info');
 }
 
 // ==================== BULK OPERATIONS ====================
@@ -14898,6 +15184,94 @@ function _findItemByIdType(id, type){
   const list = getData(key);
   return list.find(i => String(i.id) === String(id)) || null;
 }
+// === AUDIT LOG ===================================================
+// Tum ciddi olaylari (giris/cikis, olusturma/silme/guncelleme, import,
+// restore, backup) audit_log key'inde tutar; cihazlar arasinda senkron.
+const _AUDIT_LOG_KEY = 'audit_log';
+const _AUDIT_MAX_ENTRIES = 500; // ust sinir — eskiler atilir
+function _logAudit(action, opts){
+  try{
+    if(window._auditSilent) return; // bulk operasyonda skip
+    if(typeof getData !== 'function' || typeof setData !== 'function') return;
+    const log = (getData(_AUDIT_LOG_KEY) || []).slice();
+    const o = opts || {};
+    const entry = {
+      id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+      at: o.at || Date.now(),
+      by: o.by || (localStorage.getItem('irsaliye_last_user') || '?'),
+      action: action,           // 'create'|'update'|'delete'|'restore'|'import'|'backup'|'login'|'logout'
+      key:    o.key    || '',   // hangi key (irsaliyeler vs.)
+      type:   o.type   || '',   // hangi alt tip (standart, fermuar, ...)
+      itemId: (o.itemId === 0 ? 0 : (o.itemId || '')),
+      itemNo: o.itemNo || '',
+      label:  o.label  || '',   // serbest metin (orn. atolye adi)
+      details:o.details|| ''
+    };
+    log.unshift(entry); // en yenisi basa
+    if(log.length > _AUDIT_MAX_ENTRIES) log.length = _AUDIT_MAX_ENTRIES;
+    setData(_AUDIT_LOG_KEY, log);
+  }catch(e){ /* sessiz */ }
+}
+window._logAudit = _logAudit;
+
+// setData'nin orjinalini wrap et — kayit eklenmesi/silinmesini diff ile yakala.
+// _updateItem zaten 'update' loglar; biz 'create' ve 'delete' eventlerini ekliyoruz.
+// audit_log'un kendi yazimlari sonsuz dongu olusturmasin diye atliyoruz.
+(function _wrapSetDataForAudit(){
+  if(window._setDataWrapped) return;
+  if(typeof window.setData !== 'function') return;
+  const _origSet = window.setData;
+  // Hangi key'ler kayit-bazli takip edilsin (ID tasiyanlar)
+  const trackable = new Set([
+    'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar',
+    'satenaskilikler','kordonlar','danteller','atolyeler','stoklar',
+    'aksesuarlar','irsaliye_users','waybillTemplates','recycleBin'
+  ]);
+  // Hangi alt-tip etiketi gosterilsin
+  const typeMap = {
+    irsaliyeler:'standart', fermuarlar:'fermuar', lastikler:'lastik',
+    dugmeler:'dugme', toptanlar:'toptan', satenaskilikler:'satenaskilik',
+    kordonlar:'kordon', danteller:'dantel'
+  };
+  window.setData = function(key, val){
+    if(window._auditSilent || key === _AUDIT_LOG_KEY || !trackable.has(key)){
+      return _origSet(key, val);
+    }
+    let prev = [];
+    try{ prev = window.getData(key) || []; }catch(_){ prev = []; }
+    const result = _origSet(key, val);
+    try{
+      if(!Array.isArray(val) || !Array.isArray(prev)) return result;
+      const prevIds = new Set(prev.map(x=> x && (x.id !== undefined ? String(x.id) : (x.username || x.name || ''))).filter(Boolean));
+      const valIds  = new Set(val.map(x=> x && (x.id !== undefined ? String(x.id) : (x.username || x.name || ''))).filter(Boolean));
+      // Yeni eklenenler
+      val.forEach(it=>{
+        const k = it && (it.id !== undefined ? String(it.id) : (it.username || it.name || ''));
+        if(!k || prevIds.has(k)) return;
+        _logAudit('create', {
+          key, type: typeMap[key] || '',
+          itemId: (it.id !== undefined ? it.id : k),
+          itemNo: it.no || it.name || it.username || '',
+          label:  it.atolye || it.firma || ''
+        });
+      });
+      // Silinenler (recycleBin'e tasinmis olabilir; yine de log)
+      prev.forEach(it=>{
+        const k = it && (it.id !== undefined ? String(it.id) : (it.username || it.name || ''));
+        if(!k || valIds.has(k)) return;
+        _logAudit(key === 'recycleBin' ? 'purge' : 'remove', {
+          key, type: typeMap[key] || it._type || '',
+          itemId: (it.id !== undefined ? it.id : k),
+          itemNo: it.no || it.name || it.username || '',
+          label:  it.atolye || it.firma || ''
+        });
+      });
+    }catch(e){ /* sessiz */ }
+    return result;
+  };
+  window._setDataWrapped = true;
+})();
+
 function _updateItem(id, type, updater, opts){
   const key = TYPE_KEY_MAP[type];
   if(!key) return false;
@@ -14929,6 +15303,7 @@ function _updateItem(id, type, updater, opts){
   }catch(_){}
   list[idx] = updated;
   setData(key, list);
+  _logAudit('update', { key, type, itemId: id, itemNo: updated.no || updated.name || '', label: updated.atolye || updated.firma || '' });
   return true;
 }
 function _getAllUnifiedWithType(){
@@ -15610,6 +15985,7 @@ function generateQrForItem(id, type){
         <button class="btn btn-primary" onclick="downloadQrPng()"><i class="fas fa-download"></i> PNG İndir</button>
         <button class="btn btn-secondary" onclick="printQrOnly()"><i class="fas fa-print"></i> Yazdır</button>
         <button class="btn btn-secondary" onclick="_copyQrUrl()"><i class="fas fa-link"></i> Linki Kopyala</button>
+        <button class="btn" onclick="_shareQrWhatsApp()" style="background:#25D366;color:#fff;border:0;"><i class="fab fa-whatsapp"></i> WhatsApp'tan Gönder</button>
       </div>
       <div style="font-size:10px;color:var(--text-dim);margin-top:10px;word-break:break-all;max-width:460px;margin-left:auto;margin-right:auto;">
         <b>Bu QR şu URL'yi açar:</b><br>${scanUrl.length>180?scanUrl.slice(0,180)+'…':scanUrl}
@@ -15640,6 +16016,63 @@ function generateQrForItem(id, type){
       }
     }
   }, 80);
+}
+
+// Telefon numarasini wa.me icin normalize et: rakam dis karakterleri at,
+// 0 ile basliyorsa ulke kodu (TR=90) ekle, dis ulkelerde + zaten varsa olduysa kabul.
+function _normalizePhoneForWa(raw){
+  if(!raw) return '';
+  let s = String(raw).replace(/[^\d+]/g,'');
+  if(s.startsWith('+')) s = s.slice(1);
+  if(s.startsWith('00')) s = s.slice(2);
+  if(s.startsWith('0')) s = '90' + s.slice(1);
+  // Hala 10 haneli ise (905x baslamiyor) Turkiye varsayalim
+  if(s.length === 10 && !s.startsWith('90')) s = '90' + s;
+  return s;
+}
+
+function _shareQrWhatsApp(){
+  const url = window._lastQrScanUrl;
+  if(!url){ toast('Link bulunamadi','error'); return; }
+  const item = currentModalItem || {};
+  const type = currentModalType || '';
+  // Atolye telefon numarasini bul (kayitli ise)
+  let waPhone = '';
+  try{
+    const atolyeAdi = (item.atolye || item.firma || '').trim().toLowerCase();
+    if(atolyeAdi){
+      const list = getData('atolyeler') || [];
+      const a = list.find(x=> x && (x.name||'').trim().toLowerCase() === atolyeAdi);
+      if(a && (a.telefon || a.tel || a.phone)){
+        waPhone = _normalizePhoneForWa(a.telefon || a.tel || a.phone);
+      }
+    }
+  }catch(_){}
+
+  const typeLabels = { standart:'Poset Irsaliyesi', fermuar:'Fermuar', lastik:'Lastik', dugme:'Dugme', toptan:'Toptan Siparis', satenaskilik:'Saten Askilik', kordon:'Kordon Irsaliyesi', dantel:'Dantel Irsaliyesi' };
+  const typeLbl = typeLabels[type] || 'Irsaliye';
+  const lines = [
+    'Merhaba,',
+    '',
+    typeLbl + ' (' + (item.no || '-') + ')',
+    item.atolye ? ('Atolye: ' + item.atolye) : '',
+    item.tarih  ? ('Tarih: ' + item.tarih)   : '',
+    item.termin ? ('Termin: ' + item.termin) : '',
+    '',
+    'Detaylar ve fotograflar:',
+    url
+  ].filter(Boolean);
+  const text = encodeURIComponent(lines.join('\n'));
+
+  const waUrl = waPhone
+    ? ('https://wa.me/' + waPhone + '?text=' + text)
+    : ('https://wa.me/?text=' + text);
+  window.open(waUrl, '_blank');
+  if(!waPhone){
+    toast('Atolye telefonu kayitli degil — WhatsApp\'tan kisi secin', 'info');
+  } else {
+    toast('WhatsApp aciliyor: ' + waPhone, 'success');
+  }
 }
 
 function _copyQrUrl(){
@@ -16388,6 +16821,7 @@ async function runManualBackup(){
     const counts = (data._meta && data._meta.fsKeys) ? data._meta.fsKeys.length : 0;
     setStatus('<i class="fas fa-circle-check"></i> Yedek hazir: <b>'+path+'</b> ('+counts+' kategori)','#10b981');
     if(typeof toast === 'function') toast('Yedek alindi: '+path,'success');
+    if(typeof _logAudit === 'function') _logAudit('backup', { label: path, details: counts + ' kategori' });
   }catch(e){
     console.warn('Manual backup err:', e);
     setStatus('<i class="fas fa-circle-xmark"></i> '+(e.message||e),'#ef4444');
@@ -19126,6 +19560,7 @@ body.logged-out { overflow:hidden !important; }
       if(matched && matched.password === p){
         setAuthed(remember);
         try { localStorage.setItem(LAST_USER_KEY, u); } catch(e){}
+        if(typeof window._logAudit === 'function') window._logAudit('login', { by: u, label: u });
         btn.classList.remove('loading');
         btn.innerHTML = '<i class="fas fa-check-circle"></i> <span class="btn-text">Giriş başarılı</span>';
         btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
@@ -19159,6 +19594,9 @@ body.logged-out { overflow:hidden !important; }
 
   // Dışa açık: çıkış
   window.logout = function(){
+    if(typeof window._logAudit === 'function'){
+      try{ window._logAudit('logout', { by: localStorage.getItem('irsaliye_last_user') || '?' }); }catch(_){}
+    }
     // Cache'i temizle
     clearAuth();
 
