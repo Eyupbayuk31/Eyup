@@ -8193,9 +8193,9 @@ body::after{
         <select class="filter-select" id="filterAtolye" onchange="applyFilters()" style="display:none;">
           <option value="all">🏭 Tüm Atölyeler</option>
         </select>
-        <button type="button" class="filter-select" id="filterAtolyeBtn" onclick="openAtolyePicker()" style="display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;">
-          <span id="filterAtolyeLabel">🏭 Tüm Atölyeler</span>
-          <i class="fas fa-chevron-down" style="opacity:.6;font-size:11px;"></i>
+        <button type="button" class="filter-select" id="filterAtolyeBtn" onclick="openAtolyePicker()" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;">
+          <span id="filterAtolyeLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">🏭 Tüm Atölyeler</span>
+          <i class="fas fa-chevron-down" style="opacity:.6;font-size:11px;flex-shrink:0;"></i>
         </button>
         <select class="filter-select" id="filterDurum" onchange="applyFilters()">
           <option value="all">📋 Tüm Durumlar</option>
