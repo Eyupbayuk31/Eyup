@@ -13940,11 +13940,35 @@ function buildShareText(item, type) {
 
 function shareWhatsApp() {
   if (!currentShareItem) return;
-  const text = buildShareText(currentShareItem, currentShareType);
-  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
-  window.open(url, '_blank');
+  let text = buildShareText(currentShareItem, currentShareType);
+  // QR scan link'ini metnin sonuna ekle ki atolye fotograflara da ulasabilsin
+  try{
+    if(typeof _buildQrScanUrl === 'function'){
+      const scanUrl = _buildQrScanUrl(currentShareItem, currentShareType);
+      if(scanUrl) text += '\n\n📱 Detaylar ve fotograflar:\n' + scanUrl;
+    }
+  }catch(_){}
+  // Atolye telefonu kayitliysa dogrudan o numaraya gonder
+  let waPhone = '';
+  try{
+    if(typeof _normalizePhoneForWa === 'function'){
+      const ad = ((currentShareItem.atolye || currentShareItem.firma || '')+'').trim().toLowerCase();
+      if(ad){
+        const list = getData('atolyeler') || [];
+        const a = list.find(x=> x && (x.name||'').trim().toLowerCase() === ad);
+        if(a && (a.telefon || a.tel || a.phone)){
+          waPhone = _normalizePhoneForWa(a.telefon || a.tel || a.phone);
+        }
+      }
+    }
+  }catch(_){}
+  const waUrl = waPhone
+    ? ('https://wa.me/' + waPhone + '?text=' + encodeURIComponent(text))
+    : ('https://wa.me/?text=' + encodeURIComponent(text));
+  window.open(waUrl, '_blank');
   closeShareMenu();
-  toast('WhatsApp açılıyor...','info');
+  if(waPhone) toast('WhatsApp aciliyor: ' + waPhone, 'success');
+  else toast('WhatsApp aciliyor — kisi secin','info');
 }
 
 function shareEmail() {
