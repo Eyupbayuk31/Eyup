@@ -8190,9 +8190,13 @@ body::after{
           <option value="month">📅 Bu Ay</option>
           <option value="lastmonth">📅 Geçen Ay</option>
         </select>
-        <select class="filter-select" id="filterAtolye" onchange="applyFilters()">
+        <select class="filter-select" id="filterAtolye" onchange="applyFilters()" style="display:none;">
           <option value="all">🏭 Tüm Atölyeler</option>
         </select>
+        <button type="button" class="filter-select" id="filterAtolyeBtn" onclick="openAtolyePicker()" style="display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;">
+          <span id="filterAtolyeLabel">🏭 Tüm Atölyeler</span>
+          <i class="fas fa-chevron-down" style="opacity:.6;font-size:11px;"></i>
+        </button>
         <select class="filter-select" id="filterDurum" onchange="applyFilters()">
           <option value="all">📋 Tüm Durumlar</option>
           <option value="bekliyor">⏳ Bekliyor</option>
@@ -10775,6 +10779,64 @@ function loadAtolyeFilter(){
   const current=sel.value;
   sel.innerHTML='<option value="all">🏭 Tüm Atölyeler</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
   sel.value=current||'all';
+  // Aramali picker butonunun label'ini sync et
+  const lbl = document.getElementById('filterAtolyeLabel');
+  if(lbl) lbl.textContent = (sel.value === 'all' || !sel.value) ? '🏭 Tüm Atölyeler' : ('🏭 ' + sel.value);
+}
+
+// === ARAMALI ATOLYE PICKER (filterAtolye icin) ===
+function openAtolyePicker(){
+  const m = document.getElementById('atolyePicker');
+  if(!m) return;
+  m.style.display = 'flex';
+  // Modal acilir acilmaz arama input'u temizle ve listeyi yenile
+  const s = document.getElementById('atolyePickerSearch');
+  if(s){ s.value=''; setTimeout(()=>{ try{ s.focus(); }catch(_){} }, 60); }
+  renderAtolyePickerList('');
+}
+function closeAtolyePicker(){
+  const m = document.getElementById('atolyePicker');
+  if(m) m.style.display = 'none';
+}
+function renderAtolyePickerList(filter){
+  const list = document.getElementById('atolyePickerList');
+  if(!list) return;
+  const atolyeler = getData('atolyeler') || [];
+  const f = (filter||'').trim().toLowerCase();
+  const sel = document.getElementById('filterAtolye');
+  const cur = sel ? sel.value : 'all';
+  // "Tum" + filtre eslesen atolyeler
+  const items = [{ name:'all', label:'🏭 Tüm Atölyeler', count:null }]
+    .concat(atolyeler
+      .filter(a=> !f || (a.name||'').toLowerCase().includes(f))
+      .sort((a,b)=> (a.name||'').localeCompare(b.name||'','tr'))
+      .map(a=>({ name:a.name, label:a.name, count:null })));
+  if(items.length === 1 && f){
+    list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text-muted);">Eşleşen atölye yok</div>';
+    return;
+  }
+  list.innerHTML = items.map(it=>{
+    const active = (cur === it.name) || (cur === '' && it.name==='all');
+    return '<div onclick="pickAtolyeFilter(\''+String(it.name).replace(/'/g,"\\'")+'\')" '
+      + 'style="padding:12px 14px;margin:2px 4px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;'
+      + (active ? 'background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.4);' : 'border:1px solid transparent;')
+      + '" onmouseover="this.style.background=\'rgba(124,58,237,0.08)\'" onmouseout="this.style.background=\''+(active?'rgba(124,58,237,0.18)':'transparent')+'\'">'
+      + '<i class="fas '+(it.name==='all'?'fa-layer-group':'fa-industry')+'" style="color:var(--primary);width:18px;text-align:center;"></i>'
+      + '<span style="flex:1;font-size:14px;font-weight:'+(active?'700':'500')+';">'+(it.name==='all'?it.label:esc(it.label))+'</span>'
+      + (active ? '<i class="fas fa-check" style="color:var(--primary);"></i>' : '')
+      + '</div>';
+  }).join('');
+}
+function pickAtolyeFilter(name){
+  const sel = document.getElementById('filterAtolye');
+  if(sel){
+    sel.value = name;
+    // change event'i tetikle ki applyFilters calissin
+    try{ sel.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){
+      if(typeof applyFilters === 'function') applyFilters();
+    }
+  }
+  closeAtolyePicker();
 }
 
 function applyFilters(){
@@ -17691,6 +17753,21 @@ document.addEventListener('DOMContentLoaded', function(){
       <button onclick="closeShareMenu()" style="margin-left:auto;background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:30px;height:30px;border-radius:8px;cursor:pointer;"><i class="fas fa-times"></i></button>
     </div>
     <div class="share-options" id="shareOptions"></div>
+  </div>
+</div>
+
+<!-- ATOLYE PICKER (filterAtolye icin aramali secim) -->
+<div id="atolyePicker" style="display:none;position:fixed;inset:0;z-index:var(--z-modal,2000);background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeAtolyePicker()">
+  <div style="background:var(--bg-card-solid);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -10px 40px rgba(0,0,0,0.4);">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-industry" style="color:var(--primary);"></i>
+      <div style="font-weight:700;font-size:15px;flex:1;">Atölye Seç</div>
+      <button onclick="closeAtolyePicker()" style="background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:30px;height:30px;border-radius:8px;cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border);">
+      <input type="text" id="atolyePickerSearch" class="form-input" placeholder="Atölye ara..." oninput="renderAtolyePickerList(this.value)" style="width:100%;">
+    </div>
+    <div id="atolyePickerList" style="overflow-y:auto;flex:1;padding:6px;"></div>
   </div>
 </div>
 
