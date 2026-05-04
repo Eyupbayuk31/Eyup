@@ -10922,6 +10922,7 @@ function renderFilteredList(list){
           </button>
           <div class="table-actions-more">
             <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" title="PDF İndir (Ctrl+P)"><i class="fas fa-file-pdf"></i></button>
+            <button class="btn btn-xs btn-secondary" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" title="WhatsApp'tan Gönder" style="color:#25D366;"><i class="fab fa-whatsapp"></i></button>
             <button class="btn btn-xs btn-secondary" onclick="copyWaybill(${i.id},'${i._type}')" title="Kopyala (Ctrl+D)" style="color:#3b82f6;"><i class="fas fa-copy"></i></button>
             <button class="btn btn-xs btn-secondary" onclick="saveAsTemplate(${i.id},'${i._type}')" title="Şablon Kaydet" style="color:#f59e0b;"><i class="fas fa-bookmark"></i></button>
             <button class="btn btn-xs btn-danger" onclick="deleteItemUni(${i.id},'${i._type}')" title="Sil (Del)"><i class="fas fa-trash"></i></button>
@@ -10962,6 +10963,9 @@ function renderFilteredList(list){
       <div class="card-dropdown-menu">
         <div class="dropdown-item" onclick="event.stopPropagation();generatePDF(${i.id},'${i._type}');closeAllMenus()">
           <i class="fas fa-file-pdf"></i> PDF İndir
+        </div>
+        <div class="dropdown-item" onclick="event.stopPropagation();shareIrsaliyeWhatsApp(${i.id},'${i._type}');closeAllMenus()" style="color:#25D366;">
+          <i class="fab fa-whatsapp"></i> WhatsApp'tan Gönder
         </div>
         <div class="dropdown-item" onclick="event.stopPropagation();copyWaybill(${i.id},'${i._type}');closeAllMenus()">
           <i class="fas fa-copy"></i> Kopyala
@@ -15556,7 +15560,10 @@ function renderQrGenList(){
         <div class="qr-item-no">${i.no || (i.firma ? '['+i.firma+']' : '-')}</div>
         <div class="qr-item-meta">${TYPE_LABEL_MAP[i._type]||i._type} • ${i.model||i.urun||'-'} • ${i.atolye||i.firma||'-'} • ${i.tarih||'-'}</div>
       </div>
-      <button class="btn btn-sm btn-primary" onclick="generateQrForItem(${i.id},'${i._type}')"><i class="fas fa-qrcode"></i> QR Göster</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" style="background:#25D366;color:#fff;border:0;" title="WhatsApp'tan Gönder"><i class="fab fa-whatsapp"></i></button>
+        <button class="btn btn-sm btn-primary" onclick="generateQrForItem(${i.id},'${i._type}')"><i class="fas fa-qrcode"></i> QR Göster</button>
+      </div>
     </div>
   `).join('');
 }
@@ -15993,11 +16000,26 @@ function _normalizePhoneForWa(raw){
   return s;
 }
 
+// Listelerden cagrilan standalone WhatsApp paylasim — id+type'tan QR scan
+// URL'sini build edip ayni mantikla wa.me linkini acar (modal acmadan).
+function shareIrsaliyeWhatsApp(id, type){
+  try{ if(typeof event !== 'undefined' && event && event.stopPropagation) event.stopPropagation(); }catch(_){}
+  const item = (typeof _findItemByIdType === 'function') ? _findItemByIdType(id, type) : null;
+  if(!item){ toast('Kayit bulunamadi','error'); return; }
+  const url = (typeof _buildQrScanUrl === 'function') ? _buildQrScanUrl(item, type) : '';
+  if(!url){ toast('QR linki olusturulamadi','error'); return; }
+  _doShareWhatsApp(item, type, url);
+}
+
 function _shareQrWhatsApp(){
   const url = window._lastQrScanUrl;
   if(!url){ toast('Link bulunamadi','error'); return; }
   const item = currentModalItem || {};
   const type = currentModalType || '';
+  _doShareWhatsApp(item, type, url);
+}
+
+function _doShareWhatsApp(item, type, url){
   // Atolye telefon numarasini bul (kayitli ise)
   let waPhone = '';
   try{
@@ -17385,6 +17407,7 @@ function renderSigSavedList(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-xs btn-secondary" onclick="editSigForItem('${i._type}',${i.id})"><i class="fas fa-pen"></i></button>
         <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+        <button class="btn btn-xs btn-secondary" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" title="WhatsApp'tan Gönder" style="color:#25D366;"><i class="fab fa-whatsapp"></i></button>
       </div>
     </div>
   `}).join('');
