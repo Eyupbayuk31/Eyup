@@ -8539,15 +8539,14 @@ body::after{
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:flex-end;">
           <div class="form-group" style="margin-bottom:0;"><label>Atölye Adı *</label><input class="form-input" id="atolyeAdi" placeholder="Atölye adı"></div>
           <div class="form-group" style="margin-bottom:0;"><label>Telefon (WhatsApp)</label><input class="form-input" id="atolyeTel" placeholder="05xx xxx xx xx" inputmode="tel"></div>
-          <div class="form-group" style="margin-bottom:0;"><label>Birim Fiyat (₺)</label><input class="form-input" id="atolyeBirimFiyat" type="number" step="0.01" min="0" placeholder="örn: 12.50"></div>
           <div style="display:flex;gap:6px;"><button class="btn btn-primary" onclick="addAtolye()" style="flex:1;justify-content:center;"><i class="fas fa-plus"></i> Ekle</button></div>
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
-          <i class="fas fa-circle-info"></i> Telefon kayıtlıysa QR'lar tek tıkla WhatsApp'tan o atölyeye gönderilir. Birim fiyat girilirse cari hesap özetinde tahmini ciro hesaplanır.
+          <i class="fas fa-circle-info"></i> Telefon kayıtlıysa QR'lar tek tıkla WhatsApp'tan o atölyeye gönderilir.
         </div>
       </div>
       <div class="card">
-        <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>) <span id="atolyeCariSummary" style="float:right;font-weight:500;color:var(--text-muted);font-size:13px;"></span></div>
+        <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>)</div>
         <div id="atolyeList"></div>
       </div>
     </div>
@@ -9886,11 +9885,10 @@ function addAtolye(){
   if(!name)return toast('Atölye adı gerekli','error');
   const list=getData('atolyeler');
   if(list.find(a=>a.name.toLowerCase()===name.toLowerCase()))return toast('Bu atölye zaten var','error');
-  const tel = (document.getElementById('atolyeTel')||{}).value || '';
-  const fiyat = parseFloat((document.getElementById('atolyeBirimFiyat')||{}).value || '0') || 0;
-  list.push({ id:Date.now(), name, telefon: tel.trim(), birimFiyat: fiyat });
+  const tel = ((document.getElementById('atolyeTel')||{}).value || '').trim();
+  list.push({ id:Date.now(), name, telefon: tel });
   setData('atolyeler',list);
-  ['atolyeAdi','atolyeTel','atolyeBirimFiyat'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['atolyeAdi','atolyeTel'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   loadAtolyeSelects();refreshAtolyeList();
   toast('Atölye eklendi');
 }
@@ -9902,71 +9900,35 @@ function deleteAtolye(id){
   toast('Atölye silindi','info');
 }
 
-// Atolye bilgilerini inline guncelle (telefon / birim fiyat)
+// Atolye telefonunu inline guncelle (WhatsApp icin)
 function updateAtolyeField(id, field, value){
+  if(field !== 'telefon') return; // sadece telefon destekleniyor
   const list = getData('atolyeler');
   const idx = list.findIndex(a=>a.id===id);
   if(idx < 0) return;
-  if(field === 'birimFiyat') list[idx].birimFiyat = parseFloat(value) || 0;
-  else if(field === 'telefon') list[idx].telefon = String(value||'').trim();
+  list[idx].telefon = String(value||'').trim();
   setData('atolyeler', list);
   refreshAtolyeList();
-}
-
-// Bir atolye icin yapilan toplam is sayisi (tum irsaliye tipleri)
-function _countAtolyeJobs(name){
-  if(!name) return 0;
-  const lc = name.toLowerCase();
-  let total = 0;
-  ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller'].forEach(k=>{
-    (getData(k)||[]).forEach(it=>{
-      const ad = ((it.atolye||it.firma||'')+'').toLowerCase();
-      if(ad === lc) total++;
-    });
-  });
-  return total;
-}
-
-function _formatTL(v){
-  if(!isFinite(v)) v = 0;
-  try{ return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v) + ' ₺'; }
-  catch(_){ return v.toFixed(2) + ' ₺'; }
 }
 
 function refreshAtolyeList(){
   const list=getData('atolyeler');
   document.getElementById('atolyeCount').textContent=list.length;
   const el=document.getElementById('atolyeList');
-  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';
-    const sumEl=document.getElementById('atolyeCariSummary'); if(sumEl) sumEl.textContent='';
-    return;}
-  let grandJobs = 0, grandRevenue = 0;
+  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';return;}
   el.innerHTML=list.map(a=>{
-    const jobs = _countAtolyeJobs(a.name);
-    const fiyat = parseFloat(a.birimFiyat||0) || 0;
-    const revenue = jobs * fiyat;
-    grandJobs += jobs; grandRevenue += revenue;
     const tel = (a.telefon||'').replace(/[^\d+]/g,'');
     const waBtn = tel ? '<a href="https://wa.me/'+_normalizePhoneForWa(tel)+'" target="_blank" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fab fa-whatsapp"></i></a>' : '';
     return `
-    <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;"><i class="fas fa-industry" style="color:#fff;font-size:13px;"></i></div>
       <div style="min-width:0;">
         <div style="font-weight:600;font-size:14px;">${esc(a.name)} ${waBtn}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;">
-          <span><i class="fas fa-briefcase" style="opacity:.6;"></i> ${jobs} iş</span>
-          ${fiyat>0 ? '<span><i class="fas fa-coins" style="opacity:.6;"></i> ~ '+_formatTL(revenue)+'</span>' : ''}
-        </div>
       </div>
-      <input class="form-input" placeholder="Telefon" value="${esc(a.telefon||'')}" style="max-width:130px;font-size:12px;padding:5px 8px;" onchange="updateAtolyeField(${a.id},'telefon',this.value)">
-      <input class="form-input" type="number" step="0.01" min="0" placeholder="Birim ₺" value="${fiyat||''}" style="max-width:90px;font-size:12px;padding:5px 8px;text-align:right;" onchange="updateAtolyeField(${a.id},'birimFiyat',this.value)">
+      <input class="form-input" placeholder="Telefon" value="${esc(a.telefon||'')}" style="max-width:140px;font-size:12px;padding:5px 8px;" onchange="updateAtolyeField(${a.id},'telefon',this.value)">
       <button class="btn btn-sm btn-danger" onclick="deleteAtolye(${a.id})"><i class="fas fa-trash"></i></button>
     </div>`;
   }).join('');
-  const sumEl=document.getElementById('atolyeCariSummary');
-  if(sumEl){
-    sumEl.textContent = 'Toplam ' + grandJobs + ' iş • Tahmini ciro ' + _formatTL(grandRevenue);
-  }
 }
 
 // ==================== STOK TAKİBİ ====================
