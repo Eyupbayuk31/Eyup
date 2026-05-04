@@ -14103,9 +14103,41 @@ function bulkShareWhatsApp() {
     text += `\n`;
   });
   text += `━━━━━━━━━━━━━\nİrsaliye Pro`;
-  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+
+  // QR scan link'lerini sona ekle (her bir irsaliye icin) — fotograf icin
+  const items = [];
+  const atolyeSet = new Set();
+  checks.forEach(cb=>{
+    const id = +cb.dataset.id, type = cb.dataset.type;
+    const key = type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const it = getData(key).find(i=>i.id===id);
+    if(it){ items.push({it, type}); if(it.atolye) atolyeSet.add(String(it.atolye).trim().toLowerCase()); }
+  });
+  if(typeof _buildQrScanUrl === 'function' && items.length){
+    text += '\n\n📱 Detaylar:';
+    items.forEach(({it,type})=>{
+      try{ const u = _buildQrScanUrl(it, type); if(u) text += '\n• ' + (it.no||'-') + ': ' + u; }catch(_){}
+    });
+  }
+
+  // Tum kayitlar AYNI atolyeye aitse, o atolyenin telefonuna direkt gonder
+  let waPhone = '';
+  if(atolyeSet.size === 1 && typeof _normalizePhoneForWa === 'function'){
+    try{
+      const ad = Array.from(atolyeSet)[0];
+      const list = getData('atolyeler') || [];
+      const a = list.find(x=> x && (x.name||'').trim().toLowerCase() === ad);
+      if(a && (a.telefon || a.tel || a.phone)){
+        waPhone = _normalizePhoneForWa(a.telefon || a.tel || a.phone);
+      }
+    }catch(_){}
+  }
+  const url = waPhone
+    ? ('https://wa.me/' + waPhone + '?text=' + encodeURIComponent(text))
+    : ('https://wa.me/?text=' + encodeURIComponent(text));
   window.open(url, '_blank');
-  toast(checks.length + ' kayıt detaylı paylaşılıyor','info');
+  if(waPhone) toast(checks.length + ' kayit gonderiliyor: ' + waPhone, 'success');
+  else toast(checks.length + ' kayit detayli paylasiliyor — kisi secin', 'info');
 }
 
 // ==================== BULK PDF / PRINT (v16) ====================
