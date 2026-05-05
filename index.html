@@ -19712,40 +19712,35 @@ body.logged-out { overflow:hidden !important; }
 
   // Dışa açık: çıkış
   window.logout = function(){
+    console.log('[logout] basladi');
     try{
-      // Audit log: Firestore sync'i bekleme - silent flag ile sadece localStorage'a yaz
-      if(typeof window._logAudit === 'function'){
-        // Silent flag setData wrapper'in diff loglarini engellemez ama buraya gerek yok;
-        // _logAudit kendi setData'sini cagiriyor, biz sadece await yapmiyoruz.
-        try{ window._logAudit('logout', { by: localStorage.getItem('irsaliye_last_user') || '?' }); }catch(_){}
-      }
-
+      // Audit log: localStorage'a senkron yazilir, Firestore sync arka planda fire-and-forget
+      try{ if(typeof window._logAudit === 'function') window._logAudit('logout', { by: localStorage.getItem('irsaliye_last_user') || '?' }); }catch(_){}
       // Auth ve cache'i agresif temizle
       try{ clearAuth(); }catch(_){}
-
       // Firestore listener'larini durdur
       try{ if(typeof window.cleanupFirestore === 'function') window.cleanupFirestore(); }catch(_){}
-
-      // beforeunload handler'lari async Firestore yazmasini bekleyebiliyor;
-      // logout sirasinda bunu skip et ki reload gecikmesin.
+      // Bekleyen async writes await edilmesin (beforeunload bunlari beklemeye calisabiliyor)
+      try{ if(window._fsInflight && typeof window._fsInflight.clear === 'function') window._fsInflight.clear(); }catch(_){}
       try{ window._flushAll = function(){ return Promise.resolve(); }; }catch(_){}
+      // Logout sirasinda hicbir beforeunload prompt'u cikmasin
+      try{ window.onbeforeunload = null; }catch(_){}
+      // Sicakkan, anlik yenileme yapilsin diye tum FS senkron'unu off (ek koruma)
+      try{ window._auditSilent = true; }catch(_){}
+    }catch(e){ console.warn('[logout] step error:', e); }
 
-      // Toast goster (kisa sure, reload'dan once)
-      try{ if(typeof toast==='function') toast('Çıkış yapıldı','info'); }catch(_){}
-    }catch(e){ console.warn('logout error:', e); }
-
-    // Sayfayi yeni URL ile yukle — reload(true) deprecated, location.href hard reset
-    setTimeout(()=>{
-      try{
-        // Cache'siz yukleme icin URL'ye timestamp ekle
-        const u = new URL(window.location.href);
-        u.searchParams.set('_t', Date.now());
-        u.hash = '';
-        window.location.href = u.toString();
-      }catch(_){
-        try{ window.location.reload(); }catch(__){ window.location.href = window.location.pathname; }
-      }
-    }, 150);
+    // Hemen yenile — setTimeout YOK (bazi tarayicilar setTimeout'u
+    // pop-up blocker ile gectikten sonra navigate'i bloke edebiliyor).
+    console.log('[logout] navigate ediliyor...');
+    try{
+      const u = new URL(window.location.href);
+      u.searchParams.set('_t', Date.now());
+      u.hash = '';
+      window.location.replace(u.toString()); // replace — geri tusuyla geri donulemez
+    }catch(_){
+      try{ window.location.href = window.location.pathname + '?_t=' + Date.now(); }
+      catch(__){ try{ window.location.reload(); }catch(___){} }
+    }
   };
 })();
 </script>
