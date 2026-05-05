@@ -19712,24 +19712,40 @@ body.logged-out { overflow:hidden !important; }
 
   // Dışa açık: çıkış
   window.logout = function(){
-    if(typeof window._logAudit === 'function'){
-      try{ window._logAudit('logout', { by: localStorage.getItem('irsaliye_last_user') || '?' }); }catch(_){}
-    }
-    // Cache'i temizle
-    clearAuth();
+    try{
+      // Audit log: Firestore sync'i bekleme - silent flag ile sadece localStorage'a yaz
+      if(typeof window._logAudit === 'function'){
+        // Silent flag setData wrapper'in diff loglarini engellemez ama buraya gerek yok;
+        // _logAudit kendi setData'sini cagiriyor, biz sadece await yapmiyoruz.
+        try{ window._logAudit('logout', { by: localStorage.getItem('irsaliye_last_user') || '?' }); }catch(_){}
+      }
 
-    // Firestore listener'ları durdur
-    if(typeof window.cleanupFirestore === 'function'){
-      window.cleanupFirestore();
-    }
+      // Auth ve cache'i agresif temizle
+      try{ clearAuth(); }catch(_){}
 
-    // Toast göster
-    if(typeof toast==='function') toast('Çıkış yapıldı','info');
+      // Firestore listener'larini durdur
+      try{ if(typeof window.cleanupFirestore === 'function') window.cleanupFirestore(); }catch(_){}
 
-    // Sayfayı yenile (cache temizlendikten sonra)
+      // beforeunload handler'lari async Firestore yazmasini bekleyebiliyor;
+      // logout sirasinda bunu skip et ki reload gecikmesin.
+      try{ window._flushAll = function(){ return Promise.resolve(); }; }catch(_){}
+
+      // Toast goster (kisa sure, reload'dan once)
+      try{ if(typeof toast==='function') toast('Çıkış yapıldı','info'); }catch(_){}
+    }catch(e){ console.warn('logout error:', e); }
+
+    // Sayfayi yeni URL ile yukle — reload(true) deprecated, location.href hard reset
     setTimeout(()=>{
-      location.reload(true); // Hard reload
-    }, 300);
+      try{
+        // Cache'siz yukleme icin URL'ye timestamp ekle
+        const u = new URL(window.location.href);
+        u.searchParams.set('_t', Date.now());
+        u.hash = '';
+        window.location.href = u.toString();
+      }catch(_){
+        try{ window.location.reload(); }catch(__){ window.location.href = window.location.pathname; }
+      }
+    }, 150);
   };
 })();
 </script>
