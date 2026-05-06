@@ -19707,8 +19707,19 @@ body.logged-out { overflow:hidden !important; }
   });
 
   // İlk yükleme - QR viewer URL'si varsa veya viewer render edildiyse login gösterme
-  const _hasViewerParam = window.location.search.includes('v=') || window.location.hash.includes('v=');
-  if(!_viewerRendered && !_hasViewerParam && !isAuthed()) showLogin();
+  // ÖNEMLI: window._viewerRendered ile erişiyoruz çünkü strict-mode IIFE icinde
+  // bare identifier 'set edilmemis' bir global'i okudugunda ReferenceError atar.
+  // Bu hata daha once tum IIFE'yi cokerterek hem login overlay'i kapali biraktiriyor
+  // (incognito tab'ta auth bypass) hem de window.logout'un atanmasini engelliyordu.
+  // Ayrica try/catch ile deny-by-default: beklenmedik hatada login gosterilir.
+  try {
+    const _hasViewerParam = window.location.search.includes('v=') || window.location.hash.includes('v=');
+    const _vRendered = !!window._viewerRendered;
+    if(!_vRendered && !_hasViewerParam && !isAuthed()) showLogin();
+  } catch(authGateErr){
+    console.warn('[auth-gate] hata:', authGateErr);
+    try { showLogin(); } catch(_){}
+  }
 
   // Dışa açık: çıkış
   window.logout = function(){
