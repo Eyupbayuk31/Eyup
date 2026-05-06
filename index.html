@@ -1073,7 +1073,9 @@
     <div class="card">
       <div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dagilimi</div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <canvas id="homeChart" height="170" style="max-width:170px;flex-shrink:0"></canvas>
+        <div style="position:relative;width:170px;height:170px;flex-shrink:0;">
+          <canvas id="homeChart"></canvas>
+        </div>
         <div id="dbPieLegend" style="flex:1;min-width:120px"></div>
       </div>
     </div>
@@ -4987,7 +4989,7 @@ function renderHomeChart(irsaliyeler){
   const bekleyen=irsaliyeler.filter(i=>i.durum==='bekliyor').length;
   const teslim=irsaliyeler.filter(i=>i.durum==='teslim').length;
   const style=getComputedStyle(document.body);
-  window.homeChartObj=new Chart(ctx,{type:'doughnut',data:{labels:['Bekliyor','Teslim Edildi'],datasets:[{data:[bekleyen,teslim],backgroundColor:['#f59e0b','#10b981'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:style.getPropertyValue('--text-muted').trim()||'#9ca3af',padding:14,font:{size:12,weight:'600'}}}},cutout:'72%'}});
+  window.homeChartObj=new Chart(ctx,{type:'doughnut',data:{labels:['Bekliyor','Teslim Edildi'],datasets:[{data:[bekleyen,teslim],backgroundColor:['#f59e0b','#10b981'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'72%'}});
 }
 
 // ==================== REPORTS ====================
