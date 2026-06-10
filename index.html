@@ -35,7 +35,7 @@
 
     // v3 (kisa URL): inline render YOK, Firebase'den cekilmesi gerek.
     // App normal yuklensin; DOMContentLoaded'da _checkAndRenderPublicViewer
-    // v3'u algilayip _renderPublicViewerFromFirebase'i cagiracak.
+    // v3'u algilayip _renderPublicViewerFromCloud'u cagiracak (GitHub raw + Firebase fallback).
     // Yukleme sirasinda app UI parlamasin diye dokuman gizli baslar;
     // viewer body'yi tamamen degistirip 'visible' yapacak.
     if(d.v === 3){
@@ -9048,10 +9048,16 @@ function _buildQrScanUrl(item, type){
 }
 
 function _buildQrPayloadV3(item, type){
-  // Kısa anahtarlar: a=app(ip), v=versiyon, i=id, t=type kısaltması
+  // Kısa anahtarlar: a=app(ip), v=versiyon, i=id, t=type, r=owner/repo, b=branch(opt)
   // Eski format (app/id/type) hala decode edilebilir (geriye dönük uyum)
   const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da'};
-  return { a:'ip', v:3, i:item.id, t:_T[type]||type };
+  const p = { a:'ip', v:3, i:item.id, t:_T[type]||type };
+  try{
+    const cfg = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
+    if(cfg && cfg.owner && cfg.repo) p.r = cfg.owner + '/' + cfg.repo;
+    if(cfg && cfg.branch && cfg.branch !== 'main') p.b = cfg.branch;
+  }catch(_){}
+  return p;
 }
 
 function _buildQrPayload(item, type){
@@ -9093,10 +9099,21 @@ function _buildQrPayload(item, type){
   };
 }
 
-function generateQrForItem(id, type){
+async function generateQrForItem(id, type){
   const item = _findItemByIdType(id, type);
   if(!item){ toast('Kayıt bulunamadı','error'); return; }
   if(typeof QRCode === 'undefined'){ toast('QR kütüphanesi yüklenemedi','error'); return; }
+
+  // GitHub'a viewer JSON'ı publish et — atölye scan ettiğinde hazır olsun
+  // Hata olursa QR yine de gösterilir (Firebase fallback viewer'da var)
+  toast('☁️ Viewer JSON yayınlanıyor…','info');
+  try{
+    await _publishViewerJsonToGithub(item, type);
+    toast('✓ JSON yayında — QR hazır','success');
+  }catch(err){
+    console.warn('Viewer JSON publish başarısız:', err);
+    toast('⚠️ JSON yayınlanamadı: ' + (err.message||'') + ' — Firebase fallback kullanılacak','error');
+  }
 
   // QR artık URL taşır — tarayan kişi tarayıcıda doğrudan irsaliye görür
   const scanUrl = _buildQrScanUrl(item, type);
@@ -10149,6 +10166,102 @@ async function _uploadPhotoToCatbox(dataUrl){
     return data.content.download_url;
   }
   throw new Error('Yükleme yanıtı beklenmedik formatta');
+}
+
+// ====================================================================
+// VIEWER JSON — GitHub raw'da public yayın (Firebase'i bypass'lar)
+// QR taranınca atölye direkt GitHub'dan JSON çeker (auth, security rule yok)
+// ====================================================================
+function _buildViewerPayload(item, type){
+  const photos = (typeof _getPhotosArray === 'function') ? _getPhotosArray(item) : [];
+  return {
+    v: 1,
+    id: item.id, type,
+    no: item.no || '',
+    model: item.model || item.urun || '',
+    atolye: item.atolye || item.firma || '',
+    firma: item.firma || '',
+    tarih: item.tarih || '',
+    termin: item.termin || '',
+    teslimEden: item.teslimEden || '',
+    teslimAlan: item.teslimAlan || '',
+    durum: item.durum || '',
+    sizes: item.sizes,
+    bant: item.bant,
+    beden: item.beden,
+    cm: item.cm,
+    metre: item.metre,
+    adet: item.adet,
+    total: item.total,
+    totalAdet: item.totalAdet,
+    renk: item.renk,
+    aciklama: item.aciklama || item.not || '',
+    photos: (photos || []).filter(p => p && p.url).map(p => ({url: p.url, at: p.at || ''})),
+    updatedAt: Date.now()
+  };
+}
+
+function _viewerJsonPath(type, id){
+  return 'viewer/' + type + '_' + String(id) + '.json';
+}
+
+async function _publishViewerJsonToGithub(item, type){
+  const cfg = _getGithubConfig();
+  if(!cfg.token || !cfg.owner || !cfg.repo){
+    throw new Error('GitHub ayarları eksik — Ayarlar → GitHub Bulut Yükleme bölümünü doldurun');
+  }
+
+  const path = _viewerJsonPath(type, item.id);
+  const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + path;
+
+  // Mevcut SHA'yı al (update için gerekli; yoksa create)
+  let sha = null;
+  try {
+    const getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch || 'main'), {
+      headers: {
+        'Authorization': 'token ' + cfg.token,
+        'Accept': 'application/vnd.github+json'
+      }
+    });
+    if(getRes.ok){
+      const getData = await getRes.json();
+      sha = getData.sha;
+    }
+  } catch(_){}
+
+  const payload = _buildViewerPayload(item, type);
+  const jsonStr = JSON.stringify(payload);
+  const contentBase64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+  const body = {
+    message: 'Viewer JSON: ' + (item.no || item.id) + ' (' + type + ')',
+    content: contentBase64,
+    branch: cfg.branch || 'main'
+  };
+  if(sha) body.sha = sha;
+
+  const putRes = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'token ' + cfg.token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!putRes.ok){
+    let msg = 'HTTP ' + putRes.status;
+    try {
+      const errData = await putRes.json();
+      if(errData && errData.message) msg = errData.message;
+    } catch(_){}
+    if(putRes.status === 401) throw new Error('Token geçersiz — Ayarlar\'dan yeni token girin');
+    if(putRes.status === 403) throw new Error('İzin yok / rate-limit aşıldı');
+    if(putRes.status === 404) throw new Error('Repo bulunamadı: ' + cfg.owner + '/' + cfg.repo);
+    throw new Error('Viewer JSON yazılamadı: ' + msg);
+  }
+  return true;
 }
 
 const _uploadsInFlight = new Set();
@@ -12637,14 +12750,20 @@ function _checkAndRenderPublicViewer(){
   }
   window._viewerKickedOff = true;
 
-  // v3: Minimal payload - Firebase'den veri çek (compact keys: a/i/t or app/id/type)
+  // v3: Minimal payload - GitHub raw'dan (önce) veya Firebase'den (fallback) çek
   if(data.v === 3){
     const _T = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
     const id   = data.id || data.i;
     const type = data.type || _T[data.t] || data.t;
-    console.log('QR viewer: v3 — id:', id, 'type:', type);
+    // r:'owner/repo', b:'branch' — viewer GitHub raw fetch için bilgi
+    let repoInfo = null;
+    if(data.r && typeof data.r === 'string' && data.r.includes('/')){
+      const [own, rep] = data.r.split('/');
+      repoInfo = { owner: own, repo: rep, branch: (data.b || 'main') };
+    }
+    console.log('QR viewer: v3 — id:', id, 'type:', type, 'repo:', repoInfo);
     if(id && type){
-      _renderPublicViewerFromFirebase(id, type);
+      _renderPublicViewerFromCloud(id, type, repoInfo);
       return true;
     }
     window._viewerKickedOff = false; // gecersiz v3 — geri al
@@ -12656,8 +12775,8 @@ function _checkAndRenderPublicViewer(){
   return true;
 }
 
-async function _renderPublicViewerFromFirebase(id, type){
-  console.log('[viewer] _renderPublicViewerFromFirebase BAŞLADI', id, type);
+async function _renderPublicViewerFromCloud(id, type, repoInfo){
+  console.log('[viewer] _renderPublicViewerFromCloud BAŞLADI', id, type, repoInfo);
 
   function _showContent(){
     try{
@@ -12712,10 +12831,34 @@ async function _renderPublicViewerFromFirebase(id, type){
   const _onUnh = (ev)=>{ console.error('[viewer] unhandled', ev.reason||ev.error); _showError('Beklenmedik hata: ' + ((ev.reason&&ev.reason.message)||ev.message||'?')); };
   window.addEventListener('unhandledrejection', _onUnh, {once:true});
 
-  try {
-    _setLoaderMsg('Sunucuya bağlanılıyor…');
+  function _withTimeout(promise, ms, label){
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(()=>reject(new Error((label||'İstek')+' zaman aşımı ('+ms/1000+'sn)')), ms);
+      promise.then(v=>{clearTimeout(t);resolve(v);}, e=>{clearTimeout(t);reject(e);});
+    });
+  }
 
-    // Firebase hazır değilse bekle
+  async function _fetchFromGithubRaw(){
+    if(!repoInfo || !repoInfo.owner || !repoInfo.repo) return null;
+    const path = 'viewer/' + type + '_' + String(id) + '.json';
+    const url = 'https://raw.githubusercontent.com/' +
+      encodeURIComponent(repoInfo.owner) + '/' +
+      encodeURIComponent(repoInfo.repo) + '/' +
+      encodeURIComponent(repoInfo.branch || 'main') + '/' +
+      path + '?_t=' + Date.now();
+    console.log('[viewer] GitHub raw fetch:', url);
+    const res = await _withTimeout(fetch(url, {cache:'no-store'}), 10000, 'GitHub raw fetch');
+    if(!res.ok){
+      if(res.status === 404) return null; // yok — fallback'e geç
+      throw new Error('GitHub raw HTTP ' + res.status);
+    }
+    const data = await res.json();
+    console.log('[viewer] GitHub raw ile bulundu');
+    return data;
+  }
+
+  async function _fetchFromFirebase(){
+    _setLoaderMsg('Yedek sunucudan okunuyor…');
     if(!window._fs || !window._fs.db){
       console.log('[viewer] firebase-ready bekleniyor');
       await new Promise((resolve) => {
@@ -12724,60 +12867,31 @@ async function _renderPublicViewerFromFirebase(id, type){
         setTimeout(() => { if(!done){ done=true; resolve(); } }, 8000);
       });
     }
-    if(!window._fs || !window._fs.db){
-      throw new Error('Sunucu bağlantısı kurulamadı. İnternetinizi kontrol edip yenileyin.');
-    }
-    console.log('[viewer] firebase hazir');
+    if(!window._fs || !window._fs.db) throw new Error('Sunucu bağlantısı kurulamadı.');
 
     const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
     const key = keyMap[type];
     if(!key) throw new Error('Geçersiz irsaliye tipi: ' + type);
 
-    _setLoaderMsg('İrsaliye okunuyor…');
-
-    let item = null;
     const { db, doc, getDoc, collection, getDocs } = window._fs;
-
-    // Fetch'leri 12sn timeout ile sar (Firestore offline'da bekleyebilir)
-    function _withTimeout(promise, ms, label){
-      return new Promise((resolve, reject) => {
-        const t = setTimeout(()=>reject(new Error((label||'İstek')+' zaman aşımı ('+ms/1000+'sn)')), ms);
-        promise.then(v=>{clearTimeout(t);resolve(v);}, e=>{clearTimeout(t);reject(e);});
-      });
-    }
-
-    // Önce doğrudan doc ID ile dene (hızlı O(1))
+    let item = null;
     try{
-      console.log('[viewer] getDoc deneniyor:', String(id));
       const docSnap = await _withTimeout(getDoc(doc(db, 'appdata', key, 'items', String(id))), 12000, 'Doc fetch');
-      if(docSnap.exists()){
-        item = docSnap.data();
-        console.log('[viewer] getDoc ile bulundu');
-      } else {
-        console.log('[viewer] getDoc: doc yok, koleksiyon taranacak');
-      }
-    }catch(e){
-      console.warn('[viewer] getDoc hata:', e && e.message);
-    }
+      if(docSnap.exists()) item = docSnap.data();
+    }catch(e){ console.warn('[viewer] getDoc hata:', e && e.message); }
 
-    // Bulunamazsa tüm koleksiyonu tara
     if(!item){
-      _setLoaderMsg('Tüm kayıtlar taranıyor…');
       const targetId = String(id);
       const snapshot = await _withTimeout(getDocs(collection(db, 'appdata', key, 'items')), 12000, 'Koleksiyon fetch');
       snapshot.forEach(d => {
         const data = d.data();
         if(String(data.id) === targetId) item = data;
       });
-      if(!item) throw new Error('İrsaliye bulunamadı (ID: ' + id + '). QR güncel değil olabilir.');
-      console.log('[viewer] koleksiyon taramasi ile bulundu');
     }
-
-    console.log('[viewer] item hazir:', item.no || item.id);
+    if(!item) throw new Error('İrsaliye bulunamadı (ID: ' + id + ').');
 
     const photos = (typeof _getPhotosArray === 'function') ? _getPhotosArray(item) : [];
-    const payload = {
-      app:'irsaliyepro', v:2,
+    return {
       id:item.id, type,
       no: item.no||'', model: item.model||item.urun||'',
       atolye: item.atolye||item.firma||'', firma: item.firma||'',
@@ -12788,8 +12902,30 @@ async function _renderPublicViewerFromFirebase(id, type){
       cm: item.cm, metre: item.metre, adet: item.adet,
       total: item.total, totalAdet: item.totalAdet, renk: item.renk,
       aciklama: item.aciklama||item.not||'',
-      photos: (photos||[]).filter(p=>p&&p.url).map(p=>({url:p.url,at:p.at}))
+      photos: (photos||[]).filter(p=>p&&p.url).map(p=>({url:p.url,at:p.at||''}))
     };
+  }
+
+  try {
+    _setLoaderMsg('İrsaliye okunuyor…');
+
+    let data = null;
+    // Önce GitHub raw (hızlı, auth yok)
+    try {
+      data = await _fetchFromGithubRaw();
+    } catch(ghErr){
+      console.warn('[viewer] GitHub raw hata:', ghErr && ghErr.message);
+    }
+
+    // GitHub yok / başarısız → Firebase fallback
+    if(!data){
+      console.log('[viewer] GitHub raw boş — Firebase fallback');
+      data = await _fetchFromFirebase();
+    }
+
+    console.log('[viewer] data hazir:', data.no || data.id);
+
+    const payload = Object.assign({ app:'irsaliyepro', v:2 }, data);
 
     _setLoaderMsg('Görüntüleyici hazırlanıyor…');
     _showContent();
