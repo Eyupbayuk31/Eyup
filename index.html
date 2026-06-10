@@ -71,7 +71,11 @@
       }
     }
     if(d.beden){
-      var rows3 = Object.keys(d.beden).map(function(k){
+      var _bo = ['xxs','xs','s','m','l','xl','xxl','3xl'];
+      var rows3 = Object.keys(d.beden).sort(function(a,b){
+        var ia=_bo.indexOf(String(a).toLowerCase()); var ib=_bo.indexOf(String(b).toLowerCase());
+        return (ia===-1?999:ia)-(ib===-1?999:ib);
+      }).map(function(k){
         var v = d.beden[k];
         if(typeof v === 'object') return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(v.cm||'-')+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(v.adet||0)+'</td></tr>';
         return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td colspan="2" style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+v+'</td></tr>';
@@ -2733,6 +2737,22 @@ var setData = window.setData || function(key,val){try{localStorage.setItem(key,J
 function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'+key))||def;}catch(e){return def;}}
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
+// Beden key'lerini dogal sirada dondur (XXS -> 3XL).
+// Firestore map'leri alfabetik dondurdugu icin for-in ile dolasinca
+// PDF/detay ekranlarinda bedenler karisik cikiyordu.
+const BEDEN_ORDER = ['xxs','xs','s','m','l','xl','xxl','3xl'];
+function sortBedenKeys(obj){
+  if(!obj) return [];
+  return Object.keys(obj).sort((a,b)=>{
+    let ia = BEDEN_ORDER.indexOf(String(a).toLowerCase());
+    let ib = BEDEN_ORDER.indexOf(String(b).toLowerCase());
+    if(ia === -1) ia = 999;
+    if(ib === -1) ib = 999;
+    return ia - ib;
+  });
+}
+window.sortBedenKeys = sortBedenKeys;
+
 // ==================== NAVIGATION ====================
 const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
@@ -4112,7 +4132,7 @@ function showDetailUni(id,type){
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    for(let k in item.beden){html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bedenLabel[k]||k}: <b>${item.beden[k].adet}</b> adet (${item.beden[k].cm} cm)</div>`;}
+    sortBedenKeys(item.beden).forEach(k=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bedenLabel[k]||k}: <b>${item.beden[k].adet}</b> adet (${item.beden[k].cm} cm)</div>`;});
     html+='</div>';
     html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.totalAdet||0} adet</div>`;
   }
@@ -4151,7 +4171,7 @@ function showDetailUni(id,type){
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    for(let k in item.beden){html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bl[k]||k}: <b>${item.beden[k]}</b></div>`;}
+    sortBedenKeys(item.beden).forEach(k=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bl[k]||k}: <b>${item.beden[k]}</b></div>`;});
     html+='</div>';
     html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.total||0} adet</div>`;
   }
@@ -4324,9 +4344,9 @@ function generatePDF(id, type) {
 
     html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">🔗 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
     html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">CM</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
-    for (let k in item.beden) {
+    sortBedenKeys(item.beden).forEach(k => {
       html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k].cm} cm</td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k].adet}</td></tr>`;
-    }
+    });
     html += `</tbody></table><div class="total-row" style="font-size:${bedenCount >= 7 ? '12px' : '14px'};padding:${bedenCount >= 7 ? '6px 0' : '8px 0'};">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
 
@@ -4367,9 +4387,9 @@ function generatePDF(id, type) {
 
     html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">📦 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
     html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
-    for (let k in item.beden) {
+    sortBedenKeys(item.beden).forEach(k => {
       html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bl[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k]}</td></tr>`;
-    }
+    });
     html += `</tbody></table><div class="total-row">Toplam Adet: ${item.total||0}</div>`;
     // Toptan sipariş için otomatik açıklama
     html += `<div class="note-box" style="background:#fef3c7;border-color:#fbbf24;margin-top:16px;">
@@ -6985,7 +7005,7 @@ function buildShareText(item, type) {
   }
   if ((type === 'fermuar' || type === 'toptan') && item.beden) {
     const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    const bds = Object.keys(item.beden).map(k => {
+    const bds = sortBedenKeys(item.beden).map(k => {
       const v = type === 'fermuar' ? item.beden[k].adet : item.beden[k];
       return `${bl[k]||k}: ${v}`;
     }).filter(x => !x.endsWith(': 0'));
@@ -7134,7 +7154,7 @@ function bulkShareWhatsApp() {
     }
     if ((type === 'fermuar' || type === 'toptan') && item.beden) {
       const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-      const bds = Object.keys(item.beden).map(k => {
+      const bds = sortBedenKeys(item.beden).map(k => {
         const v = type === 'fermuar' ? (item.beden[k] && item.beden[k].adet) : item.beden[k];
         return {k:bl[k]||k, v: +v||0};
       }).filter(x => x.v > 0);
@@ -7259,7 +7279,7 @@ function _singleItemPdfHtml(item, type){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
     h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
     h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
-    for(let k in item.beden)h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k].cm} cm</td><td>${item.beden[k].adet}</td></tr>`;
+    sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k].cm} cm</td><td>${item.beden[k].adet}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
   if(type==='lastik'){
@@ -7271,7 +7291,7 @@ function _singleItemPdfHtml(item, type){
   if(type==='toptan'&&item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
     h+=`<div class="st">📦 Beden Detayları</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
-    for(let k in item.beden)h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`;
+    sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
   }
   if(type==='satenaskilik'){
@@ -12717,7 +12737,7 @@ function _renderPublicViewer(d){
     if(rows) sizesHtml += `<h3>🎀 Bant & Kılçık</h3><table class="pv-tbl"><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
   if(d.beden){
-    const rows = Object.keys(d.beden).map(k => {
+    const rows = (window.sortBedenKeys ? window.sortBedenKeys(d.beden) : Object.keys(d.beden)).map(k => {
       const v = d.beden[k];
       if(typeof v === 'object') return `<tr><td>${BEDEN_NAMES[k]||k}</td><td>${v.cm||'-'} cm</td><td>${v.adet||0}</td></tr>`;
       return `<tr><td>${BEDEN_NAMES[k]||k}</td><td colspan="2">${v}</td></tr>`;
