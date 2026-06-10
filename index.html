@@ -30,8 +30,32 @@
     var d    = JSON.parse(json);
     if(!d || d.app !== 'irsaliyepro') return; // Yanlış format — devam et
 
-    // ✅ Geçerli viewer URL — viewer HTML'i yaz
+    // ✅ Geçerli viewer URL
     window._isViewerUrl = true;
+
+    // v3 (kisa URL): inline render YOK, Firebase'den cekilmesi gerek.
+    // App normal yuklensin; DOMContentLoaded'da _checkAndRenderPublicViewer
+    // v3'u algilayip _renderPublicViewerFromFirebase'i cagiracak.
+    // Yukleme sirasinda app UI parlamasin diye dokuman gizli baslar;
+    // viewer body'yi tamamen degistirip 'visible' yapacak.
+    if(d.v === 3){
+      try{
+        var st = document.createElement('style');
+        st.id = '_qrV3Loader';
+        st.textContent = 'html,body{visibility:hidden!important;background:#f5f3ff!important;}#_qrV3LoaderBox{visibility:visible!important;position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:system-ui;background:#f5f3ff;z-index:2147483647;}#_qrV3LoaderBox>div{text-align:center;}';
+        document.documentElement.appendChild(st);
+        document.addEventListener('DOMContentLoaded', function(){
+          if(document.getElementById('_qrV3LoaderBox')) return;
+          var box = document.createElement('div');
+          box.id = '_qrV3LoaderBox';
+          box.innerHTML = '<div><div style="font-size:48px;margin-bottom:16px;">📦</div><div style="font-size:18px;font-weight:600;color:#7c3aed;">İrsaliye yükleniyor...</div></div>';
+          document.body.appendChild(box);
+        });
+      }catch(_){}
+      return;
+    }
+
+    // v2 (uzun URL): inline render, app yuklenmesin
     window._viewerRendered = true;
 
     var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
@@ -9015,10 +9039,17 @@ async function testGithubConnection(){
 }
 
 function _buildQrScanUrl(item, type){
-  const payload = _buildQrPayload(item, type);
+  // v3: minimal payload (~40 karakter URL); viewer Firebase'den ceker
+  // Eski v2 destegi viewer interceptor'da hala var (geriye donuk uyumluluk)
+  const payload = _buildQrPayloadV3(item, type);
   const base = _getPublishBaseUrl();
-  // Query string kullan (?v=) - telefon kameraları hash'i (#v=) görmeyebilir
+  // Query string kullan (?v=) - telefon kameralari hash'i (#v=) gormeyebilir
   return base + '?v=' + _b64UrlEncode(JSON.stringify(payload));
+}
+
+function _buildQrPayloadV3(item, type){
+  // Sadece id+type — viewer Firebase'den tam veriyi cekecek
+  return { app:'irsaliyepro', v:3, id:item.id, type:type };
 }
 
 function _buildQrPayload(item, type){
