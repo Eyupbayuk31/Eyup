@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v11-viewer-fix-2026-06-10">
+  <meta name="app-version" content="fs-v12-viewer-stuck-fix-2026-06-10">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -12628,11 +12628,14 @@ function _parseViewerHash(){
 }
 
 function _checkAndRenderPublicViewer(){
+  // Idempotent: tek bir kez calismali (sync + DOMContentLoaded iki yerden tetiklenebiliyor)
+  if(window._viewerKickedOff) return true;
   const data = _parseViewerHash();
   if(!data) {
     console.log('QR viewer: No valid hash data found');
     return false;
   }
+  window._viewerKickedOff = true;
 
   // v3: Minimal payload - Firebase'den veri çek (compact keys: a/i/t or app/id/type)
   if(data.v === 3){
@@ -12644,6 +12647,8 @@ function _checkAndRenderPublicViewer(){
       _renderPublicViewerFromFirebase(id, type);
       return true;
     }
+    window._viewerKickedOff = false; // gecersiz v3 — geri al
+    return false;
   }
 
   // v1/v2: Eski format - tüm veri QR'da
@@ -12652,7 +12657,8 @@ function _checkAndRenderPublicViewer(){
 }
 
 async function _renderPublicViewerFromFirebase(id, type){
-  // Loader CSS (body{visibility:hidden}) ve overlay'i kaldır, body'yi göster
+  console.log('[viewer] _renderPublicViewerFromFirebase BAŞLADI', id, type);
+
   function _showContent(){
     try{
       const s = document.getElementById('_qrV3Loader');
@@ -12660,51 +12666,116 @@ async function _renderPublicViewerFromFirebase(id, type){
       const b = document.getElementById('_qrV3LoaderBox');
       if(b && b.parentNode) b.parentNode.removeChild(b);
     }catch(_){}
-    document.documentElement.style.visibility = 'visible';
-    document.body.style.visibility = 'visible';
+    try{ document.documentElement.style.visibility = 'visible'; }catch(_){}
+    try{ document.body.style.visibility = 'visible'; }catch(_){}
+    try{
+      // CSSOM ile yedek: visibility !important kuralini bertaraf et
+      var st = document.createElement('style');
+      st.id = '_qrV3Override';
+      st.textContent = 'html,body{visibility:visible!important;}';
+      document.documentElement.appendChild(st);
+    }catch(_){}
+  }
+  function _setLoaderMsg(msg){
+    try{
+      const box = document.getElementById('_qrV3LoaderBox');
+      if(box){
+        const sub = box.querySelector('._sub') || (function(){
+          const d = document.createElement('div');
+          d.className = '_sub';
+          d.style.cssText = 'font-size:13px;color:#6b7280;margin-top:8px;';
+          box.firstChild.appendChild(d);
+          return d;
+        })();
+        sub.textContent = msg;
+      }
+    }catch(_){}
+  }
+  function _showError(msg){
+    _showContent();
+    const safe = (msg && typeof msg === 'string' && !msg.includes('<')) ? msg : 'Lütfen tekrar deneyin.';
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;">
+        <div style="text-align:center;max-width:400px;padding:20px;">
+          <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+          <div style="font-size:18px;font-weight:600;color:#dc2626;margin-bottom:8px;">İrsaliye Yüklenemedi</div>
+          <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">${safe}</div>
+          <button onclick="window.location.reload()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+            🔄 Tekrar Dene
+          </button>
+        </div>
+      </div>
+    `;
   }
 
+  // Global hata yakalayici: viewer'da herhangi bir sey patlarsa kullanici takilmasin
+  const _onUnh = (ev)=>{ console.error('[viewer] unhandled', ev.reason||ev.error); _showError('Beklenmedik hata: ' + ((ev.reason&&ev.reason.message)||ev.message||'?')); };
+  window.addEventListener('unhandledrejection', _onUnh, {once:true});
+
   try {
+    _setLoaderMsg('Sunucuya bağlanılıyor…');
+
     // Firebase hazır değilse bekle
     if(!window._fs || !window._fs.db){
+      console.log('[viewer] firebase-ready bekleniyor');
       await new Promise((resolve) => {
         let done = false;
         window.addEventListener('firebase-ready', () => { if(!done){ done=true; resolve(); } }, {once:true});
         setTimeout(() => { if(!done){ done=true; resolve(); } }, 8000);
       });
     }
-
     if(!window._fs || !window._fs.db){
-      throw new Error('Firebase bağlantısı kurulamadı (8sn timeout). Sayfayı yenileyin.');
+      throw new Error('Sunucu bağlantısı kurulamadı. İnternetinizi kontrol edip yenileyin.');
     }
+    console.log('[viewer] firebase hazir');
 
     const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
     const key = keyMap[type];
     if(!key) throw new Error('Geçersiz irsaliye tipi: ' + type);
 
+    _setLoaderMsg('İrsaliye okunuyor…');
+
     let item = null;
     const { db, doc, getDoc, collection, getDocs } = window._fs;
 
+    // Fetch'leri 12sn timeout ile sar (Firestore offline'da bekleyebilir)
+    function _withTimeout(promise, ms, label){
+      return new Promise((resolve, reject) => {
+        const t = setTimeout(()=>reject(new Error((label||'İstek')+' zaman aşımı ('+ms/1000+'sn)')), ms);
+        promise.then(v=>{clearTimeout(t);resolve(v);}, e=>{clearTimeout(t);reject(e);});
+      });
+    }
+
     // Önce doğrudan doc ID ile dene (hızlı O(1))
     try{
-      const docSnap = await getDoc(doc(db, 'appdata', key, 'items', String(id)));
-      if(docSnap.exists()) item = docSnap.data();
-    }catch(_){}
+      console.log('[viewer] getDoc deneniyor:', String(id));
+      const docSnap = await _withTimeout(getDoc(doc(db, 'appdata', key, 'items', String(id))), 12000, 'Doc fetch');
+      if(docSnap.exists()){
+        item = docSnap.data();
+        console.log('[viewer] getDoc ile bulundu');
+      } else {
+        console.log('[viewer] getDoc: doc yok, koleksiyon taranacak');
+      }
+    }catch(e){
+      console.warn('[viewer] getDoc hata:', e && e.message);
+    }
 
-    // Bulunamazsa tüm koleksiyonu tara (id alanı farklı kaydedilmiş olabilir)
+    // Bulunamazsa tüm koleksiyonu tara
     if(!item){
+      _setLoaderMsg('Tüm kayıtlar taranıyor…');
       const targetId = String(id);
-      const snapshot = await getDocs(collection(db, 'appdata', key, 'items'));
+      const snapshot = await _withTimeout(getDocs(collection(db, 'appdata', key, 'items')), 12000, 'Koleksiyon fetch');
       snapshot.forEach(d => {
         const data = d.data();
         if(String(data.id) === targetId) item = data;
       });
-      if(!item) throw new Error('İrsaliye bulunamadı (ID: ' + id + '). QR kodu güncel değil olabilir.');
+      if(!item) throw new Error('İrsaliye bulunamadı (ID: ' + id + '). QR güncel değil olabilir.');
+      console.log('[viewer] koleksiyon taramasi ile bulundu');
     }
 
-    console.log('QR viewer: ✅ Found item', item.no || item.id);
+    console.log('[viewer] item hazir:', item.no || item.id);
 
-    const photos = _getPhotosArray(item);
+    const photos = (typeof _getPhotosArray === 'function') ? _getPhotosArray(item) : [];
     const payload = {
       app:'irsaliyepro', v:2,
       id:item.id, type,
@@ -12720,27 +12791,19 @@ async function _renderPublicViewerFromFirebase(id, type){
       photos: (photos||[]).filter(p=>p&&p.url).map(p=>({url:p.url,at:p.at}))
     };
 
-    // Loader'ı kaldır ve viewer'ı göster (_renderPublicViewer document.open ile yeni doc yazar)
+    _setLoaderMsg('Görüntüleyici hazırlanıyor…');
     _showContent();
+    if(typeof _renderPublicViewer !== 'function'){
+      throw new Error('Görüntüleyici fonksiyonu yüklenemedi.');
+    }
     _renderPublicViewer(payload);
+    window.removeEventListener('unhandledrejection', _onUnh);
+    console.log('[viewer] render tamam');
 
   } catch(error) {
-    console.error('Firebase veri çekme hatası:', error);
-    const _safeMsg = (error&&error.message&&typeof error.message==='string'&&!error.message.includes('<'))
-      ? error.message : 'Lütfen bağlantınızı kontrol edip tekrar deneyin.';
-    _showContent();
-    document.body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;">
-        <div style="text-align:center;max-width:400px;padding:20px;">
-          <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-          <div style="font-size:18px;font-weight:600;color:#dc2626;margin-bottom:8px;">İrsaliye Yüklenemedi</div>
-          <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">${_safeMsg}</div>
-          <button onclick="window.location.reload()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
-            🔄 Tekrar Dene
-          </button>
-        </div>
-      </div>
-    `;
+    console.error('[viewer] HATA:', error);
+    const msg = (error && error.message) ? error.message : 'Bilinmeyen hata';
+    _showError(msg);
   }
 }
 
