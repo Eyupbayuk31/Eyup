@@ -12652,15 +12652,19 @@ async function _renderPublicViewerFromFirebase(id, type){
 
   try {
     // Firebase'in hazır olmasını bekle
-    if(!window._fs || !window._fs.db){
+    if(window._fs && window._fs.db){
+      // Zaten hazır — bekleme
+    } else {
       await new Promise((resolve) => {
-        window.addEventListener('firebase-ready', resolve, {once: true});
-        setTimeout(() => resolve(), 5000); // 5 saniye timeout
+        let done = false;
+        const onReady = () => { if(!done){ done = true; resolve(); } };
+        window.addEventListener('firebase-ready', onReady, {once: true});
+        setTimeout(() => { if(!done){ done = true; resolve(); } }, 8000); // 8 saniye timeout
       });
     }
 
     if(!window._fs || !window._fs.db){
-      throw new Error('Firebase bağlantısı kurulamadı');
+      throw new Error('Firebase bağlantısı kurulamadı (8sn timeout). Sayfayı yenileyin.');
     }
 
     // Firebase'den veri çek
@@ -12675,9 +12679,11 @@ async function _renderPublicViewerFromFirebase(id, type){
     const snapshot = await getDocs(colRef);
 
     let item = null;
+    const targetId = String(id);
     snapshot.forEach(doc => {
       const data = doc.data();
-      if(data.id === id){
+      // Firestore integerValue ile URL'den gelen string'i karşılaştır
+      if(String(data.id) === targetId || doc.id === targetId){
         item = data;
       }
     });
@@ -12685,6 +12691,7 @@ async function _renderPublicViewerFromFirebase(id, type){
     if(!item){
       throw new Error('İrsaliye bulunamadı: ' + id);
     }
+    console.log('QR viewer: ✅ Found item', item.no, 'from', snapshot.size, 'docs');
 
     // Fotoğrafları ekle
     const photos = _getPhotosArray(item);
