@@ -28,7 +28,7 @@
     while(b64.length % 4) b64 += '=';
     var json = decodeURIComponent(escape(atob(b64)));
     var d    = JSON.parse(json);
-    if(!d || d.app !== 'irsaliyepro') return; // Yanlış format — devam et
+    if(!d || (d.app !== 'irsaliyepro' && d.a !== 'ip')) return; // Yanlış format — devam et
 
     // ✅ Geçerli viewer URL
     window._isViewerUrl = true;
@@ -253,7 +253,7 @@
   -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, enableIndexedDbPersistence }
+    import { getFirestore, collection, doc, getDoc, setDoc, getDocs, deleteDoc, onSnapshot, enableIndexedDbPersistence }
       from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -278,7 +278,7 @@
       }
     });
 
-    window._fs = { db, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot };
+    window._fs = { db, collection, doc, getDoc, setDoc, getDocs, deleteDoc, onSnapshot };
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
   <script>
@@ -9048,8 +9048,10 @@ function _buildQrScanUrl(item, type){
 }
 
 function _buildQrPayloadV3(item, type){
-  // Sadece id+type — viewer Firebase'den tam veriyi cekecek
-  return { app:'irsaliyepro', v:3, id:item.id, type:type };
+  // Kısa anahtarlar: a=app(ip), v=versiyon, i=id, t=type kısaltması
+  // Eski format (app/id/type) hala decode edilebilir (geriye dönük uyum)
+  const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da'};
+  return { a:'ip', v:3, i:item.id, t:_T[type]||type };
 }
 
 function _buildQrPayload(item, type){
@@ -12570,7 +12572,7 @@ function _parseViewerHash(){
       console.log('QR viewer: Decoded JSON length:', json.length);
       const data = JSON.parse(json);
       console.log('QR viewer: Parsed data successfully:', data);
-      if(data && data.app === 'irsaliyepro') {
+      if(data && (data.app === 'irsaliyepro' || data.a === 'ip')) {
         console.log('QR viewer: ✅ Valid irsaliyepro data found!');
         return data;
       } else {
@@ -12618,7 +12620,7 @@ function _parseViewerHash(){
   try {
     const json = _b64UrlDecode(v);
     const data = JSON.parse(json);
-    if(data && data.app === 'irsaliyepro') return data;
+    if(data && (data.app === 'irsaliyepro' || data.a === 'ip')) return data;
   } catch(e){
     console.error('QR parse error:', e);
   }
@@ -12631,12 +12633,17 @@ function _checkAndRenderPublicViewer(){
     console.log('QR viewer: No valid hash data found');
     return false;
   }
-  console.log('QR viewer: Rendering public view for:', data.no || data.id);
 
-  // v3: Minimal payload - Firebase'den veri çek
-  if(data.v === 3 && data.id && data.type){
-    _renderPublicViewerFromFirebase(data.id, data.type);
-    return true;
+  // v3: Minimal payload - Firebase'den veri çek (compact keys: a/i/t or app/id/type)
+  if(data.v === 3){
+    const _T = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
+    const id   = data.id || data.i;
+    const type = data.type || _T[data.t] || data.t;
+    console.log('QR viewer: v3 — id:', id, 'type:', type);
+    if(id && type){
+      _renderPublicViewerFromFirebase(id, type);
+      return true;
+    }
   }
 
   // v1/v2: Eski format - tüm veri QR'da
@@ -12645,27 +12652,25 @@ function _checkAndRenderPublicViewer(){
 }
 
 async function _renderPublicViewerFromFirebase(id, type){
-  // Loading göster
-  document.body.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#f5f3ff;">
-      <div style="text-align:center;">
-        <div style="font-size:48px;margin-bottom:16px;">📦</div>
-        <div style="font-size:18px;font-weight:600;color:#7c3aed;">İrsaliye yükleniyor...</div>
-        <div style="font-size:14px;color:#6b7280;margin-top:8px;">Firebase'den veri çekiliyor</div>
-      </div>
-    </div>
-  `;
+  // Loader CSS (body{visibility:hidden}) ve overlay'i kaldır, body'yi göster
+  function _showContent(){
+    try{
+      const s = document.getElementById('_qrV3Loader');
+      if(s && s.parentNode) s.parentNode.removeChild(s);
+      const b = document.getElementById('_qrV3LoaderBox');
+      if(b && b.parentNode) b.parentNode.removeChild(b);
+    }catch(_){}
+    document.documentElement.style.visibility = 'visible';
+    document.body.style.visibility = 'visible';
+  }
 
   try {
-    // Firebase'in hazır olmasını bekle
-    if(window._fs && window._fs.db){
-      // Zaten hazır — bekleme
-    } else {
+    // Firebase hazır değilse bekle
+    if(!window._fs || !window._fs.db){
       await new Promise((resolve) => {
         let done = false;
-        const onReady = () => { if(!done){ done = true; resolve(); } };
-        window.addEventListener('firebase-ready', onReady, {once: true});
-        setTimeout(() => { if(!done){ done = true; resolve(); } }, 8000); // 8 saniye timeout
+        window.addEventListener('firebase-ready', () => { if(!done){ done=true; resolve(); } }, {once:true});
+        setTimeout(() => { if(!done){ done=true; resolve(); } }, 8000);
       });
     }
 
@@ -12673,70 +12678,57 @@ async function _renderPublicViewerFromFirebase(id, type){
       throw new Error('Firebase bağlantısı kurulamadı (8sn timeout). Sayfayı yenileyin.');
     }
 
-    // Firebase'den veri çek
     const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
     const key = keyMap[type];
-    if(!key){
-      throw new Error('Geçersiz irsaliye tipi: ' + type);
-    }
-
-    const { db, collection, getDocs } = window._fs;
-    const colRef = collection(db, 'appdata', key, 'items');
-    const snapshot = await getDocs(colRef);
+    if(!key) throw new Error('Geçersiz irsaliye tipi: ' + type);
 
     let item = null;
-    const targetId = String(id);
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      // Firestore integerValue ile URL'den gelen string'i karşılaştır
-      if(String(data.id) === targetId || doc.id === targetId){
-        item = data;
-      }
-    });
+    const { db, doc, getDoc, collection, getDocs } = window._fs;
 
+    // Önce doğrudan doc ID ile dene (hızlı O(1))
+    try{
+      const docSnap = await getDoc(doc(db, 'appdata', key, 'items', String(id)));
+      if(docSnap.exists()) item = docSnap.data();
+    }catch(_){}
+
+    // Bulunamazsa tüm koleksiyonu tara (id alanı farklı kaydedilmiş olabilir)
     if(!item){
-      throw new Error('İrsaliye bulunamadı: ' + id);
+      const targetId = String(id);
+      const snapshot = await getDocs(collection(db, 'appdata', key, 'items'));
+      snapshot.forEach(d => {
+        const data = d.data();
+        if(String(data.id) === targetId) item = data;
+      });
+      if(!item) throw new Error('İrsaliye bulunamadı (ID: ' + id + '). QR kodu güncel değil olabilir.');
     }
-    console.log('QR viewer: ✅ Found item', item.no, 'from', snapshot.size, 'docs');
 
-    // Fotoğrafları ekle
+    console.log('QR viewer: ✅ Found item', item.no || item.id);
+
     const photos = _getPhotosArray(item);
-
-    // Viewer'ı render et
     const payload = {
-      app: 'irsaliyepro',
-      v: 2,
-      id: item.id,
-      type: type,
-      no: item.no || '',
-      model: item.model || item.urun || '',
-      atolye: item.atolye || item.firma || '',
-      firma: item.firma || '',
-      tarih: item.tarih || '',
-      termin: item.termin || '',
-      teslimEden: item.teslimEden || '',
-      teslimAlan: item.teslimAlan || '',
-      durum: item.durum || '',
-      sizes: item.sizes,
-      bant: item.bant,
-      beden: item.beden,
-      cm: item.cm,
-      metre: item.metre,
-      adet: item.adet,
-      total: item.total,
-      totalAdet: item.totalAdet,
-      renk: item.renk,
-      aciklama: item.aciklama || item.not || '',
-      photos: (photos || []).filter(p => p && p.url).map(p => ({url: p.url, at: p.at}))
+      app:'irsaliyepro', v:2,
+      id:item.id, type,
+      no: item.no||'', model: item.model||item.urun||'',
+      atolye: item.atolye||item.firma||'', firma: item.firma||'',
+      tarih: item.tarih||'', termin: item.termin||'',
+      teslimEden: item.teslimEden||'', teslimAlan: item.teslimAlan||'',
+      durum: item.durum||'',
+      sizes: item.sizes, bant: item.bant, beden: item.beden,
+      cm: item.cm, metre: item.metre, adet: item.adet,
+      total: item.total, totalAdet: item.totalAdet, renk: item.renk,
+      aciklama: item.aciklama||item.not||'',
+      photos: (photos||[]).filter(p=>p&&p.url).map(p=>({url:p.url,at:p.at}))
     };
 
+    // Loader'ı kaldır ve viewer'ı göster (_renderPublicViewer document.open ile yeni doc yazar)
+    _showContent();
     _renderPublicViewer(payload);
 
   } catch(error) {
     console.error('Firebase veri çekme hatası:', error);
-    const _safeMsg = (error && error.message && typeof error.message === 'string' && !error.message.includes('<'))
-      ? error.message
-      : 'Lütfen bağlantınızı kontrol edip tekrar deneyin.';
+    const _safeMsg = (error&&error.message&&typeof error.message==='string'&&!error.message.includes('<'))
+      ? error.message : 'Lütfen bağlantınızı kontrol edip tekrar deneyin.';
+    _showContent();
     document.body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;">
         <div style="text-align:center;max-width:400px;padding:20px;">
