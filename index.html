@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v13-publish-status-2026-06-10">
+  <meta name="app-version" content="fs-v14-viewer-selfcontained-2026-06-10">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -33,31 +33,11 @@
     // ✅ Geçerli viewer URL
     window._isViewerUrl = true;
 
-    // v3 (kisa URL): inline render YOK, Firebase'den cekilmesi gerek.
-    // App normal yuklensin; DOMContentLoaded'da _checkAndRenderPublicViewer
-    // v3'u algilayip _renderPublicViewerFromCloud'u cagiracak (GitHub raw + Firebase fallback).
-    // Yukleme sirasinda app UI parlamasin diye dokuman gizli baslar;
-    // viewer body'yi tamamen degistirip 'visible' yapacak.
-    if(d.v === 3){
-      try{
-        var st = document.createElement('style');
-        st.id = '_qrV3Loader';
-        st.textContent = 'html,body{visibility:hidden!important;background:#f5f3ff!important;}#_qrV3LoaderBox{visibility:visible!important;position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:system-ui;background:#f5f3ff;z-index:2147483647;}#_qrV3LoaderBox>div{text-align:center;}';
-        document.documentElement.appendChild(st);
-        document.addEventListener('DOMContentLoaded', function(){
-          if(document.getElementById('_qrV3LoaderBox')) return;
-          var box = document.createElement('div');
-          box.id = '_qrV3LoaderBox';
-          box.innerHTML = '<div><div style="font-size:48px;margin-bottom:16px;">📦</div><div style="font-size:18px;font-weight:600;color:#7c3aed;">İrsaliye yükleniyor...</div></div>';
-          document.body.appendChild(box);
-        });
-      }catch(_){}
-      return;
-    }
-
-    // v2 (uzun URL): inline render, app yuklenmesin
-    window._viewerRendered = true;
-
+    // ════════════════════════════════════════════════════════════════
+    // ORTAK RENDER — hem v2 (uzun URL) hem v3 (GitHub raw) ayni renderer'i kullanir
+    // Tamamen self-contained: app'in geri kalanina (Firebase, 5000 satir kod) bagimli degil
+    // ════════════════════════════════════════════════════════════════
+    function renderViewer(d){
     var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
     var SIZE_NAMES  = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     var BANT_NAMES  = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
@@ -203,6 +183,102 @@
     // ANINDA YAZ — geri kalan HTML dosyasını okumayı DURDUR
     document.write(html);
     window.stop(); // Tarayıcı geri kalan HTML'i parse etmeyi durdurur
+    } // ← renderViewer sonu
+
+    // ════════════════════════════════════════════════════════════════
+    // DISPATCH: v3 (kisa URL, GitHub raw) veya v2 (uzun URL, inline)
+    // ════════════════════════════════════════════════════════════════
+    if(d.v === 3){
+      // Ana app'in viewer path'ini kilitle (cift render olmasin)
+      window._viewerKickedOff = true;
+      window._viewerRendered  = true;
+
+      // --- Loader (parse sirasinda da gorunur) ---
+      var _verEl = document.querySelector('meta[name="app-version"]');
+      var _ver = _verEl ? _verEl.getAttribute('content') : '?';
+      var _ls = document.createElement('style');
+      _ls.id = '_qrV3Loader';
+      _ls.textContent = 'html,body{visibility:hidden!important;background:#f5f3ff!important;}#_qrV3LoaderBox{visibility:visible!important;position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:system-ui;background:#f5f3ff;z-index:2147483647;padding:20px;}#_qrV3LoaderBox .b{text-align:center;max-width:440px;}';
+      document.documentElement.appendChild(_ls);
+      var _box = document.createElement('div');
+      _box.id = '_qrV3LoaderBox';
+      _box.innerHTML = '<div class="b"><div style="font-size:48px;margin-bottom:16px;">📦</div>'
+        + '<div style="font-size:18px;font-weight:600;color:#7c3aed;">İrsaliye yükleniyor…</div>'
+        + '<div id="_qrV3Step" style="font-size:13px;color:#6b7280;margin-top:10px;">Başlatılıyor…</div>'
+        + '<div style="font-size:10px;color:#c4b5fd;margin-top:14px;">sürüm: ' + _ver + '</div></div>';
+      (document.body || document.documentElement).appendChild(_box);
+      function _step(m){ try{ var e=document.getElementById('_qrV3Step'); if(e) e.textContent=m; }catch(_){} }
+
+      // --- Payload'i coz: i/id, t(kisa)/type, r=owner/repo, b=branch ---
+      var _T = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
+      var _vid   = d.id || d.i;
+      var _vtype = d.type || _T[d.t] || d.t;
+      var _repo  = (d.r && typeof d.r === 'string' && d.r.indexOf('/') > 0) ? d.r.split('/') : null;
+      var _vbr   = d.b || 'main';
+
+      function _viewerErr(m){
+        try{ var s=document.getElementById('_qrV3Loader'); if(s&&s.parentNode) s.parentNode.removeChild(s); var b=document.getElementById('_qrV3LoaderBox'); if(b&&b.parentNode) b.parentNode.removeChild(b); }catch(_){}
+        try{ document.documentElement.style.visibility='visible'; document.body.style.visibility='visible'; }catch(_){}
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;"><div style="text-align:center;max-width:400px;padding:20px;"><div style="font-size:48px;">⚠️</div><div style="font-size:18px;font-weight:600;color:#dc2626;margin:8px 0;">İrsaliye Yüklenemedi</div><div style="font-size:13px;color:#6b7280;margin-bottom:16px;word-break:break-word;">'+(m||'')+'</div><button onclick="location.reload()" style="background:#7c3aed;color:#fff;border:0;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;">🔄 Tekrar Dene</button></div></div>';
+      }
+
+      // GitHub raw'a yazma yapilamayan eski v3 QR (r yok) → ana app Firebase'den ceksin
+      if(!_repo || !_vid || !_vtype){
+        _step('Repo bilgisi yok — yedek sunucu (Firebase) deneniyor…');
+        window._viewerKickedOff = false;
+        if(typeof window._checkAndRenderPublicViewer === 'function'){
+          try{ window._checkAndRenderPublicViewer(); }catch(e){ _viewerErr('Yedek okuma hatası: '+(e&&e.message||e)); }
+        } else {
+          document.addEventListener('DOMContentLoaded', function(){
+            if(typeof window._checkAndRenderPublicViewer === 'function'){ try{ window._checkAndRenderPublicViewer(); }catch(e){ _viewerErr(String(e&&e.message||e)); } }
+            else _viewerErr('Görüntüleyici yüklenemedi (eski QR).');
+          });
+        }
+        return;
+      }
+
+      // --- GitHub raw'dan tam veriyi cek (auth yok, CDN'den hizli) ---
+      var _rawUrl = 'https://raw.githubusercontent.com/'+encodeURIComponent(_repo[0])+'/'+encodeURIComponent(_repo[1])+'/'+encodeURIComponent(_vbr)+'/viewer/'+_vtype+'_'+_vid+'.json?_t='+Date.now();
+      _step('Sunucudan okunuyor…');
+      var _done = false;
+      var _to = setTimeout(function(){ if(!_done){ _done=true; _fallbackFb('yanıt gecikti (10sn)'); } }, 10000);
+
+      function _fallbackFb(reason){
+        _step('GitHub okunamadı ('+reason+') — yedek sunucu deneniyor…');
+        window._viewerKickedOff = false;
+        function go(){
+          if(typeof window._checkAndRenderPublicViewer === 'function'){
+            try{ window._checkAndRenderPublicViewer(); }catch(e){ _viewerErr('Yedek okuma hatası: '+(e&&e.message||e)); }
+          } else { _viewerErr('Görüntüleyici yüklenemedi: '+reason); }
+        }
+        if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', go); }
+        else { go(); }
+      }
+
+      fetch(_rawUrl, {cache:'no-store'})
+        .then(function(r){
+          if(r.status === 404) throw new Error('__404__');
+          if(!r.ok) throw new Error('HTTP '+r.status);
+          return r.json();
+        })
+        .then(function(vd){
+          if(_done) return; _done=true; clearTimeout(_to);
+          _step('Hazırlanıyor…');
+          vd.type = _vtype;
+          renderViewer(vd);
+        })
+        .catch(function(err){
+          if(_done) return; _done=true; clearTimeout(_to);
+          var m = (err && err.message) || 'hata';
+          if(m === '__404__') _fallbackFb('kayıt henüz yayında değil');
+          else _fallbackFb(m);
+        });
+      return;
+    }
+
+    // v2 (uzun URL): tum veri QR'da — direkt inline render
+    window._viewerRendered = true;
+    renderViewer(d);
 
   } catch(e) {
     // Hata olursa normal uygulama yüklenir
