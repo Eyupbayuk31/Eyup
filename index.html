@@ -9104,17 +9104,6 @@ async function generateQrForItem(id, type){
   if(!item){ toast('Kayıt bulunamadı','error'); return; }
   if(typeof QRCode === 'undefined'){ toast('QR kütüphanesi yüklenemedi','error'); return; }
 
-  // GitHub'a viewer JSON'ı publish et — atölye scan ettiğinde hazır olsun
-  // Hata olursa QR yine de gösterilir (Firebase fallback viewer'da var)
-  toast('☁️ Viewer JSON yayınlanıyor…','info');
-  try{
-    await _publishViewerJsonToGithub(item, type);
-    toast('✓ JSON yayında — QR hazır','success');
-  }catch(err){
-    console.warn('Viewer JSON publish başarısız:', err);
-    toast('⚠️ JSON yayınlanamadı: ' + (err.message||'') + ' — Firebase fallback kullanılacak','error');
-  }
-
   // QR artık URL taşır — tarayan kişi tarayıcıda doğrudan irsaliye görür
   const scanUrl = _buildQrScanUrl(item, type);
   const photos = _getPhotosArray(item);
@@ -9142,6 +9131,10 @@ async function generateQrForItem(id, type){
         QR'ı taranınca atölye otomatik olarak <b>şifresiz</b> irsaliye sayfasına yönlenir.
       </div>
       <div class="qr-canvas-box"><div id="qrRenderHost"></div></div>
+      <div id="qrPublishStatus" style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);font-size:12px;color:#3b82f6;text-align:left;">
+        <i class="fas fa-spinner fa-spin"></i> <b>GitHub'a yükleniyor…</b><br>
+        <span style="font-size:11px;color:var(--text-muted);">viewer/${type}_${item.id}.json oluşturuluyor</span>
+      </div>
       ${photoWarnHtml}
       <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="downloadQrPng()"><i class="fas fa-download"></i> PNG İndir</button>
@@ -9155,6 +9148,8 @@ async function generateQrForItem(id, type){
     </div>
   `;
   window._lastQrScanUrl = scanUrl; // kopyala düğmesi için
+  window.currentModalItem = item; // retry publish butonu için
+  window.currentModalType = type;
   modal.classList.add('show');
   setTimeout(()=>{
     const host = document.getElementById('qrRenderHost');
@@ -9178,7 +9173,39 @@ async function generateQrForItem(id, type){
       }
     }
   }, 80);
+
+  // GitHub publish — arka planda, modal'da kalıcı status gösteriliyor
+  _runQrPublish(item, type);
 }
+
+window._runQrPublish = async function(item, type){
+  const statusEl = document.getElementById('qrPublishStatus');
+  const setStatus = (html, bg, border, color)=>{
+    if(!statusEl) return;
+    statusEl.style.background = bg;
+    statusEl.style.border = '1px solid ' + border;
+    statusEl.style.color = color;
+    statusEl.innerHTML = html;
+  };
+  try{
+    await _publishViewerJsonToGithub(item, type);
+    setStatus(
+      '<i class="fas fa-check-circle"></i> <b>GitHub\'a yüklendi — QR hazır</b><br><span style="font-size:11px;color:var(--text-muted);">viewer/' + type + '_' + item.id + '.json yayında</span>',
+      'rgba(16,185,129,0.1)', 'rgba(16,185,129,0.3)', '#10b981'
+    );
+  }catch(err){
+    console.error('Viewer JSON publish hatasi:', err);
+    const msg = (err && err.message) ? err.message : 'Bilinmeyen hata';
+    setStatus(
+      '<i class="fas fa-exclamation-triangle"></i> <b>GitHub yazılamadı!</b><br>'
+      + '<span style="font-size:11px;color:#dc2626;display:block;margin:6px 0;word-break:break-word;">' + _escapeHtml(msg) + '</span>'
+      + '<button class="btn btn-sm btn-secondary" onclick="_runQrPublish(window.currentModalItem, window.currentModalType)" style="margin-top:4px;">'
+      + '<i class="fas fa-redo"></i> Tekrar Dene</button>'
+      + '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Not: QR yine de çalışır — viewer Firebase\'den okur</div>',
+      'rgba(239,68,68,0.1)', 'rgba(239,68,68,0.3)', '#dc2626'
+    );
+  }
+};
 
 // Telefon numarasini wa.me icin normalize et: rakam dis karakterleri at,
 // 0 ile basliyorsa ulke kodu (TR=90) ekle, dis ulkelerde + zaten varsa olduysa kabul.
