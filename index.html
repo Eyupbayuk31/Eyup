@@ -4156,7 +4156,7 @@ function showDetailUni(id,type){
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    sortBedenKeys(item.beden).forEach(k=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bedenLabel[k]||k}: <b>${item.beden[k].adet}</b> adet (${item.beden[k].cm} cm)</div>`;});
+    sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bedenLabel[k]||k}: <b>${bv.adet??0}</b> adet (${bv.cm??'-'} cm)</div>`;});
     html+='</div>';
     html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.totalAdet||0} adet</div>`;
   }
@@ -4369,7 +4369,7 @@ function generatePDF(id, type) {
     html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">🔗 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
     html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">CM</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k => {
-      html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k].cm} cm</td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k].adet}</td></tr>`;
+      const bv=item.beden[k]||{}; html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${bv.cm??'-'} cm</td><td style="font-size:${fontSize};padding:${padding};">${bv.adet??0}</td></tr>`;
     });
     html += `</tbody></table><div class="total-row" style="font-size:${bedenCount >= 7 ? '12px' : '14px'};padding:${bedenCount >= 7 ? '6px 0' : '8px 0'};">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
@@ -7030,7 +7030,7 @@ function buildShareText(item, type) {
   if ((type === 'fermuar' || type === 'toptan') && item.beden) {
     const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
     const bds = sortBedenKeys(item.beden).map(k => {
-      const v = type === 'fermuar' ? item.beden[k].adet : item.beden[k];
+      const v = type === 'fermuar' ? (item.beden[k]?.adet ?? 0) : item.beden[k];
       return `${bl[k]||k}: ${v}`;
     }).filter(x => !x.endsWith(': 0'));
     if (bds.length) text += `\n👕 Bedenler:\n  ${bds.join('\n  ')}\n`;
@@ -7303,7 +7303,7 @@ function _singleItemPdfHtml(item, type){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
     h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
     h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
-    sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k].cm} cm</td><td>${item.beden[k].adet}</td></tr>`;});
+    sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};h+=`<tr><td><b>${bl[k]||k}</b></td><td>${bv.cm??'-'} cm</td><td>${bv.adet??0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
   if(type==='lastik'){
@@ -10149,17 +10149,22 @@ async function _uploadPhotoToCatbox(dataUrl){
   throw new Error('Yükleme yanıtı beklenmedik formatta');
 }
 
+const _uploadsInFlight = new Set();
 function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
-  // Yüklemeyi başlatırken önceki hata flag'ini temizle
+  const flightKey = `${id}__${type}__${photoIndex ?? 'main'}`;
+  if(_uploadsInFlight.has(flightKey)){ toast('⏳ Bu fotoğraf zaten yükleniyor…','info'); return; }
+  _uploadsInFlight.add(flightKey);
   _updateItem(id, type, (item)=>{
     if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
       item._photos[photoIndex].uploadFailed = false;
       item._photos[photoIndex].uploadError = '';
+      item._photos[photoIndex].uploading = true;
     }
     return item;
   });
 
   _uploadPhotoToCatbox(dataUrl).then(url=>{
+    _uploadsInFlight.delete(flightKey);
     const ok = _updateItem(id, type, (item)=>{
       if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
         item._photos[photoIndex].url = url;
@@ -10167,6 +10172,7 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
         item._photos[photoIndex].urlManual = false;
         item._photos[photoIndex].uploadFailed = false;
         item._photos[photoIndex].uploadError = '';
+        item._photos[photoIndex].uploading = false;
         if(photoIndex === 0){
           item._photoUrl = url;
           item._photoUrlAt = item._photos[0].urlAt;
@@ -10188,18 +10194,18 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
         renderSigSavedList();
       }
     } else {
-      // _updateItem başarısız: kayıt artık yok ya da yazılamadı
       console.warn('Upload başarılı ama _updateItem yazamadı:', id, type, photoIndex);
       toast('⚠️ Yüklendi fakat kaydedilemedi — tekrar deneyin','error');
     }
   }).catch(err=>{
+    _uploadsInFlight.delete(flightKey);
     console.warn('GitHub upload failed:', err);
     const msg = (err && err.message) ? err.message : 'Yükleme başarısız';
-    // Hatayı kayda işle ki UI retry butonu gösterebilsin ve veri kaybolduğu sanılmasın
     _updateItem(id, type, (item)=>{
       if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
         item._photos[photoIndex].uploadFailed = true;
         item._photos[photoIndex].uploadError = msg;
+        item._photos[photoIndex].uploading = false;
       } else {
         item._photoUploadFailed = true;
         item._photoUploadError = msg;
@@ -12728,12 +12734,15 @@ async function _renderPublicViewerFromFirebase(id, type){
 
   } catch(error) {
     console.error('Firebase veri çekme hatası:', error);
+    const _safeMsg = (error && error.message && typeof error.message === 'string' && !error.message.includes('<'))
+      ? error.message
+      : 'Lütfen bağlantınızı kontrol edip tekrar deneyin.';
     document.body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;">
         <div style="text-align:center;max-width:400px;padding:20px;">
           <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
           <div style="font-size:18px;font-weight:600;color:#dc2626;margin-bottom:8px;">İrsaliye Yüklenemedi</div>
-          <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">${error.message}</div>
+          <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">${_safeMsg}</div>
           <button onclick="window.location.reload()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
             🔄 Tekrar Dene
           </button>
