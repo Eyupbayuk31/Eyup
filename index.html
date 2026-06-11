@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v20-delete-tombstone-2026-06-11">
+  <meta name="app-version" content="fs-v21-pdf-kordon-dantel-saten-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -4651,6 +4651,43 @@ function generatePDF(id, type) {
     // Toptan sipariş için otomatik açıklama
     html += `<div class="note-box" style="background:#fef3c7;border-color:#fbbf24;margin-top:16px;">
       ⚠️ <b>ÖNEMLİ:</b> Toptan siparişler yıkama talimatı ayrı dikilir, sarı renktedir. Bu adetlerde firmaya teslim etmeniz gerekir.
+    </div>`;
+  }
+
+  if (type === 'kordon' && item.olcular && item.olcular.length) {
+    html += `<div class="section-title">🪢 Kordon Ölçüleri${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
+    item.olcular.forEach(o => {
+      html += `<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;
+    });
+    html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}</div>`;
+  }
+
+  if (type === 'dantel') {
+    html += `<div class="section-title">🕸️ Dantel Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
+      <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
+      </div>
+      ${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${item.renk}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div>
+      </div>`:''}
+    </div>`;
+  }
+
+  if (type === 'satenaskilik') {
+    html += `<div class="section-title">🪢 Saten Askılık Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
+      <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
+      </div>
+      ${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${item.renk}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div>
+      </div>`:''}
     </div>`;
   }
 
