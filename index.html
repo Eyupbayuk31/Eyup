@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v19-cloud-badge-2026-06-11">
+  <meta name="app-version" content="fs-v20-delete-tombstone-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -411,7 +411,8 @@
       'irsaliye_users','aksesuarlar','waybillTemplates',
       'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
       'app_settings',        // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
-      'audit_log'            // kim ne zaman ne yapti — iki cihazda da goruner
+      'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
+      'deleted_ids'          // TOMBSTONE: kalici silinen id'ler — offline cihazlar geri diriltmesin
     ];
     const RECENT_WRITE_MS = 5000;
     const PENDING_DELETE_MS = 5000;
@@ -676,15 +677,40 @@
     async function bootRead(){
       if(!window._fs) return;
 
-      let recycledIds = new Set();
+      // Blocklist: cop kutusundakiler (soft delete) + tombstone'lar (kalici silinenler).
+      // Bu id'ler ne buluta geri itilir ne de yerelde tutulur — geri dirilme YOK.
+      const recycledIds  = new Set();
+      const tombstoneIds = new Set();
       try {
         const rec = await fsReadAll('recycleBin');
         rec.forEach(function(it){ if(it && it.id != null) recycledIds.add(String(it.id)); });
       } catch(e){ console.warn('[fs] bootRead recycleBin err:', e); }
+      try {
+        const tomb = await fsReadAll('deleted_ids');
+        tomb.forEach(function(t){ if(t && t.id != null) tombstoneIds.add(String(t.id)); });
+      } catch(e){ console.warn('[fs] bootRead deleted_ids err:', e); }
+
+      const OFFLINE_PUSH_MAX_AGE_MS = 14 * 24 * 3600 * 1000;
 
       for(const key of FS_KEYS){
         try {
-          const remote = await fsReadAll(key);
+          let remote = await fsReadAll(key);
+
+          // Tombstone temizligi: kalici silinmis id bulutta hala duruyorsa
+          // (silen cihaz offline'di vs.) buluttan da sil.
+          if(key !== 'deleted_ids' && key !== 'audit_log'){
+            const zombies = remote.filter((it, i) => tombstoneIds.has(itemId(it, i)));
+            if(zombies.length){
+              console.log('[fs] bootRead: ' + zombies.length + ' tombstone kayit buluttan siliniyor (' + key + ')');
+              for(const z of zombies){
+                const zid = itemId(z, 0);
+                try { trackDelete(key, zid); await fsDel(key, zid); }
+                catch(e){ console.warn('[fs] tombstone sil err:', key, zid, e); }
+              }
+              remote = remote.filter((it, i) => !tombstoneIds.has(itemId(it, i)));
+            }
+          }
+
           const remoteIds = new Set();
           remote.forEach((it, i) => remoteIds.add(itemId(it, i)));
 
@@ -697,7 +723,18 @@
             } catch(_){}
             const localOnly = local.filter((it, i) => {
               const id = itemId(it, i);
-              return !remoteIds.has(id) && !recycledIds.has(id) && !id.startsWith('idx_');
+              if(remoteIds.has(id) || id.startsWith('idx_')) return false;
+              // deleted_ids'in kendisi blocklist'e takilmasin (tombstone girisinin
+              // id'si silinen kaydin id'si — kendini filtrelemesin)
+              if(key !== 'deleted_ids' && (recycledIds.has(id) || tombstoneIds.has(id))) return false;
+              // Yas korumasi: id Date.now() damgasidir. 14 gunden eski yerel-only
+              // kayit buyuk ihtimalle baska cihazda silinmis — geri diriltme.
+              const n = Number(it && it.id);
+              if(Number.isFinite(n) && n > 1500000000000 && (Date.now() - n) > OFFLINE_PUSH_MAX_AGE_MS){
+                console.warn('[fs] eski yerel-only kayit atlandi (muhtemelen silinmis):', key, id);
+                return false;
+              }
+              return true;
             });
             if(localOnly.length){
               console.log('[fs] bootRead: ' + localOnly.length + ' offline kayit buluta itiliyor (' + key + ')');
@@ -6180,12 +6217,35 @@ function restoreItem(id,type){
   toast('Kayıt başarıyla kurtarıldı');
 }
 
+// TOMBSTONE: kalici silinen id'leri senkron listeye yaz.
+// Offline bir cihaz bu id'leri asla buluta geri itemez (bootRead blocklist),
+// bulutta kalmis kopyalar da bootRead'de temizlenir.
+function _addTombstones(ids){
+  try{
+    if(!ids || !ids.length) return;
+    const now = Date.now();
+    let list = getData('deleted_ids');
+    if(!Array.isArray(list)) list = [];
+    const have = new Set(list.map(t => String(t && t.id)));
+    ids.forEach(id => {
+      if(id == null) return;
+      const s = String(id);
+      if(have.has(s)) return;
+      list.unshift({ id: id, at: now });
+      have.add(s);
+    });
+    if(list.length > 2000) list.length = 2000; // sinirsiz buyumesin
+    setData('deleted_ids', list);
+  }catch(e){ console.warn('tombstone err:', e); }
+}
+
 function permanentDelete(id){
   if(!confirm('Bu kayıt kalıcı olarak silinecek! Geri alınamaz. Emin misiniz?'))return;
   let recycle=getData('recycleBin');
   const target = recycle.find(r=>r.id===id);
   recycle=recycle.filter(r=>r.id!==id);
   setData('recycleBin',recycle);
+  _addTombstones([id]);
   renderRecycleBin();
   toast('Kayıt kalıcı olarak silindi','info');
   if(typeof _logAudit === 'function' && target){
@@ -6205,6 +6265,7 @@ function emptyRecycleBin(){
   if(!confirm('Tüm silinen kayıtlar kalıcı olarak silinecek! Geri alınamaz. Emin misiniz?'))return;
   const items = recycle.slice(); // kopyala
   setData('recycleBin',[]);
+  _addTombstones(items.map(it => it && it.id).filter(id => id != null));
   renderRecycleBin();
   toast('Geri dönüşüm kutusu boşaltıldı','info');
   if(typeof _logAudit === 'function'){
@@ -7858,6 +7919,20 @@ function clearAllData() {
   const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
                   'atolyeler','stoklar','stokHareketler','recycleBin','aksesuarlar',
                   'irsaliye_users','waybillTemplates','irsaliye_github_cfg','app_settings'];
+  // TOMBSTONE: silinen TUM id'leri kaydet — o an offline olan bir cihaz
+  // acilinca tum veritabanini buluta geri itmesin (hortlama korumasi)
+  try{
+    if(typeof _addTombstones === 'function'){
+      const allIds = [];
+      fsKeys.forEach(k => {
+        try{
+          const arr = JSON.parse(localStorage.getItem(k));
+          if(Array.isArray(arr)) arr.forEach(it => { if(it && it.id != null) allIds.push(it.id); });
+        }catch(_){}
+      });
+      _addTombstones(allIds);
+    }
+  }catch(_){}
   // Eski 'settings' anahtarini da temizle (app_settings'e migrate olduktan sonra artik kullanilmiyor)
   try{ localStorage.removeItem('settings'); }catch(_){}
   fsKeys.forEach(k => {
