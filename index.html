@@ -7634,7 +7634,7 @@ function _singleItemPdfHtml(item, type){
     <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+item.teslimEden:''}</div></div>
     <div class="sb2"><div style="height:70px;"></div><div class="sl">Teslim Alan${item.teslimAlan?': '+item.teslimAlan:''}</div></div>
   </div>
-  <div class="pf"><span>İrsaliye Pro — Eyüp</span><span>Yazdırma: ${printDate}</span></div>
+  <div class="pf"><span>İrsaliye Pro — Eyüp · ${(document.querySelector('meta[name="app-version"]')||{}).content||'?'}</span><span>Yazdırma: ${printDate}</span></div>
   </div>`;
   return h;
 }
