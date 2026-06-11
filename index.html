@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v15-snapshot-cache-fix-2026-06-10">
+  <meta name="app-version" content="fs-v16-bugsweep-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -265,7 +265,14 @@
           if(_done) return; _done=true; clearTimeout(_to);
           _step('Hazırlanıyor…');
           vd.type = _vtype;
-          renderViewer(vd);
+          // document.write parse bitmeden cagrilirsa REPLACE etmez, APPEND eder
+          // ve loader'in visibility:hidden stili kalir → beyaz ekran.
+          // Parse bittikten sonra write implicit open ile tum sayfayi degistirir.
+          if(document.readyState === 'loading'){
+            document.addEventListener('DOMContentLoaded', function(){ renderViewer(vd); });
+          } else {
+            renderViewer(vd);
+          }
         })
         .catch(function(err){
           if(_done) return; _done=true; clearTimeout(_to);
@@ -636,6 +643,8 @@
           const remote = await fsReadAll(key);
           const arr = sortDesc(remote);
           try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){}
+          // in-memory cache de guncellenmeli — yoksa getData() eski veriyi dondurur
+          try { _dataCache.set(key, arr); } catch(_){}
         } catch(e){ console.warn('[fs] bootRead err:', key, e); }
       }
       window._sbLoaded = true;
@@ -8449,8 +8458,15 @@ window._logAudit = _logAudit;
     if(window._auditSilent || key === _AUDIT_LOG_KEY || !trackable.has(key)){
       return _origSet(key, val);
     }
+    // ONEMLI: prev'i getData'dan DEGIL localStorage'dan oku.
+    // getData cache referansi dondurur; kayit ekleme akisi o referansi
+    // unshift ile yerinde mutate ettigi icin prev === val olur ve
+    // 'create' audit eventi hic dusmezdi.
     let prev = [];
-    try{ prev = window.getData(key) || []; }catch(_){ prev = []; }
+    try{
+      const raw = JSON.parse(localStorage.getItem(key));
+      if(Array.isArray(raw)) prev = raw;
+    }catch(_){ prev = []; }
     const result = _origSet(key, val);
     try{
       if(!Array.isArray(val) || !Array.isArray(prev)) return result;
@@ -8516,6 +8532,8 @@ function _updateItem(id, type, updater, opts){
   list[idx] = updated;
   setData(key, list);
   _logAudit('update', { key, type, itemId: id, itemNo: updated.no || updated.name || '', label: updated.atolye || updated.firma || '' });
+  // GitHub'daki viewer JSON'i tazele — basili QR eski veri gostermesin
+  try{ if(typeof _scheduleViewerJsonRefresh === 'function') _scheduleViewerJsonRefresh(id, type); }catch(_){}
   return true;
 }
 function _getAllUnifiedWithType(){
@@ -8652,7 +8670,16 @@ function handleQrResult(text){
       if(v){
         const json = _b64UrlDecode(v);
         const data = JSON.parse(json);
-        if(data && data.app === 'irsaliyepro') parsed = data;
+        if(data && (data.app === 'irsaliyepro' || data.a === 'ip')){
+          // Kompakt v3 formati (a/i/t) uzun forma normalize et
+          if(data.a === 'ip' && !data.app){
+            const _T = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
+            data.app  = 'irsaliyepro';
+            data.id   = data.id   || data.i;
+            data.type = data.type || _T[data.t] || data.t;
+          }
+          parsed = data;
+        }
       }
     }
   } catch(e){
@@ -8677,6 +8704,12 @@ function handleQrResult(text){
       if(existing){
         _qrLastResult.matchedItem = existing;
         _qrLastResult.matchedType = parsed.type;
+        // Kompakt v3 payload'da no/model/atolye yok — yerel kayittan doldur
+        if(!parsed.no)     parsed.no     = existing.no || '';
+        if(!parsed.model)  parsed.model  = existing.model || existing.urun || '';
+        if(!parsed.atolye) parsed.atolye = existing.atolye || existing.firma || '';
+        if(!parsed.tarih)  parsed.tarih  = existing.tarih || '';
+        if(!parsed.durum)  parsed.durum  = existing.durum || '';
       }
     }
     html = `
@@ -9118,12 +9151,51 @@ async function testGithubConnection(){
 }
 
 function _buildQrScanUrl(item, type){
-  // v3: minimal payload (~40 karakter URL); viewer Firebase'den ceker
+  // v3: minimal payload; viewer GitHub raw'dan ceker (Firebase fallback)
   // Eski v2 destegi viewer interceptor'da hala var (geriye donuk uyumluluk)
   const payload = _buildQrPayloadV3(item, type);
   const base = _getPublishBaseUrl();
+  // Scan URL'i uretilen HER yerde (WhatsApp, PDF, link kopyala, bulk) viewer
+  // JSON'inin GitHub'da guncel olmasi gerekir — arka planda yayinla
+  _ensureViewerJsonPublished(item, type).catch(()=>{});
   // Query string kullan (?v=) - telefon kameralari hash'i (#v=) gormeyebilir
   return base + '?v=' + _b64UrlEncode(JSON.stringify(payload));
+}
+
+// Ayni oturum icinde ayni kaydin ayni surumu tekrar tekrar yayinlanmasin
+// (bulk PDF/paylasim donguleri tek kaydi 2-3 kez isteyebiliyor; QR modal'da
+// _buildQrScanUrl + _runQrPublish ayni anda tetiklenirse SHA cakismasi olur)
+const _viewerPublished = new Map(); // `${type}_${id}` → {ver, promise}
+function _ensureViewerJsonPublished(item, type){
+  if(!item || !item.id) return Promise.resolve();
+  const k = type + '_' + item.id;
+  const ver = Number(item._updatedAt || 0);
+  const cur = _viewerPublished.get(k);
+  if(cur && cur.ver === ver) return cur.promise; // ayni surum zaten yayinda/yolda
+  const promise = _publishViewerJsonToGithub(item, type).catch(err => {
+    _viewerPublished.delete(k); // basarisiz — sonraki cagrida tekrar dene
+    console.warn('Viewer JSON publish hatasi:', err && err.message);
+    throw err;
+  });
+  _viewerPublished.set(k, { ver, promise });
+  return promise;
+}
+
+// Kayit guncellenince GitHub'daki viewer JSON'i da tazele (debounce'lu).
+// Yoksa basili QR'i tarayan atolye eski durumu/fotograflari gorur.
+const _viewerRefreshTimers = new Map();
+const _VIEWER_TYPES = new Set(['standart','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel']);
+function _scheduleViewerJsonRefresh(id, type){
+  try{
+    if(!id || !_VIEWER_TYPES.has(type)) return;
+    const k = type + '_' + id;
+    clearTimeout(_viewerRefreshTimers.get(k));
+    _viewerRefreshTimers.set(k, setTimeout(()=>{
+      _viewerRefreshTimers.delete(k);
+      const fresh = (typeof _findItemByIdType === 'function') ? _findItemByIdType(id, type) : null;
+      if(fresh) _ensureViewerJsonPublished(fresh, type).catch(()=>{});
+    }, 2500));
+  }catch(_){}
 }
 
 function _buildQrPayloadV3(item, type){
@@ -9267,7 +9339,9 @@ window._runQrPublish = async function(item, type){
     statusEl.innerHTML = html;
   };
   try{
-    await _publishViewerJsonToGithub(item, type);
+    // _buildQrScanUrl zaten arka planda publish baslatmis olabilir —
+    // ayni in-flight promise'i paylas (cift PUT = SHA cakismasi olmasin)
+    await _ensureViewerJsonPublished(item, type);
     setStatus(
       '<i class="fas fa-check-circle"></i> <b>GitHub\'a yüklendi — QR hazır</b><br><span style="font-size:11px;color:var(--text-muted);">viewer/' + type + '_' + item.id + '.json yayında</span>',
       'rgba(16,185,129,0.1)', 'rgba(16,185,129,0.3)', '#10b981'
@@ -10311,7 +10385,7 @@ function _viewerJsonPath(type, id){
   return 'viewer/' + type + '_' + String(id) + '.json';
 }
 
-async function _publishViewerJsonToGithub(item, type){
+async function _publishViewerJsonToGithub(item, type, _isRetry){
   const cfg = _getGithubConfig();
   if(!cfg.token || !cfg.owner || !cfg.repo){
     throw new Error('GitHub ayarları eksik — Ayarlar → GitHub Bulut Yükleme bölümünü doldurun');
@@ -10362,6 +10436,11 @@ async function _publishViewerJsonToGithub(item, type){
       const errData = await putRes.json();
       if(errData && errData.message) msg = errData.message;
     } catch(_){}
+    // SHA cakismasi (es zamanli iki guncelleme): taze SHA ile bir kez tekrar dene
+    if((putRes.status === 409 || putRes.status === 422) && !_isRetry){
+      await new Promise(r => setTimeout(r, 800));
+      return _publishViewerJsonToGithub(item, type, true);
+    }
     if(putRes.status === 401) throw new Error('Token geçersiz — Ayarlar\'dan yeni token girin');
     if(putRes.status === 403) throw new Error('İzin yok / rate-limit aşıldı');
     if(putRes.status === 404) throw new Error('Repo bulunamadı: ' + cfg.owner + '/' + cfg.repo);
@@ -13055,7 +13134,10 @@ function _renderPublicViewer(d){
     fermuar:  'Fermuar İrsaliyesi',
     lastik:   'Lastik İrsaliyesi',
     dugme:    'Düğme İrsaliyesi',
-    toptan:   'Toptan Sipariş'
+    toptan:   'Toptan Sipariş',
+    satenaskilik: 'Saten Askılık İrsaliyesi',
+    kordon:   'Kordon İrsaliyesi',
+    dantel:   'Dantel İrsaliyesi'
   };
   const SIZE_NAMES = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
   const BANT_NAMES = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
