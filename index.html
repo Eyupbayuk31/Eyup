@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v17-no-cache-layer-2026-06-11">
+  <meta name="app-version" content="fs-v18-sdk-resilient-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -334,12 +334,16 @@
       - Basarili yazma/silme sessiz calisir; UI kendisi gosterir.
     ═══════════════════════════════════════════════════════════════════════
   -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getFirestore, collection, doc, getDoc, setDoc, getDocs, deleteDoc, onSnapshot, enableIndexedDbPersistence }
-      from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
+  <script>
+  // FIREBASE SDK BOOTSTRAP — dayanikli yukleyici
+  // Statik <script type="module"> tek noktadan kirilgandir: Firefox koruma
+  // kalkani / eklenti / ag gstatic'i engellerse TUM modul sessizce coker ve
+  // window._fs hic olusmazdi ("SDK hatasi", senkron yok). Simdi:
+  //   1) gstatic'ten dinamik import (2 deneme)
+  //   2) olmazsa jsDelivr yedek CDN (2 deneme)
+  //   3) hata mesaji window._fsLoadError'da saklanir (toast gosterir)
+  (function(){
+    var firebaseConfig = {
       apiKey: "AIzaSyCr7TIB84oZuAqc4k65VvszAMCyqjfRi6o",
       authDomain: "ybreyup.firebaseapp.com",
       projectId: "ybreyup",
@@ -348,21 +352,53 @@
       appId: "1:195141663340:web:1583e8c222f11758bfb649",
       measurementId: "G-3NK5P2MTP9"
     };
+    var sources = [
+      { name: 'gstatic',
+        app: 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js',
+        fs:  'https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js' },
+      { name: 'jsdelivr',
+        app: 'https://cdn.jsdelivr.net/npm/firebase@12.12.0/app/+esm',
+        fs:  'https://cdn.jsdelivr.net/npm/firebase@12.12.0/firestore/+esm' }
+    ];
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    async function loadFrom(src){
+      var appMod = await import(src.app);
+      var fsMod  = await import(src.fs);
+      var app = appMod.initializeApp(firebaseConfig);
+      var db  = fsMod.getFirestore(app);
+      // Offline persistence: varsa dene, yoksa/baslarsa sessiz devam
+      try {
+        if(typeof fsMod.enableIndexedDbPersistence === 'function'){
+          fsMod.enableIndexedDbPersistence(db).catch(function(err){
+            console.warn('Firebase persistence devre disi:', err && err.code);
+          });
+        }
+      } catch(_){}
+      window._fs = {
+        db: db,
+        collection: fsMod.collection, doc: fsMod.doc,
+        getDoc: fsMod.getDoc, setDoc: fsMod.setDoc, getDocs: fsMod.getDocs,
+        deleteDoc: fsMod.deleteDoc, onSnapshot: fsMod.onSnapshot,
+        writeBatch: fsMod.writeBatch
+      };
+      window.dispatchEvent(new Event('firebase-ready'));
+      console.log('[fs] SDK yuklendi (' + src.name + ')');
+    }
 
-    // Offline persistence - hata durumunda sessizce devam et
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Firebase: Birden fazla sekme açık, offline persistence devre dışı');
-      } else if (err.code === 'unimplemented') {
-        console.warn('Firebase: Tarayıcı offline persistence desteklemiyor');
+    (async function boot(){
+      for(var s = 0; s < sources.length; s++){
+        for(var a = 0; a < 2; a++){
+          try { await loadFrom(sources[s]); return; }
+          catch(e){
+            window._fsLoadError = (e && e.message) ? e.message : String(e);
+            console.warn('[fs] SDK yukleme hatasi (' + sources[s].name + ', deneme ' + (a+1) + '):', e);
+            await new Promise(function(r){ setTimeout(r, 1200); });
+          }
+        }
       }
-    });
-
-    window._fs = { db, collection, doc, getDoc, setDoc, getDocs, deleteDoc, onSnapshot };
-    window.dispatchEvent(new Event('firebase-ready'));
+      console.error('[fs] SDK hicbir kaynaktan yuklenemedi:', window._fsLoadError);
+    })();
+  })();
   </script>
   <script>
   (function(){
@@ -493,7 +529,10 @@
 
       // BATCH WRITE (500 kayda kadar)
       const { db } = window._fs;
-      const { writeBatch } = await import("https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js");
+      // writeBatch artik bootstrap'tan geliyor — gstatic'e tekrar gitme
+      // (gstatic engelli + jsDelivr yedegi ile yuklenmis cihazda patlardi)
+      const writeBatch = window._fs.writeBatch
+        || (await import("https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js")).writeBatch;
 
       // Upsert batch
       if(upserts.length > 0){
@@ -627,13 +666,50 @@
       });
     }
 
-    // ── Ilk acilis: Firestore → localStorage (remote otoriter)
+    // ── Ilk acilis: Firestore → localStorage (remote otoriter + offline koruma)
+    // OFFLINE KORUMA: SDK yuklenemeyen bir oturumda olusturulan kayitlar
+    // sadece localStorage'da kalir. Eski davranis remote'u dogrudan yazip
+    // bu kayitlari SILIYORDU. Simdi: yerelde olup bulutta olmayan ve cop
+    // kutusunda da olmayan kayitlar buluta itilir (veri kaybi yok).
+    // Cop kutusu kontrolu sayesinde baska cihazda silinen kayitlar geri dirilmez.
     async function bootRead(){
       if(!window._fs) return;
+
+      let recycledIds = new Set();
+      try {
+        const rec = await fsReadAll('recycleBin');
+        rec.forEach(function(it){ if(it && it.id != null) recycledIds.add(String(it.id)); });
+      } catch(e){ console.warn('[fs] bootRead recycleBin err:', e); }
+
       for(const key of FS_KEYS){
         try {
           const remote = await fsReadAll(key);
-          const arr = sortDesc(remote);
+          const remoteIds = new Set();
+          remote.forEach((it, i) => remoteIds.add(itemId(it, i)));
+
+          let merged = remote;
+          if(key !== 'audit_log'){
+            let local = [];
+            try {
+              const raw = JSON.parse(localStorage.getItem(key));
+              if(Array.isArray(raw)) local = raw;
+            } catch(_){}
+            const localOnly = local.filter((it, i) => {
+              const id = itemId(it, i);
+              return !remoteIds.has(id) && !recycledIds.has(id) && !id.startsWith('idx_');
+            });
+            if(localOnly.length){
+              console.log('[fs] bootRead: ' + localOnly.length + ' offline kayit buluta itiliyor (' + key + ')');
+              for(const it of localOnly){
+                const id = itemId(it, 0);
+                try { markWrite(key, id); await fsSet(key, id, it); }
+                catch(e){ console.warn('[fs] offline push err:', key, id, e); }
+              }
+              merged = remote.concat(localOnly);
+            }
+          }
+
+          const arr = sortDesc(merged);
           try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){}
         } catch(e){ console.warn('[fs] bootRead err:', key, e); }
       }
@@ -729,9 +805,16 @@
       setTimeout(boot, 50);
     } else {
       window.addEventListener('firebase-ready', boot, { once: true });
+      // Bootstrap 2 CDN x 2 deneme + bekleme yapar; o yuzden 12sn bekle.
+      // Hata mesajinda SEBEP + cozum onerisi goster (ozellikle Firefox
+      // kalkan korumasi gstatic'i engelleyebiliyor).
       setTimeout(function(){
-        if(!window._fs && !window._isViewerUrl) toast('⚠️ Firebase SDK yuklenemedi (internet?)', true);
-      }, 5000);
+        if(!window._fs && !window._isViewerUrl){
+          var why = window._fsLoadError ? (' Sebep: ' + window._fsLoadError) : '';
+          toast('⚠️ Sunucu SDK yuklenemedi — kayitlar SADECE bu cihazda kalir!' + why, true);
+          toast('💡 Firefox kullaniyorsaniz: adres cubugundaki kalkan simgesine tiklayip korumayi bu site icin kapatin, eklentileri (uBlock vb.) devre disi birakin, sayfayi yenileyin.', true);
+        }
+      }, 12000);
     }
 
     // ========== ERROR LOGGING ==========
