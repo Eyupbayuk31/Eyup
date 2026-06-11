@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v16-bugsweep-2026-06-11">
+  <meta name="app-version" content="fs-v17-no-cache-layer-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -532,39 +532,31 @@
       return { upserts: upserts.length, deletes: deletes.length };
     }
 
-    // ========== IN-MEMORY CACHE ==========
-    const _dataCache = new Map();
+    // ========== CACHE-FREE GETDATA/SETDATA ==========
+    // Daha once in-memory _dataCache vardi ama snapshot/bootRead gibi alt
+    // katmanlar localStorage'i guncelleyince cache stale kalip "veritabani
+    // sorunlari" yarattigi icin kaldirdi. localStorage zaten <1ms okuma —
+    // 2 kisilik atolyede performans farki olcumlemez.
+    // _dataCache referansi disari acili duruyor (eski kod cagirabilir);
+    // no-op olarak tutuluyor ki dis cagrilar patlamasin.
+    const _dataCache = { get: () => undefined, set: () => {}, has: () => false, delete: () => {}, clear: () => {} };
     window._dataCache = _dataCache;
+    window.invalidateCache = function(){ /* no-op: cache yok */ };
 
-    window.invalidateCache = function(key){
-      if(key) _dataCache.delete(key);
-      else _dataCache.clear();
-    };
-
-    // ── getData: in-memory cache + localStorage
+    // ── getData: localStorage'dan oku (cache yok, stale veri riski yok)
     window.getData = function(key){
-      // Cache'den oku
-      if(_dataCache.has(key)) return _dataCache.get(key);
-
-      // Cache miss - localStorage'dan oku
       try {
         const v = JSON.parse(localStorage.getItem(key));
-        if(Array.isArray(v)){
-          _dataCache.set(key, v);
-          return v;
-        }
+        if(Array.isArray(v)) return v;
       } catch(e){
         logError('getData', e, {key});
       }
       return [];
     };
 
-    // ── setData: cache + localStorage + Firestore
+    // ── setData: localStorage + Firestore
     window.setData = function(key, val){
-      // Cache'i güncelle
-      _dataCache.set(key, val);
-
-      // prev'i DOGRUDAN localStorage'dan oku (varsa ust katmandaki wrapper'lari atla)
+      // prev'i DOGRUDAN localStorage'dan oku
       let prev = [];
       try {
         const raw = JSON.parse(localStorage.getItem(key));
@@ -643,8 +635,6 @@
           const remote = await fsReadAll(key);
           const arr = sortDesc(remote);
           try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){}
-          // in-memory cache de guncellenmeli — yoksa getData() eski veriyi dondurur
-          try { _dataCache.set(key, arr); } catch(_){}
         } catch(e){ console.warn('[fs] bootRead err:', key, e); }
       }
       window._sbLoaded = true;
@@ -719,9 +709,6 @@
         const prevJSON = JSON.stringify(local);
         if(prevJSON !== nextJSON){
           try { localStorage.setItem(key, nextJSON); } catch(e){}
-          // KRITIK: in-memory _dataCache de invalidate edilmeli, yoksa
-          // getData() eski cache'i dondurur ve UI yenilenmez.
-          try { if(window._dataCache && typeof window._dataCache.set === 'function') window._dataCache.set(key, nextArr); } catch(_){}
           refreshUI();
         }
       } catch(err){
