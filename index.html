@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v21-pdf-kordon-dantel-saten-2026-06-11">
+  <meta name="app-version" content="fs-v22-pdf-version-stamp-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -4725,9 +4725,11 @@ function generatePDF(id, type) {
     </div>
   </div>`;
 
-  // Footer
+  // Footer — surum damgasi: PDF'in hangi kod surumuyle uretildigi gorunur
+  // (deploy/onbellek sorunlarini teshis etmek icin)
+  const _appVer = (document.querySelector('meta[name="app-version"]')||{}).content || '?';
   html += `<div class="footer">
-    <span>İrsaliye Pro v6 — Eyüp tarafından yapılmıştır</span>
+    <span>İrsaliye Pro — Eyüp · ${_appVer}</span>
     <span>Yazdırma: ${printDate}</span>
   </div>`;
 
