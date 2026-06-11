@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v18-sdk-resilient-2026-06-11">
+  <meta name="app-version" content="fs-v19-cloud-badge-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -628,6 +628,7 @@
           logError('firestore-sync', err, {key});
           console.warn('[fs] write err:', key, err);
           toast('⚠️ ' + key + ' yazilamadi: ' + (err && err.message || err), true);
+          try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('err', key + ' yazılamadı: ' + (err && err.message || err)); }catch(_){}
         }
       })();
       window._fsInflight.add(p);
@@ -734,7 +735,10 @@
             collection(db, 'appdata', key, 'items'),
             { includeMetadataChanges: false }, // Metadata değişikliklerini dinleme (performans)
             function(snap){ handleSnapshot(key, snap); },
-            function(err){ console.warn('[fs] listener err:', key, err); }
+            function(err){
+              console.warn('[fs] listener err:', key, err);
+              try{ updateCloudBadge('err', key + ': ' + (err && err.message || err)); }catch(_){}
+            }
           );
           window._fsUnsubs.push(unsub);
         } catch(e){
@@ -787,10 +791,42 @@
           try { localStorage.setItem(key, nextJSON); } catch(e){}
           refreshUI();
         }
+        // Canli veri akiyor — gecici hata durumundan yesile don
+        updateCloudBadge('ok');
       } catch(err){
         console.warn('[fs] snapshot handler err:', key, err);
       }
     }
+
+    // ── Bulut durum rozeti: her cihazda senkronun calisip calismadigi GORUNUR olsun.
+    // Yesil = bagli, kirmizi = SDK yok (kayitlar yerel kalir), turuncu = yazma/dinleme hatasi.
+    // Tiklaninca: bagliysa buluttan yeniden eskitler, degilse sayfayi yeniler.
+    var _lastBadgeState = '';
+    function updateCloudBadge(state, detail){
+      if(window._isViewerUrl) return;
+      if(state === _lastBadgeState && state === 'ok') return; // gereksiz DOM yazma
+      _lastBadgeState = state;
+      function place(){
+        var el = document.getElementById('cloudSyncBadge');
+        if(!el){
+          el = document.createElement('div');
+          el.id = 'cloudSyncBadge';
+          el.style.cssText = 'position:fixed;bottom:74px;left:10px;z-index:99998;font-size:11px;font-weight:700;padding:5px 10px;border-radius:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;font-family:system-ui;';
+          el.onclick = function(){
+            if(!window._fs){ location.reload(); return; }
+            toast('☁️ Buluttan eşitleniyor…');
+            try{ bootRead(); }catch(e){}
+          };
+          document.body.appendChild(el);
+        }
+        if(state === 'ok'){ el.style.background='#065f46'; el.style.color='#d1fae5'; el.textContent='☁️ bağlı'; el.title='Bulut senkron aktif — tıkla: şimdi eşitle'; }
+        else if(state === 'err'){ el.style.background='#7c2d12'; el.style.color='#fed7aa'; el.textContent='☁️ hata'; el.title=(detail||'yazma/dinleme hatası')+' — tıkla: yeniden eşitle'; }
+        else { el.style.background='#7f1d1d'; el.style.color='#fecaca'; el.textContent='☁️ BAĞLI DEĞİL'; el.title=(detail||'SDK yüklenemedi')+' — tıkla: sayfayı yenile'; }
+      }
+      if(document.body){ place(); }
+      else { document.addEventListener('DOMContentLoaded', place, { once:true }); }
+    }
+    window._updateCloudBadge = updateCloudBadge;
 
     // ── Baslat
     async function boot(){
@@ -799,6 +835,7 @@
         await bootRead();
       } finally {
         if(!window._isViewerUrl) startLive();
+        updateCloudBadge('ok');
       }
     }
     if(window._fs){
@@ -810,6 +847,7 @@
       // kalkan korumasi gstatic'i engelleyebiliyor).
       setTimeout(function(){
         if(!window._fs && !window._isViewerUrl){
+          updateCloudBadge('off', window._fsLoadError);
           var why = window._fsLoadError ? (' Sebep: ' + window._fsLoadError) : '';
           toast('⚠️ Sunucu SDK yuklenemedi — kayitlar SADECE bu cihazda kalir!' + why, true);
           toast('💡 Firefox kullaniyorsaniz: adres cubugundaki kalkan simgesine tiklayip korumayi bu site icin kapatin, eklentileri (uBlock vb.) devre disi birakin, sayfayi yenileyin.', true);
