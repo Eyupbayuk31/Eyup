@@ -3168,6 +3168,7 @@ tr:hover .table-actions-more{
   display:flex;
   flex-direction:column;
   max-height:90vh;
+  position:relative;
 }
 .modal-header-new{
   display:flex;
@@ -8091,4 +8092,450 @@ input:focus, select:focus, textarea:focus {
     filter: none !important;
   }
   .notif-badge { animation: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFESSIONAL IRSALIYE CARDS & MODAL — STUDIO EDITION
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Per-type CSS variables ── */
+.uni-mobile-card.type-standart { --type-color: #a78bfa; --type-glow: rgba(167,139,250,0.22); --type-rgb: 167,139,250; }
+.uni-mobile-card.type-fermuar  { --type-color: #60a5fa; --type-glow: rgba(96,165,250,0.22);  --type-rgb: 96,165,250; }
+.uni-mobile-card.type-lastik   { --type-color: #34d399; --type-glow: rgba(52,211,153,0.22);  --type-rgb: 52,211,153; }
+.uni-mobile-card.type-dugme    { --type-color: #fbbf24; --type-glow: rgba(251,191,36,0.22);  --type-rgb: 251,191,36; }
+.uni-mobile-card.type-toptan   { --type-color: #f472b6; --type-glow: rgba(244,114,182,0.22); --type-rgb: 244,114,182; }
+
+/* ── Card base — premium rewrite ── */
+.uni-mobile-card {
+  background: linear-gradient(
+    145deg,
+    var(--bg-card) 0%,
+    color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.04), var(--bg-card)) 100%
+  ) !important;
+  border: 1px solid color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.18), var(--glass-border)) !important;
+  border-left: 3.5px solid var(--type-color, var(--primary)) !important;
+  border-radius: 14px !important;
+  padding: 16px 16px 14px !important;
+  margin-bottom: 11px !important;
+  box-shadow:
+    0 2px 12px rgba(0,0,0,0.18),
+    0 0 0 0 var(--type-glow, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.04) !important;
+  transition: transform 0.22s cubic-bezier(0.34,1.3,0.64,1),
+              box-shadow 0.22s ease,
+              border-color 0.22s ease !important;
+  position: relative !important;
+  overflow: hidden;
+}
+
+/* subtle inner glow accent top-left */
+.uni-mobile-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: radial-gradient(ellipse 80% 60% at 0% 0%, rgba(var(--type-rgb, 124,58,237), 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.uni-mobile-card .card-inner { position: relative; z-index: 1; }
+
+.uni-mobile-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow:
+    0 10px 32px rgba(0,0,0,0.22),
+    0 0 0 1px color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.35), transparent),
+    0 4px 20px var(--type-glow, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  border-left-width: 4px !important;
+}
+
+.uni-mobile-card:active {
+  transform: scale(0.985) !important;
+}
+
+/* ── Card title — Sora display font ── */
+.mc-title {
+  font-family: var(--font-display-studio) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* ── Card meta — refined spacing ── */
+.mc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mc-meta {
+  display: flex;
+  gap: 12px !important;
+  flex-wrap: wrap;
+  margin-top: 8px !important;
+  padding-bottom: 2px;
+}
+
+.mc-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  font-weight: 500;
+}
+
+.mc-meta span i {
+  color: var(--type-color, var(--primary)) !important;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* ── Type badges — premium pill ── */
+.type-badge {
+  font-family: var(--font-display-studio) !important;
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.7px !important;
+  padding: 3px 9px !important;
+  border-radius: 100px !important;
+  border: 1px solid !important;
+}
+
+.type-badge.standart {
+  background: rgba(167,139,250,0.1) !important;
+  color: #c4b5fd !important;
+  border-color: rgba(167,139,250,0.25) !important;
+  text-shadow: 0 0 8px rgba(167,139,250,0.4);
+}
+.type-badge.fermuar {
+  background: rgba(96,165,250,0.1) !important;
+  color: #93c5fd !important;
+  border-color: rgba(96,165,250,0.25) !important;
+  text-shadow: 0 0 8px rgba(96,165,250,0.4);
+}
+.type-badge.lastik {
+  background: rgba(52,211,153,0.1) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(52,211,153,0.25) !important;
+  text-shadow: 0 0 8px rgba(52,211,153,0.4);
+}
+.type-badge.dugme {
+  background: rgba(251,191,36,0.1) !important;
+  color: #fde68a !important;
+  border-color: rgba(251,191,36,0.25) !important;
+  text-shadow: 0 0 8px rgba(251,191,36,0.4);
+}
+.type-badge.toptan {
+  background: rgba(244,114,182,0.1) !important;
+  color: #fbcfe8 !important;
+  border-color: rgba(244,114,182,0.25) !important;
+  text-shadow: 0 0 8px rgba(244,114,182,0.4);
+}
+
+/* ── Action buttons — elevated style ── */
+.uni-mobile-card .mc-actions-new {
+  display: flex !important;
+  gap: 9px !important;
+  margin-top: 12px !important;
+  padding-top: 11px !important;
+  border-top: 1px solid color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.12), var(--border)) !important;
+}
+
+.uni-mobile-card .action-btn-primary {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 11px 14px !important;
+  background: linear-gradient(135deg,
+    var(--type-color, var(--primary)),
+    color-mix(in oklab, var(--type-color, var(--primary)) 70%, #000)
+  ) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-display-studio) !important;
+  cursor: pointer !important;
+  box-shadow: 0 3px 12px var(--type-glow, var(--primary-glow)) !important;
+  transition: all 0.2s cubic-bezier(0.34,1.3,0.64,1) !important;
+}
+
+.uni-mobile-card .action-btn-primary:hover {
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 6px 20px var(--type-glow, var(--primary-glow)) !important;
+}
+
+.uni-mobile-card .action-btn-primary:active {
+  transform: scale(0.96) !important;
+}
+
+.uni-mobile-card .action-btn-menu {
+  width: 44px !important;
+  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.08), var(--glass)) !important;
+  border: 1px solid color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.2), var(--border)) !important;
+  border-radius: 10px !important;
+  color: var(--type-color, var(--text-main)) !important;
+  font-size: 17px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.uni-mobile-card .action-btn-menu:hover {
+  background: color-mix(in oklab, rgba(var(--type-rgb, 124,58,237), 0.18), var(--glass)) !important;
+  border-color: var(--type-color, var(--primary)) !important;
+  transform: rotate(90deg) !important;
+}
+
+/* ── Card dropdown — glassmorphism ── */
+.card-dropdown-menu {
+  backdrop-filter: blur(20px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.6) !important;
+  background: color-mix(in oklab, var(--bg-card-solid) 85%, transparent) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 16px 48px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  min-width: 210px !important;
+  overflow: hidden !important;
+  transform: translateY(8px) scale(0.95) !important;
+  transition: all 0.2s cubic-bezier(0.34,1.3,0.64,1) !important;
+}
+
+.card-dropdown-menu.show {
+  transform: translateY(0) scale(1) !important;
+}
+
+.card-dropdown-menu .dropdown-item {
+  padding: 11px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  color: var(--text-main) !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+}
+
+.card-dropdown-menu .dropdown-item:last-child {
+  border-bottom: none !important;
+}
+
+.card-dropdown-menu .dropdown-item:hover {
+  background: color-mix(in oklab, var(--primary) 10%, var(--glass)) !important;
+  color: var(--primary-light) !important;
+}
+
+.card-dropdown-menu .dropdown-item i {
+  width: 18px !important;
+  text-align: center !important;
+  font-size: 13px !important;
+  opacity: 0.75 !important;
+}
+
+.card-dropdown-menu .dropdown-item:hover i {
+  opacity: 1 !important;
+}
+
+/* ── Card entrance animation ── */
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.uni-mobile-card {
+  animation: cardSlideIn 0.35s cubic-bezier(0.34,1.2,0.64,1) both !important;
+}
+
+/* stagger first 8 cards */
+.uni-mobile-card:nth-child(1)  { animation-delay: 0.04s !important; }
+.uni-mobile-card:nth-child(2)  { animation-delay: 0.08s !important; }
+.uni-mobile-card:nth-child(3)  { animation-delay: 0.12s !important; }
+.uni-mobile-card:nth-child(4)  { animation-delay: 0.16s !important; }
+.uni-mobile-card:nth-child(5)  { animation-delay: 0.20s !important; }
+.uni-mobile-card:nth-child(6)  { animation-delay: 0.24s !important; }
+.uni-mobile-card:nth-child(7)  { animation-delay: 0.28s !important; }
+.uni-mobile-card:nth-child(8)  { animation-delay: 0.32s !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFESSIONAL DETAIL MODAL
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes premiumModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.modal-detail {
+  animation: premiumModalIn 0.38s cubic-bezier(0.34,1.2,0.64,1) both !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow:
+    0 32px 80px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.07) !important;
+  overflow: hidden !important;
+}
+
+/* premium top accent line */
+.modal-detail::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--primary) 30%,
+    var(--accent, var(--primary-light)) 60%,
+    transparent 100%
+  );
+  z-index: 20;
+  border-radius: 18px 18px 0 0;
+  opacity: 0.85;
+}
+
+/* header gradient ── */
+.modal-header-new {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 10%, var(--bg-card-solid)) 0%,
+    var(--bg-card-solid) 100%
+  ) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  padding: 22px 24px 20px !important;
+  position: relative !important;
+}
+
+.modal-header-new h3 {
+  font-family: var(--font-display-studio) !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.4px !important;
+  background: linear-gradient(120deg, var(--text-main) 50%, var(--primary-light) 100%);
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* close button ── */
+.modal-close-btn {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  font-size: 16px !important;
+  transition: all 0.25s cubic-bezier(0.34,1.3,0.64,1) !important;
+}
+
+.modal-close-btn:hover {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 4px 14px var(--primary-glow) !important;
+  transform: rotate(90deg) scale(1.08) !important;
+}
+
+/* body scrollbar ── */
+.modal-body-new::-webkit-scrollbar { width: 4px !important; }
+.modal-body-new::-webkit-scrollbar-track { background: transparent !important; }
+.modal-body-new::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary), var(--primary-dark)) !important;
+  border-radius: 4px !important;
+}
+
+/* actions footer ── */
+.modal-actions-new {
+  background: linear-gradient(
+    0deg,
+    color-mix(in oklab, var(--bg-card-solid) 95%, var(--primary) 5%) 0%,
+    var(--bg-card-solid) 100%
+  ) !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  padding: 16px 22px 20px !important;
+}
+
+/* primary action buttons ── */
+.modal-action-btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: 0 4px 16px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+  font-family: var(--font-display-studio) !important;
+  font-weight: 700 !important;
+  border-radius: 11px !important;
+  padding: 12px 10px !important;
+  transition: all 0.22s cubic-bezier(0.34,1.3,0.64,1) !important;
+}
+
+.modal-action-btn.primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 28px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+
+/* secondary action buttons ── */
+.modal-action-btn.secondary {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  backdrop-filter: blur(12px) !important;
+  color: var(--text-secondary) !important;
+  font-family: var(--font-display-studio) !important;
+  font-weight: 600 !important;
+  border-radius: 11px !important;
+  padding: 10px 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modal-action-btn.secondary:hover {
+  background: color-mix(in oklab, var(--primary) 12%, var(--glass)) !important;
+  border-color: color-mix(in oklab, var(--primary) 40%, transparent) !important;
+  color: var(--primary-light) !important;
+  transform: translateY(-1px) !important;
+}
+
+.modal-action-btn i {
+  font-size: 20px !important;
+}
+
+.modal-action-btn span {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1px !important;
+}
+
+/* grid gaps ── */
+.modal-actions-primary { gap: 10px !important; }
+.modal-actions-secondary { gap: 8px !important; }
+
+/* ─── Mobile modal bottom sheet ── */
+@media (max-width: 640px) {
+  .modal-detail::before { border-radius: 16px 16px 0 0 !important; }
+}
+
+/* ─── Card animation: reduced-motion guard ── */
+@media (prefers-reduced-motion: reduce) {
+  .uni-mobile-card { animation: none !important; }
+  .modal-detail { animation: none !important; }
 }
