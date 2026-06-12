@@ -11068,3 +11068,367 @@ button.filter-select:hover i.fa-chevron-down {
   #page-settings .user-row,
   #editUserModalCard { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SİDEBAR — PREMIUM REDESIGN "Midnight Precision"
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes navItemIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes logoFloat {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-2px) rotate(1deg); }
+}
+@keyframes sidebarShine {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(250%); }
+}
+@keyframes syncPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  50%      { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+}
+@keyframes logoutHoverGlow {
+  from { box-shadow: none; }
+  to   { box-shadow: 0 0 20px rgba(239,68,68,0.25), inset 0 0 12px rgba(239,68,68,0.08); }
+}
+
+/* ── Sidebar background — deep velvet layers ── */
+.sidebar {
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklab, var(--bg-sidebar) 98%, var(--primary) 2%) 0%,
+      color-mix(in oklab, var(--bg-sidebar) 94%, var(--primary) 6%) 100%
+    ) !important;
+  box-shadow:
+    4px 0 40px rgba(0,0,0,0.45),
+    inset -1px 0 0 rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  border-right: none !important;
+}
+
+/* Radial top glow */
+.sidebar::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 180px !important;
+  background: radial-gradient(ellipse at 40% top, rgba(124,58,237,0.18) 0%, transparent 70%) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* ── Logo section ── */
+.sidebar .logo {
+  padding: 20px 18px 18px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+.logo-inner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 13px !important;
+  position: relative !important;
+}
+
+/* Logo icon — animated shimmer */
+.logo-icon {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 13px !important;
+  background: linear-gradient(135deg, var(--primary-light,#a78bfa) 0%, var(--primary) 50%, var(--primary-dark,#4c1d95) 100%) !important;
+  box-shadow:
+    0 6px 22px rgba(124,58,237,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.18) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  color: #fff !important;
+  position: relative !important;
+  overflow: hidden !important;
+  animation: logoFloat 5s ease-in-out infinite !important;
+}
+.logo-icon::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; left: -60% !important;
+  width: 40% !important; height: 100% !important;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.5), transparent) !important;
+  animation: sidebarShine 4s ease-in-out infinite !important;
+  animation-delay: 2s !important;
+}
+
+/* Logo text — premium gradient */
+.logo-text {
+  font-family: var(--font-display-studio,'Sora',system-ui) !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.8px !important;
+  background: linear-gradient(130deg, #fff 20%, var(--primary-light,#c4b5fd) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  line-height: 1.2 !important;
+}
+
+/* ── Navigation ── */
+.sidebar nav {
+  flex: 1 !important;
+  padding: 8px 10px 12px !important;
+  overflow-y: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(124,58,237,0.3) transparent !important;
+}
+.sidebar nav::-webkit-scrollbar { width: 3px !important; }
+.sidebar nav::-webkit-scrollbar-thumb {
+  background: rgba(124,58,237,0.35) !important;
+  border-radius: 3px !important;
+}
+
+/* ── Section labels ── */
+.nav-section {
+  font-family: var(--font-display-studio,'Sora',system-ui) !important;
+  font-size: 9.5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2.5px !important;
+  font-weight: 800 !important;
+  color: var(--text-dim) !important;
+  padding: 18px 10px 7px !important;
+  opacity: 0.55 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.nav-section::before {
+  content: '' !important;
+  flex: 1 !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, rgba(124,58,237,0.4) 0%, transparent 100%) !important;
+  display: block !important;
+  width: auto !important;
+  margin: 0 !important;
+  vertical-align: unset !important;
+  order: 2 !important;
+}
+.nav-section:first-child { padding-top: 4px !important; }
+
+/* ── Nav links ── */
+.sidebar nav a {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 9px 11px !important;
+  min-height: 40px !important;
+  border-radius: 11px !important;
+  color: var(--text-muted) !important;
+  text-decoration: none !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  font-family: var(--font-display-studio,'Sora',system-ui) !important;
+  transition: all 0.22s cubic-bezier(0.34,1.1,0.64,1) !important;
+  margin-bottom: 2px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+  animation: navItemIn 0.4s both !important;
+}
+
+/* Stagger nav items */
+.sidebar nav a:nth-child(1)  { animation-delay: 0.04s !important; }
+.sidebar nav a:nth-child(2)  { animation-delay: 0.08s !important; }
+.sidebar nav a:nth-child(3)  { animation-delay: 0.12s !important; }
+.sidebar nav a:nth-child(4)  { animation-delay: 0.16s !important; }
+.sidebar nav a:nth-child(5)  { animation-delay: 0.20s !important; }
+.sidebar nav a:nth-child(6)  { animation-delay: 0.24s !important; }
+.sidebar nav a:nth-child(7)  { animation-delay: 0.28s !important; }
+.sidebar nav a:nth-child(8)  { animation-delay: 0.32s !important; }
+.sidebar nav a:nth-child(9)  { animation-delay: 0.36s !important; }
+.sidebar nav a:nth-child(10) { animation-delay: 0.40s !important; }
+.sidebar nav a:nth-child(11) { animation-delay: 0.44s !important; }
+.sidebar nav a:nth-child(12) { animation-delay: 0.48s !important; }
+.sidebar nav a:nth-child(13) { animation-delay: 0.52s !important; }
+.sidebar nav a:nth-child(14) { animation-delay: 0.56s !important; }
+.sidebar nav a:nth-child(15) { animation-delay: 0.60s !important; }
+.sidebar nav a:nth-child(16) { animation-delay: 0.64s !important; }
+.sidebar nav a:nth-child(17) { animation-delay: 0.68s !important; }
+.sidebar nav a:nth-child(18) { animation-delay: 0.72s !important; }
+.sidebar nav a:nth-child(19) { animation-delay: 0.76s !important; }
+.sidebar nav a:nth-child(20) { animation-delay: 0.80s !important; }
+
+/* Icon container */
+.sidebar nav a i {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  border-radius: 8px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  transition: all 0.22s cubic-bezier(0.34,1.2,0.64,1) !important;
+  color: var(--text-dim) !important;
+  flex-shrink: 0 !important;
+}
+
+/* Hover state */
+.sidebar nav a:not(.active):hover {
+  background: color-mix(in oklab, var(--primary) 9%, rgba(255,255,255,0.02)) !important;
+  color: var(--text-main) !important;
+  transform: translateX(4px) !important;
+}
+.sidebar nav a:not(.active):hover i {
+  background: color-mix(in oklab, var(--primary) 18%, rgba(255,255,255,0.04)) !important;
+  border-color: color-mix(in oklab, var(--primary) 30%, transparent) !important;
+  color: var(--primary-light,#c4b5fd) !important;
+  transform: scale(1.1) !important;
+}
+
+/* Active state */
+.sidebar nav a.active {
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--primary) 85%, transparent) 0%,
+    color-mix(in oklab, var(--primary-dark,#4c1d95) 80%, transparent) 100%
+  ) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  box-shadow:
+    0 6px 24px -6px rgba(124,58,237,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.12) !important;
+}
+.sidebar nav a.active i {
+  background: rgba(255,255,255,0.18) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #fff !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+/* Active left accent bar */
+.sidebar nav a.active::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 3px !important;
+  height: 55% !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.4)) !important;
+  border-radius: 0 4px 4px 0 !important;
+  box-shadow: 0 0 10px rgba(255,255,255,0.6) !important;
+}
+/* Active right glow dot */
+.sidebar nav a.active::after {
+  content: '' !important;
+  position: absolute !important;
+  right: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,0.7) !important;
+  box-shadow: 0 0 8px rgba(255,255,255,0.5) !important;
+}
+
+/* Touch feedback */
+.sidebar nav a:active { transform: scale(0.97) !important; }
+
+/* ── Sidebar footer ── */
+.sidebar-footer {
+  padding: 14px 14px 16px !important;
+  border-top: 1px solid rgba(255,255,255,0.05) !important;
+  position: relative !important;
+  z-index: 1 !important;
+  background: rgba(0,0,0,0.08) !important;
+}
+
+/* Credit row */
+.sidebar-footer .sf-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  margin-bottom: 2px !important;
+  font-size: 11px !important;
+  font-family: var(--font-display-studio,'Sora',system-ui) !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  letter-spacing: 0.1px !important;
+}
+.sidebar-footer .sf-row i {
+  color: #f43f5e !important;
+  font-size: 11px !important;
+  animation: logoFloat 2s ease-in-out infinite !important;
+}
+
+/* Version chip */
+.sidebar-footer > div[style*="font-size:9px"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 9px !important;
+  background: rgba(124,58,237,0.1) !important;
+  border: 1px solid rgba(124,58,237,0.18) !important;
+  border-radius: 6px !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  color: var(--primary-light,#c4b5fd) !important;
+  font-family: 'JetBrains Mono','Fira Code',monospace !important;
+  letter-spacing: 0.3px !important;
+  margin: 6px 0 10px !important;
+}
+
+/* Logout button */
+.sidebar-footer > button {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 9px 14px !important;
+  border-radius: 11px !important;
+  border: 1px solid rgba(239,68,68,0.25) !important;
+  background: rgba(239,68,68,0.07) !important;
+  color: rgba(239,68,68,0.85) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-display-studio,'Sora',system-ui) !important;
+  cursor: pointer !important;
+  transition: all 0.22s cubic-bezier(0.34,1.1,0.64,1) !important;
+  letter-spacing: 0.2px !important;
+}
+.sidebar-footer > button:hover {
+  background: rgba(239,68,68,0.14) !important;
+  border-color: rgba(239,68,68,0.45) !important;
+  color: #ef4444 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(239,68,68,0.2) !important;
+}
+.sidebar-footer > button:active {
+  transform: scale(0.97) !important;
+}
+
+/* ── Mobile sidebar ── */
+@media (max-width: 768px) {
+  .sidebar { width: 260px !important; }
+  .sidebar nav a { padding: 10px 11px !important; min-height: 44px !important; }
+  .sidebar nav a i { width: 34px !important; height: 34px !important; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar nav a,
+  .logo-icon,
+  .logo-icon::after,
+  .sidebar-footer .sf-row i { animation: none !important; }
+  .sidebar nav a:not(.active):hover { transform: none !important; }
+}
