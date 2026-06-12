@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v25-atelier-login-2026-06-11">
+  <meta name="app-version" content="fs-v26-login-dashboard-coherent-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -1014,7 +1014,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,800;1,9..144,300;1,9..144,500;1,9..144,800;1,9..144,900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <!-- Yeni Özellikler: QR tarama/oluşturma kütüphaneleri -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -1072,7 +1072,7 @@
   </nav>
   <div class="sidebar-footer">
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
-    <div style="font-size:9px;color:var(--text-dim);margin-top:4px;text-align:center;">v25 — atelier ledger</div>
+    <div style="font-size:9px;color:var(--text-dim);margin-top:4px;text-align:center;">v26 — login refined</div>
     <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
       <i class="fas fa-right-from-bracket"></i> Çıkış Yap
     </button>
@@ -12428,148 +12428,133 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
 <div id="loginOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
 
-  <!-- Hidden legacy blobs (kept for JS compat) -->
+  <!-- Legacy blobs (JS compat — gizli) -->
   <div class="blob b1" hidden></div><div class="blob b2" hidden></div><div class="blob b3" hidden></div>
 
-  <div class="form-sheet">
+  <!-- Atmosfer: ambient mesh + ince grid -->
+  <div class="lg-mesh" aria-hidden="true"></div>
+  <div class="lg-grid" aria-hidden="true"></div>
 
-    <!-- Carbon-copy header bar across the top -->
-    <header class="sheet-header">
-      <div class="serial" id="loginTopBrand">
-        <span class="serial-key">FORM N°</span>
-        <span class="dot" aria-hidden="true"></span>
-        <span class="label">1962-A · GİRİŞ</span>
-      </div>
-      <div class="serial serial-mid">
-        <span class="serial-key">REV</span>
-        <span class="label">v24.2026</span>
-      </div>
-      <div class="serial" id="loginClock">
-        <span class="serial-key">SAAT</span>
-        <span class="label" id="loginClockText">--:--</span>
-      </div>
-    </header>
+  <!-- Sol üst marka chip -->
+  <div id="loginTopBrand">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="label">EYÜPYBR · TERMİNAL</span>
+  </div>
 
-    <!-- LEFT: brand panel — rubber stamp + atelier display -->
-    <aside class="brand-panel" aria-hidden="true">
-      <div class="bp-corner">↗</div>
-      <div class="stamp-mark">
-        <svg viewBox="0 0 200 200" class="stamp-svg" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <path id="stampTopArc" d="M 100,100 m -78,0 a 78,78 0 0,1 156,0" />
-            <path id="stampBotArc" d="M 22,100 a 78,78 0 0,0 156,0" />
-            <filter id="stampInk">
-              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/>
-              <feDisplacementMap in="SourceGraphic" scale="1.4"/>
-            </filter>
-          </defs>
-          <g filter="url(#stampInk)" fill="none" stroke="currentColor">
-            <circle cx="100" cy="100" r="88" stroke-width="2.5"/>
-            <circle cx="100" cy="100" r="80" stroke-width="1"/>
-            <circle cx="100" cy="100" r="56" stroke-width="0.8" stroke-dasharray="2 3"/>
-          </g>
-          <g filter="url(#stampInk)" fill="currentColor" font-family="JetBrains Mono, monospace" font-weight="700" letter-spacing="3">
-            <text font-size="10"><textPath href="#stampTopArc" startOffset="50%" text-anchor="middle">İRSALİYE · PRO · ATÖLYE</textPath></text>
-            <text font-size="9"><textPath href="#stampBotArc" startOffset="50%" text-anchor="middle">EYÜPYBR · İSTANBUL · 2024</textPath></text>
-          </g>
-          <g filter="url(#stampInk)" fill="currentColor" text-anchor="middle" font-family="Fraunces, serif">
-            <text x="100" y="92" font-size="16" font-weight="700" letter-spacing="2">ONAYLI</text>
-            <text x="100" y="120" font-size="28" font-style="italic" font-weight="900" letter-spacing="-1">N°024</text>
-          </g>
-        </svg>
-      </div>
+  <!-- Sağ üst saat chip -->
+  <div id="loginClock" aria-label="Saat">
+    <i class="fas fa-clock"></i>
+    <span id="loginClockText">--:--</span>
+  </div>
 
-      <h1 id="loginTitle" class="brand-display">
-        <span class="bw">İrsaliye</span><span class="amp">&amp;</span><span class="italic">pro</span>
+  <div id="loginCard">
+    <!-- Üst rozet: tarih / oturum bilgisi -->
+    <div class="lg-badge">
+      <span class="bd-no">01</span>
+      <span class="bd-text">Güvenli Oturum</span>
+      <span class="bd-pulse" aria-hidden="true"></span>
+    </div>
+
+    <!-- Marka -->
+    <div class="brand">
+      <h1 id="loginTitle">
+        <span class="b-line1">İrsaliye</span>
+        <span class="b-line2"><em>Pro</em></span>
       </h1>
+      <p class="subtitle" id="loginGreet">Hoş geldin — devam etmek için giriş yap</p>
+    </div>
 
-      <p class="brand-tagline">
-        <em>İğne ipliğe</em> — tekstil sevkiyat kaydı, dijital kâtibinle. <span class="dash">—</span>
-        Atölye terminalinden güvenli giriş.
-      </p>
+    <!-- İnce gradient ayraç -->
+    <div class="lg-rule" aria-hidden="true"></div>
 
-      <ul class="brand-meta">
-        <li><span>SİSTEM</span><span>İRSALİYE PRO</span></li>
-        <li><span>TERMİNAL</span><span>ATÖLYE / EYÜP</span></li>
-        <li><span>BAĞLANTI</span><span class="ok">● GÜVENLİ</span></li>
-        <li><span>YIL</span><span>MMXXVI</span></li>
-      </ul>
+    <!-- Hata + kilit uyarıları -->
+    <div id="loginError" role="alert">
+      <span class="ico"><i class="fas fa-exclamation-circle"></i></span>
+      <span id="loginErrorText">Kullanıcı adı veya şifre hatalı</span>
+    </div>
+    <div id="loginLock">
+      <span class="ico"><i class="fas fa-hourglass-half"></i></span>
+      <span id="loginLockText">Çok fazla hatalı deneme. Lütfen bekleyin…</span>
+    </div>
 
-      <div class="bp-foot">— BU FORM ÜÇ NÜSHA TANZİM EDİLİR —</div>
-    </aside>
-
-    <!-- RIGHT: actual login form -->
-    <section class="form-panel">
-      <div class="form-head">
-        <span class="form-no">SECTION 02 · AUTH</span>
-        <h2 class="form-title">Kullanıcı <em>Girişi</em></h2>
-        <p class="form-subtitle" id="loginGreet">Hoş geldin <span class="dots"></span> bilgilerinizi doldurun</p>
+    <form id="loginForm" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="loginUser"><span class="lbl-no">01</span> Kullanıcı Adı</label>
+        <div class="input-wrap">
+          <i class="fas fa-user ico-left" aria-hidden="true"></i>
+          <input type="text" id="loginUser" placeholder="kullanıcı adınız" autocomplete="username" required>
+        </div>
       </div>
 
-      <div id="loginError" role="alert"><span class="bullet">!</span> <span id="loginErrorText">Kullanıcı adı veya şifre hatalı</span></div>
-      <div id="loginLock"><span class="bullet">◴</span> <span id="loginLockText">Çok fazla hatalı deneme. Lütfen bekleyin…</span></div>
+      <div class="field">
+        <label for="loginPass"><span class="lbl-no">02</span> Şifre</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock ico-left" aria-hidden="true"></i>
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
+          <button type="button" class="toggle-pass" id="loginTogglePass" aria-label="Şifreyi göster/gizle">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div id="capsWarn"><i class="fas fa-exclamation-triangle"></i> Caps Lock açık</div>
+        <div id="passMeter"><div></div></div>
+      </div>
 
-      <form id="loginForm" autocomplete="off" novalidate>
+      <div class="row">
+        <label class="remember">
+          <input type="checkbox" id="loginRemember" checked>
+          <span class="checkbox-fake" aria-hidden="true"></span>
+          <span>Beni hatırla</span>
+        </label>
+        <button type="button" class="forgot" id="loginForgot">Şifremi unuttum</button>
+      </div>
+
+      <!-- Şifre Sıfırlama -->
+      <div id="resetSection">
+        <h4><i class="fas fa-key"></i> Şifre Değiştir</h4>
         <div class="field">
-          <label for="loginUser"><span class="lbl-no">01</span> Kullanıcı Adı</label>
-          <input type="text" id="loginUser" placeholder="örn. eyup" autocomplete="username" required>
+          <label for="resetUser">Kullanıcı Adı</label>
+          <div class="input-wrap">
+            <i class="fas fa-user ico-left"></i>
+            <input type="text" id="resetUser" placeholder="kullanıcı adınız">
+          </div>
         </div>
-
         <div class="field">
-          <label for="loginPass"><span class="lbl-no">02</span> Şifre</label>
-          <div class="pass-wrap">
-            <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
-            <button type="button" class="toggle-pass" id="loginTogglePass" aria-label="Şifreyi göster/gizle">GÖSTER</button>
+          <label for="resetOld">Mevcut Şifre</label>
+          <div class="input-wrap">
+            <i class="fas fa-lock ico-left"></i>
+            <input type="password" id="resetOld" placeholder="mevcut şifreniz">
           </div>
-          <div id="capsWarn">▲ CAPS LOCK AÇIK</div>
-          <div id="passMeter"><div></div></div>
         </div>
-
-        <div class="row">
-          <label class="remember">
-            <input type="checkbox" id="loginRemember" checked>
-            <span class="checkbox-fake" aria-hidden="true"></span>
-            <span>Beni hatırla</span>
-          </label>
-          <button type="button" class="forgot" id="loginForgot">↳ Şifremi unuttum</button>
-        </div>
-
-        <!-- Şifre Sıfırlama -->
-        <div id="resetSection">
-          <h4>↳ Şifre Değiştir</h4>
-          <div class="field">
-            <label for="resetUser"><span class="lbl-no">A</span> Kullanıcı Adı</label>
-            <input type="text" id="resetUser" placeholder="kullanıcı adı">
-          </div>
-          <div class="field">
-            <label for="resetOld"><span class="lbl-no">B</span> Mevcut Şifre</label>
-            <input type="password" id="resetOld" placeholder="mevcut şifre">
-          </div>
-          <div class="field">
-            <label for="resetNew"><span class="lbl-no">C</span> Yeni Şifre</label>
+        <div class="field">
+          <label for="resetNew">Yeni Şifre</label>
+          <div class="input-wrap">
+            <i class="fas fa-lock-open ico-left"></i>
             <input type="password" id="resetNew" placeholder="yeni şifre (min 3 karakter)">
           </div>
-          <div class="field">
-            <label for="resetNew2"><span class="lbl-no">D</span> Yeni Şifre (tekrar)</label>
+        </div>
+        <div class="field">
+          <label for="resetNew2">Yeni Şifre (Tekrar)</label>
+          <div class="input-wrap">
+            <i class="fas fa-check-circle ico-left"></i>
             <input type="password" id="resetNew2" placeholder="yeni şifreyi tekrar girin">
           </div>
-          <div id="resetMsg"></div>
-          <button type="button" class="reset-submit-btn" id="resetSubmitBtn">ŞİFREYİ KAYDET</button>
-          <button type="button" class="reset-cancel-btn" id="resetCancelBtn">İPTAL</button>
         </div>
+        <div id="resetMsg"></div>
+        <button type="button" class="reset-submit-btn" id="resetSubmitBtn"><i class="fas fa-save"></i> Şifreyi Kaydet</button>
+        <button type="button" class="reset-cancel-btn" id="resetCancelBtn"><i class="fas fa-times"></i> İptal</button>
+      </div>
 
-        <button type="submit" class="login-btn" id="loginBtn">
-          <span class="spinner" aria-hidden="true"></span>
-          <span class="btn-text">DAMGALA &amp; GİR <span class="arrow">→</span></span>
-        </button>
-      </form>
+      <button type="submit" class="login-btn" id="loginBtn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="btn-text">Oturum Aç <i class="fas fa-arrow-right arrow"></i></span>
+      </button>
+    </form>
 
-      <footer class="form-foot">
-        <span class="foot-l">— EYÜP YBR · İSTANBUL</span>
-        <span class="foot-r">İmza yerine elektronik onay</span>
-      </footer>
-    </section>
-
+    <!-- Alt çubuk: marka + meta -->
+    <div class="footer-note">
+      <span class="fn-l">EYÜP <em>YBR</em> · İstanbul</span>
+      <span class="fn-r">v24 · Bulut Senkron <span class="fn-dot"></span></span>
+    </div>
   </div>
 </div>
 
