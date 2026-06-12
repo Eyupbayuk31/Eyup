@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="fs-v23-deploy-probe-2026-06-11">
+  <meta name="app-version" content="fs-v24-data-branch-2026-06-11">
   <script>
 // ====================================================================
 // VIEWER INTERCEPTOR — Sayfanın EN BAŞI, hiçbir şey yüklenmeden önce
@@ -1072,7 +1072,7 @@
   </nav>
   <div class="sidebar-footer">
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
-    <div style="font-size:9px;color:var(--text-dim);margin-top:4px;text-align:center;">VERSIYON-DAMGASI: fs-v23</div>
+    <div style="font-size:9px;color:var(--text-dim);margin-top:4px;text-align:center;">v24 — data branch</div>
     <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
       <i class="fas fa-right-from-bracket"></i> Çıkış Yap
     </button>
@@ -5992,11 +5992,20 @@ async function restoreFromBackup(filename){
     const cfg = _getGithubConfig();
     if(!cfg || !cfg.token){ toast('GitHub ayarlari eksik','error'); return; }
     const path = _BACKUP_FOLDER + '/' + filename;
-    const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+    // Yedekler 'data' branch'inde — once oradan dene, yoksa main'e dus (eski yedekler icin)
+    const dBranch = (typeof _ensureDataBranch === 'function') ? await _ensureDataBranch(cfg) : (cfg.dataBranch || 'data');
+    let url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
       + '/contents/' + path.split('/').map(encodeURIComponent).join('/')
-      + '?ref=' + encodeURIComponent(cfg.branch || 'main');
+      + '?ref=' + encodeURIComponent(dBranch);
     setMsg('<i class="fas fa-spinner fa-spin"></i> Yedek indiriliyor: ' + filename);
-    const res = await fetch(url, { headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    let res = await fetch(url, { headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    // 'data' branch'inde yoksa eski yedekler icin main'e dus
+    if(!res.ok && res.status === 404 && dBranch !== (cfg.branch || 'main')){
+      url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+        + '/contents/' + path.split('/').map(encodeURIComponent).join('/')
+        + '?ref=' + encodeURIComponent(cfg.branch || 'main');
+      res = await fetch(url, { headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    }
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const meta = await res.json();
     let jsonStr = '';
@@ -9422,14 +9431,17 @@ function _scheduleViewerJsonRefresh(id, type){
 }
 
 function _buildQrPayloadV3(item, type){
-  // Kısa anahtarlar: a=app(ip), v=versiyon, i=id, t=type, r=owner/repo, b=branch(opt)
+  // Kısa anahtarlar: a=app(ip), v=versiyon, i=id, t=type, r=owner/repo, b=branch
   // Eski format (app/id/type) hala decode edilebilir (geriye dönük uyum)
   const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da'};
   const p = { a:'ip', v:3, i:item.id, t:_T[type]||type };
   try{
     const cfg = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
     if(cfg && cfg.owner && cfg.repo) p.r = cfg.owner + '/' + cfg.repo;
-    if(cfg && cfg.branch && cfg.branch !== 'main') p.b = cfg.branch;
+    // Viewer JSON'lari 'data' branch'inde — viewer interceptor oradan okumali.
+    // (Default 'main' degil; viewer fallback'i ana app uzerinden Firebase'i kullanir)
+    const br = (cfg && cfg.dataBranch) || 'data';
+    if(br && br !== 'main') p.b = br;
   }catch(_){}
   return p;
 }
@@ -10155,10 +10167,10 @@ function _utf8ToBase64(str){
 }
 
 // Belirli bir path'in mevcut SHA'sini cek (varsa) — PUT ile uzerine yazmak icin gerekli
-async function _ghGetFileSha(cfg, path){
+async function _ghGetFileSha(cfg, path, branch){
   const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
     + '/contents/' + path.split('/').map(encodeURIComponent).join('/')
-    + '?ref=' + encodeURIComponent(cfg.branch || 'main');
+    + '?ref=' + encodeURIComponent(branch || cfg.branch || 'main');
   try{
     const res = await fetch(url, { headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
     if(!res.ok) return null;
@@ -10200,11 +10212,14 @@ async function _uploadBackupToGitHub(jsonStr, dateStr){
   const path = _BACKUP_FOLDER + '/' + dateStr + '.json';
   const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
     + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
-  const sha = await _ghGetFileSha(cfg, path);
+  // Yedekler 'data' branch'inde — her gun otomatik yedek main'e commit atip
+  // Vercel deploy tetiklemesin (asil sebep buydu zaten)
+  const upBranch = await _ensureDataBranch(cfg);
+  const sha = await _ghGetFileSha(cfg, path, upBranch);
   const body = {
     message: 'Otomatik yedek: ' + dateStr,
     content: _utf8ToBase64(safeJson),
-    branch: cfg.branch || 'main'
+    branch: upBranch
   };
   if(sha) body.sha = sha; // gunluk yedek varsa uzerine yaz
 
@@ -10257,9 +10272,21 @@ function _extractGithubPath(url){
   }catch(_){ return null; }
 }
 
-async function _deleteGithubFile(cfg, path){
+// raw URL'den BRANCH'i cikar — eski fotolar main'de, yeniler data branch'inde.
+// Silme/temizlik islemlerinin dogru branch'i hedeflemesi icin gerekli.
+function _extractGithubBranch(url){
+  try{
+    const u = new URL(url);
+    if(u.hostname !== 'raw.githubusercontent.com') return null;
+    const parts = u.pathname.split('/').filter(Boolean);
+    return parts.length >= 4 ? decodeURIComponent(parts[2]) : null;
+  }catch(_){ return null; }
+}
+
+async function _deleteGithubFile(cfg, path, branch){
   if(!cfg || !cfg.token || !path) return { ok:false, reason:'no-cfg' };
-  const sha = await _ghGetFileSha(cfg, path);
+  const useBranch = branch || cfg.branch || 'main';
+  const sha = await _ghGetFileSha(cfg, path, useBranch);
   if(!sha) return { ok:false, reason:'not-found' }; // dosya zaten yok
   const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
     + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
@@ -10267,7 +10294,7 @@ async function _deleteGithubFile(cfg, path){
     const res = await fetch(apiUrl, {
       method:'DELETE',
       headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
-      body: JSON.stringify({ message:'cleanup: '+path, sha, branch: cfg.branch || 'main' })
+      body: JSON.stringify({ message:'cleanup: '+path, sha, branch: useBranch })
     });
     if(res.ok) return { ok:true };
     const data = await res.json().catch(()=>({}));
@@ -10292,7 +10319,9 @@ async function _deletePhotosForItem(item){
     if(!path) continue;
     // backups/ klasorune dokunma — guvenlik
     if(path.startsWith(_BACKUP_FOLDER + '/')) continue;
-    const r = await _deleteGithubFile(cfg, path);
+    // URL hangi branch'i gosteriyorsa oradan sil (eski=main, yeni=data)
+    const br = _extractGithubBranch(url) || cfg.dataBranch || cfg.branch;
+    const r = await _deleteGithubFile(cfg, path, br);
     if(r.ok) deleted++;
   }
   return { tried: urls.size, deleted };
@@ -10303,15 +10332,28 @@ async function _listGithubPhotos(){
   const cfg = _getGithubConfig();
   if(!cfg || !cfg.token || !cfg.owner || !cfg.repo) throw new Error('GitHub ayarlari eksik');
   const folder = cfg.folder || 'kanitlar';
-  const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
-    + '/contents/' + encodeURIComponent(folder) + '?ref=' + encodeURIComponent(cfg.branch || 'main');
-  const res = await fetch(url, { headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
-  if(!res.ok){
-    if(res.status === 404) return [];
-    throw new Error('GitHub: HTTP ' + res.status);
+  // Hem 'data' (yeni yuklemeler) hem 'main' (eski fotolar) taranir;
+  // birlesik listede _branch bilgisi de tutulur ki silme dogru branch'i hedeflesin.
+  const dBranch = (typeof _ensureDataBranch === 'function') ? await _ensureDataBranch(cfg) : (cfg.dataBranch || 'data');
+  const mainBranch = cfg.branch || 'main';
+  const branches = [dBranch];
+  if(mainBranch !== dBranch) branches.push(mainBranch);
+  const all = [];
+  for(const br of branches){
+    const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+      + '/contents/' + encodeURIComponent(folder) + '?ref=' + encodeURIComponent(br);
+    const res = await fetch(url, { headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    if(!res.ok){
+      if(res.status === 404) continue;
+      throw new Error('GitHub: HTTP ' + res.status + ' (' + br + ')');
+    }
+    const arr = await res.json();
+    if(Array.isArray(arr)) arr.filter(x=>x && x.type==='file' && x.path).forEach(x=>{
+      x._branch = br;
+      all.push(x);
+    });
   }
-  const arr = await res.json();
-  return Array.isArray(arr) ? arr.filter(x=>x && x.type==='file' && x.path) : [];
+  return all;
 }
 
 // Tum kayitlardan (aktif + recycle bin) referansli foto URL'lerini topla.
@@ -10380,7 +10422,7 @@ async function cleanupOrphanPhotos(){
   let done = 0, failed = 0;
   setStatus('<i class="fas fa-spinner fa-spin"></i> 0/'+orphans.length+' siliniyor...','#6b7280');
   for(const f of orphans){
-    const r = await _deleteGithubFile(cfg, f.path);
+    const r = await _deleteGithubFile(cfg, f.path, f._branch);
     if(r.ok) done++; else failed++;
     setStatus('<i class="fas fa-spinner fa-spin"></i> '+(done+failed)+'/'+orphans.length+' islem... ('+done+' silindi, '+failed+' hata)','#6b7280');
   }
@@ -10441,9 +10483,18 @@ async function listBackupsFromGitHub(){
       out.innerHTML = '<span style="color:#ef4444;">GitHub ayarlari eksik</span>';
       return;
     }
+    // Yedek listesi 'data' branch'inden — eski yedekler main'de kalmissa
+    // 404 olur ve kullaniciya bos liste gosterilir; yedek alinca data'da olusur.
+    const dBranch2 = (typeof _ensureDataBranch === 'function') ? await _ensureDataBranch(cfg) : (cfg.dataBranch || 'data');
     const url = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
-      + '/contents/' + encodeURIComponent(_BACKUP_FOLDER) + '?ref=' + encodeURIComponent(cfg.branch || 'main');
-    const res = await fetch(url, { headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+      + '/contents/' + encodeURIComponent(_BACKUP_FOLDER) + '?ref=' + encodeURIComponent(dBranch2);
+    let res = await fetch(url, { headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    // Hicbir yedek data'da yoksa eski main'deki listeyi de goster
+    if((!res.ok && res.status === 404) && dBranch2 !== (cfg.branch || 'main')){
+      const fallbackUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
+        + '/contents/' + encodeURIComponent(_BACKUP_FOLDER) + '?ref=' + encodeURIComponent(cfg.branch || 'main');
+      res = await fetch(fallbackUrl, { headers: { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' } });
+    }
     if(!res.ok){
       if(res.status === 404){ out.innerHTML = '<span style="color:#6b7280;">Henuz yedek yok. "Hemen Yedek Al" diyebilirsiniz.</span>'; return; }
       out.innerHTML = '<span style="color:#ef4444;">Liste alinamadi (HTTP '+res.status+')</span>';
@@ -10498,8 +10549,44 @@ function _getGithubConfig(){
     owner: (cfg.githubOwner  || '').trim(),
     repo:  (cfg.githubRepo   || '').trim(),
     branch:(cfg.githubBranch || 'main').trim(),
+    // VERI BRANCH'i: foto/viewer-json/yedek bu branch'e yazilir.
+    // vercel.json bu branch icin deployment'i tamamen kapatir —
+    // her foto/QR/yedek main'e commit atip deploy tetiklemesin diye.
+    dataBranch: 'data',
     folder:(cfg.githubFolder || 'kanitlar').trim().replace(/^\/+|\/+$/g,'')
   };
+}
+
+// 'data' branch'inin var oldigini garantile; yoksa main HEAD'inden olustur.
+// Basarisiz olursa main'e geri duser (yukleme islemleri bloklanmasin).
+// Oturum boyunca tek sefer calisir (promise cache).
+let _dataBranchPromise = null;
+async function _ensureDataBranch(cfg){
+  if(_dataBranchPromise) return _dataBranchPromise;
+  _dataBranchPromise = (async () => {
+    const base = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo);
+    const H = { 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json' };
+    const r = await fetch(base + '/git/ref/heads/' + encodeURIComponent(cfg.dataBranch), { headers:H });
+    if(r.ok) return cfg.dataBranch;
+    if(r.status !== 404) throw new Error('branch kontrol HTTP ' + r.status);
+    const mr = await fetch(base + '/git/ref/heads/' + encodeURIComponent(cfg.branch || 'main'), { headers:H });
+    if(!mr.ok) throw new Error('ana branch HTTP ' + mr.status);
+    const sha = (((await mr.json()) || {}).object || {}).sha;
+    if(!sha) throw new Error('ana branch SHA alinamadi');
+    const c = await fetch(base + '/git/refs', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, H),
+      body: JSON.stringify({ ref: 'refs/heads/' + cfg.dataBranch, sha: sha })
+    });
+    if(!c.ok && c.status !== 422) throw new Error('data branch olusturulamadi HTTP ' + c.status); // 422 = zaten var (yaris)
+    console.log('[gh] data branch hazir:', cfg.dataBranch);
+    return cfg.dataBranch;
+  })().catch(e => {
+    console.warn('[gh] data branch hatasi, main kullanilacak:', e && e.message);
+    _dataBranchPromise = null; // sonraki cagrida tekrar dene
+    return cfg.branch || 'main';
+  });
+  return _dataBranchPromise;
 }
 
 async function _uploadPhotoToCatbox(dataUrl){
@@ -10525,6 +10612,9 @@ async function _uploadPhotoToCatbox(dataUrl){
   const path = folder + '/' + fileName;
   const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + path;
 
+  // Veri branch'ine yukle — main'e commit atip Vercel deploy tetiklemesin
+  const upBranch = await _ensureDataBranch(cfg);
+
   let res;
   try{
     res = await fetch(apiUrl, {
@@ -10537,7 +10627,7 @@ async function _uploadPhotoToCatbox(dataUrl){
       body: JSON.stringify({
         message: 'İrsaliye kanıtı: ' + fileName,
         content: base64Data,
-        branch: cfg.branch || 'main'
+        branch: upBranch
       })
     });
   } catch(networkErr){
@@ -10562,7 +10652,7 @@ async function _uploadPhotoToCatbox(dataUrl){
     return 'https://raw.githubusercontent.com/'
       + encodeURIComponent(cfg.owner) + '/'
       + encodeURIComponent(cfg.repo)  + '/'
-      + encodeURIComponent(cfg.branch || 'main') + '/'
+      + encodeURIComponent(upBranch) + '/'
       + data.content.path.split('/').map(encodeURIComponent).join('/');
   }
   if(data && data.content && data.content.download_url){
@@ -10617,10 +10707,13 @@ async function _publishViewerJsonToGithub(item, type, _isRetry){
   const path = _viewerJsonPath(type, item.id);
   const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + path;
 
+  // Veri branch'ine yaz — main'e commit atip Vercel deploy tetiklemesin
+  const pubBranch = await _ensureDataBranch(cfg);
+
   // Mevcut SHA'yı al (update için gerekli; yoksa create)
   let sha = null;
   try {
-    const getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch || 'main'), {
+    const getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(pubBranch), {
       headers: {
         'Authorization': 'token ' + cfg.token,
         'Accept': 'application/vnd.github+json'
@@ -10639,7 +10732,7 @@ async function _publishViewerJsonToGithub(item, type, _isRetry){
   const body = {
     message: 'Viewer JSON: ' + (item.no || item.id) + ' (' + type + ')',
     content: contentBase64,
-    branch: cfg.branch || 'main'
+    branch: pubBranch
   };
   if(sha) body.sha = sha;
 

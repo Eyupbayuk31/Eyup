@@ -1,4 +1,10 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "data": false
+    }
+  },
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- index.html style.css vercel.json",
   "headers": [
     {
