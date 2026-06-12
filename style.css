@@ -7704,3 +7704,391 @@ body.logged-out { overflow: hidden !important; }
   display:flex; align-items:center; gap:8px;
 }
 .ss-add:hover{ background: rgba(124,58,237,.08); }
+
+/* ═══════════════════════════════════════════════════════════════
+   STUDIO GRADE — Visual Enhancement Layer v1
+   Adds: Sora display font, atmospheric background, refined glass,
+   card accents, KPI polish, scrollbar, stagger animations.
+   All rules use specificity / !important only where needed to
+   override the existing enhancement blocks above.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Display font variable ─── */
+:root {
+  --font-display-studio: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* ─── Atmospheric gradient mesh — floating animation ─── */
+body::before {
+  background:
+    radial-gradient(ellipse 75% 55% at 7%  7%,  var(--primary-glow)             0%, transparent 58%),
+    radial-gradient(ellipse 45% 60% at 93% 88%, rgba(5,150,105,0.07)             0%, transparent 55%),
+    radial-gradient(ellipse 38% 38% at 52% 22%, rgba(192,132,252,0.055)          0%, transparent 52%),
+    radial-gradient(ellipse 55% 28% at 28% 92%, rgba(6,182,212,0.04)             0%, transparent 52%);
+  opacity: 0.9 !important;
+  animation: studioAtmFloat 22s ease-in-out infinite alternate;
+}
+@keyframes studioAtmFloat {
+  0%   { transform: scale(1)    translate(0px,  0px); }
+  33%  { transform: scale(1.03) translate(-6px, -4px); }
+  66%  { transform: scale(1.01) translate(4px,  3px); }
+  100% { transform: scale(1)    translate(-2px, -1px); }
+}
+
+/* ─── Noise texture overlay (SVG fractal) ─── */
+body::after {
+  display: block !important;
+  content: '' !important;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='sn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23sn)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: 0.020 !important;
+  mix-blend-mode: overlay;
+  pointer-events: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+}
+
+/* ─── Scrollbar — gradient style ─── */
+::-webkit-scrollbar { width: 5px !important; height: 5px !important; }
+::-webkit-scrollbar-track { background: transparent !important; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary), var(--primary-dark)) !important;
+  border-radius: 6px !important;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--primary-light) !important; }
+
+/* ─── Sidebar — refined atmosphere ─── */
+.sidebar {
+  box-shadow: 4px 0 44px rgba(0,0,0,0.38), inset -1px 0 0 var(--glass-border) !important;
+}
+
+/* Logo text — Sora + gradient ─── */
+.logo-text {
+  font-family: var(--font-display-studio) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.9px !important;
+  background: linear-gradient(125deg, var(--text-main) 30%, var(--primary-light) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Nav section labels — tighter, more refined */
+.nav-section {
+  font-family: var(--font-display-studio) !important;
+  font-size: 10px !important;
+  letter-spacing: 2px !important;
+  font-weight: 700 !important;
+  opacity: 0.65 !important;
+}
+
+/* Active nav — stronger glow presence */
+.sidebar nav a.active {
+  box-shadow:
+    0 4px 22px -6px color-mix(in oklab, var(--primary) 75%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.12) !important;
+}
+.sidebar nav a.active::before {
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.45)) !important;
+  box-shadow: 0 0 12px rgba(255,255,255,0.7) !important;
+  width: 4px !important;
+}
+
+/* ─── Topbar — deeper glass + gradient border ─── */
+.topbar {
+  backdrop-filter: blur(30px) saturate(1.65) brightness(1.03) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(1.65) brightness(1.03) !important;
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 16%, var(--border)) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 5px 32px rgba(0,0,0,0.22) !important;
+}
+
+/* Page title — Sora + gradient ─── */
+.topbar .page-title {
+  font-family: var(--font-display-studio) !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  letter-spacing: -0.5px !important;
+  background: linear-gradient(125deg, var(--text-main) 30%, var(--primary-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Avatar with double-ring */
+.topbar-avatar {
+  box-shadow:
+    0 4px 18px var(--primary-glow),
+    0 0 0 2.5px var(--bg-card),
+    0 0 0 4px color-mix(in oklab, var(--primary) 55%, var(--border)) !important;
+}
+.topbar-avatar:hover {
+  box-shadow:
+    0 6px 26px var(--primary-glow),
+    0 0 0 2.5px var(--bg-card),
+    0 0 0 4px var(--primary-light) !important;
+}
+
+/* Topbar badge — Sora font */
+.topbar-badge {
+  font-family: var(--font-display-studio) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.3px !important;
+  box-shadow: 0 2px 14px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+}
+
+/* ─── Stat Cards — color-coded top shimmer ─── */
+.stat-card {
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+/* Top accent line per card color */
+.stat-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 2px !important;
+  border-radius: var(--radius) var(--radius) 0 0 !important;
+  opacity: 0.55 !important;
+  filter: none !important;
+  transform: none !important;
+  transition: opacity 0.3s ease !important;
+}
+.stat-card:nth-child(1)::before { background: linear-gradient(90deg, transparent, var(--primary), transparent) !important; }
+.stat-card:nth-child(2)::before { background: linear-gradient(90deg, transparent, var(--success), transparent) !important; }
+.stat-card:nth-child(3)::before { background: linear-gradient(90deg, transparent, var(--info), transparent) !important; }
+.stat-card:nth-child(4)::before { background: linear-gradient(90deg, transparent, var(--warning), transparent) !important; }
+.stat-card:hover::before { opacity: 1 !important; }
+.stat-card:hover {
+  transform: translateY(-7px) !important;
+  box-shadow:
+    var(--shadow-card-hover),
+    0 0 42px var(--primary-glow),
+    inset 0 1px 0 rgba(255,255,255,0.07) !important;
+  border-color: color-mix(in oklab, var(--primary) 55%, var(--border)) !important;
+}
+
+/* Stat values — Sora + tabular nums */
+.stat-value {
+  font-family: var(--font-display-studio) !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -2.5px !important;
+  font-size: 34px !important;
+  font-weight: 800 !important;
+}
+.stat-label {
+  font-size: 10.5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.9px !important;
+  font-weight: 700 !important;
+}
+
+/* ─── Stat card entrance stagger ─── */
+.stats-grid .stat-card:nth-child(1) { animation: studioCardIn 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.06s both !important; }
+.stats-grid .stat-card:nth-child(2) { animation: studioCardIn 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.13s both !important; }
+.stats-grid .stat-card:nth-child(3) { animation: studioCardIn 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.20s both !important; }
+.stats-grid .stat-card:nth-child(4) { animation: studioCardIn 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.27s both !important; }
+@keyframes studioCardIn {
+  from { opacity:0; transform:translateY(28px) scale(0.94); filter:blur(3px); }
+  to   { opacity:1; transform:translateY(0)    scale(1);    filter:blur(0); }
+}
+
+/* ─── General Cards ─── */
+.card {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.035) !important;
+}
+.card:hover {
+  box-shadow: var(--shadow-card-hover), 0 0 40px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+.card-title {
+  font-family: var(--font-display-studio) !important;
+  letter-spacing: -0.3px !important;
+}
+
+/* ─── Section header h2 — display font ─── */
+.section-header h2 {
+  font-family: var(--font-display-studio) !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.8px !important;
+}
+
+/* ─── Dashboard Hero ─── */
+.db-hero {
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--primary) 12%, var(--bg-card)),
+    color-mix(in oklab, var(--bg-card) 92%, transparent)) !important;
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border)) !important;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+}
+.db-hero::before {
+  background: linear-gradient(90deg, transparent, var(--primary), color-mix(in oklab, var(--primary) 70%, var(--accent)), transparent) !important;
+  opacity: 0.7 !important;
+}
+.db-greeting {
+  font-family: var(--font-display-studio) !important;
+  font-size: 23px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.7px !important;
+  background: linear-gradient(125deg, var(--text-main) 40%, var(--primary-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.db-date {
+  font-family: var(--font-display-studio) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.1px !important;
+}
+
+/* Live badge — stronger pulse */
+.db-live-badge {
+  background: rgba(16,185,129,0.12) !important;
+  border: 1px solid rgba(16,185,129,0.3) !important;
+  box-shadow: 0 2px 12px rgba(16,185,129,0.18), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  font-family: var(--font-display-studio) !important;
+  font-weight: 700 !important;
+}
+.db-live-dot {
+  box-shadow: 0 0 10px rgba(16,185,129,0.7), 0 0 20px rgba(16,185,129,0.3) !important;
+}
+
+/* ─── KPI Cards (Alert cards) ─── */
+.db-kpi-card {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+}
+.db-kpi-card:hover {
+  transform: translateY(-6px) scale(1.025) !important;
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.28),
+    0 0 0 1px color-mix(in oklab, var(--kpi-color, var(--primary)) 40%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+.db-kpi-value {
+  font-family: var(--font-display-studio) !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -1.5px !important;
+  font-size: 32px !important;
+  font-weight: 800 !important;
+}
+.db-kpi-label {
+  font-family: var(--font-display-studio) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.7px !important;
+  font-weight: 700 !important;
+}
+.db-kpi-icon {
+  box-shadow: 0 4px 16px -4px var(--kpi-color, var(--primary)) !important;
+}
+
+/* ─── Mini cards ─── */
+.db-mini-card {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+}
+.db-mini-val {
+  font-family: var(--font-display-studio) !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.8px !important;
+  font-weight: 900 !important;
+}
+
+/* ─── Goal ring card ─── */
+.v8-goal-ring-card {
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border)) !important;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+}
+.v8-goal-pct .num {
+  font-family: var(--font-display-studio) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 800 !important;
+}
+.v8-goal-title {
+  font-family: var(--font-display-studio) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* ─── Bottom nav ─── */
+.bottom-nav {
+  backdrop-filter: blur(26px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.5) !important;
+  box-shadow: 0 -4px 26px rgba(0,0,0,0.30), inset 0 1px 0 var(--glass-border) !important;
+}
+
+/* ─── Primary button ─── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  box-shadow: 0 4px 18px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.16) !important;
+  font-family: var(--font-display-studio) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1px !important;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%) !important;
+  box-shadow: 0 6px 28px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.20) !important;
+}
+
+/* ─── Notification badge pulse ─── */
+.notif-badge {
+  animation: studioBadgePulse 2.2s ease-in-out infinite !important;
+}
+@keyframes studioBadgePulse {
+  0%,100% { box-shadow: 0 2px 8px rgba(239,68,68,0.5); }
+  50%     { box-shadow: 0 2px 18px rgba(239,68,68,0.85), 0 0 0 4px rgba(239,68,68,0.14); }
+}
+
+/* ─── Table headers ─── */
+.table-wrap thead th {
+  font-family: var(--font-display-studio) !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.9px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+}
+
+/* ─── Input focus ─── */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3.5px var(--primary-glow) !important;
+  outline: none !important;
+}
+
+/* ─── Toast ─── */
+.toast {
+  backdrop-filter: blur(26px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.4) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  font-family: var(--font-display-studio) !important;
+}
+
+/* ─── Sidebar footer ─── */
+.sidebar-footer {
+  border-top: 1px solid var(--glass-border) !important;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.1)) !important;
+}
+
+/* ─── Mobile card ─── */
+.uni-mobile-card {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.025) !important;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after { animation: none !important; }
+  .stats-grid .stat-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .notif-badge { animation: none !important; }
+}
