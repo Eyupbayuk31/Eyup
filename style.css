@@ -11987,3 +11987,367 @@ body.v9-theme-changing {
   0%   { opacity: 0.7; filter: saturate(0.5); }
   100% { opacity: 1; filter: saturate(1); }
 }
+
+/* =====================================================================
+   RAPORLAR — Premium Analytics Dashboard v2
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap');
+
+/* ── Hero header ─────────────────────────────────────────────── */
+#page-reports.rep-page {
+  padding: 0 !important;
+}
+.rep-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 28px 20px;
+  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  flex-wrap: wrap;
+}
+.rep-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.rep-hero-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--primary);
+  box-shadow: 0 0 24px color-mix(in oklab, var(--primary) 20%, transparent);
+  flex-shrink: 0;
+}
+.rep-hero-title {
+  font-family: 'Bricolage Grotesque', var(--font-display-studio, system-ui), sans-serif !important;
+  font-size: 1.65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  margin: 0 !important;
+  color: var(--text-main) !important;
+  line-height: 1.1 !important;
+}
+.rep-hero-amp {
+  color: var(--primary);
+  font-style: italic;
+}
+.rep-hero-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 3px 0 0;
+  font-weight: 400;
+}
+.rep-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rep-range-info-badge {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: color-mix(in oklab, var(--primary) 8%, var(--bg-card));
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.rep-print-btn {
+  gap: 7px;
+  background: color-mix(in oklab, var(--bg-card) 90%, var(--primary));
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  color: var(--text-main);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.rep-print-btn:hover {
+  background: color-mix(in oklab, var(--primary) 15%, var(--bg-card));
+  box-shadow: 0 0 16px color-mix(in oklab, var(--primary) 20%, transparent);
+}
+
+/* ── Range strip ─────────────────────────────────────────────── */
+.rep-range-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 28px;
+  background: color-mix(in oklab, var(--bg-card) 60%, transparent);
+  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.06));
+}
+.rep-range-icon {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.rep-range-pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.rep-range-btn {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.1,0.64,1);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.01em;
+}
+.rep-range-btn:hover {
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border-color: color-mix(in oklab, var(--primary) 35%, transparent);
+  transform: translateY(-1px);
+}
+.rep-range-btn.active {
+  background: color-mix(in oklab, var(--primary) 18%, var(--bg-card));
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 14px color-mix(in oklab, var(--primary) 22%, transparent),
+              inset 0 0 8px color-mix(in oklab, var(--primary) 8%, transparent);
+}
+
+/* ── KPI grid ────────────────────────────────────────────────── */
+.rep-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 20px 28px;
+}
+/* Override JS-rendered KPI cards */
+.rep-kpi-grid .rep-kpi {
+  background: color-mix(in oklab, var(--bg-card) 80%, transparent) !important;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08)) !important;
+  border-radius: 16px !important;
+  padding: 18px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  animation: repKpiIn 0.5s cubic-bezier(0.34,1.1,0.64,1) both;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12) !important;
+}
+.rep-kpi-grid .rep-kpi:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.2) !important;
+}
+.rep-kpi-grid .rep-kpi:nth-child(1) { animation-delay: 0.04s; }
+.rep-kpi-grid .rep-kpi:nth-child(2) { animation-delay: 0.08s; }
+.rep-kpi-grid .rep-kpi:nth-child(3) { animation-delay: 0.12s; }
+.rep-kpi-grid .rep-kpi:nth-child(4) { animation-delay: 0.16s; }
+.rep-kpi-grid .rep-kpi:nth-child(5) { animation-delay: 0.20s; }
+.rep-kpi-grid .rep-kpi:nth-child(6) { animation-delay: 0.24s; }
+@keyframes repKpiIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+.rep-kpi-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 17px !important;
+}
+.rep-kpi-val {
+  font-family: 'Bricolage Grotesque', var(--font-display-studio), sans-serif !important;
+  font-size: 1.55rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1 !important;
+  color: var(--text-main) !important;
+}
+.rep-kpi-lbl {
+  font-size: 11px !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+  margin-top: 3px !important;
+  line-height: 1.3 !important;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────── */
+.rep-tabs-wrap {
+  padding: 0 28px;
+  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.07));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rep-tabs-wrap::-webkit-scrollbar { display: none; }
+.rep-tab-bar {
+  display: flex !important;
+  gap: 2px !important;
+  padding: 10px 0 !important;
+  flex-wrap: nowrap !important;
+  overflow: visible !important;
+  border: none !important;
+  background: transparent !important;
+}
+.rep-tab-btn {
+  white-space: nowrap !important;
+  border-radius: 10px !important;
+  padding: 7px 14px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  gap: 6px !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+.rep-tab-btn:hover {
+  background: color-mix(in oklab, var(--primary) 8%, transparent) !important;
+  color: var(--text-main) !important;
+}
+.rep-tab-btn.active {
+  background: color-mix(in oklab, var(--primary) 15%, var(--bg-card)) !important;
+  color: var(--primary) !important;
+  border-color: color-mix(in oklab, var(--primary) 30%, transparent) !important;
+  box-shadow: 0 0 12px color-mix(in oklab, var(--primary) 18%, transparent) !important;
+}
+
+/* ── Tab content area ────────────────────────────────────────── */
+.rep-tab {
+  padding: 20px 28px;
+  animation: repTabIn 0.35s cubic-bezier(0.34,1.1,0.64,1);
+}
+@keyframes repTabIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.rep-card {
+  background: color-mix(in oklab, var(--bg-card) 85%, transparent);
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  border-radius: 18px;
+  padding: 20px 22px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  transition: box-shadow 0.25s;
+}
+.rep-card:hover {
+  box-shadow: 0 6px 32px rgba(0,0,0,0.16);
+}
+.rep-card-head {
+  font-family: 'Bricolage Grotesque', var(--font-display-studio), sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+.rep-card-head i {
+  color: var(--primary);
+  font-size: 14px;
+}
+
+/* ── Chart wrap ──────────────────────────────────────────────── */
+.rep-chart-wrap {
+  position: relative;
+  height: 280px;
+}
+.rep-chart-sm {
+  height: 240px;
+}
+
+/* ── Two-col layout ──────────────────────────────────────────── */
+.rep-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ── List body (durumOzet etc.) ──────────────────────────────── */
+.rep-list-body > div {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 11px 0 !important;
+  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.07)) !important;
+  font-size: 13px !important;
+}
+.rep-list-body > div:last-child { border-bottom: none !important; }
+
+/* ── Table body ──────────────────────────────────────────────── */
+.rep-table-body table { border-collapse: separate !important; border-spacing: 0 !important; width: 100% !important; }
+.rep-table-body thead tr {
+  background: color-mix(in oklab, var(--primary) 8%, var(--bg-card)) !important;
+}
+.rep-table-body thead th {
+  padding: 10px 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  white-space: nowrap !important;
+}
+.rep-table-body thead th:first-child { border-radius: 8px 0 0 8px !important; }
+.rep-table-body thead th:last-child  { border-radius: 0 8px 8px 0 !important; }
+.rep-table-body tbody tr {
+  transition: background 0.15s !important;
+}
+.rep-table-body tbody tr:hover {
+  background: color-mix(in oklab, var(--primary) 6%, transparent) !important;
+}
+.rep-table-body tbody td {
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.05)) !important;
+  vertical-align: middle !important;
+}
+
+/* ── Termin & stat blocks ────────────────────────────────────── */
+.rep-stat {
+  border-radius: 14px !important;
+  padding: 16px 18px !important;
+}
+.rep-stat-val {
+  font-family: 'Bricolage Grotesque', var(--font-display-studio), sans-serif !important;
+  font-size: 1.8rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1 !important;
+}
+.rep-stat-lbl {
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  margin-top: 5px !important;
+}
+
+/* ── Print ───────────────────────────────────────────────────── */
+@media print {
+  .rep-hero-actions, .rep-range-strip, .rep-tabs-wrap { display: none !important; }
+  .rep-tab { display: block !important; page-break-inside: avoid; }
+  .rep-card { box-shadow: none !important; border: 1px solid #eee !important; }
+}
+
+/* ── Mobile ──────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+  .rep-hero, .rep-tab, .rep-range-strip, .rep-kpi-grid, .rep-tabs-wrap { padding-left: 16px !important; padding-right: 16px !important; }
+  .rep-hero-title { font-size: 1.35rem !important; }
+  .rep-hero-icon  { width: 42px !important; height: 42px !important; font-size: 18px !important; }
+  .rep-kpi-grid   { grid-template-columns: repeat(2, 1fr) !important; }
+  .rep-two-col    { grid-template-columns: 1fr !important; }
+  .rep-range-info-badge { display: none !important; }
+}

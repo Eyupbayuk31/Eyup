@@ -1971,97 +1971,142 @@
     </div>
 
     <!-- ========== RAPORLAR (YENİLENDİ v13) ========== -->
-    <div class="page" id="page-reports">
-      <div class="section-header">
-        <div><h2>📊 Raporlar & Analiz</h2><p>Detaylı istatistikler ve performans analizi</p></div>
-        <button class="btn btn-sm btn-secondary" onclick="printReports()"><i class="fas fa-print"></i> Yazdır</button>
+    <div class="page rep-page" id="page-reports">
+
+      <!-- Header -->
+      <div class="rep-hero">
+        <div class="rep-hero-left">
+          <div class="rep-hero-icon"><i class="fas fa-chart-mixed"></i></div>
+          <div>
+            <h2 class="rep-hero-title">Raporlar <span class="rep-hero-amp">&</span> Analiz</h2>
+            <p class="rep-hero-sub">Detaylı istatistikler ve performans takibi</p>
+          </div>
+        </div>
+        <div class="rep-hero-actions">
+          <span class="rep-range-info-badge" id="repRangeInfo"></span>
+          <button class="btn btn-sm rep-print-btn" onclick="printReports()"><i class="fas fa-print"></i><span>Yazdır</span></button>
+        </div>
       </div>
 
-      <!-- Tarih aralığı -->
-      <div class="card" style="margin-bottom:16px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <strong style="margin-right:8px;"><i class="fas fa-calendar"></i> Dönem:</strong>
-          <button class="btn btn-xs btn-secondary rep-range-btn active" data-range="7" onclick="setReportRange(7,this)">Son 7 gün</button>
-          <button class="btn btn-xs btn-secondary rep-range-btn" data-range="30" onclick="setReportRange(30,this)">Son 30 gün</button>
-          <button class="btn btn-xs btn-secondary rep-range-btn" data-range="90" onclick="setReportRange(90,this)">Son 90 gün</button>
-          <button class="btn btn-xs btn-secondary rep-range-btn" data-range="365" onclick="setReportRange(365,this)">Son 1 yıl</button>
-          <button class="btn btn-xs btn-secondary rep-range-btn" data-range="all" onclick="setReportRange('all',this)">Tümü</button>
-          <span style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="repRangeInfo"></span>
+      <!-- Dönem seçici -->
+      <div class="rep-range-strip">
+        <i class="fas fa-calendar-days rep-range-icon"></i>
+        <div class="rep-range-pills">
+          <button class="rep-range-btn active" data-range="7"  onclick="setReportRange(7,this)">7G</button>
+          <button class="rep-range-btn"         data-range="30" onclick="setReportRange(30,this)">30G</button>
+          <button class="rep-range-btn"         data-range="90" onclick="setReportRange(90,this)">90G</button>
+          <button class="rep-range-btn"         data-range="365" onclick="setReportRange(365,this)">1Y</button>
+          <button class="rep-range-btn"         data-range="all" onclick="setReportRange('all',this)">Tümü</button>
         </div>
       </div>
 
       <!-- KPI Cards -->
-      <div class="grid-auto" style="margin-bottom:16px;" id="repKpis"></div>
+      <div class="rep-kpi-grid" id="repKpis"></div>
 
-      <!-- Sekmeler -->
-      <div class="filter-bar" style="margin-bottom:16px;">
-        <button class="btn btn-sm btn-secondary active" onclick="showReportTab('trend',this)">📈 Zaman Trendi</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('durum',this)">🥧 Durum Dağılımı</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('atolye',this)">🏭 Atölye</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('model',this)">📦 Model</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('olcu',this)">📏 Ölçü/Renk</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('termin',this)">⏱️ Termin</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('heatmap',this)">🗓️ Haftanın Günleri</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('compare',this)">📊 Aylık Karşılaştırma</button>
-        <button class="btn btn-sm btn-secondary" onclick="showReportTab('firms',this)">🏆 Top Firmalar</button>
+      <!-- Tab bar -->
+      <div class="rep-tabs-wrap">
+        <div class="filter-bar rep-tab-bar">
+          <button class="btn btn-sm btn-secondary active rep-tab-btn" onclick="showReportTab('trend',this)"><i class="fas fa-chart-line"></i> Zaman Trendi</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('durum',this)"><i class="fas fa-circle-half-stroke"></i> Durum</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('atolye',this)"><i class="fas fa-industry"></i> Atölye</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('model',this)"><i class="fas fa-cubes"></i> Model</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('olcu',this)"><i class="fas fa-ruler-combined"></i> Ölçü/Renk</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('termin',this)"><i class="fas fa-hourglass"></i> Termin</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('heatmap',this)"><i class="fas fa-table-cells"></i> Günler</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('compare',this)"><i class="fas fa-code-compare"></i> Aylık</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('firms',this)"><i class="fas fa-trophy"></i> Firmalar</button>
+        </div>
       </div>
 
       <!-- Zaman Trendi -->
       <div class="rep-tab" id="rep-trend">
-        <div class="card"><div class="card-title"><i class="fas fa-chart-line"></i> İrsaliye Sayısı / Adet Trendi</div><div style="position:relative;height:250px;"><canvas id="chartTrend"></canvas></div></div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-chart-line"></i> İrsaliye Sayısı / Adet Trendi</div>
+          <div class="rep-chart-wrap"><canvas id="chartTrend"></canvas></div>
+        </div>
       </div>
 
       <!-- Durum -->
       <div class="rep-tab" id="rep-durum" style="display:none;">
-        <div class="grid-auto">
-          <div class="card"><div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dağılımı</div><div style="position:relative;height:250px;"><canvas id="chartDurum"></canvas></div></div>
-          <div class="card"><div class="card-title"><i class="fas fa-list-check"></i> Özet</div><div id="durumOzet"></div></div>
+        <div class="rep-two-col">
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-chart-pie"></i> Durum Dağılımı</div>
+            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartDurum"></canvas></div>
+          </div>
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-list-check"></i> Özet</div>
+            <div id="durumOzet" class="rep-list-body"></div>
+          </div>
         </div>
       </div>
 
       <!-- Atölye -->
       <div class="rep-tab" id="rep-atolye" style="display:none;">
-        <div class="card" style="margin-bottom:16px;"><div class="card-title"><i class="fas fa-chart-bar"></i> Atölye Bazlı İrsaliye Sayısı</div><div style="position:relative;height:250px;"><canvas id="chartAtolye"></canvas></div></div>
-        <div class="card"><div class="card-title"><i class="fas fa-trophy"></i> Atölye Performans Tablosu</div><div id="atolyePerf"></div></div>
+        <div class="rep-card" style="margin-bottom:16px;">
+          <div class="rep-card-head"><i class="fas fa-chart-bar"></i> Atölye Bazlı İrsaliye Sayısı</div>
+          <div class="rep-chart-wrap"><canvas id="chartAtolye"></canvas></div>
+        </div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-medal"></i> Atölye Performans Tablosu</div>
+          <div id="atolyePerf" class="rep-table-body"></div>
+        </div>
       </div>
 
       <!-- Model -->
       <div class="rep-tab" id="rep-model" style="display:none;">
-        <div class="card" style="margin-bottom:16px;"><div class="card-title"><i class="fas fa-star"></i> Top 10 Model</div><div style="position:relative;height:280px;"><canvas id="chartModel"></canvas></div></div>
-        <div class="card"><div class="card-title"><i class="fas fa-list-ol"></i> Model Sıralaması</div><div id="modelTable"></div></div>
+        <div class="rep-card" style="margin-bottom:16px;">
+          <div class="rep-card-head"><i class="fas fa-star"></i> Top 10 Model</div>
+          <div class="rep-chart-wrap"><canvas id="chartModel"></canvas></div>
+        </div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-list-ol"></i> Model Sıralaması</div>
+          <div id="modelTable" class="rep-table-body"></div>
+        </div>
       </div>
 
       <!-- Ölçü / Renk -->
       <div class="rep-tab" id="rep-olcu" style="display:none;">
-        <div class="grid-auto">
-          <div class="card"><div class="card-title"><i class="fas fa-ruler"></i> Ölçü Dağılımı</div><div style="position:relative;height:250px;"><canvas id="chartOlcu"></canvas></div></div>
-          <div class="card"><div class="card-title"><i class="fas fa-palette"></i> Renk Dağılımı</div><div style="position:relative;height:250px;"><canvas id="chartRenk"></canvas></div></div>
+        <div class="rep-two-col">
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-ruler"></i> Ölçü Dağılımı</div>
+            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartOlcu"></canvas></div>
+          </div>
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-palette"></i> Renk Dağılımı</div>
+            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartRenk"></canvas></div>
+          </div>
         </div>
       </div>
 
       <!-- Termin -->
       <div class="rep-tab" id="rep-termin" style="display:none;">
-        <div class="card"><div class="card-title"><i class="fas fa-clock"></i> Termin Analizi</div><div id="terminAnalysis"></div></div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-clock"></i> Termin Analizi</div>
+          <div id="terminAnalysis"></div>
+        </div>
       </div>
 
       <!-- Heatmap -->
       <div class="rep-tab" id="rep-heatmap" style="display:none;">
-        <div class="card"><div class="card-title"><i class="fas fa-calendar-week"></i> Haftanın Günlerine Göre Yoğunluk</div><div id="weekHeatmap"></div></div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-calendar-week"></i> Haftanın Günlerine Göre Yoğunluk</div>
+          <div id="weekHeatmap" style="padding:8px 0;"></div>
+        </div>
       </div>
 
       <!-- Aylık Karşılaştırma -->
       <div class="rep-tab" id="rep-compare" style="display:none;">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-title"><i class="fas fa-chart-line"></i> Aylık Karşılaştırma (Son 6 Ay)</div>
-          <div style="position:relative;height:280px;"><canvas id="chartCompare"></canvas></div>
+        <div class="rep-card" style="margin-bottom:16px;">
+          <div class="rep-card-head"><i class="fas fa-code-compare"></i> Aylık Karşılaştırma — Son 6 Ay</div>
+          <div class="rep-chart-wrap"><canvas id="chartCompare"></canvas></div>
         </div>
-        <div class="grid-auto">
-          <div class="card">
-            <div class="card-title"><i class="fas fa-calendar-check"></i> Bu Ay</div>
+        <div class="rep-two-col">
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-calendar-check"></i> Bu Ay</div>
             <div id="compareThisMonth"></div>
           </div>
-          <div class="card">
-            <div class="card-title"><i class="fas fa-calendar"></i> Geçen Ay</div>
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-calendar"></i> Geçen Ay</div>
             <div id="compareLastMonth"></div>
           </div>
         </div>
@@ -2069,15 +2114,16 @@
 
       <!-- Top Firmalar -->
       <div class="rep-tab" id="rep-firms" style="display:none;">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-title"><i class="fas fa-chart-bar"></i> En Çok İş Yapılan Firmalar (Top 10)</div>
-          <div style="position:relative;height:280px;"><canvas id="chartFirms"></canvas></div>
+        <div class="rep-card" style="margin-bottom:16px;">
+          <div class="rep-card-head"><i class="fas fa-chart-bar"></i> En Çok İş Yapılan Firmalar (Top 10)</div>
+          <div class="rep-chart-wrap"><canvas id="chartFirms"></canvas></div>
         </div>
-        <div class="card">
-          <div class="card-title"><i class="fas fa-trophy"></i> Firma Performans Tablosu</div>
-          <div id="firmsTable"></div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-trophy"></i> Firma Performans Tablosu</div>
+          <div id="firmsTable" class="rep-table-body"></div>
         </div>
       </div>
+
     </div>
 
     <!-- ========== AKSESUAR TAKİP ========== -->
@@ -5389,12 +5435,13 @@ function renderReportTab(tab){
 function renderRepKpis(){
   const data = getReportData();
   const total = data.length;
-  const totalAdet = data.reduce((s,i)=>s+(parseInt(i.toplamAdet)||0),0);
-  const tamamlandi = data.filter(i=>i.durum==='Tamamlandı'||i.durum==='tamamlandi').length;
-  const bekliyor = data.filter(i=>i.durum==='Bekliyor'||i.durum==='bekliyor'||!i.durum).length;
+  const totalAdet = data.reduce((s,i)=>s+(parseInt(i.toplamAdet||i.totalAdet||i.total)||0),0);
+  const _isDone = d=>{ const n=(d||'').toLowerCase(); return n.includes('tamam')||n==='teslim'; };
+  const tamamlandi = data.filter(i=>_isDone(i.durum)).length;
+  const bekliyor = data.filter(i=>{ const n=(i.durum||'').toLowerCase(); return !n||n==='bekliyor'||n==='waiting'; }).length;
   const today = new Date(); today.setHours(0,0,0,0);
   const geciken = data.filter(i=>{
-    if(i.durum==='Tamamlandı') return false;
+    if(_isDone(i.durum)) return false;
     if(!i.termin) return false;
     return new Date(i.termin) < today;
   }).length;
@@ -5426,7 +5473,7 @@ function renderTrendChart(){
     labels.push(d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}));
     const dayItems = data.filter(x=>(x.tarih||'').slice(0,10)===key);
     counts.push(dayItems.length);
-    adets.push(dayItems.reduce((s,x)=>s+(parseInt(x.toplamAdet)||0),0));
+    adets.push(dayItems.reduce((s,x)=>s+(parseInt(x.toplamAdet||x.totalAdet||x.total)||0),0));
   }
   destroyChart('trend');
   const ctx = document.getElementById('chartTrend');
@@ -5480,9 +5527,10 @@ function renderAtolyeChart(){
     counts[a] = (counts[a]||0)+1;
     if(!perf[a]) perf[a]={total:0,tamam:0,geciken:0,adet:0};
     perf[a].total++;
-    perf[a].adet += parseInt(i.toplamAdet)||0;
-    if((i.durum||'').toLowerCase().includes('tamam')) perf[a].tamam++;
-    if(i.termin && new Date(i.termin)<today && !(i.durum||'').toLowerCase().includes('tamam')) perf[a].geciken++;
+    perf[a].adet += parseInt(i.toplamAdet||i.totalAdet||i.total)||0;
+    const _ad = (i.durum||'').toLowerCase();
+    if(_ad.includes('tamam')||_ad==='teslim') perf[a].tamam++;
+    if(i.termin && new Date(i.termin)<today && !(_ad.includes('tamam')||_ad==='teslim')) perf[a].geciken++;
   });
   const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
   destroyChart('atolye');
@@ -5651,15 +5699,15 @@ function renderMonthlyCompare(){
     return {
       label: m.label,
       count: items.length,
-      teslim: items.filter(i=>i.durum==='teslim'||i.durum==='Tamamlandı').length
+      teslim: items.filter(i=>{ const n=(i.durum||'').toLowerCase(); return n.includes('tamam')||n==='teslim'; }).length
     };
   });
 
   // Grafik
   const ctx = document.getElementById('chartCompare');
   if(!ctx) return;
-  if(window.chartCompareObj) window.chartCompareObj.destroy();
-  window.chartCompareObj = new Chart(ctx, {
+  destroyChart('compare');
+  repCharts.compare = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: monthData.map(m=>m.label),
@@ -5736,14 +5784,14 @@ function renderMonthlyCompare(){
 
 // ========== TOP FİRMALAR ==========
 function renderTopFirms(){
-  const allData = getUnifiedList();
+  const allData = getReportData();
   const firmMap = {};
 
   allData.forEach(i=>{
     const firma = i.firma || i.atolye || 'Belirtilmemiş';
     if(!firmMap[firma]) firmMap[firma] = {count:0, teslim:0, bekliyor:0};
     firmMap[firma].count++;
-    if(i.durum==='teslim'||i.durum==='Tamamlandı') firmMap[firma].teslim++;
+    const _fn=(i.durum||'').toLowerCase(); if(_fn.includes('tamam')||_fn==='teslim') firmMap[firma].teslim++;
     else firmMap[firma].bekliyor++;
   });
 
@@ -5760,8 +5808,8 @@ function renderTopFirms(){
   // Grafik
   const ctx = document.getElementById('chartFirms');
   if(!ctx) return;
-  if(window.chartFirmsObj) window.chartFirmsObj.destroy();
-  window.chartFirmsObj = new Chart(ctx, {
+  destroyChart('firms');
+  repCharts.firms = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: top10.map(f=>f.name.length>15 ? f.name.substring(0,15)+'...' : f.name),
