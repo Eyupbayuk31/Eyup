@@ -7613,15 +7613,15 @@ function _singleItemPdfHtml(item, type){
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
   if(type==='lastik'){
-    h+=`<div class="st">📏 Lastik Miktarı</div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div></div>`;
+    h+=`<div class="st">📏 Lastik Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
   }
   if(type==='dugme'){
     h+=`<div class="st">🔘 Düğme Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">ADET</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='toptan'&&item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    h+=`<div class="st">📦 Beden Detayları</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
-    sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]}</td></tr>`;});
+    h+=`<div class="st">📦 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
+    sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
   }
   if(type==='satenaskilik'){
@@ -7634,7 +7634,7 @@ function _singleItemPdfHtml(item, type){
   if(type==='kordon'&&item.olcular&&item.olcular.length){
     h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
     h+=`<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
-    item.olcular.forEach(o=>{h+=`<tr><td><b>${o.cm} cm</b></td><td>${o.adet}</td></tr>`;});
+    item.olcular.forEach(o=>{h+=`<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
   if(item.aciklama||item.not)h+=`<div class="nb">📝 <b>Not:</b> ${item.aciklama||item.not}</div>`;
