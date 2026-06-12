@@ -6476,7 +6476,7 @@ function updateSelDash(checks){
   const sub=document.getElementById('selDashSub');
   const footer=document.getElementById('selDashFooter');
   if(!dash||!grid){hideSelDash();return;}
-  
+
   // Seçili itemlari topla
   const items=[];
   checks.forEach(cb=>{
@@ -6488,170 +6488,168 @@ function updateSelDash(checks){
     const item=list.find(i=>String(i.id)===String(id));
     if(item)items.push({...item,_type:type});
   });
-  
+
   if(items.length<1){hideSelDash();return;}
-  
-  // Helper: güvenli sayi alma
-  const gN=(obj,path,def=0)=>{if(!obj)return def;const v=path.split('.').reduce((o,k)=>o&&o[k],obj);return(v!==undefined&&v!==null&&v!=='')?+v:def;};
-  
-  const atolyeler=new Set(), modeller=new Set(), durumler={teslim:0,bekliyor:0};
+
+  const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
+  const bedLabels={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+  const sizeKeys=['s30','s35','s40','s50','s60','s100'];
+  const sizeMap={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+
+  const atolyeler=new Set(), modeller=new Set();
   items.forEach(item=>{
     if(item.atolye||item.firma)atolyeler.add(item.atolye||item.firma);
     if(item.model||item.urun)modeller.add(item.model||item.urun);
-    if(item.durum==='teslim')durumler.teslim++;else durumler.bekliyor++;
   });
-  
-  sub.textContent=items.length+' irsaliye secildi — '+atolyeler.size+' atolye, '+modeller.size+' model';
 
-  let html='';
+  sub.textContent=items.length+' irsaliye seçildi — '+atolyeler.size+' atölye, '+modeller.size+' model';
 
-  // === OZET KARTLARI ===
   const standartItems=items.filter(i=>i._type==='standart');
   const fermuarItems=items.filter(i=>i._type==='fermuar');
   const lastikItems=items.filter(i=>i._type==='lastik');
   const dugmeItems=items.filter(i=>i._type==='dugme');
   const toptanItems=items.filter(i=>i._type==='toptan');
-  
-  // Toplam poset sayisi
-  let totalPoset=0;
-  const sizeKeys=['s30','s35','s40','s50','s60','s100'];
-  standartItems.forEach(it=>{sizeKeys.forEach(sk=>{totalPoset+=gN(it,'sizes.'+sk);});});
-  
-  // Toplam bant/kilcik
-  let totalGenisBant=0, totalDarBant=0, totalKilcik=0;
-  standartItems.forEach(it=>{
-    totalGenisBant+=gN(it,'bant.genis');
-    totalDarBant+=gN(it,'bant.dar');
-    totalKilcik+=gN(it,'bant.kilcik');
-  });
-  
-  // === POŞET ÖLÇÜ KARTLARI ===
-  const sizeMap={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+  const kordonItems=items.filter(i=>i._type==='kordon');
+  const dantelItems=items.filter(i=>i._type==='dantel');
+  const satenItems=items.filter(i=>i._type==='satenaskilik');
 
+  let html='';
+
+  // ── STANDART (Poşet) ──
   if(standartItems.length>0){
+    let totalPoset=0;
+    sizeKeys.forEach(sk=>standartItems.forEach(it=>totalPoset+=(+((it.sizes||{})[sk]||0))));
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-box">📦</span> Poşet Ölçüleri (Toplam: '+totalPoset.toLocaleString('tr')+')</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-box">📦</span> Poşet Ölçüleri <span class="sd-total-badge">Toplam: '+totalPoset.toLocaleString('tr')+'</span></div>';
     html+='<div class="sd-size-grid">';
-
     sizeKeys.forEach(sk=>{
-      const total=standartItems.reduce((sum,it)=>sum+gN(it,'sizes.'+sk),0);
-      if(total>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">${sizeMap[sk]}</div>
-          <div class="sd-size-value">${total.toLocaleString('tr')}</div>
-        </div>`;
-      }
+      const total=standartItems.reduce((s,it)=>s+(+((it.sizes||{})[sk]||0)),0);
+      if(total>0)html+=`<div class="sd-size-card"><div class="sd-size-name">${sizeMap[sk]}</div><div class="sd-size-value">${total.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
     });
-
     html+='</div></div>';
 
-    // === BANT & KILÇIK KARTLARI ===
-    const totalBant = totalGenisBant+totalDarBant;
-    if(totalBant>0 || totalKilcik>0){
+    const tG=standartItems.reduce((s,it)=>s+(+((it.bant||{}).genis||0)),0);
+    const tD=standartItems.reduce((s,it)=>s+(+((it.bant||{}).dar||0)),0);
+    const tK=standartItems.reduce((s,it)=>s+(+((it.bant||{}).kilcik||0)),0);
+    if(tG+tD+tK>0){
       html+='<div class="sd-section">';
-      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-bant">🎀</span> Bant (Toplam: '+totalBant.toLocaleString('tr')+') & Kılçık</div>';
+      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-bant">🎀</span> Bant & Kılçık <span class="sd-total-badge">Toplam: '+(tG+tD).toLocaleString('tr')+'</span></div>';
       html+='<div class="sd-size-grid">';
-
-      if(totalGenisBant>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">Geniş Bant</div>
-          <div class="sd-size-value">${totalGenisBant.toLocaleString('tr')}</div>
-        </div>`;
-      }
-      if(totalDarBant>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">Dar Bant</div>
-          <div class="sd-size-value">${totalDarBant.toLocaleString('tr')}</div>
-        </div>`;
-      }
-      if(totalKilcik>0){
-        html+=`<div class="sd-size-card">
-          <div class="sd-size-name">Kılçık</div>
-          <div class="sd-size-value">${totalKilcik.toLocaleString('tr')}</div>
-        </div>`;
-      }
-
+      if(tG>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Geniş Bant</div><div class="sd-size-value">${tG.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
+      if(tD>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Dar Bant</div><div class="sd-size-value">${tD.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
+      if(tK>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Kılçık</div><div class="sd-size-value">${tK.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
       html+='</div></div>';
     }
   }
 
-  // === FERMUAR KARTLARI ===
+  // ── FERMUAR — beden ölçü ölçü (it.beden[b].adet) ──
   if(fermuarItems.length>0){
-    const totalFermuar=fermuarItems.reduce((s,it)=>{const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];return s+beds.reduce((ss,b)=>ss+(+it[b+'a']||0),0);},0);
+    const bedenTotals={};
+    fermuarItems.forEach(it=>{
+      beds.forEach(b=>{
+        const adet=+((it.beden||{})[b]||{}).adet||0;
+        if(adet>0)bedenTotals[b]=(bedenTotals[b]||0)+adet;
+      });
+    });
+    const grand=Object.values(bedenTotals).reduce((s,v)=>s+v,0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar">🔗</span> Fermuar</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar">🔗</span> Fermuar Bedenleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
     html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Fermuar</div>
-      <div class="sd-size-value">${totalFermuar.toLocaleString('tr')}</div>
-      <div class="sd-size-label">adet</div>
-    </div>`;
+    beds.forEach(b=>{if(bedenTotals[b])html+=`<div class="sd-size-card"><div class="sd-size-name">${bedLabels[b]}</div><div class="sd-size-value">${bedenTotals[b].toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;});
+    if(!grand)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam</div><div class="sd-size-value">0</div></div>`;
     html+='</div></div>';
   }
 
-  // === LASTİK KARTLARI ===
+  // ── LASTİK ──
   if(lastikItems.length>0){
-    const totalMetre=lastikItems.reduce((s,it)=>s+(+it.metre||0),0);
+    const tM=lastikItems.reduce((s,it)=>s+(+it.metre||0),0);
+    const tC=lastikItems.reduce((s,it)=>s+(+it.cm||0),0);
     html+='<div class="sd-section">';
     html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-lastik">📏</span> Lastik</div>';
     html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Lastik</div>
-      <div class="sd-size-value">${totalMetre.toLocaleString('tr')}</div>
-      <div class="sd-size-label">metre</div>
-    </div>`;
+    if(tM>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Metre</div><div class="sd-size-value">${tM.toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
+    if(tC>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam CM</div><div class="sd-size-value">${tC.toLocaleString('tr')}</div><div class="sd-size-label">cm</div></div>`;
     html+='</div></div>';
   }
 
-  // === DÜĞME KARTLARI ===
+  // ── DÜĞME ──
   if(dugmeItems.length>0){
-    const totalAdet=dugmeItems.reduce((s,it)=>s+(+it.adet||0),0);
+    const tA=dugmeItems.reduce((s,it)=>s+(+it.adet||0),0);
     html+='<div class="sd-section">';
     html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dugme">🔘</span> Düğme</div>';
     html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Düğme</div>
-      <div class="sd-size-value">${totalAdet.toLocaleString('tr')}</div>
-      <div class="sd-size-label">adet</div>
-    </div>`;
+    html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Düğme</div><div class="sd-size-value">${tA.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
     html+='</div></div>';
   }
 
-  // === TOPTAN KARTLARI ===
+  // ── TOPTAN — beden ölçü ölçü (it.beden[b] = number) ──
   if(toptanItems.length>0){
-    const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
-    const totalToptan=toptanItems.reduce((s,it)=>s+beds.reduce((ss,b)=>ss+(+it[b]||0),0),0);
+    const bedenTotals={};
+    toptanItems.forEach(it=>{
+      beds.forEach(b=>{
+        const adet=+((it.beden||{})[b]||0);
+        if(adet>0)bedenTotals[b]=(bedenTotals[b]||0)+adet;
+      });
+    });
+    const grand=Object.values(bedenTotals).reduce((s,v)=>s+v,0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan">🚚</span> Toptan</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan">🚚</span> Toptan Bedenleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
     html+='<div class="sd-size-grid">';
-    html+=`<div class="sd-size-card">
-      <div class="sd-size-name">Toplam Toptan</div>
-      <div class="sd-size-value">${totalToptan.toLocaleString('tr')}</div>
-      <div class="sd-size-label">adet</div>
-    </div>`;
+    beds.forEach(b=>{if(bedenTotals[b])html+=`<div class="sd-size-card"><div class="sd-size-name">${bedLabels[b]}</div><div class="sd-size-value">${bedenTotals[b].toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;});
+    if(!grand)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam</div><div class="sd-size-value">0</div></div>`;
     html+='</div></div>';
   }
 
-  html+='</div>'; // selDashDetail kapanış
+  // ── KORDON — cm ölçü ölçü (it.olcular[{cm,adet}]) ──
+  if(kordonItems.length>0){
+    const cmTotals={};
+    let grand=0;
+    kordonItems.forEach(it=>{
+      (it.olcular||[]).forEach(o=>{
+        const cm=String(o.cm||'-');
+        const adet=+o.adet||0;
+        cmTotals[cm]=(cmTotals[cm]||0)+adet;
+        grand+=adet;
+      });
+    });
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-kordon">🪢</span> Kordon Ölçüleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
+    html+='<div class="sd-size-grid">';
+    Object.entries(cmTotals).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).forEach(([cm,adet])=>{
+      html+=`<div class="sd-size-card"><div class="sd-size-name">${cm} cm</div><div class="sd-size-value">${adet.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
+    });
+    html+='</div></div>';
+  }
 
-  grid.innerHTML=html;
+  // ── DANTEL ──
+  if(dantelItems.length>0){
+    const tM=dantelItems.reduce((s,it)=>s+(+it.metre||0),0);
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dantel">🕸️</span> Dantel</div>';
+    html+='<div class="sd-size-grid">';
+    html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Metre</div><div class="sd-size-value">${tM.toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
+    html+='</div></div>';
+  }
 
-  // Footer — atolye ve model detayi
+  // ── SATEN ASKILIK ──
+  if(satenItems.length>0){
+    const tM=satenItems.reduce((s,it)=>s+(+it.metre||0),0);
+    html+='<div class="sd-section">';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-saten">🪢</span> Saten Askılık</div>';
+    html+='<div class="sd-size-grid">';
+    html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Metre</div><div class="sd-size-value">${tM.toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
+    html+='</div></div>';
+  }
+
+  grid.innerHTML=html; // tek atama — duplicate kaldırıldı
+
   let footerHtml='';
-  if(atolyeler.size>0){
-    footerHtml+=`<span><i class="fas fa-industry"></i> Atolyeler: <strong>${[...atolyeler].join(', ')}</strong></span>`;
-  }
-  if(modeller.size>0){
-    footerHtml+=`<span><i class="fas fa-cube"></i> Modeller: <strong>${[...modeller].join(', ')}</strong></span>`;
-  }
-
-  grid.innerHTML=html;
+  if(atolyeler.size>0)footerHtml+=`<span><i class="fas fa-industry"></i> Atölyeler: <strong>${[...atolyeler].join(', ')}</strong></span>`;
+  if(modeller.size>0)footerHtml+=`<span><i class="fas fa-cube"></i> Modeller: <strong>${[...modeller].join(', ')}</strong></span>`;
   if(footer)footer.innerHTML=footerHtml;
 
   dash.classList.add('show');
   dash.style.display='block';
-
-  // Dashboard'a scroll
   setTimeout(()=>{dash.scrollIntoView({behavior:'smooth',block:'start'});},150);
 }
 
