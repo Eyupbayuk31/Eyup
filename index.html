@@ -23,12 +23,33 @@
     if(!vParam){ var hMatch = hash.match(/[#&]?v=([^&]+)/); if(hMatch) vParam = hMatch[1]; }
     if(!vParam) return; // Normal sayfa — devam et
 
-    // Base64 decode
-    var b64 = vParam.replace(/-/g,'+').replace(/_/g,'/');
-    while(b64.length % 4) b64 += '=';
-    var json = decodeURIComponent(escape(atob(b64)));
-    var d    = JSON.parse(json);
-    if(!d || (d.app !== 'irsaliyepro' && d.a !== 'ip')) return; // Yanlış format — devam et
+    // ── v4 COMPACT FORMAT: id36.type.owner~repo[.branch] ──────────────
+    // Ornek: mq9ridmt.k.Eyupbayuk31~Eyup.data
+    var _TV = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
+    var v4Match = vParam.match(/^([0-9a-z]+)\.([a-z]{1,3})\.([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_-]+))?$/);
+    var d;
+    if(v4Match){
+      var _t4 = v4Match[2];
+      d = {
+        a:'ip', v:3,
+        i: parseInt(v4Match[1], 36),
+        t: _t4,
+        r: v4Match[3] + '/' + v4Match[4],
+        b: v4Match[5] || 'data',
+        // normalize
+        id:   parseInt(v4Match[1], 36),
+        type: _TV[_t4] || _t4
+      };
+    } else {
+      // ── v2/v3 LEGACY: base64-encoded JSON ──────────────────────────
+      try{
+        var b64 = vParam.replace(/-/g,'+').replace(/_/g,'/');
+        while(b64.length % 4) b64 += '=';
+        var json = decodeURIComponent(escape(atob(b64)));
+        d = JSON.parse(json);
+      }catch(_){ return; }
+      if(!d || (d.app !== 'irsaliyepro' && d.a !== 'ip')) return;
+    }
 
     // ✅ Geçerli viewer URL
     window._isViewerUrl = true;
@@ -8898,17 +8919,32 @@ function handleQrResult(text){
       }
 
       if(v){
-        const json = _b64UrlDecode(v);
-        const data = JSON.parse(json);
-        if(data && (data.app === 'irsaliyepro' || data.a === 'ip')){
-          // Kompakt v3 formati (a/i/t) uzun forma normalize et
-          if(data.a === 'ip' && !data.app){
-            const _T = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
-            data.app  = 'irsaliyepro';
-            data.id   = data.id   || data.i;
-            data.type = data.type || _T[data.t] || data.t;
-          }
-          parsed = data;
+        const _TV2 = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
+        // v4 compact: id36.type.owner~repo[.branch]
+        const v4m = v.match(/^([0-9a-z]+)\.([a-z]{1,3})\.([A-Za-z0-9_-]+)~([A-Za-z0-9_.-]+)(?:\.([A-Za-z0-9_-]+))?$/);
+        if(v4m){
+          const _t = v4m[2];
+          parsed = {
+            app:'irsaliyepro', v:3,
+            id: parseInt(v4m[1], 36),
+            type: _TV2[_t] || _t,
+            r: v4m[3]+'/'+v4m[4],
+            b: v4m[5] || 'data'
+          };
+        } else {
+          // v2/v3 legacy base64-JSON
+          try{
+            const json2 = _b64UrlDecode(v);
+            const data = JSON.parse(json2);
+            if(data && (data.app === 'irsaliyepro' || data.a === 'ip')){
+              if(data.a === 'ip' && !data.app){
+                data.app  = 'irsaliyepro';
+                data.id   = data.id   || data.i;
+                data.type = data.type || _TV2[data.t] || data.t;
+              }
+              parsed = data;
+            }
+          }catch(_){}
         }
       }
     }
@@ -9381,15 +9417,30 @@ async function testGithubConnection(){
 }
 
 function _buildQrScanUrl(item, type){
-  // v3: minimal payload; viewer GitHub raw'dan ceker (Firebase fallback)
-  // Eski v2 destegi viewer interceptor'da hala var (geriye donuk uyumluluk)
-  const payload = _buildQrPayloadV3(item, type);
-  const base = _getPublishBaseUrl();
-  // Scan URL'i uretilen HER yerde (WhatsApp, PDF, link kopyala, bulk) viewer
-  // JSON'inin GitHub'da guncel olmasi gerekir — arka planda yayinla
+  // v4: ultra-compact format  →  id36.type.owner~repo[.branch]
+  // Eski QR'lar (v3 base64-JSON) viewer interceptor'da hala destekleniyor.
   _ensureViewerJsonPublished(item, type).catch(()=>{});
-  // Query string kullan (?v=) - telefon kameralari hash'i (#v=) gormeyebilir
-  return base + '?v=' + _b64UrlEncode(JSON.stringify(payload));
+  return _getPublishBaseUrl() + '?v=' + _buildQrPayloadV4Short(item, type);
+}
+
+function _buildQrPayloadV4Short(item, type){
+  // Format: <id_base36>.<typeCode>.<owner>~<repo>[.<branch>]
+  // Ornek: mq9ridmt.k.Eyupbayuk31~Eyup.data  (36 karakter vs onceki 104)
+  const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da'};
+  const id36     = Number(item.id).toString(36);
+  const typeCode = _T[type] || type;
+  try{
+    const cfg    = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
+    const owner  = (cfg && cfg.owner) || '';
+    const repo   = (cfg && cfg.repo)  || '';
+    const branch = (cfg && cfg.dataBranch) || 'data';
+    if(owner && repo){
+      // branch 'data' ise zorunlu (viewer default 'main' bekler)
+      return id36 + '.' + typeCode + '.' + owner + '~' + repo + '.' + branch;
+    }
+  }catch(_){}
+  // GitHub config yoksa eski base64-JSON formatina don (Firebase fallback)
+  return _b64UrlEncode(JSON.stringify(_buildQrPayloadV3(item, type)));
 }
 
 // Ayni oturum icinde ayni kaydin ayni surumu tekrar tekrar yayinlanmasin
