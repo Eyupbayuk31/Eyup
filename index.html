@@ -781,6 +781,30 @@
               const raw = JSON.parse(localStorage.getItem(key));
               if(Array.isArray(raw)) local = raw;
             } catch(_){}
+
+            // Fotoğraf kayıp koruması: yerel kayıtta buluttan fazla fotoğraf varsa
+            // (önceki yazma 1MB limitinden başarısız olduysa) → yereli koru + buluta
+            // yeniden it (artık stripPhotoBlobs nedeniyle limit aşılmaz).
+            const localIdMap = new Map();
+            local.forEach((it, i) => localIdMap.set(itemId(it, i), it));
+            const photoPushQueue = [];
+            merged = remote.map(remoteItem => {
+              const id = itemId(remoteItem, 0);
+              const localItem = localIdMap.get(id);
+              if(!localItem) return remoteItem;
+              const rN = Array.isArray(remoteItem._photos) ? remoteItem._photos.length : (remoteItem._photo ? 1 : 0);
+              const lN = Array.isArray(localItem._photos)  ? localItem._photos.length  : (localItem._photo ? 1 : 0);
+              if(lN > rN){ photoPushQueue.push([id, localItem]); return localItem; }
+              return rehydratePhotoBlobs(remoteItem, localItem);
+            });
+            if(photoPushQueue.length){
+              console.log('[fs] bootRead: ' + photoPushQueue.length + ' kayit fazla fotografla buluta yeniden itiliyor (' + key + ')');
+              for(const [id, it] of photoPushQueue){
+                try { markWrite(key, id); await fsSet(key, id, it); }
+                catch(e){ console.warn('[fs] bootRead photo-push err:', key, id, e); }
+              }
+            }
+
             const localOnly = local.filter((it, i) => {
               const id = itemId(it, i);
               if(remoteIds.has(id) || id.startsWith('idx_')) return false;
@@ -803,7 +827,7 @@
                 try { markWrite(key, id); await fsSet(key, id, it); }
                 catch(e){ console.warn('[fs] offline push err:', key, id, e); }
               }
-              merged = remote.concat(localOnly);
+              merged = merged.concat(localOnly);
             }
           }
 
@@ -869,8 +893,13 @@
         for(const [id, item] of cloud){
           if(isRecent(recent, id) && localMap.has(id)){
             merged.set(id, localMap.get(id));
+          } else if(localMap.has(id)){
+            const localItem = localMap.get(id);
+            const rN = Array.isArray(item._photos) ? item._photos.length : (item._photo ? 1 : 0);
+            const lN = Array.isArray(localItem._photos) ? localItem._photos.length : (localItem._photo ? 1 : 0);
+            merged.set(id, lN > rN ? localItem : rehydratePhotoBlobs(item, localItem));
           } else {
-            merged.set(id, localMap.has(id) ? rehydratePhotoBlobs(item, localMap.get(id)) : item);
+            merged.set(id, item);
           }
         }
         // Henuz buluta inmemis (recent yazim) yerel ogeleri koru
@@ -10991,16 +11020,19 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
 function retryPhotoUpload(id, type, photoIndex){
   const item = _findItemByIdType(id, type);
   if(!item){ toast('Kayıt bulunamadı','error'); return; }
-  const photos = _getPhotosArray(item);
-  if(photoIndex !== undefined){
-    if(!photos[photoIndex] || !photos[photoIndex].data){ toast('Fotoğraf bulunamadı','error'); return; }
-    toast('Yükleniyor...','info');
-    _uploadPhotoInBackground(id, type, photos[photoIndex].data, photoIndex);
-  } else {
-    if(!photos.length){ toast('Önce fotoğraf çekin','error'); return; }
-    toast('Yükleniyor...','info');
-    _uploadPhotoInBackground(id, type, photos[0].data, 0);
+  const rawPhotos = Array.isArray(item._photos) ? item._photos : [];
+  const idx = photoIndex !== undefined ? photoIndex : 0;
+  if(!rawPhotos.length){ toast('Önce fotoğraf çekin','error'); return; }
+  const rawPhoto = rawPhotos[idx];
+  // Base64 doğrudan _photos[].data'dan al (_getPhotosArray URL'i tercih eder)
+  const dataUrl = (rawPhoto && typeof rawPhoto.data === 'string' && rawPhoto.data.startsWith('data:')) ? rawPhoto.data : '';
+  if(!dataUrl){
+    // Sayfa yenilenince base64 Firestore'dan dönen versiyona göre silinmiş olabilir
+    toast('⚠️ Fotoğraf verisi bulunamadı — bu fotoğrafı galeriden veya kameradan tekrar ekleyin', 'error');
+    return;
   }
+  toast('Yükleniyor...','info');
+  _uploadPhotoInBackground(id, type, dataUrl, idx);
 }
 
 // ====================================================================
@@ -11290,22 +11322,31 @@ function renderPhotoGallery(){
   const type = _sigCurrentWaybill.type;
   gallery.style.display = 'block';
 
-  const retryAllBtn = failedCount > 1
-    ? `<button onclick="retryAllFailedPhotos()" style="margin-top:6px;padding:4px 12px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;">⟳ ${failedCount} fotoğrafı tekrar yükle</button>`
+  const retryAllBtn = failedCount >= 1
+    ? `<button onclick="retryAllFailedPhotos()" style="margin-top:8px;padding:7px 16px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12.5px;cursor:pointer;font-weight:700;width:100%;letter-spacing:0.01em;">⟳ ${failedCount} fotoğrafı tekrar yükle</button>`
     : '';
 
   gallery.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">
       ${photos.map((p, idx) => {
-        const statusIcon = p.url ? '☁️' : (p.uploading ? '⏳' : '⚠️');
-        const statusTitle = p.url ? 'Buluta yüklü' : (p.uploading ? 'Yükleniyor...' : (p.uploadError || 'Yüklenmemiş — dokunarak tekrar dene'));
-        const statusClick = (!p.url && !p.uploading) ? ('retryPhotoUpload('+JSON.stringify(id)+',' + JSON.stringify(type) + ','+idx+')') : '';
-        const imgSrc = p.data || '';
+        const rawData = (item._photos && item._photos[idx] && typeof item._photos[idx].data === 'string' && item._photos[idx].data.startsWith('data:')) ? item._photos[idx].data : '';
+        const hasData = !!rawData;
+        const imgSrc = p.url || rawData;
+        const isFailed = !p.url && !p.uploading;
+        const retryFn = isFailed ? ('retryPhotoUpload('+JSON.stringify(id)+',' + JSON.stringify(type) + ','+idx+')') : '';
+        const statusBadge = p.url
+          ? `<div style="position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;">☁️</div>`
+          : p.uploading
+            ? `<div style="position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;">⏳</div>`
+            : `<div onclick="${retryFn}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:3px;">
+                 <span style="font-size:18px;">⚠️</span>
+                 <span style="font-size:9px;color:#fff;font-weight:700;text-align:center;line-height:1.2;">${hasData?'Tekrar\nYükle':'Yeniden\nÇek'}</span>
+               </div>`;
         return `
         <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
-          ${imgSrc ? `<img src="${imgSrc}" style="width:90px;height:90px;object-fit:cover;display:block;cursor:pointer;" alt="foto ${idx+1}" onclick="openPhotoLightbox(${idx})">` : `<div style="width:90px;height:90px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:22px;" onclick="openPhotoLightbox(${idx})">${p.uploading?'⏳':'🖼️'}</div>`}
-          <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;">${idx+1}</div>
-          <div style="position:absolute;bottom:3px;left:3px;font-size:12px;line-height:1;cursor:${statusClick?'pointer':'default'};" title="${statusTitle}" onclick="${statusClick}">${statusIcon}</div>
+          ${imgSrc ? `<img src="${imgSrc}" style="width:90px;height:90px;object-fit:cover;display:block;" alt="foto ${idx+1}">` : `<div style="width:90px;height:90px;background:#374151;display:flex;align-items:center;justify-content:center;font-size:22px;">🖼️</div>`}
+          <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;">${idx+1}</div>
+          ${statusBadge}
           <button onclick="removePhotoAt(${idx})" title="Bu fotoğrafı sil" style="position:absolute;top:3px;right:3px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">✕</button>
         </div>`;
       }).join('')}
@@ -11318,16 +11359,23 @@ function retryAllFailedPhotos(){
   if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
   const item = _findItemByIdType(_sigCurrentWaybill.id, _sigCurrentWaybill.type);
   if(!item){ toast('Kayıt bulunamadı','error'); return; }
-  const photos = _getPhotosArray(item);
-  const failedIndexes = photos.reduce((acc, p, idx) => { if(p.uploadFailed && !p.url) acc.push(idx); return acc; }, []);
-  if(!failedIndexes.length){ toast('Başarısız yükleme yok','info'); return; }
-  toast('⟳ ' + failedIndexes.length + ' fotoğraf tekrar sıraya alındı','info');
+  const rawPhotos = Array.isArray(item._photos) ? item._photos : [];
+  // Başarısız veya url'siz (yüklenmemiş) fotoğrafları bul
+  const failedIndexes = rawPhotos.reduce((acc, p, idx) => {
+    if(p && !p.url && !p.uploading) acc.push(idx);
+    return acc;
+  }, []);
+  if(!failedIndexes.length){ toast('Yüklenmemiş fotoğraf yok','info'); return; }
+  let queued = 0, noData = 0;
   failedIndexes.forEach((photoIdx, i) => {
-    const rawPhotos = item._photos || [];
-    const photoData = rawPhotos[photoIdx] && rawPhotos[photoIdx].data;
-    if(!photoData){ toast('Fotoğraf ' + (photoIdx+1) + ': veri yok, tekrar çekilmeli','error'); return; }
-    setTimeout(() => _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, photoData, photoIdx), i * 700);
+    const p = rawPhotos[photoIdx];
+    const dataUrl = p && typeof p.data === 'string' && p.data.startsWith('data:') ? p.data : '';
+    if(!dataUrl){ noData++; return; }
+    queued++;
+    setTimeout(() => _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, dataUrl, photoIdx), i * 700);
   });
+  if(queued) toast('⟳ ' + queued + ' fotoğraf yeniden yükleniyor…','info');
+  if(noData) toast('⚠️ ' + noData + ' fotoğrafın verisi yok — galeriden veya kameradan tekrar ekleyin','error');
 }
 
 function openPhotoLightbox(idx){
