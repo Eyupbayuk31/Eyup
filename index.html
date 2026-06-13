@@ -3340,7 +3340,8 @@ function refreshAtolyeList(){
   if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';return;}
   el.innerHTML=list.map(a=>{
     const tel = (a.telefon||'').replace(/[^\d+]/g,'');
-    const waBtn = tel ? '<a href="https://wa.me/'+_normalizePhoneForWa(tel)+'" target="_blank" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fab fa-whatsapp"></i></a>' : '';
+    const normTel = tel ? _normalizePhoneForWa(tel) : '';
+    const waBtn = normTel ? '<a href="javascript:void(0)" onclick="_openWhatsApp(\''+normTel+'\',\'\')" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fab fa-whatsapp"></i></a>' : '';
     return `
     <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;"><i class="fas fa-industry" style="color:#fff;font-size:13px;"></i></div>
@@ -7514,10 +7515,7 @@ function shareWhatsApp() {
       }
     }
   }catch(_){}
-  const waUrl = waPhone
-    ? ('https://wa.me/' + waPhone + '?text=' + encodeURIComponent(text))
-    : ('https://wa.me/?text=' + encodeURIComponent(text));
-  window.open(waUrl, '_blank');
+  _openWhatsApp(waPhone, text);
   closeShareMenu();
   if(waPhone) toast('WhatsApp aciliyor: ' + waPhone, 'success');
   else toast('WhatsApp aciliyor — kisi secin','info');
@@ -7684,10 +7682,7 @@ function bulkShareWhatsApp() {
       }
     }catch(_){}
   }
-  const url = waPhone
-    ? ('https://wa.me/' + waPhone + '?text=' + encodeURIComponent(text))
-    : ('https://wa.me/?text=' + encodeURIComponent(text));
-  window.open(url, '_blank');
+  _openWhatsApp(waPhone, text);
   if(waPhone) toast(checks.length + ' kayit gonderiliyor: ' + waPhone, 'success');
   else toast(checks.length + ' kayit detayli paylasiliyor — kisi secin', 'info');
 }
@@ -9773,6 +9768,40 @@ function _normalizePhoneForWa(raw){
   return s;
 }
 
+// WhatsApp'ı kişisel uygulama olarak aç (Business değil).
+// Android'de intent:// ile com.whatsapp paketini direkt hedefler;
+// iOS ve diğer platformlarda whatsapp:// derin bağlantısını dener.
+function _openWhatsApp(phone, text){
+  const enc = encodeURIComponent(text);
+  const ua  = navigator.userAgent || '';
+  const isAndroid = /android/i.test(ua);
+  const isIOS     = /iphone|ipad|ipod/i.test(ua);
+
+  if(isAndroid){
+    // intent:// → yalnızca com.whatsapp (kişisel) paketini açar, Business'ı atlar
+    const intentUrl = phone
+      ? 'intent://send?phone=' + phone + '&text=' + enc + '#Intent;scheme=whatsapp;package=com.whatsapp;end'
+      : 'intent://send?text=' + enc + '#Intent;scheme=whatsapp;package=com.whatsapp;end';
+    window.location.href = intentUrl;
+    return;
+  }
+
+  if(isIOS){
+    // iOS'ta her iki WA da aynı whatsapp:// şemasını kullanır; varsayılan açılır.
+    const iosUrl = phone
+      ? 'whatsapp://send?phone=' + phone + '&text=' + enc
+      : 'whatsapp://send?text=' + enc;
+    window.location.href = iosUrl;
+    return;
+  }
+
+  // Masaüstü / diğer: wa.me
+  const waUrl = phone
+    ? ('https://wa.me/' + phone + '?text=' + enc)
+    : ('https://wa.me/?text=' + enc);
+  window.open(waUrl, '_blank');
+}
+
 // Listelerden cagrilan standalone WhatsApp paylasim — id+type'tan QR scan
 // URL'sini build edip ayni mantikla wa.me linkini acar (modal acmadan).
 function shareIrsaliyeWhatsApp(id, type){
@@ -9821,10 +9850,7 @@ function _doShareWhatsApp(item, type, url){
   ].filter(Boolean);
   const text = encodeURIComponent(lines.join('\n'));
 
-  const waUrl = waPhone
-    ? ('https://wa.me/' + waPhone + '?text=' + text)
-    : ('https://wa.me/?text=' + text);
-  window.open(waUrl, '_blank');
+  _openWhatsApp(waPhone, lines.join('\n'));
   if(!waPhone){
     toast('Atolye telefonu kayitli degil — WhatsApp\'tan kisi secin', 'info');
   } else {
