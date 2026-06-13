@@ -499,7 +499,7 @@
     // ── Firestore primitifleri
     async function fsSet(key, id, item){
       const { db, doc, setDoc } = window._fs;
-      await setDoc(doc(db, 'appdata', key, 'items', id), item);
+      await setDoc(doc(db, 'appdata', key, 'items', id), stripPhotoBlobs(item));
     }
     async function fsDel(key, id){
       const { db, doc, deleteDoc } = window._fs;
@@ -511,6 +511,45 @@
       const arr = [];
       snap.forEach(d => arr.push(d.data()));
       return arr;
+    }
+
+    // ── FOTOGRAF BLOB AYIKLAMA — Firestore 1MB limit korumasi
+    // Base64 fotograf verisi (data:...) Firestore dokumanina YAZILMAZ. Bir
+    // dokuman 1,048,576 byte'i asamaz; cok fotografli kayitlar bu limiti
+    // patlatiyordu. Base64 yalnizca localStorage'da (bu cihazda) tutulur,
+    // bulut dokumani sadece GitHub URL'sini + meta veriyi saklar. Upload
+    // tamamlanip url gelince base64 yerelde de otomatik temizlenir.
+    function _isDataUrl(s){ return typeof s === 'string' && s.lastIndexOf('data:', 0) === 0; }
+    function stripPhotoBlobs(item){
+      if(!item || typeof item !== 'object') return item;
+      let clone = null;
+      const ensure = () => { if(!clone) clone = JSON.parse(JSON.stringify(item)); return clone; };
+      if(Array.isArray(item._photos)){
+        item._photos.forEach((p, i) => {
+          if(p && _isDataUrl(p.data)){ ensure()._photos[i].data = ''; }
+        });
+      }
+      ['_photo','_photoData','_photoThumb'].forEach(f => {
+        if(_isDataUrl(item[f])){ ensure()[f] = ''; }
+      });
+      return clone || item;
+    }
+    // Buluttan gelen (base64'siz) kaydi yerel base64 ile zenginlestir:
+    // url'si olmayan (henuz yuklenmemis) fotograflarin onizlemesi kaybolmasin.
+    function rehydratePhotoBlobs(cloudItem, localItem){
+      if(!cloudItem || !localItem) return cloudItem;
+      if(Array.isArray(cloudItem._photos) && Array.isArray(localItem._photos)){
+        cloudItem._photos.forEach((cp, i) => {
+          if(cp && !cp.data && !cp.url){
+            const lp = localItem._photos.find(x => x && cp.at && x.at === cp.at) || localItem._photos[i];
+            if(lp && _isDataUrl(lp.data)) cp.data = lp.data;
+          }
+        });
+      }
+      ['_photo','_photoData','_photoThumb'].forEach(f => {
+        if(!cloudItem[f] && _isDataUrl(localItem[f])) cloudItem[f] = localItem[f];
+      });
+      return cloudItem;
     }
 
     // ── Deep equality check (JSON.stringify yerine)
@@ -566,7 +605,7 @@
             markWrite(key, id);
             const { doc } = window._fs;
             const docRef = doc(db, 'appdata', key, 'items', id);
-            batch.set(docRef, item);
+            batch.set(docRef, stripPhotoBlobs(item));
           }
           batches.push(batch.commit());
         }
@@ -831,7 +870,7 @@
           if(isRecent(recent, id) && localMap.has(id)){
             merged.set(id, localMap.get(id));
           } else {
-            merged.set(id, item);
+            merged.set(id, localMap.has(id) ? rehydratePhotoBlobs(item, localMap.get(id)) : item);
           }
         }
         // Henuz buluta inmemis (recent yazim) yerel ogeleri koru
@@ -10809,7 +10848,8 @@ function _viewerJsonPath(type, id){
   return 'viewer/' + type + '_' + String(id) + '.json';
 }
 
-async function _publishViewerJsonToGithub(item, type, _isRetry){
+async function _publishViewerJsonToGithub(item, type, _attempt){
+  _attempt = _attempt || 0;
   const cfg = _getGithubConfig();
   if(!cfg.token || !cfg.owner || !cfg.repo){
     throw new Error('GitHub ayarları eksik — Ayarlar → GitHub Bulut Yükleme bölümünü doldurun');
@@ -10863,10 +10903,12 @@ async function _publishViewerJsonToGithub(item, type, _isRetry){
       const errData = await putRes.json();
       if(errData && errData.message) msg = errData.message;
     } catch(_){}
-    // SHA cakismasi (es zamanli iki guncelleme): taze SHA ile bir kez tekrar dene
-    if((putRes.status === 409 || putRes.status === 422) && !_isRetry){
-      await new Promise(r => setTimeout(r, 800));
-      return _publishViewerJsonToGithub(item, type, true);
+    // SHA cakismasi (es zamanli commit'ler ref'i kaydirir): taze SHA ile
+    // ustel bekleyerek 4 kez tekrar dene (her denemede SHA bastan cekilir).
+    if((putRes.status === 409 || putRes.status === 422) && _attempt < 4){
+      const delay = 500 + _attempt * 700 + Math.floor(Math.random() * 400); // jitter ile
+      await new Promise(r => setTimeout(r, delay));
+      return _publishViewerJsonToGithub(item, type, _attempt + 1);
     }
     if(putRes.status === 401) throw new Error('Token geçersiz — Ayarlar\'dan yeni token girin');
     if(putRes.status === 403) throw new Error('İzin yok / rate-limit aşıldı');
