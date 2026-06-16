@@ -4159,16 +4159,18 @@ tr:hover .table-actions-more{
 
 /* ===== CALENDAR — Premium 2-Panel Layout ===== */
 
-/* Page shell */
-.cal-page{padding:0!important;display:flex;flex-direction:column;min-height:calc(100vh - 60px);}
+/* Page shell — .page.active sets display:block so we override with higher specificity */
+.cal-page { padding: 0 !important; }
+.cal-page.active { display: flex !important; flex-direction: column; min-height: calc(100vh - 60px); }
 
 /* Floating page header */
-.cal-page-header{
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  padding:22px 28px 16px;
-  border-bottom:1px solid var(--glass-border);
-  background:var(--glass);
-  backdrop-filter:blur(10px);
+.cal-page-header {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: nowrap;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
 }
 .cal-ph-left{display:flex;align-items:center;gap:14px;}
 .cal-ph-icon{
@@ -4186,28 +4188,31 @@ tr:hover .table-actions-more{
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
 .cal-ph-sub{font-size:12px;color:var(--text-muted);margin:2px 0 0;line-height:1;}
-.cal-ph-legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-.cal-leg2{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-muted);}
-.cal-leg2-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.cal-leg2-termin{background:transparent!important;border:2px dashed #f59e0b;border-radius:50%;}
+.cal-ph-legend { display: flex !important; flex-direction: row !important; flex-wrap: wrap; gap: 8px 14px; align-items: center; flex-shrink: 0; }
+.cal-leg2 { display: flex !important; flex-direction: row !important; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.cal-leg2-dot { display: inline-block !important; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cal-leg2-termin { background: transparent !important; border: 2px dashed #f59e0b; border-radius: 50%; }
 
 /* Two-panel layout */
-.cal-panels{
-  display:grid;
-  grid-template-columns:1fr 360px;
-  flex:1;
-  min-height:600px;
+.cal-panels {
+  display: grid !important;
+  grid-template-columns: 1fr 340px;
+  flex: 1;
+  min-height: 560px;
+  overflow: hidden;
 }
-.cal-panel-main{
-  padding:20px 24px;
-  border-right:1px solid var(--glass-border);
-  overflow:hidden;
+.cal-panel-main {
+  padding: 18px 20px;
+  border-right: 1px solid var(--glass-border);
+  overflow: auto;
+  min-width: 0;
 }
-.cal-panel-detail{
-  padding:20px 24px;
-  background:color-mix(in srgb,var(--bg-main) 40%,var(--bg-card));
-  overflow:hidden;
-  display:flex;flex-direction:column;
+.cal-panel-detail {
+  padding: 18px 20px;
+  background: color-mix(in srgb, var(--bg-main) 40%, var(--bg-card));
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  min-width: 0;
 }
 
 /* Calendar nav bar */
@@ -4404,14 +4409,14 @@ tr:hover .table-actions-more{
 
 /* Mobile */
 @media(max-width:768px){
-  .cal-page-header{padding:16px 16px 12px;}
-  .cal-ph-legend{display:none;}
-  .cal-panels{grid-template-columns:1fr;min-height:auto;}
-  .cal-panel-main{padding:14px 12px;border-right:none;border-bottom:1px solid var(--glass-border);}
-  .cal-panel-detail{padding:14px 12px;}
-  .cal-day{min-height:52px;padding:4px 5px;}
-  .cal-day-num{font-size:11px;}
-  .cal-grid{gap:2px;}
+  .cal-page-header { padding: 14px 16px 12px; flex-wrap: wrap; }
+  .cal-ph-legend { display: none !important; }
+  .cal-panels { display: flex !important; flex-direction: column; min-height: auto; }
+  .cal-panel-main { padding: 12px 12px; border-right: none; border-bottom: 1px solid var(--glass-border); }
+  .cal-panel-detail { padding: 12px 12px; min-height: 200px; }
+  .cal-day { min-height: 52px; padding: 4px 5px; }
+  .cal-day-num { font-size: 11px; }
+  .cal-grid { gap: 2px; }
   .cal-ev{display:none;}
   .cal-more{display:none;}
 }
