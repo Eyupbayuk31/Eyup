@@ -2087,6 +2087,10 @@
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('heatmap',this)"><i class="fas fa-table-cells"></i> Günler</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('compare',this)"><i class="fas fa-code-compare"></i> Aylık</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('firms',this)"><i class="fas fa-trophy"></i> Firmalar</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn rep-tab-kritik" onclick="showReportTab('kritik',this)"><i class="fas fa-triangle-exclamation"></i> Kritik</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('verimlilik',this)"><i class="fas fa-gauge-high"></i> Verimlilik</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('tahmin',this)"><i class="fas fa-brain"></i> Tahmin</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('tablo',this)"><i class="fas fa-table"></i> Tablo</button>
         </div>
       </div>
 
@@ -2193,6 +2197,53 @@
         <div class="rep-card">
           <div class="rep-card-head"><i class="fas fa-trophy"></i> Firma Performans Tablosu</div>
           <div id="firmsTable" class="rep-table-body"></div>
+        </div>
+      </div>
+
+      <!-- Kritik Aksiyon -->
+      <div class="rep-tab" id="rep-kritik" style="display:none;">
+        <div id="kritikContent"></div>
+      </div>
+
+      <!-- Verimlilik -->
+      <div class="rep-tab" id="rep-verimlilik" style="display:none;">
+        <div class="rep-two-col" style="margin-bottom:16px;">
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-medal"></i> Verimlilik Skoru</div>
+            <div id="verimlilikScores" class="rep-perf-list"></div>
+          </div>
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-gauge-high"></i> Özet Metrikler</div>
+            <div id="verimlilikMeta"></div>
+          </div>
+        </div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-chart-column"></i> Atölye Karşılaştırma — İş Sayısı & Tamamlama Oranı</div>
+          <div class="rep-chart-wrap"><canvas id="chartVerimlilik"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Tahmin -->
+      <div class="rep-tab" id="rep-tahmin" style="display:none;">
+        <div class="rep-forecast-summary" id="forecastSummary"></div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-brain"></i> Trend & Projeksiyon — Geçmiş + Tahmin</div>
+          <div class="rep-chart-wrap" style="height:320px;"><canvas id="chartTahmin"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Detay Tablo -->
+      <div class="rep-tab" id="rep-tablo" style="display:none;">
+        <div class="rep-card">
+          <div class="rep-tablo-toolbar">
+            <div class="rep-card-head" style="margin-bottom:0;"><i class="fas fa-table"></i> Dönem Kayıtları</div>
+            <div class="rep-tablo-search-wrap">
+              <i class="fas fa-search"></i>
+              <input type="text" id="repTabloSearch" placeholder="Ara: no, atölye, model…" oninput="filterRepTablo()" autocomplete="off">
+            </div>
+            <div id="repTabloCount" class="rep-tablo-count"></div>
+          </div>
+          <div id="repTabloBody" class="rep-tablo-scroll"></div>
         </div>
       </div>
 
@@ -5504,6 +5555,10 @@ function renderReportTab(tab){
   else if(tab==='heatmap') renderWeekHeatmap();
   else if(tab==='compare') renderMonthlyCompare();
   else if(tab==='firms') renderTopFirms();
+  else if(tab==='kritik') renderKritikAksiyon();
+  else if(tab==='verimlilik') renderVerimlilik();
+  else if(tab==='tahmin') renderTahmin();
+  else if(tab==='tablo') renderRepTablo();
 }
 
 // Durumu takip edilmeyen türler (toptan = atölyeye verilen sipariş, teslim akışı yok)
@@ -6004,6 +6059,368 @@ function renderTopFirms(){
         </tbody>
       </table>
     </div>`;
+}
+
+/* ============================================================
+   KRİTİK AKSİYON
+============================================================ */
+function renderKritikAksiyon(){
+  const data = getReportData().filter(_repHasStatus).filter(i => !_repIsDone(i.durum));
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const geciken = [], bugun = [], hafta = [];
+  data.forEach(i => {
+    if(!i.termin) return;
+    const t = new Date(i.termin); t.setHours(0,0,0,0);
+    if(t < today) geciken.push(i);
+    else if(t.getTime() === today.getTime()) bugun.push(i);
+    else if(t <= weekEnd) hafta.push(i);
+  });
+
+  if(!geciken.length && !bugun.length && !hafta.length){
+    document.getElementById('kritikContent').innerHTML = `
+      <div class="rep-kritik-empty">
+        <div class="rep-kritik-empty-icon"><i class="fas fa-circle-check"></i></div>
+        <div class="rep-kritik-empty-title">Her şey yolunda!</div>
+        <div class="rep-kritik-empty-sub">Geciken veya yaklaşan kritik iş yok. Harika gidiyorsunuz.</div>
+      </div>`;
+    return;
+  }
+
+  function _kritikCard(item, urgency){
+    const t = item.termin ? new Date(item.termin) : null;
+    const daysDiff = t ? Math.round((t - today) / 86400000) : null;
+    const diffLabel = daysDiff === null ? '' : daysDiff < 0 ? `${Math.abs(daysDiff)} gün geçti` : daysDiff === 0 ? 'Bugün!' : `${daysDiff} gün kaldı`;
+    const qty = _repItemQty(item);
+    return `<div class="rep-kritik-card rep-uk-${urgency}" onclick="showDetailUni(${item.id},'${esc(item._type||'standart')}')">
+      <div class="rep-kk-accent"></div>
+      <div class="rep-kk-body">
+        <div class="rep-kk-top">
+          <span class="rep-kk-no">${esc(item.no||'—')}</span>
+          <span class="rep-kk-badge rep-ukb-${urgency}">${diffLabel}</span>
+        </div>
+        <div class="rep-kk-title">${esc(item.model||item.urun||'—')}</div>
+        <div class="rep-kk-meta">
+          <span><i class="fas fa-industry"></i> ${esc(item.atolye||item.firma||'—')}</span>
+          ${qty ? `<span><i class="fas fa-box"></i> ${qty} adet</span>` : ''}
+          <span><i class="fas fa-calendar-xmark"></i> Termin: ${esc(item.termin||'—')}</span>
+          ${getTypeBadge ? getTypeBadge(item._type||'') : ''}
+        </div>
+      </div>
+      <div class="rep-kk-arrow"><i class="fas fa-chevron-right"></i></div>
+    </div>`;
+  }
+
+  function _kritikGroup(label, items, urgency, icon){
+    if(!items.length) return '';
+    return `<div class="rep-kritik-group">
+      <div class="rep-kg-header">
+        <span class="rep-kg-dot rep-kg-dot-${urgency}"></span>
+        <span class="rep-kg-icon"><i class="fas ${icon}"></i></span>
+        <span class="rep-kg-label">${label}</span>
+        <span class="rep-kg-count">${items.length}</span>
+      </div>
+      <div class="rep-kg-cards">
+        ${items.sort((a,b)=> new Date(a.termin)-new Date(b.termin)).map(i=>_kritikCard(i,urgency)).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('kritikContent').innerHTML =
+    _kritikGroup('Geciken — Acil Aksiyon Gerekli', geciken, 'red', 'fa-fire') +
+    _kritikGroup('Bugün Termini Doluyor', bugun, 'orange', 'fa-bell') +
+    _kritikGroup('Bu Hafta İçinde', hafta, 'yellow', 'fa-hourglass-half');
+
+  // Kritik tab butonuna badge ekle
+  const kritikBtn = document.querySelector('.rep-tab-kritik');
+  if(kritikBtn){
+    const total = geciken.length + bugun.length;
+    if(total > 0){
+      kritikBtn.innerHTML = `<i class="fas fa-triangle-exclamation"></i> Kritik <span class="rep-tab-badge">${total}</span>`;
+    }
+  }
+}
+
+/* ============================================================
+   VERİMLİLİK
+============================================================ */
+function renderVerimlilik(){
+  const data = getReportData().filter(_repHasStatus);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const atolyeMap = {};
+
+  data.forEach(i => {
+    const a = (i.atolye || i.firma || 'Belirtilmemiş').trim();
+    if(!atolyeMap[a]) atolyeMap[a] = { total: 0, teslim: 0, sureler: [] };
+    atolyeMap[a].total++;
+    if(_repIsDone(i.durum)){
+      atolyeMap[a].teslim++;
+      if(i.tarih && i.termin){
+        const gun = Math.round((new Date(i.termin) - new Date(i.tarih)) / 86400000);
+        if(gun >= 0) atolyeMap[a].sureler.push(gun);
+      }
+    }
+  });
+
+  const firms = Object.entries(atolyeMap).map(([name, d]) => {
+    const rate = d.total ? Math.round(d.teslim / d.total * 100) : 0;
+    const avgSure = d.sureler.length ? (d.sureler.reduce((a,b)=>a+b,0) / d.sureler.length).toFixed(1) : null;
+    const skor = Math.round(d.total * (rate / 100) * 10 + rate);
+    return { name, ...d, rate, avgSure, skor };
+  }).sort((a,b) => b.skor - a.skor);
+
+  // Liderlik tablosu
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('verimlilikScores').innerHTML = firms.slice(0,10).map((f,i) => `
+    <div class="rep-perf-row" style="animation-delay:${i*0.05}s">
+      <div class="rep-perf-rank">${medals[i]||`#${i+1}`}</div>
+      <div class="rep-perf-info">
+        <div class="rep-perf-name">${esc(f.name)}</div>
+        <div class="rep-perf-sub">${f.total} iş · ${f.avgSure ? f.avgSure+' gün ort. süre' : 'süre yok'}</div>
+      </div>
+      <div class="rep-perf-right">
+        <div class="rep-perf-skor">${f.skor}</div>
+        <div class="rep-perf-skor-lbl">SKOR</div>
+      </div>
+      <div class="rep-perf-rate-col">
+        <div class="rep-perf-rate-bar"><div class="rep-perf-rate-fill" style="width:${f.rate}%;background:${f.rate>=80?'#10b981':f.rate>=50?'#f59e0b':'#ef4444'}"></div></div>
+        <div class="rep-perf-rate-txt" style="color:${f.rate>=80?'#10b981':f.rate>=50?'#f59e0b':'#ef4444'}">${f.rate}%</div>
+      </div>
+    </div>`).join('') || '<div style="padding:20px;color:var(--text-muted);text-align:center;">Yeterli veri yok</div>';
+
+  // Meta metrikler
+  const allRates = firms.map(f=>f.rate);
+  const avgRate = firms.length ? Math.round(allRates.reduce((a,b)=>a+b,0)/firms.length) : 0;
+  const best = firms[0], worst = firms.length > 1 ? firms[firms.length-1] : null;
+  const allSureler = firms.flatMap(f=>f.sureler);
+  const globalAvgSure = allSureler.length ? (allSureler.reduce((a,b)=>a+b,0)/allSureler.length).toFixed(1) : '-';
+
+  document.getElementById('verimlilikMeta').innerHTML = `
+    <div class="rep-vmeta-grid">
+      <div class="rep-vmeta-item">
+        <div class="rep-vmeta-val">${avgRate}%</div>
+        <div class="rep-vmeta-lbl">Ort. Tamamlama</div>
+      </div>
+      <div class="rep-vmeta-item">
+        <div class="rep-vmeta-val">${globalAvgSure}</div>
+        <div class="rep-vmeta-lbl">Ort. Termin Süresi (gün)</div>
+      </div>
+      <div class="rep-vmeta-item">
+        <div class="rep-vmeta-val rep-vmeta-green">${best ? esc(best.name.split(' ')[0]) : '—'}</div>
+        <div class="rep-vmeta-lbl">En İyi Atölye</div>
+      </div>
+      <div class="rep-vmeta-item">
+        <div class="rep-vmeta-val rep-vmeta-red">${worst ? esc(worst.name.split(' ')[0]) : '—'}</div>
+        <div class="rep-vmeta-lbl">Gelişim Gereken</div>
+      </div>
+    </div>`;
+
+  // Chart
+  destroyChart('verimlilik');
+  const ctx = document.getElementById('chartVerimlilik');
+  if(!ctx || !firms.length) return;
+  const top = firms.slice(0,8);
+  repCharts.verimlilik = new Chart(ctx, {
+    data: {
+      labels: top.map(f => f.name.length > 14 ? f.name.slice(0,14)+'…' : f.name),
+      datasets: [
+        { type: 'bar', label: 'İş Sayısı', data: top.map(f=>f.total), backgroundColor: top.map(f=>`hsl(${220+f.rate*0.6},75%,55%,0.7)`), borderRadius: 8, yAxisID: 'y' },
+        { type: 'line', label: 'Tamamlama %', data: top.map(f=>f.rate), borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.4, pointRadius: 6, pointBackgroundColor: '#10b981', yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: true, position: 'left', title: { display: true, text: 'İş Sayısı' } },
+        y1: { beginAtZero: true, max: 100, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Tamamlama %' } }
+      },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+
+/* ============================================================
+   TAHMİN
+============================================================ */
+function renderTahmin(){
+  const allData = (typeof getUnifiedList==='function') ? getUnifiedList() : getData('irsaliyeler')||[];
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Son 30 günlük günlük sayılar
+  const histDays = 30;
+  const histCounts = [];
+  for(let i = histDays-1; i >= 0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    histCounts.push(allData.filter(x=>(x.tarih||'').slice(0,10)===k).length);
+  }
+
+  // Basit hareketli ortalama (7 günlük)
+  function movAvg(arr, w){ return arr.map((_,i)=>{ const s=arr.slice(Math.max(0,i-w+1),i+1); return s.reduce((a,b)=>a+b,0)/s.length; }); }
+  const smoothed = movAvg(histCounts, 7);
+
+  // Lineer regresyon son 14 güne göre
+  const n = 14;
+  const xs = [...Array(n)].map((_,i)=>i);
+  const ys = histCounts.slice(-n);
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  const slope = xs.reduce((acc,x,i)=>acc+(x-mx)*(ys[i]-my),0) / xs.reduce((acc,x)=>acc+(x-mx)**2,0);
+  const intercept = my - slope * mx;
+
+  // Gelecek 14 gün projeksiyonu
+  const futureDays = 14;
+  const futureLabels = [], futureCounts = [];
+  for(let i = 1; i <= futureDays; i++){
+    const d = new Date(today); d.setDate(d.getDate()+i);
+    futureLabels.push(d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}));
+    const projected = Math.max(0, Math.round(intercept + slope * (n-1+i)));
+    futureCounts.push(projected);
+  }
+
+  // Özet tahminler
+  const nextWeekTotal = futureCounts.slice(0,7).reduce((a,b)=>a+b,0);
+  const nextMonthTotal = futureCounts.reduce((a,b)=>a+b,0) * 2; // rough 30 day
+  const thisMonthSoFar = histCounts.slice(-new Date().getDate()).reduce((a,b)=>a+b,0);
+  const daysLeft = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate() - new Date().getDate();
+  const projRemain = futureCounts.slice(0, daysLeft).reduce((a,b)=>a+b,0);
+  const monthClose = thisMonthSoFar + projRemain;
+  const trend = slope > 0.1 ? 'up' : slope < -0.1 ? 'down' : 'flat';
+  const trendLabel = trend==='up' ? 'Artan trend' : trend==='down' ? 'Azalan trend' : 'Stabil trend';
+  const trendIcon = trend==='up' ? 'fa-arrow-trend-up' : trend==='down' ? 'fa-arrow-trend-down' : 'fa-minus';
+  const trendColor = trend==='up' ? '#10b981' : trend==='down' ? '#ef4444' : '#f59e0b';
+
+  document.getElementById('forecastSummary').innerHTML = `
+    <div class="rep-forecast-cards">
+      <div class="rep-fc-card">
+        <div class="rep-fc-icon" style="color:#3b82f6;background:#3b82f615;"><i class="fas fa-calendar-week"></i></div>
+        <div class="rep-fc-val">${nextWeekTotal}</div>
+        <div class="rep-fc-lbl">Gelecek Hafta Tahmini</div>
+        <div class="rep-fc-sub">irsaliye bekleniyor</div>
+      </div>
+      <div class="rep-fc-card">
+        <div class="rep-fc-icon" style="color:#8b5cf6;background:#8b5cf615;"><i class="fas fa-calendar-days"></i></div>
+        <div class="rep-fc-val">${monthClose}</div>
+        <div class="rep-fc-lbl">Ay Kapanış Tahmini</div>
+        <div class="rep-fc-sub">${thisMonthSoFar} + ~${projRemain} beklenen</div>
+      </div>
+      <div class="rep-fc-card">
+        <div class="rep-fc-icon" style="color:${trendColor};background:${trendColor}15;"><i class="fas ${trendIcon}"></i></div>
+        <div class="rep-fc-val" style="color:${trendColor}">${trendLabel}</div>
+        <div class="rep-fc-lbl">14 Günlük Eğilim</div>
+        <div class="rep-fc-sub">Günlük ${slope>=0?'+':''}${slope.toFixed(2)} irsaliye</div>
+      </div>
+    </div>`;
+
+  // Chart
+  destroyChart('tahmin');
+  const ctx = document.getElementById('chartTahmin');
+  if(!ctx) return;
+
+  const histLabels = [];
+  for(let i = histDays-1; i >= 0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    histLabels.push(d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}));
+  }
+
+  // Birleşik label dizisi
+  const allLabels = [...histLabels, ...futureLabels];
+  const actualData = [...histCounts, ...Array(futureDays).fill(null)];
+  const smoothData = [...smoothed, ...Array(futureDays).fill(null)];
+  const forecastData = [...Array(histDays).fill(null), ...futureCounts];
+
+  repCharts.tahmin = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allLabels,
+      datasets: [
+        { label: 'Gerçek', data: actualData, borderColor: '#3b82f6', backgroundColor: '#3b82f610', borderWidth: 1.5, pointRadius: 2, tension: 0, fill: true },
+        { label: '7-Gün Ortalama', data: smoothData, borderColor: '#8b5cf6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+        { label: 'Tahmin', data: forecastData, borderColor: '#10b981', backgroundColor: '#10b98115', borderWidth: 2.5, borderDash: [8,4], pointRadius: 4, pointBackgroundColor: '#10b981', tension: 0.3, fill: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { ticks: { maxTicksLimit: 12 } },
+        y: { beginAtZero: true, title: { display: true, text: 'İrsaliye Sayısı' } }
+      },
+      plugins: {
+        legend: { position: 'bottom' },
+        annotation: { annotations: { todayLine: { type: 'line', xMin: histDays-1, xMax: histDays-1, borderColor: '#f59e0b', borderWidth: 2, borderDash: [4,4], label: { display: true, content: 'Bugün', position: 'start', color: '#f59e0b', font: { size: 10 } } } } }
+      }
+    }
+  });
+}
+
+/* ============================================================
+   DETAY TABLO
+============================================================ */
+let _repTabloData = [];
+
+function renderRepTablo(){
+  _repTabloData = getReportData().sort((a,b) => (b.tarih||'').localeCompare(a.tarih||''));
+  const search = (document.getElementById('repTabloSearch')||{}).value || '';
+  filterRepTablo(search);
+}
+
+function filterRepTablo(val){
+  const q = (typeof val === 'string' ? val : (document.getElementById('repTabloSearch')||{}).value || '').toLowerCase().trim();
+  const filtered = q ? _repTabloData.filter(i =>
+    (i.no||'').toLowerCase().includes(q) ||
+    (i.atolye||i.firma||'').toLowerCase().includes(q) ||
+    (i.model||i.urun||'').toLowerCase().includes(q) ||
+    (i.renk||'').toLowerCase().includes(q) ||
+    getTypeLabel(i._type||'').toLowerCase().includes(q)
+  ) : _repTabloData;
+
+  const MAX = 200;
+  const shown = filtered.slice(0, MAX);
+  const extra = filtered.length - shown.length;
+
+  document.getElementById('repTabloCount').textContent = `${filtered.length} kayıt`;
+
+  if(!shown.length){
+    document.getElementById('repTabloBody').innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);">Sonuç bulunamadı</div>';
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  document.getElementById('repTabloBody').innerHTML = `
+    <table class="rep-tablo-table">
+      <thead>
+        <tr>
+          <th>#</th><th>No</th><th>Tür</th><th>Tarih</th><th>Atölye / Firma</th><th>Model</th><th>Adet</th><th>Durum</th><th>Termin</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${shown.map((i,idx) => {
+          const isDone = _repIsDone(i.durum);
+          const hasTermin = !!i.termin;
+          const terminDate = hasTermin ? new Date(i.termin) : null;
+          const isLate = hasTermin && !isDone && terminDate < today;
+          const isToday = hasTermin && terminDate && terminDate.getTime() === today.getTime();
+          const rowCls = isLate ? 'rep-row-late' : isToday ? 'rep-row-today' : '';
+          const qty = _repItemQty(i);
+          return `<tr class="rep-tbl-row ${rowCls}" onclick="showDetailUni(${i.id},'${esc(i._type||'standart')}')">
+            <td class="rep-tbl-idx">${idx+1}</td>
+            <td class="rep-tbl-no">${esc(i.no||'—')}</td>
+            <td>${getTypeBadge ? getTypeBadge(i._type||'') : esc(getTypeLabel(i._type||''))}</td>
+            <td class="rep-tbl-date">${esc(i.tarih||'—')}</td>
+            <td class="rep-tbl-firm">${esc(i.atolye||i.firma||'—')}</td>
+            <td class="rep-tbl-model">${esc(i.model||i.urun||'—')}</td>
+            <td class="rep-tbl-qty">${qty||'—'}</td>
+            <td><span class="chip ${isDone?'chip-success':'chip-warning'}" style="font-size:11px;">${isDone?'✓ Teslim':'⏳ Bekliyor'}</span></td>
+            <td class="rep-tbl-termin ${isLate?'rep-tbl-late':isToday?'rep-tbl-today':''}">${esc(i.termin||'—')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    ${extra > 0 ? `<div class="rep-tablo-more">+ ${extra} kayıt daha — aramayı daraltın</div>` : ''}`;
 }
 
 function printReports(){
