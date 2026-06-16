@@ -2072,6 +2072,9 @@
       <!-- KPI Cards -->
       <div class="rep-kpi-grid" id="repKpis"></div>
 
+      <!-- Akıllı Özet -->
+      <div class="rep-insights" id="repInsights" style="display:none;"></div>
+
       <!-- Tab bar -->
       <div class="rep-tabs-wrap">
         <div class="filter-bar rep-tab-bar">
@@ -5462,7 +5465,8 @@ function getReportData(){
   const all = (typeof getUnifiedList==='function') ? getUnifiedList() : (getData('irsaliyeler')||[]);
   if(reportRange==='all') return all;
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - reportRange);
+  cutoff.setHours(0,0,0,0);
+  cutoff.setDate(cutoff.getDate() - reportRange + 1);
   return all.filter(i=>{
     const d = new Date(i.tarih || i.createdAt || 0);
     return d >= cutoff;
@@ -5502,30 +5506,98 @@ function renderReportTab(tab){
   else if(tab==='firms') renderTopFirms();
 }
 
+// Durumu takip edilmeyen türler (toptan = atölyeye verilen sipariş, teslim akışı yok)
+const REP_NO_STATUS_TYPES = ['toptan'];
+function _repHasStatus(i){ return REP_NO_STATUS_TYPES.indexOf(i._type) === -1; }
+function _repIsDone(d){ const n=(d||'').toLowerCase(); return n.includes('tamam')||n==='teslim'; }
+function _repItemQty(i){ return parseInt(i.toplamAdet||i.totalAdet||i.total||i.adet||i.metre)||0; }
+
+// Önceki eş uzunluktaki dönemin verisi (karşılaştırma için)
+function getReportDataPrev(){
+  if(reportRange==='all') return null;
+  const all = (typeof getUnifiedList==='function') ? getUnifiedList() : (getData('irsaliyeler')||[]);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const start = new Date(now); start.setDate(start.getDate() - (reportRange*2 - 1));
+  const end   = new Date(now); end.setDate(end.getDate() - (reportRange - 1));
+  return all.filter(i=>{ const d=new Date(i.tarih||i.createdAt||0); return d>=start && d<end; });
+}
+
+function _repDeltaBadge(cur, prev){
+  if(prev===null || prev===undefined) return '';
+  if(prev===0){ return cur>0 ? '<span class="rep-kpi-delta up"><i class="fas fa-arrow-trend-up"></i> Yeni</span>' : ''; }
+  const pct = Math.round((cur-prev)/prev*100);
+  if(pct===0) return '<span class="rep-kpi-delta flat"><i class="fas fa-minus"></i> Sabit</span>';
+  const up = pct>0;
+  return `<span class="rep-kpi-delta ${up?'up':'down'}"><i class="fas fa-arrow-trend-${up?'up':'down'}"></i> %${Math.abs(pct)}</span>`;
+}
+
 function renderRepKpis(){
   const data = getReportData();
+  const prev = getReportDataPrev();
   const total = data.length;
-  const totalAdet = data.reduce((s,i)=>s+(parseInt(i.toplamAdet||i.totalAdet||i.total)||0),0);
-  const _isDone = d=>{ const n=(d||'').toLowerCase(); return n.includes('tamam')||n==='teslim'; };
-  const tamamlandi = data.filter(i=>_isDone(i.durum)).length;
-  const bekliyor = data.filter(i=>{ const n=(i.durum||'').toLowerCase(); return !n||n==='bekliyor'||n==='waiting'; }).length;
+  const totalAdet = data.reduce((s,i)=>s+_repItemQty(i),0);
+  // Durum bazlı metrikler yalnızca teslim durumu takip edilen türler için (toptan hariç)
+  const statusItems = data.filter(_repHasStatus);
+  const tamamlandi = statusItems.filter(i=>_repIsDone(i.durum)).length;
+  const bekliyor = statusItems.filter(i=>{ const n=(i.durum||'').toLowerCase(); return !_repIsDone(i.durum) && (!n||n==='bekliyor'||n==='waiting'); }).length;
   const today = new Date(); today.setHours(0,0,0,0);
-  const geciken = data.filter(i=>{
-    if(_isDone(i.durum)) return false;
+  const geciken = statusItems.filter(i=>{
+    if(_repIsDone(i.durum)) return false;
     if(!i.termin) return false;
     return new Date(i.termin) < today;
   }).length;
-  const oranTamam = total? Math.round(tamamlandi/total*100):0;
+  const oranTamam = statusItems.length? Math.round(tamamlandi/statusItems.length*100):0;
   const gunluk = reportRange==='all'? '-' : (total/reportRange).toFixed(1);
 
+  const prevTotal = prev? prev.length : null;
+  const prevAdet  = prev? prev.reduce((s,i)=>s+_repItemQty(i),0) : null;
+
   document.getElementById('repKpis').innerHTML = `
-    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#3b82f620;color:#3b82f6"><i class="fas fa-file-alt"></i></div><div><div class="rep-kpi-val">${total}</div><div class="rep-kpi-lbl">Toplam İrsaliye</div></div></div>
-    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#10b98120;color:#10b981"><i class="fas fa-box"></i></div><div><div class="rep-kpi-val">${totalAdet.toLocaleString('tr-TR')}</div><div class="rep-kpi-lbl">Toplam Adet</div></div></div>
-    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#8b5cf620;color:#8b5cf6"><i class="fas fa-check-circle"></i></div><div><div class="rep-kpi-val">%${oranTamam}</div><div class="rep-kpi-lbl">Tamamlama Oranı</div></div></div>
-    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#f59e0b20;color:#f59e0b"><i class="fas fa-hourglass-half"></i></div><div><div class="rep-kpi-val">${bekliyor}</div><div class="rep-kpi-lbl">Bekleyen</div></div></div>
-    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#ef444420;color:#ef4444"><i class="fas fa-exclamation-triangle"></i></div><div><div class="rep-kpi-val">${geciken}</div><div class="rep-kpi-lbl">Geciken</div></div></div>
-    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#06b6d420;color:#06b6d4"><i class="fas fa-chart-line"></i></div><div><div class="rep-kpi-val">${gunluk}</div><div class="rep-kpi-lbl">Günlük Ortalama</div></div></div>
+    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#3b82f620;color:#3b82f6"><i class="fas fa-file-alt"></i></div><div class="rep-kpi-body"><div class="rep-kpi-val">${total}</div><div class="rep-kpi-lbl">Toplam İrsaliye</div>${_repDeltaBadge(total, prevTotal)}</div></div>
+    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#10b98120;color:#10b981"><i class="fas fa-box"></i></div><div class="rep-kpi-body"><div class="rep-kpi-val">${totalAdet.toLocaleString('tr-TR')}</div><div class="rep-kpi-lbl">Toplam Adet</div>${_repDeltaBadge(totalAdet, prevAdet)}</div></div>
+    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#8b5cf620;color:#8b5cf6"><i class="fas fa-check-circle"></i></div><div class="rep-kpi-body"><div class="rep-kpi-val">%${oranTamam}</div><div class="rep-kpi-lbl">Tamamlama Oranı</div><div class="rep-kpi-mini">${tamamlandi}/${statusItems.length} teslim</div></div></div>
+    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#f59e0b20;color:#f59e0b"><i class="fas fa-hourglass-half"></i></div><div class="rep-kpi-body"><div class="rep-kpi-val">${bekliyor}</div><div class="rep-kpi-lbl">Bekleyen</div></div></div>
+    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#ef444420;color:#ef4444"><i class="fas fa-exclamation-triangle"></i></div><div class="rep-kpi-body"><div class="rep-kpi-val">${geciken}</div><div class="rep-kpi-lbl">Geciken</div></div></div>
+    <div class="card rep-kpi"><div class="rep-kpi-icon" style="background:#06b6d420;color:#06b6d4"><i class="fas fa-chart-line"></i></div><div class="rep-kpi-body"><div class="rep-kpi-val">${gunluk}</div><div class="rep-kpi-lbl">Günlük Ortalama</div></div></div>
   `;
+  renderRepInsights(data, statusItems, {total, totalAdet, bekliyor, geciken, tamamlandi, oranTamam, prevTotal});
+}
+
+// Otomatik "Akıllı Özet" içgörü bandı
+function renderRepInsights(data, statusItems, m){
+  const host = document.getElementById('repInsights');
+  if(!host) return;
+  const ins = [];
+  // En aktif atölye
+  const byAtolye = {};
+  data.forEach(i=>{ const a=(i.atolye||i.firma||'').trim(); if(a) byAtolye[a]=(byAtolye[a]||0)+1; });
+  const topAtolye = Object.entries(byAtolye).sort((a,b)=>b[1]-a[1])[0];
+  if(topAtolye) ins.push({ic:'fa-industry',cl:'p',t:'En aktif',v:`${topAtolye[0]} (${topAtolye[1]} iş)`});
+  // Dönem karşılaştırma
+  if(m.prevTotal!==null){
+    if(m.prevTotal===0 && m.total>0) ins.push({ic:'fa-arrow-trend-up',cl:'g',t:'İvme',v:'Bu dönem ilk kayıtlar geldi'});
+    else if(m.prevTotal>0){
+      const pct=Math.round((m.total-m.prevTotal)/m.prevTotal*100);
+      if(pct>0) ins.push({ic:'fa-arrow-trend-up',cl:'g',t:'Artış',v:`Önceki döneme göre %${pct} daha fazla iş`});
+      else if(pct<0) ins.push({ic:'fa-arrow-trend-down',cl:'r',t:'Düşüş',v:`Önceki döneme göre %${Math.abs(pct)} daha az iş`});
+      else ins.push({ic:'fa-equals',cl:'n',t:'Sabit',v:'Önceki dönemle aynı tempo'});
+    }
+  }
+  // Geciken uyarısı
+  if(m.geciken>0) ins.push({ic:'fa-triangle-exclamation',cl:'r',t:'Dikkat',v:`${m.geciken} iş termini geçmiş, acil takip gerekli`});
+  else if(statusItems.length>0) ins.push({ic:'fa-circle-check',cl:'g',t:'Temiz',v:'Termini geçen iş yok'});
+  // Tamamlama
+  if(statusItems.length>0){
+    if(m.oranTamam>=80) ins.push({ic:'fa-award',cl:'g',t:'Tamamlama',v:`Güçlü teslim oranı: %${m.oranTamam}`});
+    else if(m.oranTamam<40) ins.push({ic:'fa-hourglass-half',cl:'a',t:'Tamamlama',v:`Bekleyen yoğunluğu yüksek (%${m.oranTamam} teslim)`});
+  }
+  if(!ins.length){ host.style.display='none'; return; }
+  host.style.display='grid';
+  host.innerHTML = ins.slice(0,4).map(x=>`
+    <div class="rep-insight rep-ins-${x.cl}">
+      <div class="rep-ins-ic"><i class="fas ${x.ic}"></i></div>
+      <div class="rep-ins-txt"><span class="rep-ins-t">${x.t}</span><span class="rep-ins-v">${esc(x.v)}</span></div>
+    </div>`).join('');
 }
 
 function destroyChart(key){
@@ -5560,7 +5632,7 @@ function renderTrendChart(){
 }
 
 function renderDurumChart(){
-  const data = getReportData();
+  const data = getReportData().filter(_repHasStatus);
   const counts = {'Bekliyor':0,'Tamamlandı':0,'İptal':0,'Geciken':0};
   const today = new Date(); today.setHours(0,0,0,0);
   data.forEach(i=>{
@@ -5680,7 +5752,7 @@ function renderOlcuRenk(){
 }
 
 function renderTerminAnalysis(){
-  const data = getReportData();
+  const data = getReportData().filter(_repHasStatus);
   const today = new Date(); today.setHours(0,0,0,0);
   let zamanindaTamam=0, gecTamam=0, bekleyenZamaninda=0, geciken=0, noTermin=0;
   let toplamSure=0, sureSayac=0;
