@@ -794,7 +794,13 @@
               if(!localItem) return remoteItem;
               const rN = Array.isArray(remoteItem._photos) ? remoteItem._photos.length : (remoteItem._photo ? 1 : 0);
               const lN = Array.isArray(localItem._photos)  ? localItem._photos.length  : (localItem._photo ? 1 : 0);
-              if(lN > rN){ photoPushQueue.push([id, localItem]); return localItem; }
+              if(lN > rN){
+                const remoteAt = remoteItem._updatedAt || remoteItem.updatedAt || remoteItem._deletedAt || '';
+                const localAt  = localItem._updatedAt  || localItem.updatedAt  || '';
+                if(!remoteAt || localAt >= remoteAt){
+                  photoPushQueue.push([id, localItem]); return localItem;
+                }
+              }
               return rehydratePhotoBlobs(remoteItem, localItem);
             });
             if(photoPushQueue.length){
@@ -897,7 +903,13 @@
             const localItem = localMap.get(id);
             const rN = Array.isArray(item._photos) ? item._photos.length : (item._photo ? 1 : 0);
             const lN = Array.isArray(localItem._photos) ? localItem._photos.length : (localItem._photo ? 1 : 0);
-            merged.set(id, lN > rN ? localItem : rehydratePhotoBlobs(item, localItem));
+            if(lN > rN){
+              const remoteAt = item._updatedAt || item.updatedAt || '';
+              const localAt  = localItem._updatedAt || localItem.updatedAt || '';
+              merged.set(id, (!remoteAt || localAt >= remoteAt) ? localItem : rehydratePhotoBlobs(item, localItem));
+            } else {
+              merged.set(id, rehydratePhotoBlobs(item, localItem));
+            }
           } else {
             merged.set(id, item);
           }
@@ -4953,7 +4965,7 @@ function saveLastik(){
   refreshLastikList();toast('Lastik irsaliyesi kaydedildi: '+item.no);refreshHome();
 }
 
-function deleteLastik(id){if(!confirm('Silinsin mi?'))return;let list=getData('lastikler');list=list.filter(i=>i.id!==id);setData('lastikler',list);refreshLastikList();toast('Silindi','info');}
+function deleteLastik(id){deleteItemUni(id,'lastik');}
 
 function refreshLastikList(){
   const list=getData('lastikler');
@@ -5000,7 +5012,7 @@ function saveToptan(){
   refreshToptanList();toast('Sipariş kaydedildi');
 }
 
-function deleteToptan(id){if(!confirm('Silinsin mi?'))return;let list=getData('toptanlar');list=list.filter(i=>i.id!==id);setData('toptanlar',list);refreshToptanList();toast('Silindi','info');}
+function deleteToptan(id){deleteItemUni(id,'toptan');}
 
 function refreshToptanList(){
   const list=getData('toptanlar');
@@ -5049,7 +5061,7 @@ function saveKordon(){
   toast('Kordon irsaliyesi kaydedildi: '+item.no);refreshHome();refreshKordonList();
 }
 
-function deleteKordon(id){if(!confirm('Silinsin mi?'))return;let list=getData('kordonlar');list=list.filter(i=>i.id!==id);setData('kordonlar',list);refreshKordonList();toast('Silindi','info');}
+function deleteKordon(id){deleteItemUni(id,'kordon');}
 
 function refreshKordonList(){
   const list=getData('kordonlar');
@@ -5087,7 +5099,7 @@ function saveDantel(){
   toast('Dantel irsaliyesi kaydedildi: '+item.no);refreshHome();refreshDantelList();
 }
 
-function deleteDantel(id){if(!confirm('Silinsin mi?'))return;let list=getData('danteller');list=list.filter(i=>i.id!==id);setData('danteller',list);refreshDantelList();toast('Silindi','info');}
+function deleteDantel(id){deleteItemUni(id,'dantel');}
 
 function refreshDantelList(){
   const list=getData('danteller');
@@ -11246,7 +11258,7 @@ function cleanupLocalStoragePhotos(){
       }
       if(item._photos && Array.isArray(item._photos)){
         item._photos.forEach(p => {
-          if(p.data && p.data.startsWith('data:image')){
+          if(p && p.url && p.data && p.data.startsWith('data:image')){
             p.data = '';
             modified = true;
           }
@@ -14148,7 +14160,7 @@ if(_origShowPage){
     if(diff < -100){
       // Sağa kaydır - Sil
       if(navigator.vibrate) navigator.vibrate([50, 50, 50]);
-      const id = swipeTarget.dataset.id;
+      const id = parseInt(swipeTarget.dataset.id, 10);
       const type = swipeTarget.dataset.type || 'standart';
       if(id && confirm('Silmek istediğinize emin misiniz?')){
         deleteItemUni(id, type);
@@ -14156,7 +14168,7 @@ if(_origShowPage){
     } else if(diff > 100){
       // Sola kaydır - Düzenle
       if(navigator.vibrate) navigator.vibrate(50);
-      const id = swipeTarget.dataset.id;
+      const id = parseInt(swipeTarget.dataset.id, 10);
       const type = swipeTarget.dataset.type || 'standart';
       if(id) showDetailUni(id, type);
     }
