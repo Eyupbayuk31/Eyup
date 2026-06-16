@@ -3469,11 +3469,11 @@ function stokHareket(id, tip){
 }
 
 function getStockStatus(miktar, minStok){
-  if(minStok <= 0) return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0 };
-  if(miktar <= 0) return { label: '🚨 Tükendi!', class: 'chip-danger', icon: '🚨', urgent: 3 };
-  if(miktar <= minStok) return { label: '⚠️ Düşük', class: 'chip-warning', icon: '⚠️', urgent: 2 };
-  if(miktar <= minStok * 1.5) return { label: '🔶 Yaklaşıyor', class: 'chip-info', icon: '🔶', urgent: 1 };
-  return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0 };
+  if(minStok <= 0) return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0, barClass: 'green' };
+  if(miktar <= 0) return { label: '🚨 Tükendi!', class: 'chip-danger', icon: '🚨', urgent: 3, barClass: 'red' };
+  if(miktar <= minStok) return { label: '⚠️ Düşük', class: 'chip-warning', icon: '⚠️', urgent: 2, barClass: 'red' };
+  if(miktar <= minStok * 1.5) return { label: '🔶 Yaklaşıyor', class: 'chip-info', icon: '🔶', urgent: 1, barClass: 'yellow' };
+  return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0, barClass: 'green' };
 }
 
 function _stokUyariPanelHtml(list, cats){
@@ -4685,7 +4685,7 @@ function generatePDF(id, type) {
       <p>İrsaliye Pro — Eyüp</p>
     </div>
     <div class="header-right">
-      <div class="no">${item.no || '—'}</div>
+      <div class="no">${esc(item.no) || '—'}</div>
       <div class="date">Oluşturma: ${printDate}</div>
       ${qrHeaderBlock}
     </div>
@@ -4693,16 +4693,16 @@ function generatePDF(id, type) {
 
   // Info grid
   html += `<div class="info-grid">
-    <div class="info-box"><div class="label">Tarih</div><div class="value">${item.tarih || '—'}</div></div>
-    <div class="info-box"><div class="label">Durum</div><div class="value"><span class="status-badge status-${item.durum || 'bekliyor'}">${item.durum === 'teslim' ? '✅ Teslim Edildi' : '⏳ Bekliyor'}</span></div></div>
-    <div class="info-box"><div class="label">Model / Ürün</div><div class="value">${item.model || item.urun || '—'}</div></div>
-    <div class="info-box"><div class="label">Atölye / Firma</div><div class="value">${item.atolye || item.firma || '—'}</div></div>`;
+    <div class="info-box"><div class="label">Tarih</div><div class="value">${esc(item.tarih) || '—'}</div></div>
+    <div class="info-box"><div class="label">Durum</div><div class="value"><span class="status-badge status-${esc(item.durum || 'bekliyor')}">${item.durum === 'teslim' ? '✅ Teslim Edildi' : '⏳ Bekliyor'}</span></div></div>
+    <div class="info-box"><div class="label">Model / Ürün</div><div class="value">${esc(item.model || item.urun) || '—'}</div></div>
+    <div class="info-box"><div class="label">Atölye / Firma</div><div class="value">${esc(item.atolye || item.firma) || '—'}</div></div>`;
 
-  if (item.teslimEden) html += `<div class="info-box"><div class="label">Teslim Eden</div><div class="value">${item.teslimEden}</div></div>`;
-  if (item.teslimAlan) html += `<div class="info-box"><div class="label">Teslim Alan</div><div class="value">${item.teslimAlan}</div></div>`;
-  if (item.termin) html += `<div class="info-box"><div class="label">Termin Tarihi</div><div class="value">${item.termin}</div></div>`;
+  if (item.teslimEden) html += `<div class="info-box"><div class="label">Teslim Eden</div><div class="value">${esc(item.teslimEden)}</div></div>`;
+  if (item.teslimAlan) html += `<div class="info-box"><div class="label">Teslim Alan</div><div class="value">${esc(item.teslimAlan)}</div></div>`;
+  if (item.termin) html += `<div class="info-box"><div class="label">Termin Tarihi</div><div class="value">${esc(item.termin)}</div></div>`;
   if ((type === 'fermuar' || type === 'dugme') && item.renk) {
-    html += `<div class="info-box" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="label">🎨 Renk</div><div class="value">${item.renk}</div></div>`;
+    html += `<div class="info-box" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="label">🎨 Renk</div><div class="value">${esc(item.renk)}</div></div>`;
   }
   html += `</div>`;
 
@@ -4748,7 +4748,7 @@ function generatePDF(id, type) {
     const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
     const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
 
-    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">🔗 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">🔗 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
     html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">CM</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k => {
       const bv=item.beden[k]||{}; html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${bv.cm??'-'} cm</td><td style="font-size:${fontSize};padding:${padding};">${bv.adet??0}</td></tr>`;
@@ -4757,7 +4757,7 @@ function generatePDF(id, type) {
   }
 
   if (type === 'lastik') {
-    html += `<div class="section-title">📏 Lastik Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    html += `<div class="section-title">📏 Lastik Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.cm||0}</div>
@@ -4768,18 +4768,18 @@ function generatePDF(id, type) {
         <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
       </div>
     </div>
-    ${item.renk ? `<div style="margin-top:12px;background:#f3f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px;text-align:center;border-left:4px solid #7c3aed;"><div style="font-size:18px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div></div>` : ''}`;
+    ${item.renk ? `<div style="margin-top:12px;background:#f3f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px;text-align:center;border-left:4px solid #7c3aed;"><div style="font-size:18px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div></div>` : ''}`;
   }
 
   if (type === 'dugme') {
-    html += `<div class="section-title">🔘 Düğme Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    html += `<div class="section-title">🔘 Düğme Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.adet||0}</div>
         <div style="font-size:13px;color:#6b7280;font-weight:600;">ADET</div>
       </div>
       ${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:16px;text-align:center;border-left:4px solid #7c3aed;">
-        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${item.renk}</div>
+        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div>
         <div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div>
       </div>`:''}
     </div>`;
@@ -4791,7 +4791,7 @@ function generatePDF(id, type) {
     const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
     const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
 
-    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">📦 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">📦 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
     html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k => {
       html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bl[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k]}</td></tr>`;
@@ -4804,7 +4804,7 @@ function generatePDF(id, type) {
   }
 
   if (type === 'kordon' && item.olcular && item.olcular.length) {
-    html += `<div class="section-title">🪢 Kordon Ölçüleri${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>`;
+    html += `<div class="section-title">🪢 Kordon Ölçüleri${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
     html += `<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
     item.olcular.forEach(o => {
       html += `<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;
@@ -4841,7 +4841,7 @@ function generatePDF(id, type) {
   }
 
   if (item.aciklama || item.not) {
-    html += `<div class="note-box">📝 <b>Not:</b> ${item.aciklama || item.not}</div>`;
+    html += `<div class="note-box">📝 <b>Not:</b> ${esc(item.aciklama || item.not)}</div>`;
   }
 
   // === Fotoğraflar PDF'te YOK — QR tarandığında viewer'da görüntülenecek ===
@@ -5133,7 +5133,7 @@ function saveSatenaskilik(){
   toast('Saten Askılık irsaliyesi kaydedildi: '+item.no);refreshHome();refreshSatenaskilikList();
 }
 
-function deleteSatenaskilik(id){if(!confirm('Silinsin mi?'))return;let list=getData('satenaskilikler');list=list.filter(i=>i.id!==id);setData('satenaskilikler',list);refreshSatenaskilikList();toast('Silindi','info');}
+function deleteSatenaskilik(id){deleteItemUni(id,'satenaskilik');}
 
 function refreshSatenaskilikList(){
   const list=getData('satenaskilikler');
@@ -5550,7 +5550,7 @@ function renderTrendChart(){
   const now = new Date(); now.setHours(0,0,0,0);
   for(let i=days-1;i>=0;i--){
     const d = new Date(now); d.setDate(d.getDate()-i);
-    const key = d.toISOString().slice(0,10);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     labels.push(d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}));
     const dayItems = data.filter(x=>(x.tarih||'').slice(0,10)===key);
     counts.push(dayItems.length);
@@ -11519,7 +11519,7 @@ function goSignatureForModal(){
    ÖZELLİK 3 — KOPYALA & ŞABLON
 ==================================================================== */
 function _genNoForType(type){
-  const prefix = {standart:'IRS', fermuar:'FER', lastik:'LAS', dugme:'DUG'}[type];
+  const prefix = {standart:'IRS', fermuar:'FER', lastik:'LAS', dugme:'DUG', kordon:'KOR', dantel:'DAN', satenaskilik:'SAT'}[type];
   if(!prefix) return '';
   const n = getNextNo();
   return prefix + '-' + String(n).padStart(3,'0');
