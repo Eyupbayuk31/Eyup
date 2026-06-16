@@ -4813,28 +4813,28 @@ function generatePDF(id, type) {
   }
 
   if (type === 'dantel') {
-    html += `<div class="section-title">🕸️ Dantel Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    html += `<div class="section-title">🕸️ Dantel Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
         <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
       </div>
       ${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:16px;text-align:center;">
-        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${item.renk}</div>
+        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div>
         <div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div>
       </div>`:''}
     </div>`;
   }
 
   if (type === 'satenaskilik') {
-    html += `<div class="section-title">🪢 Saten Askılık Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${item.renk}</span>` : ''}</div>
+    html += `<div class="section-title">🪢 Saten Askılık Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
         <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
       </div>
       ${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:16px;text-align:center;">
-        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${item.renk}</div>
+        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div>
         <div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div>
       </div>`:''}
     </div>`;
@@ -4866,11 +4866,11 @@ function generatePDF(id, type) {
       ${item._signature
         ? '<img src="'+item._signature+'" style="height:80px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">'
         : '<div style="height:80px;"></div>'}
-      <div class="sig-line">Teslim Eden${item.teslimEden?': '+item.teslimEden:''}</div>
+      <div class="sig-line">Teslim Eden${item.teslimEden?': '+esc(item.teslimEden):''}</div>
     </div>
     <div class="sig-box">
       <div style="height:80px;"></div>
-      <div class="sig-line">Teslim Alan${item.teslimAlan?': '+item.teslimAlan:''}</div>
+      <div class="sig-line">Teslim Alan${item.teslimAlan?': '+esc(item.teslimAlan):''}</div>
     </div>
   </div>`;
 
@@ -5753,7 +5753,7 @@ function renderWeekHeatmap(){
         </div>`;
       }).join('')}
     </div>
-    <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:12px;">En yoğun: <strong>${days[counts.indexOf(Math.max(...counts))]}</strong></p>`;
+    <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:12px;">En yoğun: <strong>${counts.every(c=>c===0) ? 'Veri yok' : days[counts.indexOf(Math.max(...counts))]}</strong></p>`;
 }
 
 // ========== AYLIK KARŞILAŞTIRMA ==========
@@ -7721,16 +7721,16 @@ function _singleItemPdfHtml(item, type){
   const qrDataUrl=(typeof _buildQrDataUrl==='function'&&qrScanUrl)?_buildQrDataUrl(qrScanUrl,{size:1024,correctLevel:'H'}):'';
   const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;"><div style="font-size:9px;color:#6b7280;margin-top:2px;">📱 Tara</div></div>`:'';
   let h=`<div class="irsaliye-page">
-  <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${item.no||'—'}</div><div class="pdate">Tarih: ${printDate}</div>${qrBlock}</div></div>
+  <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${esc(item.no)||'—'}</div><div class="pdate">Tarih: ${printDate}</div>${qrBlock}</div></div>
   <div class="ig">
-    <div class="ib"><div class="il">Tarih</div><div class="iv">${item.tarih||'—'}</div></div>
+    <div class="ib"><div class="il">Tarih</div><div class="iv">${esc(item.tarih)||'—'}</div></div>
     <div class="ib"><div class="il">Durum</div><div class="iv"><span class="sb ${item.durum==='teslim'?'sb-teslim':'sb-bekliyor'}">${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}</span></div></div>
-    <div class="ib"><div class="il">Model / Ürün</div><div class="iv">${item.model||item.urun||'—'}</div></div>
-    <div class="ib"><div class="il">Atölye / Firma</div><div class="iv">${item.atolye||item.firma||'—'}</div></div>
-    ${item.teslimEden?`<div class="ib"><div class="il">Teslim Eden</div><div class="iv">${item.teslimEden}</div></div>`:''}
-    ${item.teslimAlan?`<div class="ib"><div class="il">Teslim Alan</div><div class="iv">${item.teslimAlan}</div></div>`:''}
-    ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${item.termin}</div></div>`:''}
-    ${((type==='fermuar'||type==='dugme'||type==='satenaskilik')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${item.renk}</div></div>`:''}
+    <div class="ib"><div class="il">Model / Ürün</div><div class="iv">${esc(item.model||item.urun)||'—'}</div></div>
+    <div class="ib"><div class="il">Atölye / Firma</div><div class="iv">${esc(item.atolye||item.firma)||'—'}</div></div>
+    ${item.teslimEden?`<div class="ib"><div class="il">Teslim Eden</div><div class="iv">${esc(item.teslimEden)}</div></div>`:''}
+    ${item.teslimAlan?`<div class="ib"><div class="il">Teslim Alan</div><div class="iv">${esc(item.teslimAlan)}</div></div>`:''}
+    ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${esc(item.termin)}</div></div>`:''}
+    ${((type==='fermuar'||type==='dugme'||type==='satenaskilik')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${esc(item.renk)}</div></div>`:''}
   </div>`;
 
   if(type==='standart'&&item.sizes){
@@ -7749,41 +7749,41 @@ function _singleItemPdfHtml(item, type){
   }
   if(type==='fermuar'&&item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
+    h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};h+=`<tr><td><b>${bl[k]||k}</b></td><td>${bv.cm??'-'} cm</td><td>${bv.adet??0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
   if(type==='lastik'){
-    h+=`<div class="st">📏 Lastik Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
+    h+=`<div class="st">📏 Lastik Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
   }
   if(type==='dugme'){
-    h+=`<div class="st">🔘 Düğme Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">ADET</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
+    h+=`<div class="st">🔘 Düğme Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">ADET</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='toptan'&&item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
-    h+=`<div class="st">📦 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
+    h+=`<div class="st">📦 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
   }
   if(type==='satenaskilik'){
-    h+=`<div class="st">🪢 Saten Askılık Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
+    h+=`<div class="st">🪢 Saten Askılık Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='dantel'){
-    h+=`<div class="st">🕸️ Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
-    h+=`<div style="display:grid;grid-template-columns:1fr ${item.renk?'1fr':''};gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${item.renk}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
+    h+=`<div class="st">🕸️ Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+    h+=`<div style="display:grid;grid-template-columns:1fr ${item.renk?'1fr':''};gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='kordon'&&item.olcular&&item.olcular.length){
-    h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${item.renk}</span>`:''}</div>`;
+    h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     h+=`<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
     item.olcular.forEach(o=>{h+=`<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
-  if(item.aciklama||item.not)h+=`<div class="nb">📝 <b>Not:</b> ${item.aciklama||item.not}</div>`;
+  if(item.aciklama||item.not)h+=`<div class="nb">📝 <b>Not:</b> ${esc(item.aciklama||item.not)}</div>`;
 
   h+=`<div class="sigs">
-    <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+item.teslimEden:''}</div></div>
-    <div class="sb2"><div style="height:70px;"></div><div class="sl">Teslim Alan${item.teslimAlan?': '+item.teslimAlan:''}</div></div>
+    <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+esc(item.teslimEden):''}</div></div>
+    <div class="sb2"><div style="height:70px;"></div><div class="sl">Teslim Alan${item.teslimAlan?': '+esc(item.teslimAlan):''}</div></div>
   </div>
   <div class="pf"><span>İrsaliye Pro — Eyüp · ${(document.querySelector('meta[name="app-version"]')||{}).content||'?'}</span><span>Yazdırma: ${printDate}</span></div>
   </div>`;
@@ -9791,9 +9791,10 @@ function _openWhatsApp(phone, text){
 
   if(isAndroid){
     // intent:// → yalnızca com.whatsapp (kişisel) paketini açar, Business'ı atlar
+    const fb = encodeURIComponent('https://wa.me/' + (phone ? phone + '?text=' + enc : '?text=' + enc));
     const intentUrl = phone
-      ? 'intent://send?phone=' + phone + '&text=' + enc + '#Intent;scheme=whatsapp;package=com.whatsapp;end'
-      : 'intent://send?text=' + enc + '#Intent;scheme=whatsapp;package=com.whatsapp;end';
+      ? 'intent://send?phone=' + phone + '&text=' + enc + '#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=' + fb + ';end'
+      : 'intent://send?text=' + enc + '#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=' + fb + ';end';
     window.location.href = intentUrl;
     return;
   }
@@ -11963,15 +11964,15 @@ function printListPDF(){
     const detay = (typeof getItemDetail==='function') ? (getItemDetail(it)||'-') : '-';
     rows += `<tr>
       <td style="text-align:center;">${idx+1}</td>
-      <td><b>${it.no||'-'}</b></td>
+      <td><b>${esc(it.no)||'-'}</b></td>
       <td>${getTypeLabel(it._type||'')}</td>
-      <td>${it.tarih||'-'}</td>
-      <td>${it.termin||'-'}</td>
-      <td>${it.atolye||it.firma||'-'}</td>
-      <td>${it.model||'-'}</td>
-      <td style="font-size:10px;">${detay}</td>
-      <td>${it.teslimEden||'-'}</td>
-      <td>${it.teslimAlan||'-'}</td>
+      <td>${esc(it.tarih)||'-'}</td>
+      <td>${esc(it.termin)||'-'}</td>
+      <td>${esc(it.atolye||it.firma)||'-'}</td>
+      <td>${esc(it.model)||'-'}</td>
+      <td style="font-size:10px;">${esc(detay)}</td>
+      <td>${esc(it.teslimEden)||'-'}</td>
+      <td>${esc(it.teslimAlan)||'-'}</td>
       <td style="text-align:center;">${durumText(it.durum, it.termin)}</td>
     </tr>`;
   });
