@@ -2424,31 +2424,47 @@
     </div>
 
     <!-- ========== TAKVİM ========== -->
-    <div class="page" id="page-takvim">
-      <div class="section-header">
-        <div><h2>📅 Takvim Görünümü</h2><p>Sevkiyatlarınızı takvimde görüntüleyin</p></div>
-      </div>
-      <div class="card" style="margin-bottom:16px;">
-        <div class="cal-legend">
-          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#a78bfa;"></div> Poşet</div>
-          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#60a5fa;"></div> Fermuar</div>
-          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#34d399;"></div> Lastik</div>
-          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fbbf24;"></div> Düğme</div>
-          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f472b6;"></div> Toptan</div>
-        </div>
-        <div class="cal-header">
-          <button class="btn btn-sm btn-secondary" onclick="calPrev()"><i class="fas fa-chevron-left"></i></button>
-          <h3 id="calTitle">Ocak 2025</h3>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-sm btn-secondary" onclick="calToday()">Bugün</button>
-            <button class="btn btn-sm btn-secondary" onclick="calNext()"><i class="fas fa-chevron-right"></i></button>
+    <div class="page cal-page" id="page-takvim">
+      <!-- Floating header -->
+      <div class="cal-page-header">
+        <div class="cal-ph-left">
+          <div class="cal-ph-icon"><i class="fas fa-calendar-days"></i></div>
+          <div>
+            <h2 class="cal-ph-title">Takvim</h2>
+            <p class="cal-ph-sub">Sevk &amp; termin takibi</p>
           </div>
         </div>
-        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-ph-legend">
+          <div class="cal-leg2"><span class="cal-leg2-dot" style="background:#a78bfa;"></span>Poşet</div>
+          <div class="cal-leg2"><span class="cal-leg2-dot" style="background:#60a5fa;"></span>Fermuar</div>
+          <div class="cal-leg2"><span class="cal-leg2-dot" style="background:#34d399;"></span>Lastik</div>
+          <div class="cal-leg2"><span class="cal-leg2-dot" style="background:#fbbf24;"></span>Düğme</div>
+          <div class="cal-leg2"><span class="cal-leg2-dot" style="background:#f472b6;"></span>Toptan</div>
+          <div class="cal-leg2"><span class="cal-leg2-dot cal-leg2-termin"></span>Termin</div>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-title"><i class="fas fa-list"></i> <span id="calDayTitle">Günün Sevkleri</span></div>
-        <div id="calDayEvents"></div>
+
+      <!-- Two-panel layout -->
+      <div class="cal-panels">
+        <!-- Left: calendar -->
+        <div class="cal-panel-main">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calPrev()"><i class="fas fa-chevron-left"></i></button>
+            <h3 class="cal-nav-title" id="calTitle">Ocak 2025</h3>
+            <button class="cal-nav-today" onclick="calToday()">Bugün</button>
+            <button class="cal-nav-btn" onclick="calNext()"><i class="fas fa-chevron-right"></i></button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+
+        <!-- Right: day detail -->
+        <div class="cal-panel-detail">
+          <div class="cal-detail-header">
+            <i class="fas fa-circle-dot cal-detail-dot"></i>
+            <span class="cal-detail-date" id="calDayTitle">Günün Sevkleri</span>
+          </div>
+          <div class="cal-detail-events" id="calDayEvents"></div>
+        </div>
       </div>
     </div>
 
@@ -6690,25 +6706,26 @@ function calToday(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMon
 function renderCalendar(){
   document.getElementById('calTitle').textContent=calMonthNames[calMonth]+' '+calYear;
   const grid=document.getElementById('calGrid');
-  const today=new Date().toISOString().split('T')[0];
+  const now=new Date();
+  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const firstDay=new Date(calYear,calMonth,1);
-  let startDay=firstDay.getDay(); // 0=Pazar
-  if(startDay===0)startDay=7; // Pzt=1
-  startDay--; // 0-indexed for Monday start
+  let startDay=firstDay.getDay();
+  if(startDay===0)startDay=7;
+  startDay--;
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const prevMonthDays=new Date(calYear,calMonth,0).getDate();
-
-  // Get all items for this month
   const allItems=getUnifiedList();
   const monthStr=calYear+'-'+String(calMonth+1).padStart(2,'0');
 
+  // Type color map
+  const typeColors={standart:'#a78bfa',fermuar:'#60a5fa',lastik:'#34d399',dugme:'#fbbf24',toptan:'#f472b6',satenaskilik:'#fb923c',kordon:'#38bdf8',dantel:'#e879f9'};
+
   let html='';
-  // Day names
-  calDayNames.forEach(d=>{html+='<div class="cal-day-name">'+d+'</div>';});
+  calDayNames.forEach(d=>{html+=`<div class="cal-day-name">${d}</div>`;});
 
   // Previous month days
   for(let i=startDay-1;i>=0;i--){
-    html+='<div class="cal-day other-month"><div class="day-num">'+(prevMonthDays-i)+'</div></div>';
+    html+=`<div class="cal-day cal-other-month"><div class="cal-day-num">${prevMonthDays-i}</div></div>`;
   }
 
   // Current month days
@@ -6716,79 +6733,113 @@ function renderCalendar(){
     const dateStr=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isToday=dateStr===today;
     const dayItems=allItems.filter(i=>i.tarih===dateStr);
-    const terminItems=allItems.filter(i=>i.termin===dateStr);
+    const terminItems=allItems.filter(i=>i.termin===dateStr&&i.durum!=='teslim');
+    const total=dayItems.length+terminItems.length;
+    const hasBusy=total>0;
+    const hasUrgent=terminItems.length>0;
 
-    html+='<div class="cal-day'+(isToday?' today':'')+'" onclick="showCalDay(\''+dateStr+'\')">';
-    html+='<div class="day-num">'+d+'</div>';
+    html+=`<div class="cal-day${isToday?' cal-today':''}${hasBusy?' cal-has-events':''}${hasUrgent?' cal-has-termin':''}" onclick="showCalDay('${dateStr}')">`;
+    html+=`<div class="cal-day-num${isToday?' cal-today-num':''}">${d}`;
+    if(isToday) html+=`<span class="cal-today-ring"></span>`;
+    html+=`</div>`;
 
-    // Show up to 3 events
-    const events=[...dayItems.map(i=>({...i,_isTermin:false})),...terminItems.map(i=>({...i,_isTermin:true}))];
-    events.slice(0,3).forEach(ev=>{
-      const t=ev._type||'standart';
-      const label=ev._isTermin?'⏰ '+(ev.no||''):(ev.no||'');
-      html+='<div class="cal-event '+t+'" title="'+getTypeLabel(t)+' — '+(ev.model||ev.urun||'')+'">'+label+'</div>';
-    });
-    if(events.length>3){
-      html+='<div style="font-size:9px;color:var(--text-dim);text-align:center;">+'+( events.length-3)+' daha</div>';
+    // Dot indicators
+    if(dayItems.length||terminItems.length){
+      html+=`<div class="cal-dots">`;
+      const types=[...new Set(dayItems.map(i=>i._type||'standart'))];
+      types.slice(0,3).forEach(t=>{
+        html+=`<span class="cal-dot" style="background:${typeColors[t]||'#a78bfa'}"></span>`;
+      });
+      if(terminItems.length>0) html+=`<span class="cal-dot cal-dot-termin"></span>`;
+      html+=`</div>`;
     }
-    html+='</div>';
+
+    // Event labels — show up to 2
+    const events=[...dayItems.map(i=>({...i,_isTermin:false})),...terminItems.map(i=>({...i,_isTermin:true}))];
+    events.slice(0,2).forEach(ev=>{
+      const t=ev._type||'standart';
+      const color=typeColors[t]||'#a78bfa';
+      if(ev._isTermin){
+        html+=`<div class="cal-ev cal-ev-termin" title="Termin: ${ev.no||''}">⏰${ev.no||''}</div>`;
+      } else {
+        html+=`<div class="cal-ev" style="background:${color}20;color:${color};" title="${getTypeLabel(t)}: ${ev.model||ev.urun||''}">${ev.no||''}</div>`;
+      }
+    });
+    if(events.length>2){
+      html+=`<div class="cal-more">+${events.length-2}</div>`;
+    }
+    html+=`</div>`;
   }
 
-  // Next month days
+  // Next month padding
   const totalCells=startDay+daysInMonth;
   const remaining=totalCells%7===0?0:7-(totalCells%7);
   for(let i=1;i<=remaining;i++){
-    html+='<div class="cal-day other-month"><div class="day-num">'+i+'</div></div>';
+    html+=`<div class="cal-day cal-other-month"><div class="cal-day-num">${i}</div></div>`;
   }
 
   grid.innerHTML=html;
-
-  // Show today's events by default
   showCalDay(today);
 }
 
 function showCalDay(dateStr){
+  // Highlight selected day
+  document.querySelectorAll('.cal-day.cal-selected').forEach(el=>el.classList.remove('cal-selected'));
+  const now=new Date();
+  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  document.querySelectorAll('.cal-day:not(.cal-other-month)').forEach(el=>{
+    const d=el.querySelector('.cal-day-num');
+    if(d){
+      const dayN=parseInt(d.textContent);
+      const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(dayN).padStart(2,'0');
+      if(ds===dateStr) el.classList.add('cal-selected');
+    }
+  });
+
   const allItems=getUnifiedList();
   const dayItems=allItems.filter(i=>i.tarih===dateStr);
   const terminItems=allItems.filter(i=>i.termin===dateStr);
 
-  const dateObj=new Date(dateStr);
+  const dateObj=new Date(dateStr+'T00:00:00');
   const formatted=dateObj.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
-  document.getElementById('calDayTitle').textContent=formatted+' Sevkleri';
+  document.getElementById('calDayTitle').textContent=formatted;
 
   const el=document.getElementById('calDayEvents');
   let html='';
 
+  const isLate=dateStr<today;
+  const isToday2=dateStr===today;
+
+  function _evCard(i, isTermin){
+    const late=isLate&&i.durum!=='teslim';
+    return `<div class="cal-ev-card${late?' cal-ev-late':''}" onclick="showDetailUni(${i.id},'${i._type||'standart'}')">
+      <div class="cal-ev-card-accent" style="background:${isTermin?'#f59e0b':'var(--primary)'}"></div>
+      <div class="cal-ev-card-body">
+        <div class="cal-ev-card-top">
+          <span class="cal-ev-card-no">${esc(i.no||'—')}</span>
+          ${isTermin?'<span class="cal-ev-badge-termin">Termin</span>':''}
+        </div>
+        <div class="cal-ev-card-title">${esc(i.model||i.urun||'—')}</div>
+        <div class="cal-ev-card-meta"><i class="fas fa-industry"></i> ${esc(i.atolye||i.firma||'—')}</div>
+      </div>
+      <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" style="flex-shrink:0;font-size:11px;">${i.durum==='teslim'?'✓ Teslim':'⏳ Bekliyor'}</span>
+    </div>`;
+  }
+
   if(dayItems.length){
-    html+='<div style="font-weight:700;font-size:13px;color:var(--primary);margin-bottom:8px;"><i class="fas fa-truck"></i> Sevkler ('+dayItems.length+')</div>';
-    dayItems.forEach(i=>{
-      html+=`<div class="cal-event-detail" onclick="showDetailUni(${i.id},'${i._type}')">
-        ${getTypeBadge(i._type)}
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:13px;">${i.no||'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);">${i.model||i.urun||'—'} · ${i.atolye||i.firma||'—'}</div>
-        </div>
-        <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" style="flex-shrink:0;">${i.durum==='teslim'?'✓':'⏳'}</span>
-      </div>`;
-    });
+    html+=`<div class="cal-section-label"><i class="fas fa-truck"></i> Sevkler <span class="cal-section-count">${dayItems.length}</span></div>`;
+    html+=dayItems.map(i=>_evCard(i,false)).join('');
   }
-
   if(terminItems.length){
-    html+='<div style="font-weight:700;font-size:13px;color:#f59e0b;margin:12px 0 8px;"><i class="fas fa-clock"></i> Terminler ('+terminItems.length+')</div>';
-    terminItems.forEach(i=>{
-      html+=`<div class="cal-event-detail" onclick="showDetailUni(${i.id},'${i._type}')">
-        <span style="font-size:16px;">⏰</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:13px;">${i.no||'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);">${i.model||i.urun||'—'} · ${i.atolye||i.firma||'—'}</div>
-        </div>
-        <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" style="flex-shrink:0;">${i.durum==='teslim'?'✓':'⏳'}</span>
-      </div>`;
-    });
+    html+=`<div class="cal-section-label cal-section-termin"><i class="fas fa-clock"></i> Terminler <span class="cal-section-count">${terminItems.length}</span></div>`;
+    html+=terminItems.map(i=>_evCard(i,true)).join('');
   }
-
   if(!dayItems.length&&!terminItems.length){
-    html='<div class="empty-state" style="padding:20px;"><i class="fas fa-calendar-times"></i><p>Bu tarihte sevk veya termin yok.</p></div>';
+    html=`<div class="cal-empty-day">
+      <div class="cal-empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+      <div class="cal-empty-title">Etkinlik yok</div>
+      <div class="cal-empty-sub">Bu tarihe kayıtlı sevk veya termin bulunmuyor</div>
+    </div>`;
   }
 
   el.innerHTML=html;
