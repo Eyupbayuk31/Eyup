@@ -11092,17 +11092,35 @@ function stopPhotoCamera(silent){
   if(!silent) toast('Kamera kapatıldı','info');
 }
 
+// Yüksek kalite + GitHub Contents API'nin ~1MB dosya sınırına güvenli kalan
+// uyarlanabilir sıkıştırma: önce yüksek çözünürlük/kalite dener, dosya
+// limite yaklaşırsa kaliteyi sonra boyutu kademeli düşürür.
+function _compressImageToDataUrl(source, canvas){
+  const srcW = source.videoWidth || source.width;
+  const srcH = source.videoHeight || source.height;
+  const maxBytes = 950000; // GitHub Contents API güvenli payı
+  let w = Math.min(1900, srcW);
+  let h = Math.round(srcH * (w / srcW));
+  let quality = 0.92;
+  let dataUrl = '';
+  for(let attempt=0; attempt<7; attempt++){
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(source, 0, 0, w, h);
+    dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const approxBytes = dataUrl.length * 0.75;
+    if(approxBytes <= maxBytes) break;
+    if(quality > 0.6){ quality -= 0.1; }
+    else { w = Math.round(w * 0.85); h = Math.round(h * 0.85); }
+  }
+  return dataUrl;
+}
+
 function capturePhoto(){
   if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); stopPhotoCamera(true); return; }
   const v = document.getElementById('photoVideo');
   if(!v || !v.videoWidth){ toast('Video hazır değil','error'); return; }
-  const maxW = 900;
-  const w = Math.min(maxW, v.videoWidth);
-  const h = Math.round(v.videoHeight * (w/v.videoWidth));
   const c = document.getElementById('photoCanvas');
-  c.width = w; c.height = h;
-  c.getContext('2d').drawImage(v, 0, 0, w, h);
-  const dataUrl = c.toDataURL('image/jpeg', 0.82);
+  const dataUrl = _compressImageToDataUrl(v, c);
   _savePhotoToWaybill(dataUrl);
   stopPhotoCamera(true);
 }
@@ -11118,13 +11136,8 @@ function loadPhotoFromFile(e){
     r.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const maxW = 900;
-        const w = Math.min(maxW, img.width);
-        const h = Math.round(img.height * (w/img.width));
         const c = document.getElementById('photoCanvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = c.toDataURL('image/jpeg', 0.82);
+        const dataUrl = _compressImageToDataUrl(img, c);
         // Her fotoğraf için 700ms arayla yükleme başlat (GitHub secondary rate limit önlemi)
         _savePhotoToWaybill(dataUrl, fileIdx * 700);
       };
@@ -12037,16 +12050,11 @@ function removeNfPhotoAt(idx){
 }
 
 function addNfPhoto(dataUrl){
-  const maxW = 900;
   const img = new Image();
   img.onload = () => {
-    const w = Math.min(maxW, img.width);
-    const h = Math.round(img.height*(w/img.width));
     const c = document.getElementById('nfCanvas');
     if(!c) return;
-    c.width=w; c.height=h;
-    c.getContext('2d').drawImage(img,0,0,w,h);
-    const resized = c.toDataURL('image/jpeg',0.82);
+    const resized = _compressImageToDataUrl(img, c);
     _newFormPhotos.push({ data: resized, at: new Date().toISOString() });
     renderNewFormPhotoGallery();
     toast('Fotoğraf eklendi ('+_newFormPhotos.length+'. foto)','success');
@@ -12087,10 +12095,7 @@ function captureNewFormPhoto(){
   const v = document.getElementById('nfVideo');
   if(!v||!v.videoWidth){ toast('Video hazır değil','error'); return; }
   const c = document.getElementById('nfCanvas');
-  const maxW=900; const w=Math.min(maxW,v.videoWidth); const h=Math.round(v.videoHeight*(w/v.videoWidth));
-  c.width=w; c.height=h;
-  c.getContext('2d').drawImage(v,0,0,w,h);
-  const dataUrl = c.toDataURL('image/jpeg',0.82);
+  const dataUrl = _compressImageToDataUrl(v, c);
   _newFormPhotos.push({ data: dataUrl, at: new Date().toISOString() });
   renderNewFormPhotoGallery();
   toast('Fotoğraf çekildi ('+_newFormPhotos.length+'. foto)','success');
