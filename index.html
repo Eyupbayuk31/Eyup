@@ -1633,8 +1633,11 @@
     <!-- ========== FERMUAR ========== -->
     <div class="page" id="page-fermuar">
       <div class="section-header">
-        <div><h2>Fermuar İrsaliyesi</h2><p>Beden ve cm bazlı fermuar sevki</p></div>
-        <button class="btn btn-primary" onclick="saveFermuar()"><i class="fas fa-save"></i> Kaydet</button>
+        <div><h2 id="fermuarFormTitle">Fermuar İrsaliyesi</h2><p>Beden ve cm bazlı fermuar sevki</p></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" id="fermuarCancelEditBtn" onclick="cancelEditFermuar()" style="display:none;"><i class="fas fa-xmark"></i> Vazgeç</button>
+          <button class="btn btn-primary" id="fermuarSaveBtn" onclick="saveFermuar()"><i class="fas fa-save"></i> Kaydet</button>
+        </div>
       </div>
       <div class="grid-auto">
         <div class="card">
@@ -3225,6 +3228,10 @@
         </button>
       </div>
       <div class="modal-actions-secondary">
+        <button class="modal-action-btn secondary" onclick="editCurrentModalItem()" id="modalEditBtn" title="Bu irsaliyeyi düzenle" style="display:none;">
+          <i class="fas fa-pen"></i>
+          <span>Düzenle</span>
+        </button>
         <button class="modal-action-btn secondary" onclick="copyCurrentModalItem()" id="modalCopyBtn" title="Bu irsaliyeyi kopyala">
           <i class="fas fa-copy"></i>
           <span>Kopyala</span>
@@ -4724,7 +4731,49 @@ function showDetailUni(id,type){
   document.getElementById('modalContent').innerHTML=html;
   currentModalItem = item;
   currentModalType = type;
+  const editBtn = document.getElementById('modalEditBtn');
+  if(editBtn) editBtn.style.display = (type==='fermuar') ? 'flex' : 'none';
   document.getElementById('detailModal').classList.add('show');
+}
+
+function editCurrentModalItem(){
+  if(!currentModalItem || !currentModalType) return;
+  if(currentModalType==='fermuar'){
+    closeModal();
+    editFermuar(currentModalItem.id);
+  }
+}
+
+function editFermuar(id){
+  const item = _findItemByIdType(id,'fermuar');
+  if(!item){ toast('Kayıt bulunamadı','error'); return; }
+  showPage('fermuar');
+  setTimeout(()=>{
+    _fillPageFromData('fermuar', item);
+    window._editingFermuarId = id;
+    const hdr = document.getElementById('fermuarFormTitle');
+    if(hdr) hdr.textContent = 'Fermuar İrsaliyesi Düzenle — '+(item.no||'');
+    const saveBtn = document.getElementById('fermuarSaveBtn');
+    if(saveBtn) saveBtn.innerHTML = '<i class="fas fa-check"></i> Güncelle';
+    const cancelBtn = document.getElementById('fermuarCancelEditBtn');
+    if(cancelBtn) cancelBtn.style.display = 'inline-flex';
+    toast('Düzenleme modu: değişiklikleri yapıp Güncelle\'ye basın','info');
+  }, 150);
+}
+
+function cancelEditFermuar(){
+  window._editingFermuarId = null;
+  const hdr = document.getElementById('fermuarFormTitle');
+  if(hdr) hdr.textContent = 'Fermuar İrsaliyesi';
+  const saveBtn = document.getElementById('fermuarSaveBtn');
+  if(saveBtn) saveBtn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
+  const cancelBtn = document.getElementById('fermuarCancelEditBtn');
+  if(cancelBtn) cancelBtn.style.display = 'none';
+  ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{const ec=document.getElementById('fer_'+s+'cm');const ea=document.getElementById('fer_'+s+'a');if(ec)ec.value='';if(ea)ea.value='';});
+  document.getElementById('ferToplam').textContent='0';
+  const today=new Date().toISOString().split('T')[0];document.getElementById('fTarih').value=today;
+  toast('Düzenleme iptal edildi','info');
 }
 
 // ==================== PDF GENERATION ====================
@@ -5045,8 +5094,23 @@ function saveFermuar(){
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
   const sizes=['xxs','xs','s','m','l','xl','xxl','3xl'];const beden={};let total=0;
   sizes.forEach(s=>{const cm=+(document.getElementById('fer_'+s+'cm').value||0);const adet=+(document.getElementById('fer_'+s+'a').value||0);if(adet>0)beden[s]={cm,adet};total+=adet;});
+  const termin=document.getElementById('fTermin').value;const aciklama=document.getElementById('fAciklama').value.trim();
+
+  if(window._editingFermuarId){
+    const list=getData('fermuarlar');
+    const idx=list.findIndex(i=>i.id===window._editingFermuarId);
+    if(idx===-1){ toast('Düzenlenen kayıt bulunamadı','error'); cancelEditFermuar(); return; }
+    const existing=list[idx];
+    list[idx]={...existing,model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,beden,totalAdet:total};
+    setData('fermuarlar',list);
+    toast('Fermuar irsaliyesi güncellendi: '+existing.no);
+    cancelEditFermuar();
+    refreshHome();
+    return;
+  }
+
   const no=getNextNo();
-  const item={id:Date.now(),no:'FER-'+String(no).padStart(3,'0'),type:'fermuar',model,tarih,atolye,teslimEden,teslimAlan,renk,termin:document.getElementById('fTermin').value,aciklama:document.getElementById('fAciklama').value.trim(),beden,totalAdet:total,durum:'bekliyor',createdAt:new Date().toISOString()};
+  const item={id:Date.now(),no:'FER-'+String(no).padStart(3,'0'),type:'fermuar',model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,beden,totalAdet:total,durum:'bekliyor',createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'fermuar');
   const list=getData('fermuarlar');list.unshift(item);setData('fermuarlar',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'fermuar');
@@ -9836,7 +9900,7 @@ function fillFormFromQr(){
 function _fillPageFromData(page, data){
   const map = {
     new: { model:'iModel', tarih:'iTarih', atolye:'iAtolye', teslimEden:'iTeslimEden', teslimAlan:'iTeslimAlan', termin:'iTermin', durum:'iDurum', aciklama:'iAciklama' },
-    fermuar: { model:'fModel', tarih:'fTarih', atolye:'fAtolye', teslimEden:'fTeslimEden', teslimAlan:'fTeslimAlan', termin:'fTermin', aciklama:'fAciklama' },
+    fermuar: { model:'fModel', tarih:'fTarih', atolye:'fAtolye', teslimEden:'fTeslimEden', teslimAlan:'fTeslimAlan', renk:'fRenk', termin:'fTermin', aciklama:'fAciklama' },
     lastik: { model:'lModel', tarih:'lTarih', atolye:'lAtolye', teslimEden:'lTeslimEden', teslimAlan:'lTeslimAlan', renk:'lRenk', termin:'lTermin', aciklama:'lAciklama', cm:'lCm', metre:'lMetre' },
     dugme:  { model:'dModel', tarih:'dTarih', atolye:'dAtolye', teslimEden:'dTeslimEden', teslimAlan:'dTeslimAlan', termin:'dTermin', aciklama:'dAciklama', adet:'dAdet' },
     toptan: { firma:'tFirma', urun:'tUrun', not:'tNot' }
