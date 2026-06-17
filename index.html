@@ -3429,6 +3429,54 @@ function toast(msg,type='success'){
   const dismissTimer = setTimeout(cleanup, 4000);
 }
 
+// Tekrar dene butonu içeren kalıcı toast — fotoğraf/yükleme hataları gibi
+// kullanıcının o an başka bir sayfada olabileceği arka plan hatalarında
+// normal toast'ın 4sn'de kaybolup aksiyon butonunun hiç görünmemesini önler.
+function toastAction(msg, type, actionLabel, actionFn){
+  const c=document.getElementById('toastContainer');
+  const t=document.createElement('div');
+  t.className='toast toast-'+type;
+  const icons={success:'check-circle',error:'exclamation-circle',info:'info-circle',warning:'exclamation-triangle'};
+  const colors={success:'var(--success)',error:'var(--danger)',info:'var(--info)',warning:'var(--warning)'};
+  t.innerHTML=`
+    <div class="toast-icon" style="color:${colors[type]||'var(--info)'}">
+      <i class="fas fa-${icons[type]||'info-circle'}"></i>
+    </div>
+    <div class="toast-content">
+      <div class="toast-message">${msg}</div>
+      <button class="toast-action-btn" type="button" style="margin-top:7px;padding:6px 14px;background:${colors[type]||'var(--primary)'};color:#fff;border:none;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">${esc(actionLabel)}</button>
+    </div>
+    <button class="toast-close" type="button">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  c.appendChild(t);
+
+  requestAnimationFrame(()=>{
+    t.style.opacity='1';
+    t.style.transform='translateX(0)';
+  });
+
+  let removeTimer = null;
+  let removed = false;
+  const closeBtn = t.querySelector('.toast-close');
+  const actionBtn = t.querySelector('.toast-action-btn');
+  const cleanup = ()=>{
+    if(removed) return;
+    removed = true;
+    if(dismissTimer){ clearTimeout(dismissTimer); }
+    if(removeTimer){ clearTimeout(removeTimer); }
+    if(closeBtn) closeBtn.removeEventListener('click', cleanup);
+    t.style.opacity='0';
+    t.style.transform='translateX(100px)';
+    removeTimer = setTimeout(()=>{ if(t.parentNode) t.parentNode.removeChild(t); }, 300);
+  };
+  if(closeBtn) closeBtn.addEventListener('click', cleanup);
+  if(actionBtn) actionBtn.addEventListener('click', ()=>{ cleanup(); try{ actionFn(); }catch(e){ console.error(e); } });
+  // Aksiyonlu hata toast'ları normalden çok daha uzun kalsın — kullanıcı görüp tıklayabilsin
+  const dismissTimer = setTimeout(cleanup, 15000);
+}
+
 // ==================== ATÖLYE ====================
 function loadAtolyeSelects(){
   const atolyeler=getData('atolyeler');
@@ -11925,7 +11973,10 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
       }
       return item;
     });
-    toast('⚠️ ' + msg + ' — "Tekrar Dene" ile yeniden yükleyin','error');
+    const num = (photoIndex !== undefined) ? ' (' + (photoIndex+1) + '. foto)' : '';
+    toastAction('⚠️ Fotoğraf yüklenemedi' + num + ': ' + esc(msg), 'error', '⟳ Tekrar Dene', ()=>{
+      _uploadPhotoInBackground(id, type, dataUrl, photoIndex);
+    });
     if(_sigCurrentWaybill && String(_sigCurrentWaybill.id) === String(id) && _sigCurrentWaybill.type === type){
       try{ renderPhotoGallery(); renderSigSavedList(); }catch(_){}
     }
