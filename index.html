@@ -2994,53 +2994,109 @@
     </div>
 
     <!-- ==== QR / BARKOD ==== -->
-    <div class="page" id="page-qr">
-      <div class="section-header">
-        <div><h2><i class="fas fa-qrcode" style="color:var(--primary);margin-right:8px;"></i>QR / Barkod İşlemleri</h2><p>Kamera ile tara veya mevcut irsaliye için QR kod oluştur</p></div>
-      </div>
+    <div class="page qr-page" id="page-qr">
 
-      <div class="qr-tabs">
-        <div class="qr-tab active" id="qrTabScan" onclick="switchQrTab('scan')"><i class="fas fa-camera"></i> Tara</div>
-        <div class="qr-tab" id="qrTabGen" onclick="switchQrTab('gen')"><i class="fas fa-qrcode"></i> QR Oluştur</div>
-      </div>
-
-      <!-- Scan panel -->
-      <div id="qrPanelScan">
-        <div class="qr-scan-wrap">
-          <div class="card-title"><i class="fas fa-camera"></i> Kamera ile Tara</div>
-          <div id="qr-reader" style="min-height:220px;"></div>
-          <div class="qr-scan-btn-row">
-            <button class="btn btn-primary" id="qrStartBtn" onclick="startQrScanner()"><i class="fas fa-play"></i> Taramayı Başlat</button>
-            <button class="btn btn-secondary" id="qrStopBtn" onclick="stopQrScanner()" style="display:none;"><i class="fas fa-stop"></i> Durdur</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('qrFileInput').click()"><i class="fas fa-image"></i> Resimden Tara</button>
-            <input type="file" id="qrFileInput" accept="image/*" style="display:none;" onchange="scanQrFromFile(event)">
+      <!-- Page header -->
+      <div class="qr-page-hdr">
+        <div class="qr-phdr-left">
+          <div class="qr-phdr-icon"><i class="fas fa-qrcode"></i></div>
+          <div>
+            <h2 class="qr-phdr-title">QR & Barkod</h2>
+            <p class="qr-phdr-sub">Tarama ve kod oluşturma merkezi</p>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:10px;"><i class="fas fa-info-circle"></i> Mobilde kamera izni gereklidir. HTTPS veya localhost üzerinde çalışır.</div>
         </div>
+        <div class="qr-phdr-stats" id="qrPageStats"></div>
+      </div>
 
-        <div id="qrResultBox" style="display:none;">
-          <div class="qr-result">
-            <div class="qr-result-title"><i class="fas fa-check-circle"></i> Tarama Başarılı</div>
-            <div id="qrResultContent"></div>
-            <div class="qr-scan-btn-row">
-              <button class="btn btn-primary" id="qrFillBtn" style="display:none;" onclick="fillFormFromQr()"><i class="fas fa-pen"></i> Yeni İrsaliyeye Doldur</button>
-              <button class="btn btn-secondary" id="qrViewBtn" style="display:none;" onclick="viewQrWaybill()"><i class="fas fa-eye"></i> İrsaliyeyi Aç</button>
-              <button class="btn btn-secondary" onclick="copyQrResult()"><i class="fas fa-copy"></i> Kopyala</button>
+      <!-- Tab switcher -->
+      <div class="qr-tab-rail">
+        <button class="qr-rail-btn active" id="qrTabScan" onclick="switchQrTab('scan')">
+          <i class="fas fa-camera"></i><span>Tara</span>
+        </button>
+        <button class="qr-rail-btn" id="qrTabGen" onclick="switchQrTab('gen')">
+          <i class="fas fa-qrcode"></i><span>QR Oluştur</span>
+        </button>
+        <button class="qr-rail-btn" id="qrTabHistory" onclick="switchQrTab('history')">
+          <i class="fas fa-clock-rotate-left"></i><span>Geçmiş</span>
+          <span class="qr-rail-badge" id="qrHistBadge" style="display:none;"></span>
+        </button>
+      </div>
+
+      <!-- SCAN PANEL -->
+      <div id="qrPanelScan" class="qr-panel">
+
+        <div class="qr-scanner-shell">
+          <!-- Viewfinder -->
+          <div class="qr-viewfinder" id="qrViewfinder">
+            <div id="qr-reader"></div>
+            <div class="qr-vf-corner qr-vf-tl"></div>
+            <div class="qr-vf-corner qr-vf-tr"></div>
+            <div class="qr-vf-corner qr-vf-bl"></div>
+            <div class="qr-vf-corner qr-vf-br"></div>
+            <div class="qr-vf-idle" id="qrVfIdle">
+              <div class="qr-vf-idle-icon"><i class="fas fa-camera"></i></div>
+              <div class="qr-vf-idle-txt">Kamerayı başlatın</div>
             </div>
           </div>
+
+          <!-- Controls -->
+          <div class="qr-scan-controls">
+            <button class="qr-ctrl-btn qr-ctrl-primary" id="qrStartBtn" onclick="startQrScanner()">
+              <i class="fas fa-play"></i> Kamerayı Başlat
+            </button>
+            <button class="qr-ctrl-btn qr-ctrl-danger" id="qrStopBtn" onclick="stopQrScanner()" style="display:none;">
+              <i class="fas fa-stop"></i> Durdur
+            </button>
+            <button class="qr-ctrl-btn qr-ctrl-secondary" onclick="document.getElementById('qrFileInput').click()">
+              <i class="fas fa-image"></i> Resimden Tara
+            </button>
+            <input type="file" id="qrFileInput" accept="image/*" style="display:none;" onchange="scanQrFromFile(event)">
+          </div>
+
+          <div class="qr-scan-hint"><i class="fas fa-shield-halved"></i> HTTPS veya localhost gerektirir · Kamera izni otomatik istenir</div>
+        </div>
+
+        <!-- Result box -->
+        <div id="qrResultBox" class="qr-result-shell" style="display:none;">
+          <div class="qr-result-header">
+            <div class="qr-result-icon"><i class="fas fa-circle-check"></i></div>
+            <div>
+              <div class="qr-result-label">Tarama Başarılı</div>
+              <div class="qr-result-sub">QR içeriği okundu</div>
+            </div>
+          </div>
+          <div id="qrResultContent" class="qr-result-content"></div>
+          <div class="qr-result-actions">
+            <button class="qr-ctrl-btn qr-ctrl-primary" id="qrFillBtn" style="display:none;" onclick="fillFormFromQr()"><i class="fas fa-pen"></i> Forma Doldur</button>
+            <button class="qr-ctrl-btn qr-ctrl-secondary" id="qrViewBtn" style="display:none;" onclick="viewQrWaybill()"><i class="fas fa-eye"></i> İrsaliyeyi Aç</button>
+            <button class="qr-ctrl-btn qr-ctrl-secondary" onclick="copyQrResult()"><i class="fas fa-copy"></i> Kopyala</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- GENERATE PANEL -->
+      <div id="qrPanelGen" class="qr-panel" style="display:none;">
+        <div class="qr-gen-shell">
+          <div class="qr-gen-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="qrSearchInput" placeholder="İrsaliye no, model veya atölye ara…" oninput="renderQrGenList()" autocomplete="off">
+          </div>
+          <div id="qrGenList" class="qr-gen-list"></div>
         </div>
       </div>
 
-      <!-- Generate panel -->
-      <div id="qrPanelGen" style="display:none;">
-        <div class="qr-scan-wrap">
-          <div class="card-title"><i class="fas fa-list"></i> İrsaliye Seç</div>
-          <div class="form-group">
-            <input type="text" id="qrSearchInput" class="form-input" placeholder="İrsaliye no, model veya atölye ara..." oninput="renderQrGenList()">
+      <!-- HISTORY PANEL -->
+      <div id="qrPanelHistory" class="qr-panel" style="display:none;">
+        <div class="qr-hist-shell">
+          <div class="qr-hist-header">
+            <span class="qr-hist-title"><i class="fas fa-clock-rotate-left"></i> Son Taramalar</span>
+            <button class="qr-ctrl-btn qr-ctrl-ghost" onclick="clearQrHistory()"><i class="fas fa-trash"></i> Temizle</button>
           </div>
-          <div id="qrGenList" style="max-height:480px;overflow-y:auto;"></div>
+          <div id="qrHistList" class="qr-hist-list"></div>
         </div>
       </div>
+
     </div>
 
     <!-- ==== İMZA & FOTOĞRAF ==== -->
@@ -9452,17 +9508,22 @@ function _getAllUnifiedWithType(){
 ==================================================================== */
 let _qrScannerInstance = null;
 let _qrLastResult = null; // { text, parsed, matchedItem, matchedType }
+const typeColorsQr = {standart:'#a78bfa',fermuar:'#60a5fa',lastik:'#34d399',dugme:'#fbbf24',toptan:'#f472b6',satenaskilik:'#fb923c',kordon:'#38bdf8',dantel:'#e879f9'};
 
 function switchQrTab(tab){
-  document.getElementById('qrTabScan').classList.toggle('active', tab==='scan');
-  document.getElementById('qrTabGen').classList.toggle('active', tab==='gen');
-  document.getElementById('qrPanelScan').style.display = tab==='scan' ? 'block' : 'none';
-  document.getElementById('qrPanelGen').style.display  = tab==='gen'  ? 'block' : 'none';
+  ['scan','gen','history'].forEach(t=>{
+    const cap = t.charAt(0).toUpperCase()+t.slice(1);
+    const panel = document.getElementById('qrPanel'+cap);
+    const btn = document.getElementById('qrTab'+cap);
+    if(panel) panel.style.display = (t===tab) ? 'block' : 'none';
+    if(btn) btn.classList.toggle('active', t===tab);
+  });
   if(tab==='scan'){
-    // Show hint
+    _updateQrPageStats();
   } else {
     stopQrScanner(true);
-    renderQrGenList();
+    if(tab==='gen') renderQrGenList();
+    if(tab==='history') renderQrHistory();
   }
 }
 
@@ -9480,6 +9541,82 @@ function refreshQrPage(){
   const photoUrlCard = document.getElementById('photoUrlCard');
   if(photoUrlCard) {
     photoUrlCard.style.display = isAdmin ? 'block' : 'none';
+  }
+  _updateQrPageStats();
+}
+
+/* ---- QR Tarama Geçmişi ---- */
+const QR_HIST_KEY = '_qrScanHistory';
+const QR_HIST_MAX = 50;
+
+function _loadQrHistory(){
+  try{ return JSON.parse(localStorage.getItem(QR_HIST_KEY)) || []; }catch(e){ return []; }
+}
+function _saveQrHistory(h){
+  try{ localStorage.setItem(QR_HIST_KEY, JSON.stringify(h.slice(0, QR_HIST_MAX))); }catch(e){}
+}
+function _pushQrHistory(raw){
+  if(!raw) return;
+  const h = _loadQrHistory();
+  const r = _qrLastResult || {};
+  const p = r.parsed || null;
+  const matched = r.matchedItem || null;
+  h.unshift({
+    text: raw,
+    type: p ? (matched ? r.matchedType : p.type) : null,
+    no: p ? (p.no || (matched && matched.no) || '') : '',
+    model: p ? (p.model || p.urun || (matched && (matched.model||matched.urun)) || '') : '',
+    found: !!matched,
+    ts: Date.now()
+  });
+  _saveQrHistory(h);
+  _updateQrPageStats();
+}
+function clearQrHistory(){
+  if(!confirm('Tarama geçmişini temizlemek istiyor musunuz?')) return;
+  _saveQrHistory([]);
+  renderQrHistory();
+  _updateQrPageStats();
+}
+function renderQrHistory(){
+  const container = document.getElementById('qrHistList');
+  if(!container) return;
+  const h = _loadQrHistory();
+  if(!h.length){
+    container.innerHTML = '<div class="qr-hist-empty"><i class="fas fa-clock-rotate-left"></i><p>Henüz tarama geçmişi yok.</p></div>';
+    return;
+  }
+  container.innerHTML = h.map(e=>{
+    const clr = (typeColorsQr[e.type] || '#94a3b8');
+    const dt = new Date(e.ts);
+    const dateStr = dt.toLocaleDateString('tr-TR') + ' ' + dt.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+    const label = e.type ? (TYPE_LABEL_MAP[e.type]||e.type) : 'Düz Metin';
+    const title = e.no || e.model || (e.text||'').slice(0,40) || '-';
+    return `
+      <div class="qr-hist-item" style="--qr-accent:${clr};">
+        <div class="qr-hist-accent"></div>
+        <div class="qr-hist-body">
+          <div class="qr-hist-top">
+            <span class="qr-hist-no">${esc(title)}</span>
+            ${e.found ? '<span class="qr-hist-found"><i class="fas fa-check"></i> Eşleşti</span>' : '<span class="qr-hist-nofound">Kayıt yok</span>'}
+          </div>
+          <div class="qr-hist-meta">${esc(label)} • ${esc(dateStr)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+function _updateQrPageStats(){
+  const statsEl = document.getElementById('qrPageStats');
+  const badgeEl = document.getElementById('qrHistBadge');
+  const h = _loadQrHistory();
+  if(statsEl){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayCount = h.filter(e=>e.ts >= today.getTime()).length;
+    statsEl.innerHTML = `<div class="qr-stat-pill"><i class="fas fa-bolt"></i> Bugün ${todayCount}</div><div class="qr-stat-pill"><i class="fas fa-database"></i> Toplam ${h.length}</div>`;
+  }
+  if(badgeEl){
+    if(h.length){ badgeEl.style.display='inline-flex'; badgeEl.textContent = h.length > 99 ? '99+' : h.length; }
+    else { badgeEl.style.display='none'; }
   }
 }
 
@@ -9659,6 +9796,7 @@ function handleQrResult(text){
   document.getElementById('qrResultContent').innerHTML = html;
   resBox.style.display = 'block';
   toast('Kod okundu','success');
+  _pushQrHistory(text);
 }
 
 function copyQrResult(){
@@ -9751,18 +9889,21 @@ function renderQrGenList(){
     container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Kayıt bulunamadı.</p></div>';
     return;
   }
-  container.innerHTML = filtered.slice(0, 300).map(i=>`
-    <div class="qr-list-item">
-      <div class="qr-item-info">
-        <div class="qr-item-no">${i.no || (i.firma ? '['+i.firma+']' : '-')}</div>
-        <div class="qr-item-meta">${TYPE_LABEL_MAP[i._type]||i._type} • ${i.model||i.urun||'-'} • ${i.atolye||i.firma||'-'} • ${i.tarih||'-'}</div>
+  container.innerHTML = filtered.slice(0, 300).map(i=>{
+    const clr = typeColorsQr[i._type] || '#94a3b8';
+    return `
+    <div class="qr-gen-item" style="--qr-accent:${clr};">
+      <div class="qr-gen-accent"></div>
+      <div class="qr-gen-body">
+        <div class="qr-gen-no">${esc(i.no || (i.firma ? '['+i.firma+']' : '-'))}</div>
+        <div class="qr-gen-meta">${esc(TYPE_LABEL_MAP[i._type]||i._type)} • ${esc(i.model||i.urun||'-')} • ${esc(i.atolye||i.firma||'-')} • ${esc(i.tarih||'-')}</div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-sm" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" style="background:#25D366;color:#fff;border:0;" title="WhatsApp'tan Gönder"><i class="fab fa-whatsapp"></i></button>
-        <button class="btn btn-sm btn-primary" onclick="generateQrForItem(${i.id},'${i._type}')"><i class="fas fa-qrcode"></i> QR Göster</button>
+      <div class="qr-gen-acts">
+        <button class="qr-ctrl-btn qr-ctrl-wa" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" title="WhatsApp'tan Gönder"><i class="fab fa-whatsapp"></i></button>
+        <button class="qr-ctrl-btn qr-ctrl-primary" onclick="generateQrForItem(${i.id},'${i._type}')"><i class="fas fa-qrcode"></i> QR Göster</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // QR kod PNG dataURL üretir — PDF/yazdırmaya gömmek için (senkron)
