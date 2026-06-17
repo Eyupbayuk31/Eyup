@@ -1094,7 +1094,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>İrsaliye Pro v7 — Premium Design</title>
+<title>İrsaliye Pro</title>
 <!-- Tema flaşını önle: render başlamadan sync çalışır -->
 <script>
 (function(){
@@ -1173,7 +1173,6 @@
   </nav>
   <div class="sidebar-footer">
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
-    <div style="font-size:9px;color:var(--text-dim);margin-top:4px;text-align:center;">v26 — login refined</div>
     <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
       <i class="fas fa-right-from-bracket"></i> Çıkış Yap
     </button>
@@ -1881,6 +1880,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn btn-sm btn-primary" id="nfCamBtn" onclick="startNewFormCamera()"><i class="fas fa-video"></i> Kamera</button>
           <button type="button" class="btn btn-sm btn-success" id="nfCapBtn" onclick="captureNewFormPhoto()" style="display:none;"><i class="fas fa-camera"></i> Çek</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="nfRetakeBtn" onclick="retakeNewFormPhoto()" style="display:none;"><i class="fas fa-rotate-left"></i> Tekrar Çek</button>
           <button type="button" class="btn btn-sm btn-secondary" id="nfStopBtn" onclick="stopNewFormCamera()" style="display:none;"><i class="fas fa-stop"></i> Kapat</button>
           <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('nfFileInput').click()"><i class="fas fa-image"></i> Galeriden</button>
           <input type="file" id="nfFileInput" accept="image/*" multiple style="display:none;" onchange="loadNewFormPhotoFromFile(event)">
@@ -5165,11 +5165,9 @@ function generatePDF(id, type) {
     </div>
   </div>`;
 
-  // Footer — surum damgasi: PDF'in hangi kod surumuyle uretildigi gorunur
-  // (deploy/onbellek sorunlarini teshis etmek icin)
-  const _appVer = (document.querySelector('meta[name="app-version"]')||{}).content || '?';
+  // Footer
   html += `<div class="footer">
-    <span>İrsaliye Pro — Eyüp · ${_appVer}</span>
+    <span>İrsaliye Pro — Eyüp</span>
     <span>Yazdırma: ${printDate}</span>
   </div>`;
 
@@ -8562,7 +8560,7 @@ function _singleItemPdfHtml(item, type){
     <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+esc(item.teslimEden):''}</div></div>
     <div class="sb2"><div style="height:70px;"></div><div class="sl">Teslim Alan${item.teslimAlan?': '+esc(item.teslimAlan):''}</div></div>
   </div>
-  <div class="pf"><span>İrsaliye Pro — Eyüp · ${(document.querySelector('meta[name="app-version"]')||{}).content||'?'}</span><span>Yazdırma: ${printDate}</span></div>
+  <div class="pf"><span>İrsaliye Pro — Eyüp</span><span>Yazdırma: ${printDate}</span></div>
   </div>`;
   return h;
 }
@@ -12047,6 +12045,9 @@ function renderNewFormPhotoGallery(){
 function removeNfPhotoAt(idx){
   _newFormPhotos.splice(idx,1);
   renderNewFormPhotoGallery();
+  if(!_newFormPhotos.length){
+    const rt=document.getElementById('nfRetakeBtn'); if(rt) rt.style.display='none';
+  }
 }
 
 function addNfPhoto(dataUrl){
@@ -12087,6 +12088,7 @@ function stopNewFormCamera(silent){
   const lb=document.getElementById('nfLiveBox'); if(lb) lb.style.display='none';
   const cb=document.getElementById('nfCamBtn'); if(cb) cb.style.display='inline-flex';
   const cp=document.getElementById('nfCapBtn'); if(cp) cp.style.display='none';
+  const rt=document.getElementById('nfRetakeBtn'); if(rt) rt.style.display='none';
   const st=document.getElementById('nfStopBtn'); if(st) st.style.display='none';
   if(!silent) toast('Kamera kapatıldı','info');
 }
@@ -12098,7 +12100,20 @@ function captureNewFormPhoto(){
   const dataUrl = _compressImageToDataUrl(v, c);
   _newFormPhotos.push({ data: dataUrl, at: new Date().toISOString() });
   renderNewFormPhotoGallery();
+  // Çekimden sonra "Tekrar Çek" butonunu göster — beğenilmeyen kareyi silip yeniden çekmek için
+  const rt=document.getElementById('nfRetakeBtn'); if(rt) rt.style.display='inline-flex';
   toast('Fotoğraf çekildi ('+_newFormPhotos.length+'. foto)','success');
+}
+
+function retakeNewFormPhoto(){
+  if(!_newFormPhotos.length){ toast('Silinecek fotoğraf yok','info'); return; }
+  // Son çekilen kareyi at; kamera açık kaldığı için kullanıcı hemen yeniden çekebilir
+  _newFormPhotos.pop();
+  renderNewFormPhotoGallery();
+  if(!_newFormPhotos.length){
+    const rt=document.getElementById('nfRetakeBtn'); if(rt) rt.style.display='none';
+  }
+  toast('Son fotoğraf silindi — tekrar çekebilirsiniz','info');
 }
 
 function _attachNfPhotosToItem(item, type){
@@ -14831,7 +14846,7 @@ function _renderPublicViewer(d){
           ${photoHtml}
         </div>
         <div class="pv-footer">
-          İrsaliye Pro v10 — QR ile açılan şifresiz görüntüleyici
+          İrsaliye Pro — QR ile açılan şifresiz görüntüleyici
         </div>
       </div>
       <div class="pv-print-bar">
