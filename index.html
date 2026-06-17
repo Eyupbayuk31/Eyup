@@ -3225,7 +3225,7 @@
         </button>
       </div>
       <div class="modal-actions-secondary">
-        <button class="modal-action-btn secondary" onclick="editCurrentModalItem()" id="modalEditBtn" title="Bu irsaliyeyi düzenle" style="display:none;">
+        <button class="modal-action-btn secondary edit-accent" onclick="editCurrentModalItem()" id="modalEditBtn" title="Bu irsaliyeyi düzenle" style="display:none;">
           <i class="fas fa-pen"></i>
           <span>Düzenle</span>
         </button>
@@ -4821,14 +4821,25 @@ function _setEditBanner(page, item){
   if(!pageEl) return;
   const header = pageEl.querySelector('.section-header');
   const saveBtn = header ? header.querySelector('.btn-primary') : null;
-  if(saveBtn) saveBtn.innerHTML = '<i class="fas fa-check"></i> Güncelle';
+  if(saveBtn){
+    saveBtn.classList.add('btn-update-mode');
+    saveBtn.innerHTML = '<span class="btn-label-swap"><i class="fas fa-check"></i> Güncelle</span>';
+  }
   let banner = pageEl.querySelector('.edit-mode-banner');
   if(!banner){
     banner = document.createElement('div');
     banner.className = 'edit-mode-banner';
     pageEl.insertBefore(banner, pageEl.firstChild);
   }
-  banner.innerHTML = `<i class="fas fa-pen"></i> <span><b>${esc(item.no || item.firma || '')}</b> kaydı düzenleniyor</span><button class="btn btn-sm btn-secondary" onclick="cancelEditUni()"><i class="fas fa-xmark"></i> Vazgeç</button>`;
+  banner.innerHTML = `
+    <div class="ebn-left">
+      <span class="ebn-badge"><i class="fas fa-pen"></i></span>
+      <div class="ebn-text">
+        <span class="ebn-label">Düzenleme Modu</span>
+        <span class="ebn-name">${esc(item.no || item.firma || '')}</span>
+      </div>
+    </div>
+    <button class="btn-cancel-edit" onclick="cancelEditUni()"><i class="fas fa-xmark"></i> Vazgeç</button>`;
   banner.style.display = 'flex';
 }
 
@@ -4843,7 +4854,10 @@ function _silentCancelEditUni(){
     if(banner) banner.style.display = 'none';
     const header = pageEl.querySelector('.section-header');
     const saveBtn = header ? header.querySelector('.btn-primary') : null;
-    if(saveBtn) saveBtn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
+    if(saveBtn){
+      saveBtn.classList.remove('btn-update-mode');
+      saveBtn.innerHTML = '<span class="btn-label-swap"><i class="fas fa-save"></i> Kaydet</span>';
+    }
   }
   _clearFormFields(type);
 }

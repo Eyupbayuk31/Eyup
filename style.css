@@ -1656,20 +1656,122 @@ body::after{
   to{opacity:1;transform:translateY(0);}
 }
 
+/* ═══════════ EDIT MODE — editorial redline system ═══════════
+   Amber/gold reads as a distinct semantic from primary purple
+   (create) so users instantly recognize "you're revising a
+   live record" without reading the label. */
 .edit-mode-banner{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-  background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 16%,transparent),color-mix(in srgb,var(--primary) 6%,transparent));
-  border:1px solid color-mix(in srgb,var(--primary) 35%,var(--border));
-  border-radius:var(--radius-sm);
-  padding:12px 16px;
-  margin-bottom:16px;
+  position:relative;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(135deg,
+    color-mix(in oklab,var(--warning) 14%,var(--bg-card)) 0%,
+    color-mix(in oklab,var(--warning) 4%,var(--bg-card)) 55%,
+    var(--bg-card) 100%);
+  border:1px solid color-mix(in oklab,var(--warning) 38%,var(--border));
+  border-radius:var(--radius);
+  padding:12px 18px 12px 16px;
+  margin-bottom:18px;
   font-size:13px;
   font-weight:600;
   color:var(--text-main);
-  animation:fadeInDown 0.4s ease;
+  overflow:hidden;
+  box-shadow:0 4px 18px -6px color-mix(in oklab,var(--warning) 30%,transparent), inset 0 1px 0 rgba(255,255,255,0.06);
+  animation:editBannerIn 0.45s cubic-bezier(0.34,1.3,0.64,1);
 }
-.edit-mode-banner i{color:var(--primary);}
-.edit-mode-banner span{display:flex;align-items:center;gap:6px;}
+.edit-mode-banner::before{
+  content:'';
+  position:absolute; inset:0 auto 0 0;
+  width:4px;
+  background:linear-gradient(180deg,var(--warning-light),var(--warning-dark));
+  box-shadow:0 0 10px color-mix(in oklab,var(--warning) 70%,transparent);
+}
+@keyframes editBannerIn{
+  from{opacity:0; transform:translateY(-10px) scale(0.98);}
+  to{opacity:1; transform:translateY(0) scale(1);}
+}
+.edit-mode-banner .ebn-left{display:flex;align-items:center;gap:12px;min-width:0;}
+.edit-mode-banner .ebn-badge{
+  position:relative;
+  width:34px;height:34px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--warning),var(--warning-dark));
+  color:#1c1305;
+  font-size:14px;
+  box-shadow:0 0 0 3px color-mix(in oklab,var(--warning) 22%,transparent);
+}
+.edit-mode-banner .ebn-badge::after{
+  content:'';
+  position:absolute; inset:-5px;
+  border-radius:50%;
+  border:1.5px solid color-mix(in oklab,var(--warning) 55%,transparent);
+  animation:ebnPulse 2.2s ease-out infinite;
+}
+@keyframes ebnPulse{
+  0%{transform:scale(0.85); opacity:0.9;}
+  80%,100%{transform:scale(1.35); opacity:0;}
+}
+.edit-mode-banner .ebn-text{display:flex; flex-direction:column; gap:1px; min-width:0;}
+.edit-mode-banner .ebn-label{
+  font-size:10.5px; letter-spacing:1.4px; text-transform:uppercase;
+  color:color-mix(in oklab,var(--warning-light) 80%,var(--text-muted));
+  font-weight:700;
+}
+.edit-mode-banner .ebn-name{
+  font-family:var(--font-display-studio,var(--font-display));
+  font-size:14.5px; font-weight:700; letter-spacing:-0.2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  background:linear-gradient(120deg,var(--text-main) 30%,var(--warning-light) 130%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.edit-mode-banner .btn-cancel-edit{
+  display:flex; align-items:center; gap:6px;
+  background:transparent;
+  border:1.5px solid color-mix(in oklab,var(--warning) 45%,var(--border));
+  color:var(--text-main);
+  font-weight:600; font-size:12.5px;
+  padding:7px 14px; border-radius:var(--radius-full);
+  cursor:pointer; transition:all 0.2s var(--ease-smooth);
+  white-space:nowrap; flex-shrink:0;
+}
+.edit-mode-banner .btn-cancel-edit:hover{
+  background:color-mix(in oklab,var(--danger) 14%,transparent);
+  border-color:var(--danger);
+  color:var(--danger-light);
+  transform:translateY(-1px);
+}
+.edit-mode-banner .btn-cancel-edit:active{transform:scale(0.95);}
+
+@media(max-width:560px){
+  .edit-mode-banner{padding:11px 14px;}
+  .edit-mode-banner .ebn-name{font-size:13px; max-width:38vw;}
+}
+
+/* Kaydet -> Güncelle morph on the section-header save button */
+.section-header .btn-primary{
+  transition:background 0.35s var(--ease-smooth), box-shadow 0.35s ease, transform 0.15s ease;
+}
+.section-header .btn-primary.btn-update-mode{
+  background:linear-gradient(135deg,var(--warning),var(--warning-dark)) !important;
+  box-shadow:0 4px 18px -4px color-mix(in oklab,var(--warning) 55%,transparent) !important;
+  animation:updatePulse 2.4s ease-in-out infinite;
+}
+.section-header .btn-primary.btn-update-mode:hover{
+  background:linear-gradient(135deg,var(--warning-light),var(--warning)) !important;
+  box-shadow:0 6px 26px -4px color-mix(in oklab,var(--warning) 65%,transparent) !important;
+}
+@keyframes updatePulse{
+  0%,100%{box-shadow:0 4px 18px -4px color-mix(in oklab,var(--warning) 55%,transparent);}
+  50%{box-shadow:0 4px 24px -2px color-mix(in oklab,var(--warning) 75%,transparent);}
+}
+.section-header .btn-primary .btn-label-swap{
+  display:inline-flex; align-items:center; gap:7px;
+  animation:btnLabelSwap 0.3s var(--ease-spring);
+}
+@keyframes btnLabelSwap{
+  from{opacity:0; transform:translateY(4px) scale(0.9);}
+  to{opacity:1; transform:translateY(0) scale(1);}
+}
 
 .section-header h2{
   font-size:28px;
@@ -3295,6 +3397,16 @@ tr:hover .table-actions-more{
   transform:translateY(-2px);
   box-shadow:var(--shadow-sm);
 }
+
+/* Düzenle — distinct amber accent so editing reads apart from neutral actions */
+.modal-action-btn.edit-accent i{color:var(--warning);}
+.modal-action-btn.edit-accent:hover{
+  border-color:color-mix(in oklab,var(--warning) 55%,var(--border)) !important;
+  background:color-mix(in oklab,var(--warning) 10%,var(--glass)) !important;
+  box-shadow:0 4px 16px -4px color-mix(in oklab,var(--warning) 35%,transparent) !important;
+}
+.modal-action-btn.edit-accent:hover i,
+.modal-action-btn.edit-accent:hover span{color:var(--warning-light) !important;}
 
 @media(max-width:640px){
   .modal-detail{max-width:100%;max-height:80vh;border-radius:16px 16px 0 0;margin:0;}
