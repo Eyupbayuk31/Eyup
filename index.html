@@ -1035,6 +1035,37 @@
     window.addEventListener('focus',  function(){ smartResync('focus'); });
     window.addEventListener('online', function(){ smartResync('online'); });
 
+    // ── LISTE SAYFASI HAFIF POLLING — canli listener (onSnapshot) zaten
+    // calisiyor ama sekme uzun sure ayni sayfada acik kalirsa baglanti
+    // sessizce kesilebiliyor (ag degisimi, VPN, mobil operator handoff vb.)
+    // ve bunu yakalayacak bir 'visibilitychange/focus/online' olayi hic
+    // tetiklenmeyebilir. Bu yuzden kullanici "Liste" sayfasindayken SADECE o
+    // sayfada gosterilen 8 urun koleksiyonunu 5 sn'de bir buluttan kontrol
+    // ederiz. handleSnapshot veri ayniysa DOM'a dokunmuyor — yani bos
+    // donguler ekrani yeniden cizmiyor, sadece GERCEK bir degisiklik 5 sn
+    // icinde yakalanmis oluyor.
+    var LIST_PAGE_FS_KEYS = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller'];
+    var _listPagePollTimer = null;
+    async function _listPagePollTick(){
+      if(window._isViewerUrl || !window._fs || document.hidden) return;
+      if(window._fsInflight && window._fsInflight.size > 0) return; // yazma suruyorsa karistirma
+      if(window._lastLocalWriteAt && (Date.now() - window._lastLocalWriteAt < 4000)) return;
+      const { db, collection, getDocs } = window._fs;
+      for(const key of LIST_PAGE_FS_KEYS){
+        try{
+          const snap = await getDocs(collection(db, 'appdata', key, 'items'));
+          handleSnapshot(key, snap);
+        }catch(e){ /* sessiz gec — bir sonraki 5sn'lik tick'te tekrar denenir */ }
+      }
+    }
+    window._startListPagePolling = function(){
+      window._stopListPagePolling();
+      _listPagePollTimer = setInterval(_listPagePollTick, 5000);
+    };
+    window._stopListPagePolling = function(){
+      if(_listPagePollTimer){ clearInterval(_listPagePollTimer); _listPagePollTimer = null; }
+    };
+
     // ========== ERROR LOGGING ==========
     window.logError = function(context, error, meta = {}){
       try {
@@ -3343,7 +3374,15 @@ function showPage(page){
   if(bIdx>=0){document.querySelectorAll('.bottom-nav a')[bIdx]?.classList.add('active');}
   
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
-  
+
+  // Liste sayfasi acikken buluttan hafif polling ile taze tut (canli
+  // listener'i tamamlayan guvenlik agi) — diger sayfaya gecince durdur.
+  if(page === 'list'){
+    try{ if(typeof window._startListPagePolling === 'function') window._startListPagePolling(); }catch(_){}
+  } else {
+    try{ if(typeof window._stopListPagePolling === 'function') window._stopListPagePolling(); }catch(_){}
+  }
+
   if(window.innerWidth<=768)closeSidebar();
   // Form sayfalarında fotoğraf bölümünü taşı
   const _nfFormPages = ['new','fermuar','lastik','dugme','satenaskilik','kordon','dantel'];
