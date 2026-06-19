@@ -1100,40 +1100,15 @@
     };
 
     // ========== QUOTA MONITORING ==========
-    window.checkStorageQuota = function(){
-      try {
-        let used = 0;
-        // Object.keys + length doğrudan iteration: for-in/hasOwnProperty zincirinden hızlı.
-        const keys = Object.keys(localStorage);
-        for(let i = 0; i < keys.length; i++){
-          const k = keys[i];
-          const v = localStorage.getItem(k);
-          used += (v ? v.length : 0) + k.length;
-        }
-        const usedMB = (used / 1024 / 1024).toFixed(2);
-        const limitMB = 5; // Tarayıcıya göre 5-10MB
-        const percent = (used / (limitMB * 1024 * 1024) * 100).toFixed(1);
-
-        // %80 dolunca uyar
-        if(percent > 80 && !window._quotaWarned){
-          window._quotaWarned = true;
-          if(typeof toast === 'function'){
-            toast('⚠️ Depolama alanı %' + percent + ' dolu! Eski kayıtları temizleyin.', 'error');
-          }
-        }
-
-        return {used: usedMB, percent, limit: limitMB};
-      } catch(e){
-        if(typeof logError === 'function') logError('checkStorageQuota', e);
-        return {used: 0, percent: 0, limit: 5};
-      }
-    };
+    // checkStorageQuota() asil tanimi asagida (formatBytes/getStorageUsage
+    // yanindaki bolumde) — orada tek ve guard'li (window._quotaWarned)
+    // halde. Burada sadece sayfa yuklenince ilk kontrolu tetikliyoruz.
 
     // Sayfa yüklendiğinde quota kontrol et
     if(document.readyState === 'loading'){
-      document.addEventListener('DOMContentLoaded', checkStorageQuota);
+      document.addEventListener('DOMContentLoaded', function(){ if(typeof checkStorageQuota==='function') checkStorageQuota(); });
     } else {
-      setTimeout(checkStorageQuota, 1000);
+      setTimeout(function(){ if(typeof checkStorageQuota==='function') checkStorageQuota(); }, 1000);
     }
 
     // ========== FIRESTORE CLEANUP ==========
@@ -3487,6 +3462,24 @@ document.addEventListener('DOMContentLoaded', function(){
 // ─────────────────────────────────────────────────────────
 
 // ==================== TOAST ====================
+// Toast yığını cok kabarirsa (orn. ardisik foto yukleme hatalari + depolama
+// uyarilari) ekrani doldurup altta kalan onemli (aksiyon butonlu) toast'lari
+// gomebiliyordu. Belirli bir sayidan fazlasi varsa en eski SADE (aksiyonsuz)
+// toast'lari kaldirip aksiyon butonlu olanlari ekranda tutariz.
+function _pruneToastStack(){
+  const c=document.getElementById('toastContainer');
+  if(!c) return;
+  const MAX_TOASTS=4;
+  const nodes=Array.from(c.children);
+  let excess=nodes.length-MAX_TOASTS;
+  if(excess<=0) return;
+  for(const n of nodes){
+    if(excess<=0) break;
+    if(n.querySelector('.toast-action-btn')) continue; // aksiyon butonlu toast'lari koru
+    n.remove();
+    excess--;
+  }
+}
 function toast(msg,type='success'){
   const c=document.getElementById('toastContainer');
   const t=document.createElement('div');
@@ -3505,6 +3498,8 @@ function toast(msg,type='success'){
     </button>
   `;
   c.appendChild(t);
+  _pruneToastStack();
+  t.scrollIntoView({block:'nearest'});
 
   // Animate in
   requestAnimationFrame(()=>{
@@ -3553,6 +3548,8 @@ function toastAction(msg, type, actionLabel, actionFn){
     </button>
   `;
   c.appendChild(t);
+  _pruneToastStack();
+  t.scrollIntoView({block:'nearest'});
 
   requestAnimationFrame(()=>{
     t.style.opacity='1';
@@ -9104,15 +9101,16 @@ function updateStorageDisplay(){
   const usedEl = document.getElementById('storageUsed');
   const barEl = document.getElementById('storageBar');
 
-  if(usedEl) usedEl.textContent = quota.used + ' MB';
+  if(usedEl) usedEl.textContent = formatBytes(quota.used);
   if(barEl){
-    barEl.style.width = quota.percent + '%';
-    barEl.textContent = quota.percent + '%';
+    const pct = quota.pct;
+    barEl.style.width = Math.min(100,pct) + '%';
+    barEl.textContent = pct.toFixed(0) + '%';
 
     // Renk değiştir
-    if(quota.percent > 80){
+    if(pct > 80){
       barEl.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)';
-    } else if(quota.percent > 60){
+    } else if(pct > 60){
       barEl.style.background = 'linear-gradient(90deg,#f59e0b,#d97706)';
     } else {
       barEl.style.background = 'linear-gradient(90deg,var(--primary),#a78bfa)';
@@ -9356,7 +9354,12 @@ function checkStorageQuota() {
   const limit = 5 * 1024 * 1024; // ~5MB typical localStorage limit
   const pct = (used / limit) * 100;
 
-  if (pct > 80) {
+  // Bu fonksiyon setData() icinden HER kayitta cagriliyor — uyariyi
+  // oturum basina sadece BIR kez goster, yoksa ardisik kayitlarda (orn.
+  // foto yukleme denemeleri) ayni toast'tan onlarca kopya birikip ekrani
+  // dolduruyor ve altindaki onemli (orn. "Tekrar Dene") toast'lari gomuyor.
+  if (pct > 80 && !window._quotaWarned) {
+    window._quotaWarned = true;
     toast(`⚠️ Depolama %${pct.toFixed(0)} dolu (${formatBytes(used)}). Yedek alın!`,'error');
   }
   return { used, limit, pct };
@@ -11918,6 +11921,15 @@ async function _uploadPhotoToCatbox(dataUrl, _retryCount){
       throw new Error('İzin yok / rate-limit — Token\'ın repo yetkisini kontrol edin');
     }
     if(res.status === 404) throw new Error('Repo bulunamadı: ' + cfg.owner + '/' + cfg.repo + ' (private repo için token "repo" kapsamlı olmalı)');
+    // 409 = ayni anda birden fazla foto yuklenirken (toplu yukleme) data
+    // branch'inin ucu kaymis olabilir ("is at X but expected Y"). Bu gercek
+    // bir hata degil, salt es zamanlilik — taze ref ile otomatik tekrar dene.
+    if((res.status === 409 || (res.status === 422 && /sha/i.test(msg))) && _retryCount < 4){
+      const delay = 500 + _retryCount * 700 + Math.floor(Math.random() * 400);
+      console.log('[gh] Foto yükleme çakışması (409), ' + delay + 'ms sonra tekrar deneniyor (' + (_retryCount+1) + '/4)');
+      await new Promise(r => setTimeout(r, delay));
+      return _uploadPhotoToCatbox(dataUrl, _retryCount + 1);
+    }
     if(res.status === 422 && /sha/i.test(msg)) throw new Error('Aynı dosya zaten var (nadir bir çakışma) — tekrar deneyin');
     throw new Error('GitHub: ' + msg);
   }

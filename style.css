@@ -3584,7 +3584,8 @@ tr:hover .table-actions-more{
 }
 .swipe-action i{font-size:18px;}
 
-.toast-container{position:fixed;top:20px;right:20px;z-index:var(--z-toast,200);display:flex;flex-direction:column;gap:12px;max-width:420px;pointer-events:none;}
+.toast-container{position:fixed;top:20px;right:20px;z-index:var(--z-toast,200);display:flex;flex-direction:column;gap:12px;max-width:420px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;pointer-events:none;scrollbar-width:none;}
+.toast-container::-webkit-scrollbar{display:none;}
 .toast-container .toast{pointer-events:auto;}
 /* ===== TOAST NOTIFICATIONS ===== */
 .toast{
@@ -5572,8 +5573,10 @@ img,svg,video{max-width:100%;height:auto;}
   }
   .modal-content{padding:16px !important;}
 
-  /* Toast notifications mobilde */
-  .toast-container{left:12px !important;right:12px !important;bottom:12px !important;top:auto !important;}
+  /* Toast notifications mobilde — bottom-anchored; max-height+scroll olmazsa
+     ust sira eklendikce ekranin disina tasiyip Tekrar Dene gibi aksiyonlu
+     toast'lari gomuyordu. */
+  .toast-container{left:12px !important;right:12px !important;bottom:12px !important;top:auto !important;max-height:calc(100vh - 24px) !important;}
   .toast{width:100% !important;max-width:none !important;}
 
   /* Arama/Global search */
@@ -7407,7 +7410,7 @@ body::after{
   .content{ padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
   /* FAB'ları nav ve içerik üstüne kaydır */
   .fab{ bottom: calc(95px + env(safe-area-inset-bottom, 0px)) !important; right: 16px !important; }
-  .toast-container{ bottom: calc(95px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; }
+  .toast-container{ bottom: calc(95px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; max-height: calc(100vh - 95px - env(safe-area-inset-bottom, 0px) - 16px) !important; }
   .v8-fab-menu{ bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important; }
   #v8ScrollTop, .v8-scroll-top{ bottom: calc(165px + env(safe-area-inset-bottom, 0px)) !important; }
 }
