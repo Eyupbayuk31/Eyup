@@ -1559,7 +1559,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="iModel" placeholder="Örn: MK-2024"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="iTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label><select class="form-input" id="iAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label>
+              <select class="form-input" id="iAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="iAtolyeBtn" onclick="openAtolyePicker('iAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="iAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="iTeslimEden" placeholder="Ad Soyad"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="iTeslimAlan" placeholder="Ad Soyad"></div>
             <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="iTermin" type="date"></div>
@@ -1714,7 +1717,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="fModel" placeholder="Örn: FZ-001"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="fTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label><select class="form-input" id="fAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label>
+              <select class="form-input" id="fAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="fAtolyeBtn" onclick="openAtolyePicker('fAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="fAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="fTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="fTeslimAlan"></div>
             <div class="form-group" style="grid-column:span 2;">
@@ -1759,7 +1765,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="lModel" placeholder="Örn: LS-001"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="lTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label><select class="form-input" id="lAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label>
+              <select class="form-input" id="lAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="lAtolyeBtn" onclick="openAtolyePicker('lAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="lAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="lTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="lTeslimAlan"></div>
             <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="lRenk" placeholder="Örn: Siyah, Beyaz, Ekru…"></div>
@@ -1802,7 +1811,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="dModel" placeholder="Örn: DG-001"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="dTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label><select class="form-input" id="dAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label>
+              <select class="form-input" id="dAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="dAtolyeBtn" onclick="openAtolyePicker('dAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="dAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="dTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="dTeslimAlan"></div>
             <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="dRenk" placeholder="Örn: Siyah, Beyaz, Lacivert…"></div>
@@ -1834,7 +1846,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="saModel" placeholder="Örn: SA-001"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="saTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label><select class="form-input" id="saAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label>
+              <select class="form-input" id="saAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="saAtolyeBtn" onclick="openAtolyePicker('saAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="saAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="saTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="saTeslimAlan"></div>
             <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="saRenk" placeholder="Örn: Siyah, Beyaz, Lacivert…"></div>
@@ -1871,7 +1886,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="korModel" placeholder="Örn: KOR-001"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="korTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label><select class="form-input" id="korAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label>
+              <select class="form-input" id="korAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="korAtolyeBtn" onclick="openAtolyePicker('korAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="korAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="korTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="korTeslimAlan"></div>
             <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="korRenk" placeholder="Örn: Siyah, Beyaz, Lacivert…"></div>
@@ -1920,7 +1938,10 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="danModel" placeholder="Örn: DAN-001"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="danTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label><select class="form-input" id="danAtolye"><option value="">Atölye Seçin</option></select></div>
+            <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label>
+              <select class="form-input" id="danAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
+              <button type="button" class="form-input" id="danAtolyeBtn" onclick="openAtolyePicker('danAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="danAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
+            </div>
             <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="danTeslimEden"></div>
             <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="danTeslimAlan"></div>
             <div class="form-group" style="grid-column:span 2;"><label>Renk *</label><input class="form-input" id="danRenk" placeholder="Örn: Siyah, Beyaz, Ekru…"></div>
@@ -3559,10 +3580,22 @@ function toastAction(msg, type, actionLabel, actionFn){
 }
 
 // ==================== ATÖLYE ====================
+const ATOLYE_FORM_FIELD_IDS=['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye','korAtolye','danAtolye'];
 function loadAtolyeSelects(){
   const atolyeler=getData('atolyeler');
   const opts='<option value="">Atölye Seçin</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
-  ['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye','korAtolye','danAtolye'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  ATOLYE_FORM_FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;_syncAtolyeLabel(id);});
+}
+// Aramali atolye picker'in tetikledigi buton etiketini gizli select'in
+// guncel degeriyle eslestirir (cok sayida atolye arasinda native <select>
+// yerine arama kutulu bir secici kullaniliyor — bkz. openAtolyePicker).
+function _syncAtolyeLabel(targetId){
+  const lbl=document.getElementById(targetId+'BtnLabel');
+  if(!lbl)return;
+  const sel=document.getElementById(targetId);
+  const v=sel?sel.value:'';
+  lbl.textContent=v||'Atölye Seçin';
+  lbl.style.color=v?'':'var(--text-muted)';
 }
 
 function addAtolye(){
@@ -4336,6 +4369,7 @@ function saveIrsaliye(){
   deductStockFromIrsaliye(item);
 
   ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik'].forEach(id=>document.getElementById(id).value='');
+  _syncAtolyeLabel('iAtolye');
   document.getElementById('iDurum').value='bekliyor';
   const today=new Date().toISOString().split('T')[0];document.getElementById('iTarih').value=today;
   toast('İrsaliye kaydedildi: '+item.no);refreshHome();
@@ -4488,10 +4522,15 @@ function loadAtolyeFilter(){
   if(lbl) lbl.textContent = (sel.value === 'all' || !sel.value) ? '🏭 Tüm Atölyeler' : ('🏭 ' + sel.value);
 }
 
-// === ARAMALI ATOLYE PICKER (filterAtolye icin) ===
-function openAtolyePicker(){
+// === ARAMALI ATOLYE PICKER — hem liste sayfasindaki filtre hem de irsaliye
+// kesme formlarindaki Atolye alanlari icin ortak, arama kutulu secici. Atolye
+// sayisi arttikca native <select> icinde aranan atolyeyi bulmak zorlasiyordu;
+// bu modal yazarak filtrelenebilen bir liste sunar. targetId verilmezse
+// (eski cagrilarla uyumluluk icin) liste sayfasindaki filtreyi hedefler.
+function openAtolyePicker(targetId){
   const m = document.getElementById('atolyePicker');
   if(!m) return;
+  window._atolyePickerTarget = targetId || 'filterAtolye';
   m.style.display = 'flex';
   // Modal acilir acilmaz arama input'u temizle ve listeyi yenile
   const s = document.getElementById('atolyePickerSearch');
@@ -4507,21 +4546,23 @@ function renderAtolyePickerList(filter){
   if(!list) return;
   const atolyeler = getData('atolyeler') || [];
   const f = (filter||'').trim().toLowerCase();
-  const sel = document.getElementById('filterAtolye');
-  const cur = sel ? sel.value : 'all';
-  // "Tum" + filtre eslesen atolyeler
-  const items = [{ name:'all', label:'🏭 Tüm Atölyeler', count:null }]
+  const targetId = window._atolyePickerTarget || 'filterAtolye';
+  const isFilter = targetId === 'filterAtolye';
+  const sel = document.getElementById(targetId);
+  const cur = sel ? sel.value : (isFilter ? 'all' : '');
+  // Liste filtresinde "Tum Atolyeler" secenegi de gosterilir; form alanlarinda gosterilmez.
+  const items = (isFilter ? [{ name:'all', label:'🏭 Tüm Atölyeler', count:null }] : [])
     .concat(atolyeler
       .filter(a=> !f || (a.name||'').toLowerCase().includes(f))
       .sort((a,b)=> (a.name||'').localeCompare(b.name||'','tr'))
       .map(a=>({ name:a.name, label:a.name, count:null })));
-  if(items.length === 1 && f){
+  if(!items.length || (items.length === 1 && isFilter && f)){
     list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text-muted);">Eşleşen atölye yok</div>';
     return;
   }
   list.innerHTML = items.map(it=>{
-    const active = (cur === it.name) || (cur === '' && it.name==='all');
-    return '<div onclick="pickAtolyeFilter(\''+String(it.name).replace(/'/g,"\\'")+'\')" '
+    const active = (cur === it.name) || (isFilter && cur === '' && it.name==='all');
+    return '<div onclick="pickAtolyeForTarget(\''+String(it.name).replace(/'/g,"\\'")+'\')" '
       + 'style="padding:12px 14px;margin:2px 4px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;'
       + (active ? 'background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.4);' : 'border:1px solid transparent;')
       + '" onmouseover="this.style.background=\'rgba(124,58,237,0.08)\'" onmouseout="this.style.background=\''+(active?'rgba(124,58,237,0.18)':'transparent')+'\'">'
@@ -4531,15 +4572,18 @@ function renderAtolyePickerList(filter){
       + '</div>';
   }).join('');
 }
-function pickAtolyeFilter(name){
-  const sel = document.getElementById('filterAtolye');
+function pickAtolyeForTarget(name){
+  const targetId = window._atolyePickerTarget || 'filterAtolye';
+  const isFilter = targetId === 'filterAtolye';
+  const sel = document.getElementById(targetId);
   if(sel){
     sel.value = name;
     // change event'i tetikle ki applyFilters calissin
     try{ sel.dispatchEvent(new Event('change', { bubbles:true })); }catch(_){
-      if(typeof applyFilters === 'function') applyFilters();
+      if(isFilter && typeof applyFilters === 'function') applyFilters();
     }
   }
+  if(!isFilter) _syncAtolyeLabel(targetId);
   closeAtolyePicker();
 }
 
@@ -5030,6 +5074,8 @@ function _clearFormFields(type){
     ['saModel','saTarih','saAtolye','saTeslimEden','saTeslimAlan','saRenk','saTermin','saAciklama','saMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const t=document.getElementById('saTarih'); if(t) t.value=today;
   }
+  const atolyeFieldMap={standart:'iAtolye',fermuar:'fAtolye',lastik:'lAtolye',dugme:'dAtolye',satenaskilik:'saAtolye',kordon:'korAtolye',dantel:'danAtolye'};
+  if(atolyeFieldMap[type]) _syncAtolyeLabel(atolyeFieldMap[type]);
 }
 
 // ==================== PDF GENERATION ====================
@@ -5358,6 +5404,7 @@ function saveFermuar(){
   const list=getData('fermuarlar');list.unshift(item);setData('fermuarlar',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'fermuar');
   ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>document.getElementById(id).value='');
+  _syncAtolyeLabel('fAtolye');
   sizes.forEach(s=>{document.getElementById('fer_'+s+'cm').value='';document.getElementById('fer_'+s+'a').value='';});
   document.getElementById('ferToplam').textContent='0';
   const today=new Date().toISOString().split('T')[0];document.getElementById('fTarih').value=today;
@@ -5385,6 +5432,7 @@ function saveLastik(){
   const list=getData('lastikler');list.unshift(item);setData('lastikler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'lastik');
   ['lModel','lTarih','lAtolye','lTeslimEden','lTeslimAlan','lRenk','lTermin','lAciklama','lCm','lMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  _syncAtolyeLabel('lAtolye');
   const today=new Date().toISOString().split('T')[0];document.getElementById('lTarih').value=today;
   refreshLastikList();toast('Lastik irsaliyesi kaydedildi: '+item.no);refreshHome();
 }
@@ -5420,6 +5468,7 @@ function saveDugme(){
   const list=getData('dugmeler');list.unshift(item);setData('dugmeler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'dugme');
   ['dModel','dTarih','dAtolye','dTeslimEden','dTeslimAlan','dRenk','dTermin','dAciklama','dAdet'].forEach(id=>document.getElementById(id).value='');
+  _syncAtolyeLabel('dAtolye');
   const today=new Date().toISOString().split('T')[0];document.getElementById('dTarih').value=today;
   toast('Düğme irsaliyesi kaydedildi: '+item.no);refreshHome();
 }
@@ -5485,6 +5534,7 @@ function saveKordon(){
   const list=getData('kordonlar');list.unshift(item);setData('kordonlar',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'kordon');
   ['korModel','korTarih','korAtolye','korTeslimEden','korTeslimAlan','korRenk','korTermin','korAciklama'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  _syncAtolyeLabel('korAtolye');
   for(let i=1;i<=10;i++){const c=document.getElementById('kor_'+i+'_cm');const a=document.getElementById('kor_'+i+'_a');if(c)c.value='';if(a)a.value='';}
   const el=document.getElementById('korToplam');if(el)el.textContent='0';
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('korTarih');if(dt)dt.value=today;
@@ -5527,6 +5577,7 @@ function saveDantel(){
   const list=getData('danteller');list.unshift(item);setData('danteller',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'dantel');
   ['danModel','danTarih','danAtolye','danTeslimEden','danTeslimAlan','danRenk','danTermin','danAciklama','danMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  _syncAtolyeLabel('danAtolye');
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('danTarih');if(dt)dt.value=today;
   toast('Dantel irsaliyesi kaydedildi: '+item.no);refreshHome();refreshDantelList();
 }
@@ -5563,6 +5614,7 @@ function saveSatenaskilik(){
   const list=getData('satenaskilikler');list.unshift(item);setData('satenaskilikler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'satenaskilik');
   ['saModel','saTarih','saAtolye','saTeslimEden','saTeslimAlan','saRenk','saTermin','saAciklama','saMetre'].forEach(id=>document.getElementById(id).value='');
+  _syncAtolyeLabel('saAtolye');
   const today=new Date().toISOString().split('T')[0];document.getElementById('saTarih').value=today;
   toast('Saten Askılık irsaliyesi kaydedildi: '+item.no);refreshHome();refreshSatenaskilikList();
 }
@@ -10166,6 +10218,7 @@ function _fillPageFromData(page, data){
   Object.keys(map).forEach(k=>{
     const el = document.getElementById(map[k]);
     if(el && data[k] != null) el.value = data[k];
+    if(k==='atolye') _syncAtolyeLabel(map[k]);
   });
   // Sizes / beden dolumu (standart)
   if(page==='new' && data.sizes){
