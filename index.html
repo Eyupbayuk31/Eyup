@@ -676,6 +676,9 @@
       }
 
       if(!FS_KEYS.includes(key)) return;
+      // Bu cihazda yeni bir yazma oldu — kisa sure smartResync'i ertele ki
+      // henuz buluta inmemis/inmekte olan yerel kaydi bayat remote ezmesin.
+      window._lastLocalWriteAt = Date.now();
 
       const p = (async function(){
         // SDK hazir olana dek bekle
@@ -693,7 +696,18 @@
         }
       })();
       window._fsInflight.add(p);
-      p.finally(() => window._fsInflight.delete(p));
+      // Rozet: yazma basladi → "kaydediliyor…"; tum yazmalar inince → "bağlı".
+      // Boylece (ozellikle telefonda) kaydin gercekten buluta gittigi gorunur.
+      try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('sync'); }catch(_){}
+      p.finally(() => {
+        window._fsInflight.delete(p);
+        try{
+          if(window._fsInflight.size === 0 && window._lastBadgeStateRef !== 'err'
+             && typeof window._updateCloudBadge === 'function'){
+            window._updateCloudBadge('ok');
+          }
+        }catch(_){}
+      });
     };
 
     // ── Sayfa kapanirken bekleyen yazmalari bekle (best effort)
@@ -944,6 +958,7 @@
       if(window._isViewerUrl) return;
       if(state === _lastBadgeState && state === 'ok') return; // gereksiz DOM yazma
       _lastBadgeState = state;
+      window._lastBadgeStateRef = state; // setData finally'sinin hata durumunu gormesi icin
       function place(){
         var el = document.getElementById('cloudSyncBadge');
         if(!el){
@@ -958,6 +973,7 @@
           document.body.appendChild(el);
         }
         if(state === 'ok'){ el.style.background='#065f46'; el.style.color='#d1fae5'; el.textContent='☁️ bağlı'; el.title='Bulut senkron aktif — tıkla: şimdi eşitle'; }
+        else if(state === 'sync'){ el.style.background='#92400e'; el.style.color='#fde68a'; el.textContent='☁️ kaydediliyor…'; el.title='Değişiklikler buluta yazılıyor — uygulamayı birkaç saniye açık tutun'; }
         else if(state === 'err'){ el.style.background='#7c2d12'; el.style.color='#fed7aa'; el.textContent='☁️ hata'; el.title=(detail||'yazma/dinleme hatası')+' — tıkla: yeniden eşitle'; }
         else { el.style.background='#7f1d1d'; el.style.color='#fecaca'; el.textContent='☁️ BAĞLI DEĞİL'; el.title=(detail||'SDK yüklenemedi')+' — tıkla: sayfayı yenile'; }
       }
@@ -992,6 +1008,32 @@
         }
       }, 12000);
     }
+
+    // ── HIZLI YENIDEN ESITLEME — cihaz one gelince / aga yeniden baglaninca
+    // aninda buluttan cek. Arka plandaki sekme (ozellikle acik birakilan PC)
+    // Firestore canli kanalini kisitlayabiliyor; kullanici sekmeye donunce
+    // throttled listener'i beklemeden son veriyi getiririz. Ayrica telefonda
+    // gecici hatayla buluta inmemis kayitlar bootRead icindeki offline-push ile
+    // bu sirada tekrar denenir — yani iki yonu de hizlandirir.
+    var _lastResyncAt = 0;
+    function smartResync(reason){
+      if(window._isViewerUrl || !window._fs) return;
+      // Bekleyen yerel yazma varsa cekme: once yazma insin, snapshot uzlastirsin.
+      // (Aksi halde bootRead bayat remote ile henuz inmemis bir duzenlemeyi ezebilir.)
+      if(window._fsInflight && window._fsInflight.size > 0) return;
+      // Bu cihaz az once yazdiysa biraz bekle (yazma insin) — clobber'i onler.
+      if(window._lastLocalWriteAt && (Date.now() - window._lastLocalWriteAt < 6000)) return;
+      var now = Date.now();
+      if(now - _lastResyncAt < 10000) return; // cooldown: ard arda okuma maliyetini sinirla
+      _lastResyncAt = now;
+      try { bootRead(); } catch(e){ console.warn('[fs] smartResync err:', reason, e); }
+    }
+    window._smartResync = smartResync;
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') smartResync('visible');
+    });
+    window.addEventListener('focus',  function(){ smartResync('focus'); });
+    window.addEventListener('online', function(){ smartResync('online'); });
 
     // ========== ERROR LOGGING ==========
     window.logError = function(context, error, meta = {}){
