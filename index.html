@@ -1168,6 +1168,11 @@
 <!-- Yeni Özellikler: QR tarama/oluşturma kütüphaneleri -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Gerçek PDF dosyası indirme için (yazdırma diyaloğuna ihtiyaç duymadan).
+     html2canvas-pro kullanılıyor: orijinal html2canvas modern CSS renk
+     fonksiyonlarını (oklch/color()) parse edemiyor ve güncel Chrome'da hata veriyor. -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -5079,13 +5084,54 @@ function _clearFormFields(type){
 let currentModalItem = null;
 let currentModalType = null;
 
+// Gerçek PDF dosyası indirir (tarayıcı yazdırma diyaloğu açmadan).
+// Yazdırma penceresinden de window.opener._downloadElementAsPDF(...) ile çağrılabilir.
+// hideEl: yakalama sırasında gizlenecek (ör. yüzen buton barı), sonra tekrar gösterilecek eleman.
+async function _downloadElementAsPDF(element, filename, hideEl) {
+  if (typeof html2canvas === 'undefined' || !(window.jspdf && window.jspdf.jsPDF)) {
+    toast('PDF kütüphanesi yüklenemedi — internet bağlantınızı kontrol edin', 'error');
+    return;
+  }
+  toast('PDF hazırlanıyor…', 'info');
+  const prevDisplay = hideEl ? hideEl.style.display : null;
+  if (hideEl) hideEl.style.display = 'none';
+  try {
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    pdf.save(filename);
+    toast('PDF indirildi 📥', 'success');
+  } catch (err) {
+    console.error('PDF indirme hatası:', err);
+    toast('PDF indirilemedi — tekrar deneyin', 'error');
+  } finally {
+    if (hideEl) hideEl.style.display = prevDisplay || 'flex';
+  }
+}
+
 function generatePDFFromModal() {
   if (currentModalItem && currentModalType) {
     generatePDF(currentModalItem.id, currentModalType);
   }
 }
 
-function generatePDF(id, type) {
+function generatePDF(id, type, mode) {
+  mode = mode || 'download'; // 'download' = gerçek PDF dosyası indir, 'print' = yazdırma önizlemesi aç
   const keyMap = {standart:'irsaliyeler',fermuar:'fermuarlar',lastik:'lastikler',dugme:'dugmeler',toptan:'toptanlar',satenaskilik:'satenaskilikler',kordon:'kordonlar',dantel:'danteller'};
   const key = keyMap[type];
   if (!key) return toast('PDF oluşturulamadı','error');
@@ -5345,36 +5391,62 @@ function generatePDF(id, type) {
 
   html += `</body></html>`;
 
-  // Open in new window with proper viewer controls
-  const printWindow = window.open('', '_blank', 'width=900,height=800');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
+  const filename = ((item.no || typeLabel).toString().replace(/[\\/:*?"<>|]+/g,'_')) + '.pdf';
 
-    // Add print button and controls after content loads
-    printWindow.addEventListener('load', function() {
-      const controlsDiv = printWindow.document.createElement('div');
-      controlsDiv.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;';
-      controlsDiv.innerHTML = `
-        <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,0.3);display:flex;align-items:center;gap:6px;">
-          <span style="font-size:16px;">🖨️</span> PDF Kaydet / Yazdır
-        </button>
-        <button onclick="window.close()" style="background:#6b7280;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(107,115,128,0.3);">
-          ✕ Kapat
-        </button>
-      `;
-      printWindow.document.body.appendChild(controlsDiv);
+  if (mode === 'print') {
+    // Yazdırma önizlemesi: kullanıcı yazıcıya gönderebilir veya popup içinden PDF indirebilir
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
 
-      // Hide controls when printing
-      const style = printWindow.document.createElement('style');
-      style.textContent = '@media print { div[style*="position:fixed"] { display:none !important; } }';
-      printWindow.document.head.appendChild(style);
-    });
+      printWindow.addEventListener('load', function() {
+        const controlsDiv = printWindow.document.createElement('div');
+        controlsDiv.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;';
+        controlsDiv.innerHTML = `
+          <button class="pdf-dl-btn" style="background:#16a34a;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,0.3);display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;">📥</span> PDF İndir
+          </button>
+          <button class="pdf-print-btn" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,0.3);display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;">🖨️</span> Yazdır
+          </button>
+          <button class="pdf-close-btn" style="background:#6b7280;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(107,115,128,0.3);">
+            ✕ Kapat
+          </button>
+        `;
+        printWindow.document.body.appendChild(controlsDiv);
+        controlsDiv.querySelector('.pdf-dl-btn').addEventListener('click', function() {
+          _downloadElementAsPDF(printWindow.document.body, filename, controlsDiv);
+        });
+        controlsDiv.querySelector('.pdf-print-btn').addEventListener('click', function() { printWindow.print(); });
+        controlsDiv.querySelector('.pdf-close-btn').addEventListener('click', function() { printWindow.close(); });
 
-    toast('PDF önizleme açıldı — yazdır veya PDF olarak kaydet');
-  } else {
-    toast('Popup engellendi — lütfen izin verin', 'error');
+        const style = printWindow.document.createElement('style');
+        style.textContent = '@media print { div[style*="position:fixed"] { display:none !important; } }';
+        printWindow.document.head.appendChild(style);
+      });
+
+      toast('Yazdırma önizlemesi açıldı');
+    } else {
+      toast('Popup engellendi — lütfen izin verin', 'error');
+    }
+    return;
   }
+
+  // mode === 'download': hiçbir diyalog açmadan gerçek PDF dosyasını indir
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:1131px;border:0;';
+  document.body.appendChild(iframe);
+  iframe.addEventListener('load', function onLoad() {
+    iframe.removeEventListener('load', onLoad);
+    // QR kod ve fontların render olması için kısa bekleme
+    setTimeout(() => {
+      _downloadElementAsPDF(iframe.contentDocument.body, filename).finally(() => {
+        document.body.removeChild(iframe);
+      });
+    }, 250);
+  });
+  iframe.srcdoc = html;
 }
 
 // Keep old function name for compatibility
@@ -8524,8 +8596,7 @@ function sharePDF() {
 
 function sharePrint() {
   if (!currentShareItem) return;
-  generatePDF(currentShareItem.id, currentShareType);
-  setTimeout(() => { toast('Yazdırma penceresi açıldı','info'); }, 500);
+  generatePDF(currentShareItem.id, currentShareType, 'print');
   closeShareMenu();
 }
 
@@ -8745,6 +8816,7 @@ function _singleItemPdfHtml(item, type){
 
 function _buildBulkHTML(items){
   const today=new Date().toLocaleDateString('tr-TR');
+  const pdfFilename='Toplu_Irsaliye_'+new Date().toISOString().split('T')[0]+'.pdf';
   const pages=items.map(x=>_singleItemPdfHtml(x.item,x.type)).join('');
   return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
 <title>İrsaliye PDF — ${today}</title>
@@ -8961,12 +9033,12 @@ function _buildBulkHTML(items){
   .btn-pdf{background:#dc2626;color:#fff;}
   .btn-close{background:#6b7280;color:#fff;}
 </style></head><body>
-<div class="no-print">
-  <button class="btn-pdf" onclick="window.print()">🖨️ PDF Kaydet / Yazdır</button>
+<div class="no-print" id="bulkPdfControls">
+  <button class="btn-pdf" style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.body, '${pdfFilename}', document.getElementById('bulkPdfControls'))">📥 PDF İndir</button>
+  <button class="btn-pdf" onclick="window.print()">🖨️ Yazdır</button>
   <button class="btn-close" onclick="window.close()">✕ Kapat</button>
 </div>
 ${pages}
-<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),600));<\/script>
 </body></html>`;
 }
 
@@ -8978,7 +9050,7 @@ function bulkExportPDF(){
   w.document.open();
   w.document.write(_buildBulkHTML(items));
   w.document.close();
-  toast(items.length+' kayıt PDF olarak hazırlanıyor','success');
+  toast(items.length+' kayıt için PDF önizlemesi açıldı — "PDF İndir" ile kaydedin','success');
 }
 
 function bulkPrint(){
@@ -8989,6 +9061,7 @@ function bulkPrint(){
   w.document.open();
   w.document.write(_buildBulkHTML(items));
   w.document.close();
+  w.addEventListener('load', () => setTimeout(() => w.print(), 500));
   toast(items.length+' kayıt yazdırılıyor','info');
 }
 
