@@ -5402,6 +5402,7 @@ function generatePDF(id, type, mode) {
 
       printWindow.addEventListener('load', function() {
         const controlsDiv = printWindow.document.createElement('div');
+        controlsDiv.className = 'pdf-preview-controls';
         controlsDiv.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;';
         controlsDiv.innerHTML = `
           <button class="pdf-dl-btn" style="background:#16a34a;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,0.3);display:flex;align-items:center;gap:6px;">
@@ -5422,7 +5423,7 @@ function generatePDF(id, type, mode) {
         controlsDiv.querySelector('.pdf-close-btn').addEventListener('click', function() { printWindow.close(); });
 
         const style = printWindow.document.createElement('style');
-        style.textContent = '@media print { div[style*="position:fixed"] { display:none !important; } }';
+        style.textContent = '@media print { .pdf-preview-controls { display:none !important; } }';
         printWindow.document.head.appendChild(style);
       });
 
@@ -9007,7 +9008,7 @@ function _buildBulkHTML(items){
   }
 
   @media print{
-    .no-print{display:none;}
+    .no-print{display:none !important;}
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .irsaliye-page{page-break-inside:avoid;}
   }
@@ -13153,7 +13154,7 @@ function printListPDF(){
   .summary{margin-top:15px;padding:10px;background:#f1f5f9;border-radius:4px;font-size:11px;display:flex;justify-content:space-around;}
   .summary div b{color:#1e40af;font-size:14px;display:block;}
   .footer{margin-top:15px;text-align:center;font-size:9px;color:#777;border-top:1px solid #ddd;padding-top:6px;}
-  @media print{ .no-print{display:none;} body{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }
+  @media print{ .no-print{display:none !important;} body{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }
   .no-print{position:fixed;top:10px;right:10px;z-index:999;}
   .no-print button{padding:10px 18px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-left:5px;}
   .no-print button.close{background:#64748b;}
