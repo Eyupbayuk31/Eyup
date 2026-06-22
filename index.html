@@ -4814,6 +4814,11 @@ function deleteItemUni(id,type){
   recycle.unshift({...item,_type:type,_deletedAt:new Date().toISOString()});
   setData('recycleBin',recycle);
   applyFilters();refreshHome();toast('Kayıt geri dönüşüme taşındı','info');
+  if(type==='lastik')refreshLastikList();
+  else if(type==='toptan')refreshToptanList();
+  else if(type==='kordon')refreshKordonList();
+  else if(type==='dantel')refreshDantelList();
+  else if(type==='satenaskilik')refreshSatenaskilikList();
 }
 
 function showDetailUni(id,type){
@@ -5504,23 +5509,27 @@ function saveLastik(){
   ['lModel','lTarih','lAtolye','lTeslimEden','lTeslimAlan','lRenk','lTermin','lAciklama','lCm','lMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   _syncAtolyeLabel('lAtolye');
   const today=new Date().toISOString().split('T')[0];document.getElementById('lTarih').value=today;
-  refreshLastikList();toast('Lastik irsaliyesi kaydedildi: '+item.no);refreshHome();
+  _subListPage.lastik=1;refreshLastikList();toast('Lastik irsaliyesi kaydedildi: '+item.no);refreshHome();
 }
 
 function deleteLastik(id){deleteItemUni(id,'lastik');}
 
 function refreshLastikList(){
-  const list=getData('lastikler');
-  document.getElementById('lastikCount').textContent=list.length;
+  const fullList=getData('lastikler');
+  document.getElementById('lastikCount').textContent=fullList.length;
   const tbody=document.getElementById('lastikTable');
   const mobileEl=document.getElementById('lastikMobile');
-  if(!list.length){
+  if(!fullList.length){
     tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Kayıt yok</p></div>';
+    const pagEl=document.getElementById('lastikPagination');if(pagEl)pagEl.innerHTML='';
     return;
   }
+  const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.lastik,PAGE_SIZE);
+  _subListPage.lastik=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
   mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">📐 ${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  _renderSubListPagination('lastikPagination',tbody,page,totalPages,total,start,end,'goToLastikPage');
 }
 
 // ==================== DÜĞME ====================
@@ -5556,23 +5565,27 @@ function saveToptan(){
   ['tFirma','tUrun','tRenk','tNot'].forEach(id=>document.getElementById(id).value='');
   sizes.forEach(s=>document.getElementById('t_'+s+'a').value='');
   document.getElementById('tToplam').textContent='0';
-  refreshToptanList();toast('Sipariş kaydedildi');
+  _subListPage.toptan=1;refreshToptanList();toast('Sipariş kaydedildi');
 }
 
 function deleteToptan(id){deleteItemUni(id,'toptan');}
 
 function refreshToptanList(){
-  const list=getData('toptanlar');
-  document.getElementById('toptanCount').textContent=list.length;
+  const fullList=getData('toptanlar');
+  document.getElementById('toptanCount').textContent=fullList.length;
   const tbody=document.getElementById('toptanTable');
   const mobileEl=document.getElementById('toptanMobile');
-  if(!list.length){
+  if(!fullList.length){
     tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-boxes-stacked"></i><p>Kayıt yok</p></div>';
+    const pagEl=document.getElementById('toptanPagination');if(pagEl)pagEl.innerHTML='';
     return;
   }
+  const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.toptan,PAGE_SIZE);
+  _subListPage.toptan=page;
   tbody.innerHTML=list.map(i=>`<tr><td>${esc(i.tarih)}</td><td style="font-weight:600;">${esc(i.firma)}</td><td>${esc(i.urun)||'-'}</td><td><span class="chip chip-info">${+i.total||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
   mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span style="font-weight:600;">${esc(i.firma)}</span><span class="chip chip-info">${+i.total||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span>${i.urun?'<span><i class="fas fa-cube"></i> '+esc(i.urun)+'</span>':''}</div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  _renderSubListPagination('toptanPagination',tbody,page,totalPages,total,start,end,'goToToptanPage');
 }
 
 // ==================== KORDON ====================
@@ -5608,24 +5621,28 @@ function saveKordon(){
   for(let i=1;i<=10;i++){const c=document.getElementById('kor_'+i+'_cm');const a=document.getElementById('kor_'+i+'_a');if(c)c.value='';if(a)a.value='';}
   const el=document.getElementById('korToplam');if(el)el.textContent='0';
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('korTarih');if(dt)dt.value=today;
-  toast('Kordon irsaliyesi kaydedildi: '+item.no);refreshHome();refreshKordonList();
+  _subListPage.kordon=1;toast('Kordon irsaliyesi kaydedildi: '+item.no);refreshHome();refreshKordonList();
 }
 
 function deleteKordon(id){deleteItemUni(id,'kordon');}
 
 function refreshKordonList(){
-  const list=getData('kordonlar');
-  const countEl=document.getElementById('kordonCount');if(countEl)countEl.textContent=list.length;
+  const fullList=getData('kordonlar');
+  const countEl=document.getElementById('kordonCount');if(countEl)countEl.textContent=fullList.length;
   const tbody=document.getElementById('kordonTable');
   const mobileEl=document.getElementById('kordonMobile');
   if(!tbody)return;
-  if(!list.length){
+  if(!fullList.length){
     tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-bezier-curve"></i><p>Kayıt yok</p></div>';
+    const pagEl=document.getElementById('kordonPagination');if(pagEl)pagEl.innerHTML='';
     return;
   }
+  const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.kordon,PAGE_SIZE);
+  _subListPage.kordon=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${i.totalAdet||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
   if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${i.totalAdet||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">🎨 ${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  _renderSubListPagination('kordonPagination',tbody,page,totalPages,total,start,end,'goToKordonPage');
 }
 
 // ==================== DANTEL ====================
@@ -5649,24 +5666,28 @@ function saveDantel(){
   ['danModel','danTarih','danAtolye','danTeslimEden','danTeslimAlan','danRenk','danTermin','danAciklama','danMetre'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   _syncAtolyeLabel('danAtolye');
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('danTarih');if(dt)dt.value=today;
-  toast('Dantel irsaliyesi kaydedildi: '+item.no);refreshHome();refreshDantelList();
+  _subListPage.dantel=1;toast('Dantel irsaliyesi kaydedildi: '+item.no);refreshHome();refreshDantelList();
 }
 
 function deleteDantel(id){deleteItemUni(id,'dantel');}
 
 function refreshDantelList(){
-  const list=getData('danteller');
-  const countEl=document.getElementById('dantelCount');if(countEl)countEl.textContent=list.length;
+  const fullList=getData('danteller');
+  const countEl=document.getElementById('dantelCount');if(countEl)countEl.textContent=fullList.length;
   const tbody=document.getElementById('dantelTable');
   const mobileEl=document.getElementById('dantelMobile');
   if(!tbody)return;
-  if(!list.length){
+  if(!fullList.length){
     tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-border-all"></i><p>Kayıt yok</p></div>';
+    const pagEl=document.getElementById('dantelPagination');if(pagEl)pagEl.innerHTML='';
     return;
   }
+  const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.dantel,PAGE_SIZE);
+  _subListPage.dantel=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
   if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">🕸️ ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  _renderSubListPagination('dantelPagination',tbody,page,totalPages,total,start,end,'goToDantelPage');
 }
 
 // ==================== SATEN ASKILIK ====================
@@ -5686,24 +5707,28 @@ function saveSatenaskilik(){
   ['saModel','saTarih','saAtolye','saTeslimEden','saTeslimAlan','saRenk','saTermin','saAciklama','saMetre'].forEach(id=>document.getElementById(id).value='');
   _syncAtolyeLabel('saAtolye');
   const today=new Date().toISOString().split('T')[0];document.getElementById('saTarih').value=today;
-  toast('Saten Askılık irsaliyesi kaydedildi: '+item.no);refreshHome();refreshSatenaskilikList();
+  _subListPage.satenaskilik=1;toast('Saten Askılık irsaliyesi kaydedildi: '+item.no);refreshHome();refreshSatenaskilikList();
 }
 
 function deleteSatenaskilik(id){deleteItemUni(id,'satenaskilik');}
 
 function refreshSatenaskilikList(){
-  const list=getData('satenaskilikler');
-  const countEl=document.getElementById('satenaskilikCount');if(countEl)countEl.textContent=list.length;
+  const fullList=getData('satenaskilikler');
+  const countEl=document.getElementById('satenaskilikCount');if(countEl)countEl.textContent=fullList.length;
   const tbody=document.getElementById('satenaskilikTable');
   const mobileEl=document.getElementById('satenaskilikMobile');
   if(!tbody)return;
-  if(!list.length){
+  if(!fullList.length){
     tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
     if(mobileEl)mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-layer-group"></i><p>Kayıt yok</p></div>';
+    const pagEl=document.getElementById('satenaskilikPagination');if(pagEl)pagEl.innerHTML='';
     return;
   }
+  const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.satenaskilik,PAGE_SIZE);
+  _subListPage.satenaskilik=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
   if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'} / ${esc(i.metre)} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  _renderSubListPagination('satenaskilikPagination',tbody,page,totalPages,total,start,end,'goToSatenaskilikPage');
 }
 
 // Toptan total live
@@ -9278,7 +9303,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // --- Pagination ---
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 15;
 let currentListPage = 1;
 let _lastFilteredList = [];
 
@@ -9405,6 +9430,30 @@ function goToListPage(p) {
     }
   }, 500);
 });
+
+// --- Sub-list pagination (Lastik/Toptan/Kordon/Dantel/Saten Askılık kayıt listeleri) ---
+const _subListPage = { lastik:1, toptan:1, kordon:1, dantel:1, satenaskilik:1 };
+function goToLastikPage(p){ _subListPage.lastik = p; refreshLastikList(); }
+function goToToptanPage(p){ _subListPage.toptan = p; refreshToptanList(); }
+function goToKordonPage(p){ _subListPage.kordon = p; refreshKordonList(); }
+function goToDantelPage(p){ _subListPage.dantel = p; refreshDantelList(); }
+function goToSatenaskilikPage(p){ _subListPage.satenaskilik = p; refreshSatenaskilikList(); }
+
+function _renderSubListPagination(containerId, tbody, page, totalPages, total, start, end, onPageChange) {
+  let pagEl = document.getElementById(containerId);
+  if (!pagEl) {
+    pagEl = document.createElement('div');
+    pagEl.id = containerId;
+    const parent = tbody.closest('.card');
+    if (parent) parent.appendChild(pagEl);
+  }
+  if (totalPages > 1) {
+    renderPagination(containerId, page, totalPages, onPageChange);
+    pagEl.insertAdjacentHTML('beforeend', `<div class="pagination-info">Gösterilen: ${start+1}-${end} / Toplam: ${total} kayıt</div>`);
+  } else {
+    pagEl.innerHTML = '';
+  }
+}
 
 // --- Storage monitoring ---
 function getStorageUsage() {
