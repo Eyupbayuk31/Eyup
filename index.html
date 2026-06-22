@@ -4430,10 +4430,39 @@ function openAtolyePicker(targetId){
   const s = document.getElementById('atolyePickerSearch');
   if(s){ s.value=''; setTimeout(()=>{ try{ s.focus(); }catch(_){} }, 60); }
   renderAtolyePickerList('');
+  _syncAtolyePickerViewport();
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', _syncAtolyePickerViewport);
+    window.visualViewport.addEventListener('scroll', _syncAtolyePickerViewport);
+  }
+}
+function _syncAtolyePickerViewport(){
+  // Mobilde klavye acilinca position:fixed eleman layout viewport'a gore
+  // boyutlanmaya devam eder; gercekte gorunen alan (visualViewport) kucalir
+  // ve altta hizali sheet'in alt kismi (liste) klavyenin arkasinda kalir.
+  // Bu yuzden overlay'i ve panelin max-height'ini gercek gorunur alana gore ayarliyoruz.
+  const m = document.getElementById('atolyePicker');
+  if(!m || m.style.display === 'none') return;
+  const vv = window.visualViewport;
+  if(!vv) return;
+  const panel = m.firstElementChild;
+  m.style.top = vv.offsetTop + 'px';
+  m.style.height = vv.height + 'px';
+  if(panel) panel.style.maxHeight = Math.max(200, vv.height * 0.85) + 'px';
 }
 function closeAtolyePicker(){
   const m = document.getElementById('atolyePicker');
-  if(m) m.style.display = 'none';
+  if(m){
+    m.style.display = 'none';
+    m.style.top = '';
+    m.style.height = '';
+    const panel = m.firstElementChild;
+    if(panel) panel.style.maxHeight = '';
+  }
+  if(window.visualViewport){
+    window.visualViewport.removeEventListener('resize', _syncAtolyePickerViewport);
+    window.visualViewport.removeEventListener('scroll', _syncAtolyePickerViewport);
+  }
 }
 function renderAtolyePickerList(filter){
   const list = document.getElementById('atolyePickerList');
