@@ -5080,6 +5080,44 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
   }
 }
 
+// Yeni pencerede HTML açar — document.write yerine blob: URL kullanır.
+// Sebep: mobil tarayıcılar (Chrome/Safari) "about:blank" sekmelerini
+// yazdırma diyaloğu açılınca veya sekme değişince yeniden yükler ve
+// document.write ile yazılan içerik kaybolur → boş "about:blank" sayfası.
+// blob: URL gerçek bir adres olduğundan içerik kalıcı olur.
+function _openHtmlWindow(html, features) {
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank', features || '');
+    if (w) {
+      // blob URL'i bir süre sonra serbest bırak (pencere yüklendikten sonra)
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 60000);
+      return w;
+    }
+    // Pencere açılamadıysa URL'i hemen temizle
+    try { URL.revokeObjectURL(url); } catch (e) {}
+    return null;
+  } catch (e) {
+    // Blob desteklenmiyorsa eski yönteme düş
+    const w = window.open('', '_blank', features || '');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+    return w;
+  }
+}
+
+// Pencere yüklendiğinde (veya zaten yüklüyse hemen) verilen işlevi çalıştırır.
+// blob: URL ile açılan pencerede 'load' olayı dinleyici eklenmeden önce
+// tetiklenebileceği için readyState kontrolü yapılır.
+function _whenWindowReady(w, cb) {
+  if (!w) return;
+  const run = () => { try { cb(); } catch (e) { console.error(e); } };
+  try {
+    if (w.document && w.document.readyState === 'complete') { run(); return; }
+  } catch (e) {}
+  w.addEventListener('load', run);
+}
+
 function generatePDFFromModal() {
   if (currentModalItem && currentModalType) {
     generatePDF(currentModalItem.id, currentModalType);
@@ -5359,12 +5397,9 @@ function generatePDF(id, type, mode) {
 
   if (mode === 'print') {
     // Yazdırma önizlemesi: kullanıcı yazıcıya gönderebilir veya popup içinden PDF indirebilir
-    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    const printWindow = _openHtmlWindow(html, 'width=900,height=800');
     if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-
-      printWindow.addEventListener('load', function() {
+      _whenWindowReady(printWindow, function() {
         const controlsDiv = printWindow.document.createElement('div');
         controlsDiv.className = 'pdf-preview-controls';
         controlsDiv.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;';
@@ -9038,23 +9073,17 @@ ${pages}
 function bulkExportPDF(){
   const items=_bulkGetSelectedItems();
   if(!items.length) return toast('En az 1 kayıt seçin','error');
-  const w=window.open('','_blank','width=1000,height=700');
+  const w=_openHtmlWindow(_buildBulkHTML(items),'width=1000,height=700');
   if(!w){ toast('Popup engellendi! İzin verin.','error'); return; }
-  w.document.open();
-  w.document.write(_buildBulkHTML(items));
-  w.document.close();
   toast(items.length+' kayıt için PDF önizlemesi açıldı — "PDF İndir" ile kaydedin','success');
 }
 
 function bulkPrint(){
   const items=_bulkGetSelectedItems();
   if(!items.length) return toast('En az 1 kayıt seçin','error');
-  const w=window.open('','_blank','width=1000,height=700');
+  const w=_openHtmlWindow(_buildBulkHTML(items),'width=1000,height=700');
   if(!w){ toast('Popup engellendi!','error'); return; }
-  w.document.open();
-  w.document.write(_buildBulkHTML(items));
-  w.document.close();
-  w.addEventListener('load', () => setTimeout(() => w.print(), 500));
+  _whenWindowReady(w, () => setTimeout(() => { try{ w.print(); }catch(e){} }, 500));
   toast(items.length+' kayıt yazdırılıyor','info');
 }
 
@@ -10678,15 +10707,13 @@ function printQrOnly(){
   const src = (img && img.src) || (canvas && canvas.toDataURL('image/png'));
   if(!src) return toast('QR bulunamadı','error');
   const no = (currentModalItem && currentModalItem.no) || '';
-  const w = window.open('', '_blank');
-  if(!w){ toast('Popup engellendi','error'); return; }
-  w.document.write(`<html><head><title>${no} QR</title></head><body style="text-align:center;font-family:sans-serif;padding:30px;">
+  const w = _openHtmlWindow(`<html><head><title>${no} QR</title></head><body style="text-align:center;font-family:sans-serif;padding:30px;">
     <h2>${no}</h2>
     <img src="${src}" style="width:280px;height:280px;"/>
     <div style="margin-top:10px;font-size:12px;color:#666;">İrsaliye Pro — QR Kod</div>
     <script>setTimeout(()=>window.print(),300);<\/script>
   </body></html>`);
-  w.document.close();
+  if(!w){ toast('Popup engellendi','error'); return; }
 }
 
 function showQrForCurrentModal(){
@@ -12725,11 +12752,8 @@ function printListPDF(){
   // Önce seçili kayıtları kontrol et — varsa tam detaylı PDF
   const selected = _bulkGetSelectedItems();
   if(selected.length){
-    const w=window.open('','_blank','width=1000,height=700');
+    const w=_openHtmlWindow(_buildBulkHTML(selected),'width=1000,height=700');
     if(!w){ toast('Popup engellendi! İzin verin.','error'); return; }
-    w.document.open();
-    w.document.write(_buildBulkHTML(selected));
-    w.document.close();
     toast(selected.length+' irsaliye için PDF hazırlanıyor','success');
     return;
   }
@@ -12852,10 +12876,8 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 <script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),400);});<\/script>
 </body></html>`;
 
-  const w = window.open('', '_blank');
+  const w = _openHtmlWindow(htmlDoc);
   if(!w){ alert('Pop-up engellenmiş olabilir. Lütfen pop-up izni verin.'); return; }
-  w.document.write(htmlDoc);
-  w.document.close();
 }
 
 </script>
