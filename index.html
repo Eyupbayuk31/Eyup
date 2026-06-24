@@ -7689,10 +7689,19 @@ function _bulkRestoreSelection(){
   _bulkSyncUI();
 }
 function bulkUpdate(){
-  // Görünen checkbox'lardaki değişikliği Set'e yansıt
+  // Aynı kayıt için hem tablo satırı hem mobil kart checkbox'ı DOM'da aynı anda
+  // bulunur; herhangi biri işaretliyse kayıt seçili sayılır.
+  // Döngü tümünü gezdirip "son gördüğü" değeri yazarsa (tablo=işaretli, kart=işaretsiz),
+  // kayıt Set'e eklenip hemen silinir → dashboard hiç görünmez.
+  // Çözüm: aynı anahtar için en az biri işaretliyse true, ikisi de işaretsizse false.
+  const keyStates = new Map();
   document.querySelectorAll('.bulk-check[data-id]').forEach(cb=>{
     const k=cb.dataset.type+':'+cb.dataset.id;
-    if(cb.checked) window._bulkSelected.add(k); else window._bulkSelected.delete(k);
+    if(cb.checked) keyStates.set(k, true);
+    else if(!keyStates.has(k)) keyStates.set(k, false);
+  });
+  keyStates.forEach((checked, k)=>{
+    if(checked) window._bulkSelected.add(k); else window._bulkSelected.delete(k);
   });
   _bulkSyncUI();
 }
