@@ -7651,34 +7651,66 @@ function clearAuditLog(){
 }
 
 // ==================== BULK OPERATIONS ====================
-function bulkUpdate(){
-  const checks=document.querySelectorAll('.bulk-check[data-id]:checked');
-  const count=checks.length;
-  document.getElementById('bulkCount').textContent=count;
-  const bar=document.getElementById('bulkBar');
-  if(count>0){bar.classList.add('show');}else{bar.classList.remove('show');}
-  // Update header checkbox
+// Seçim DOM checkbox'larında DEĞİL, kalıcı bir Set'te tutulur (anahtar: "tür:id").
+// Sebep: bulut senkronu (5 sn'lik liste polling'i / canlı onSnapshot) herhangi
+// bir veri değişince listeyi yeniden çiziyor; bu da checkbox'ları sıfırlayıp
+// seçimi siliyordu ("otomatik yenileme seçtiğim irsaliyeleri kaybediyor").
+// Set kullanınca yeniden çizimden sonra seçim geri yüklenir.
+window._bulkSelected = window._bulkSelected || new Set();
+function _bulkKeyFor(type){
+  return type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+}
+// Artık var olmayan (ör. başka cihazda silinen) seçimleri Set'ten temizle.
+function _bulkPrune(){
+  if(!window._bulkSelected) return;
+  Array.from(window._bulkSelected).forEach(k=>{
+    const idx=k.indexOf(':'); if(idx<0){ window._bulkSelected.delete(k); return; }
+    const type=k.slice(0,idx), id=k.slice(idx+1);
+    const exists=(getData(_bulkKeyFor(type))||[]).some(i=>String(i.id)===String(id));
+    if(!exists) window._bulkSelected.delete(k);
+  });
+}
+// Sayaç / araç çubuğu / başlık checkbox'ı / seçim panosunu Set'e göre tazele.
+function _bulkSyncUI(){
+  _bulkPrune();
+  const count=window._bulkSelected.size;
+  const cEl=document.getElementById('bulkCount'); if(cEl) cEl.textContent=count;
+  const bar=document.getElementById('bulkBar'); if(bar){ if(count>0) bar.classList.add('show'); else bar.classList.remove('show'); }
   const allChecks=document.querySelectorAll('.bulk-check[data-id]');
-  document.getElementById('bulkCheckAll').checked=allChecks.length>0&&allChecks.length===checks.length;
-  // Update selection dashboard
-  if(count>=1){updateSelDash(checks);}else{hideSelDash();}
+  const checkedRendered=document.querySelectorAll('.bulk-check[data-id]:checked');
+  const hdr=document.getElementById('bulkCheckAll'); if(hdr) hdr.checked=allChecks.length>0&&allChecks.length===checkedRendered.length;
+  if(count>=1){ updateSelDash(); } else { hideSelDash(); }
+}
+// Yeniden çizimden sonra checkbox'ların işaretli durumunu Set'ten geri yükle.
+function _bulkRestoreSelection(){
+  document.querySelectorAll('.bulk-check[data-id]').forEach(cb=>{
+    cb.checked = window._bulkSelected.has(cb.dataset.type+':'+cb.dataset.id);
+  });
+  _bulkSyncUI();
+}
+function bulkUpdate(){
+  // Görünen checkbox'lardaki değişikliği Set'e yansıt
+  document.querySelectorAll('.bulk-check[data-id]').forEach(cb=>{
+    const k=cb.dataset.type+':'+cb.dataset.id;
+    if(cb.checked) window._bulkSelected.add(k); else window._bulkSelected.delete(k);
+  });
+  _bulkSyncUI();
 }
 
-function updateSelDash(checks){
-  if(!checks||checks.length<1){hideSelDash();return;}
+function updateSelDash(){
   const dash=document.getElementById('selDash');
   const grid=document.getElementById('selDashGrid');
   const sub=document.getElementById('selDashSub');
   const footer=document.getElementById('selDashFooter');
   if(!dash||!grid){hideSelDash();return;}
 
-  // Seçili itemlari topla
+  // Seçili itemları kalıcı Set'ten topla (yeniden çizim/sayfalamada korunur)
   const items=[];
-  checks.forEach(cb=>{
-    const id=cb.dataset.id;
-    const type=cb.dataset.type;
+  window._bulkSelected.forEach(k=>{
+    const idx=k.indexOf(':'); if(idx<0)return;
+    const type=k.slice(0,idx), id=k.slice(idx+1);
     if(!id||!type)return;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
+    const key=_bulkKeyFor(type);
     const list=getData(key)||[];
     const item=list.find(i=>String(i.id)===String(id));
     if(item)items.push({...item,_type:type});
@@ -7875,8 +7907,11 @@ function bulkSelectAll(){
 }
 
 function bulkClear(){
+  window._bulkSelected.clear();
   document.querySelectorAll('.bulk-check').forEach(cb=>{cb.checked=false;});
-  document.getElementById('bulkBar').classList.remove('show');
+  const bar=document.getElementById('bulkBar'); if(bar) bar.classList.remove('show');
+  const hdr=document.getElementById('bulkCheckAll'); if(hdr) hdr.checked=false;
+  hideSelDash();
 }
 
 function bulkDelete(){
@@ -8745,12 +8780,13 @@ function bulkShareWhatsApp() {
 
 // ==================== BULK PDF / PRINT (v16) ====================
 function _bulkGetSelectedItems(){
-  const checks=document.querySelectorAll('.bulk-check[data-id]:checked');
+  // Kalıcı Set'ten oku — seçim yeniden çizimden sonra da korunur
   const items=[];
-  checks.forEach(cb=>{
-    const id=+cb.dataset.id; const type=cb.dataset.type;
-    const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
-    const item=getData(key).find(i=>i.id===id);
+  window._bulkSelected.forEach(k=>{
+    const idx=k.indexOf(':'); if(idx<0)return;
+    const type=k.slice(0,idx), id=k.slice(idx+1);
+    const key=_bulkKeyFor(type);
+    const item=(getData(key)||[]).find(i=>String(i.id)===String(id));
     if(item) items.push({item,type,key});
   });
   return items;
@@ -9369,6 +9405,10 @@ function goToListPage(p) {
 
     // After filter, apply pagination to the rendered table
     setTimeout(() => {
+      // Yeniden çizilen listede toplu seçimi geri yükle (bulut senkronu /
+      // otomatik yenileme seçimi silmesin)
+      try { if (typeof _bulkRestoreSelection === 'function') _bulkRestoreSelection(); } catch(e){}
+
       const tbody = document.getElementById('irsaliyeTable');
       const mobileEl = document.getElementById('irsaliyeMobile');
       if (!tbody) return;
