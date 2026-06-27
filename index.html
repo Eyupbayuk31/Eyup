@@ -941,7 +941,21 @@
         const prevJSON = JSON.stringify(local);
         if(prevJSON !== nextJSON){
           try { localStorage.setItem(key, nextJSON); } catch(e){}
-          refreshUI();
+          // Liste sayfasi ACIKKEN otomatik yeniden cizmeyiz: ekran titremesin
+          // ve kullanicinin yaptigi secim kaybolmasin. Veri sessizce
+          // localStorage'a yazilir, "Yenile" butonunda uyari noktasi yanar;
+          // kullanici basinca taze veriyle cizilir. Diger sayfalardayken
+          // her zamanki gibi tazelenir (liste arka planda guncel tutulur).
+          const listEl = document.getElementById('page-list');
+          if(listEl && listEl.classList.contains('active')){
+            window._listRefreshPending = true;
+            try { if(typeof window._markListRefreshPending === 'function') window._markListRefreshPending(); } catch(e){}
+            // Liste disindaki rozet/ozet vb. icin hafif tazeleme (listeyi cizmez)
+            try { if(typeof refreshHome === 'function') refreshHome(); } catch(e){}
+            try { if(typeof updateBadge === 'function') updateBadge(); } catch(e){}
+          } else {
+            refreshUI();
+          }
         }
         // Canli veri akiyor — gecici hata durumundan yesile don
         updateCloudBadge('ok');
@@ -1622,6 +1636,7 @@
 
       <!-- Export Bar -->
       <div class="export-bar">
+        <button class="export-btn" id="listRefreshBtn" onclick="manualRefreshList()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="listRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid #1e1b3a;box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
         <button class="export-btn" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV İndir</button>
         <button class="export-btn" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel İndir</button>
         <button class="export-btn" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> Filtrelenmiş CSV</button>
@@ -3295,6 +3310,11 @@ function showPage(page){
   // listener'i tamamlayan guvenlik agi) — diger sayfaya gecince durdur.
   if(page === 'list'){
     try{ if(typeof window._startListPagePolling === 'function') window._startListPagePolling(); }catch(_){}
+    // Listeyi acarken en guncel veriyle bir kez ciz ve bekleyen uyariyi temizle.
+    // Sayfa ACILDIKTAN sonraki bulut degisiklikleri otomatik cizmez; "Yenile" bekler.
+    try{ if(typeof applyFilters === 'function') applyFilters(); }catch(_){}
+    window._listRefreshPending = false;
+    try{ const d=document.getElementById('listRefreshDot'); if(d) d.style.display='none'; }catch(_){}
   } else {
     try{ if(typeof window._stopListPagePolling === 'function') window._stopListPagePolling(); }catch(_){}
   }
@@ -7649,6 +7669,28 @@ function clearAuditLog(){
   renderAuditLog();
   if(typeof toast === 'function') toast('İşlem geçmişi temizlendi','info');
 }
+
+// ==================== MANUEL LISTE YENILEME ====================
+// Liste sayfasi acikken bulut senkronu listeyi otomatik yeniden cizmez
+// (titreme + secim kaybi olmasin). Bunun yerine "Yenile" butonunda bir
+// uyari noktasi yanar; kullanici basinca taze veriyle cizilir.
+window._listRefreshPending = window._listRefreshPending || false;
+window._markListRefreshPending = function(){
+  const dot = document.getElementById('listRefreshDot');
+  if(dot) dot.style.display = 'inline-block';
+  const btn = document.getElementById('listRefreshBtn');
+  if(btn) btn.title = 'Yeni veri var — güncellemek için tıklayın';
+};
+function manualRefreshList(){
+  window._listRefreshPending = false;
+  const dot = document.getElementById('listRefreshDot');
+  if(dot) dot.style.display = 'none';
+  const btn = document.getElementById('listRefreshBtn');
+  if(btn) btn.title = '';
+  try { if(typeof applyFilters === 'function') applyFilters(); } catch(e){}
+  if(typeof toast === 'function') toast('Liste güncellendi','success');
+}
+window.manualRefreshList = manualRefreshList;
 
 // ==================== BULK OPERATIONS ====================
 // Seçim DOM checkbox'larında DEĞİL, kalıcı bir Set'te tutulur (anahtar: "tür:id").
