@@ -3521,7 +3521,16 @@ const ATOLYE_FORM_FIELD_IDS=['iAtolye','fAtolye','lAtolye','dAtolye','saAtolye',
 function loadAtolyeSelects(){
   const atolyeler=getData('atolyeler');
   const opts='<option value="">Atölye Seçin</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
-  ATOLYE_FORM_FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;_syncAtolyeLabel(id);});
+  ATOLYE_FORM_FIELD_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    // Kullanicinin SECTIGI deger korunur: innerHTML degisimi secimi sifirlar;
+    // bulut senkronu form doldururken bunu tetikleyince atolye "gidiyordu".
+    const prev=el.value;
+    el.innerHTML=opts;
+    if(prev && atolyeler.some(a=>a.name===prev)) el.value=prev; // hala mevcutsa geri yukle
+    _syncAtolyeLabel(id);
+  });
 }
 // Aramali atolye picker'in tetikledigi buton etiketini gizli select'in
 // guncel degeriyle eslestirir (cok sayida atolye arasinda native <select>
