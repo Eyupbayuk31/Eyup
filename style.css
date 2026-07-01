@@ -7635,6 +7635,81 @@ body::after{
     transparent 100%);
 }
 
+/* ──────────────── GİRİŞ / KAYIT SEKMELERİ ──────────────── */
+.lg-tabs {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 24px;
+  background: var(--bg-input, #0e0a1d);
+  border: 1px solid var(--border, #2d2145);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.35);
+}
+.lg-tab {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 8px;
+  background: transparent; border: none; cursor: pointer;
+  font-family: var(--font-body, sans-serif);
+  font-size: 13.5px; font-weight: 700;
+  color: var(--text-dim, #a78bfa);
+  border-radius: 10px;
+  letter-spacing: 0.01em;
+  transition: color var(--transition-base, 200ms);
+}
+.lg-tab i { font-size: 12px; }
+.lg-tab.active { color: #fff; }
+.lg-tab:not(.active):hover { color: var(--text-main, #f1f0f5); }
+.lg-tab-ind {
+  position: absolute; z-index: 0; top: 4px; left: 4px;
+  width: calc(50% - 6px); height: calc(100% - 8px);
+  background: linear-gradient(135deg, var(--primary, #7c3aed), var(--primary-dark, #5b21b6));
+  border-radius: 10px;
+  box-shadow:
+    0 4px 14px -4px color-mix(in srgb, var(--primary) 60%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: transform var(--transition-spring, 400ms);
+}
+.lg-tabs.reg .lg-tab-ind { transform: translateX(calc(100% + 4px)); }
+
+/* Kayıt: şifre güç barı (login #passMeter ile aynı görünüm) */
+#regMeter {
+  display: none; height: 3px;
+  background: var(--border, #2d2145);
+  border-radius: 2px; margin-top: 10px; overflow: hidden;
+}
+#regMeter.show { display: block; }
+#regMeter > div {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #ef4444 0%, #fbbf24 50%, #10b981 100%);
+  border-radius: 2px;
+  transition: width 0.4s cubic-bezier(.4,0,.2,1), background 0.4s;
+}
+
+/* Kayıt: mesaj kutusu */
+#regMsg {
+  display: none;
+  font-size: 12px; font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin: 2px 0 14px;
+  letter-spacing: 0.02em;
+  align-items: center; gap: 8px;
+}
+#regMsg.ok  { display: flex; background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+#regMsg.err { display: flex; background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3); animation: lgShake 0.42s; }
+
+/* Kayıt: alt ipucu notu */
+.lg-reg-hint {
+  margin: 14px 2px 0;
+  font-size: 11.5px; line-height: 1.5;
+  color: var(--text-dim, #a78bfa);
+  text-align: center;
+  opacity: 0.75;
+}
+
 /* ──────────────── FORM ALANLARI ──────────────── */
 #loginCard .field { margin-bottom: 18px; }
 #loginCard label {

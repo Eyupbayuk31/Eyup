@@ -13723,6 +13723,17 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     <!-- İnce gradient ayraç -->
     <div class="lg-rule" aria-hidden="true"></div>
 
+    <!-- Giriş / Kayıt sekmeleri -->
+    <div class="lg-tabs" id="lgTabs" role="tablist">
+      <button type="button" class="lg-tab active" id="tabLogin" role="tab" aria-selected="true">
+        <i class="fas fa-right-to-bracket"></i> Giriş Yap
+      </button>
+      <button type="button" class="lg-tab" id="tabRegister" role="tab" aria-selected="false">
+        <i class="fas fa-user-plus"></i> Kayıt Ol
+      </button>
+      <span class="lg-tab-ind" aria-hidden="true"></span>
+    </div>
+
     <!-- Hata + kilit uyarıları -->
     <div id="loginError" role="alert">
       <span class="ico"><i class="fas fa-exclamation-circle"></i></span>
@@ -13804,6 +13815,45 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
         <span class="spinner" aria-hidden="true"></span>
         <span class="btn-text">Oturum Aç <i class="fas fa-arrow-right arrow"></i></span>
       </button>
+    </form>
+
+    <!-- ==================== KAYIT FORMU ==================== -->
+    <form id="registerForm" autocomplete="off" novalidate style="display:none;">
+      <div class="field">
+        <label for="regUser"><span class="lbl-no">01</span> Kullanıcı Adı</label>
+        <div class="input-wrap">
+          <i class="fas fa-user ico-left" aria-hidden="true"></i>
+          <input type="text" id="regUser" placeholder="yeni kullanıcı adı" autocomplete="off" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="regPass"><span class="lbl-no">02</span> Şifre</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock ico-left" aria-hidden="true"></i>
+          <input type="password" id="regPass" placeholder="en az 3 karakter" autocomplete="new-password" required>
+          <button type="button" class="toggle-pass" id="regTogglePass" aria-label="Şifreyi göster/gizle">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div id="regMeter"><div></div></div>
+      </div>
+
+      <div class="field">
+        <label for="regPass2"><span class="lbl-no">03</span> Şifre (Tekrar)</label>
+        <div class="input-wrap">
+          <i class="fas fa-check-circle ico-left" aria-hidden="true"></i>
+          <input type="password" id="regPass2" placeholder="şifreyi tekrar girin" autocomplete="new-password" required>
+        </div>
+      </div>
+
+      <div id="regMsg"></div>
+
+      <button type="submit" class="login-btn" id="regBtn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="btn-text">Kayıt Ol <i class="fas fa-user-plus arrow"></i></span>
+      </button>
+      <p class="lg-reg-hint">Kayıt olduğunuzda otomatik olarak giriş yapılır ve hesabınız tüm cihazlara senkronlanır.</p>
     </form>
 
     <!-- Alt çubuk: marka + meta -->
@@ -14048,6 +14098,123 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     resetNew2Inp.value = '';
     resetOldInp.value = '';
     setTimeout(()=> resetSection.classList.remove('show'), 2500);
+  });
+  // ─────────────────────────────────────────────────────────
+
+  // ── Giriş / Kayıt Ol sekmeleri ───────────────────────────
+  function computeGreet(){
+    const h = new Date().getHours();
+    if(h < 6) return 'İyi geceler 🌙';
+    if(h < 12) return 'Günaydın ☀️';
+    if(h < 18) return 'İyi günler 🌤️';
+    return 'İyi akşamlar 🌆';
+  }
+
+  const lgTabs      = document.getElementById('lgTabs');
+  const tabLoginBtn = document.getElementById('tabLogin');
+  const tabRegBtn   = document.getElementById('tabRegister');
+  const loginForm   = document.getElementById('loginForm');
+  const registerForm= document.getElementById('registerForm');
+  const regUserInp  = document.getElementById('regUser');
+  const regPassInp  = document.getElementById('regPass');
+  const regPass2Inp = document.getElementById('regPass2');
+  const regBtn      = document.getElementById('regBtn');
+  const regMsg      = document.getElementById('regMsg');
+  const regMeter    = document.getElementById('regMeter');
+  const regMeterBar = regMeter.querySelector('div');
+
+  function switchMode(mode){
+    const isReg = (mode === 'register');
+    lgTabs.classList.toggle('reg', isReg);
+    tabRegBtn.classList.toggle('active', isReg);
+    tabLoginBtn.classList.toggle('active', !isReg);
+    tabRegBtn.setAttribute('aria-selected', isReg ? 'true' : 'false');
+    tabLoginBtn.setAttribute('aria-selected', !isReg ? 'true' : 'false');
+    loginForm.style.display    = isReg ? 'none' : '';
+    registerForm.style.display = isReg ? '' : 'none';
+    // ortak / diğer moda ait uyarıları temizle
+    err.classList.remove('show');
+    resetSection.classList.remove('show');
+    regMsg.className = ''; regMsg.textContent = '';
+    greet.textContent = isReg
+      ? 'Sisteme kayıt ol — hesabını saniyeler içinde oluştur'
+      : computeGreet() + ' — devam etmek için giriş yap';
+    setTimeout(()=>{ try{ (isReg ? regUserInp : userInp).focus(); }catch(_){} }, 90);
+  }
+  tabLoginBtn.addEventListener('click', ()=> switchMode('login'));
+  tabRegBtn.addEventListener('click', ()=> switchMode('register'));
+
+  // Kayıt: şifre göster/gizle
+  document.getElementById('regTogglePass').addEventListener('click', function(){
+    const isHidden = regPassInp.type === 'password';
+    regPassInp.type = isHidden ? 'text' : 'password';
+    this.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+    regPassInp.focus();
+  });
+  // Kayıt: şifre güç barı + caps uyarısı (login ile aynı davranış)
+  regPassInp.addEventListener('input', function(){
+    const v = regPassInp.value;
+    if(!v){ regMeter.classList.remove('show'); return; }
+    regMeter.classList.add('show');
+    const s = scorePass(v);
+    const pct = [10,30,55,80,100][s];
+    const colors = ['#ef4444','#f97316','#eab308','#22c55e','#10b981'];
+    regMeterBar.style.width = pct + '%';
+    regMeterBar.style.background = colors[s];
+  });
+  regPassInp.addEventListener('keydown', checkCaps);
+  regPassInp.addEventListener('keyup', checkCaps);
+  regUserInp.addEventListener('keydown', checkCaps);
+
+  // Kayıt: gönderim → yeni kullanıcıyı sisteme kaydet + otomatik giriş
+  registerForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(regBtn.disabled || regBtn.classList.contains('loading')) return;
+
+    const u  = regUserInp.value.trim();
+    const p  = regPassInp.value;
+    const p2 = regPass2Inp.value;
+
+    function fail(msg){
+      regMsg.className = 'err';
+      regMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>' + msg + '</span>';
+    }
+    regMsg.className = ''; regMsg.textContent = '';
+
+    if(!u || !p || !p2){ fail('Lütfen tüm alanları doldurun.'); return; }
+    if(u.length < 3){ fail('Kullanıcı adı en az 3 karakter olmalı.'); regUserInp.focus(); return; }
+    if(p.length < 3){ fail('Şifre en az 3 karakter olmalı.'); regPassInp.focus(); return; }
+    if(p !== p2){ fail('Şifreler eşleşmiyor.'); regPass2Inp.focus(); return; }
+    if(findUser(u)){ fail('“' + u + '” zaten kullanımda. Başka bir ad seçin.'); regUserInp.focus(); return; }
+
+    regBtn.classList.add('loading');
+    setTimeout(()=>{
+      const users = getUsers();
+      users.push({ username: u, password: p, role: 'user' });
+      saveUsers(users);
+      try { if(typeof window._logAudit === 'function') window._logAudit('user_register', { by: u, label: u }); } catch(_){}
+
+      regMsg.className = 'ok';
+      regMsg.innerHTML = '<i class="fas fa-check-circle"></i> <span>Hesap oluşturuldu! Giriş yapılıyor…</span>';
+      regBtn.classList.remove('loading');
+      regBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span class="btn-text">Kayıt tamam</span>';
+      regBtn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+
+      // otomatik giriş
+      setAuthed(true);
+      try { localStorage.setItem(LAST_USER_KEY, u); } catch(e){}
+
+      setTimeout(()=>{
+        hideLogin();
+        if(typeof toast === 'function') toast('Hoş geldin, ' + u + ' 👋 Hesabın oluşturuldu.', 'success');
+        // formu ve butonu sıfırla, giriş moduna dön
+        regUserInp.value = ''; regPassInp.value = ''; regPass2Inp.value = '';
+        regMeter.classList.remove('show');
+        regBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span class="btn-text">Kayıt Ol <i class="fas fa-user-plus arrow"></i></span>';
+        regBtn.style.background = '';
+        switchMode('login');
+      }, 800);
+    }, 450);
   });
   // ─────────────────────────────────────────────────────────
 
