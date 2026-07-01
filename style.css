@@ -5095,7 +5095,7 @@ tr:hover .table-actions-more{
   color:var(--text-dim);
   margin-top:3px;
 }
-.db-kpi-purple{--kpi-color:var(--primary);--kpi-bg:rgba(124,58,237,0.12)}
+.db-kpi-purple{--kpi-color:var(--primary);--kpi-bg:color-mix(in srgb, var(--primary) 12%, transparent)}
 .db-kpi-amber{--kpi-color:#f59e0b;--kpi-bg:rgba(245,158,11,0.12)}
 .db-kpi-green{--kpi-color:#10b981;--kpi-bg:rgba(16,185,129,0.12)}
 .db-kpi-red{--kpi-color:#ef4444;--kpi-bg:rgba(239,68,68,0.12)}
