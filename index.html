@@ -2177,6 +2177,8 @@
           <button class="btn btn-sm btn-secondary active rep-tab-btn" onclick="showReportTab('trend',this)"><i class="fas fa-chart-line"></i> Zaman Trendi</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('durum',this)"><i class="fas fa-circle-half-stroke"></i> Durum</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('atolye',this)"><i class="fas fa-industry"></i> Atölye</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('turler',this)"><i class="fas fa-shapes"></i> Tür Analizi</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('yil',this)"><i class="fas fa-calendar-days"></i> Yıl Haritası</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('model',this)"><i class="fas fa-cubes"></i> Model</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('olcu',this)"><i class="fas fa-ruler-combined"></i> Ölçü/Renk</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('termin',this)"><i class="fas fa-hourglass"></i> Termin</button>
@@ -2221,6 +2223,46 @@
         <div class="rep-card">
           <div class="rep-card-head"><i class="fas fa-medal"></i> Atölye Performans Tablosu</div>
           <div id="atolyePerf" class="rep-table-body"></div>
+        </div>
+      </div>
+
+      <!-- Tür Analizi -->
+      <div class="rep-tab" id="rep-turler" style="display:none;">
+        <div class="rep-two-col">
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-shapes"></i> Türlere Göre Üretim (Adet)</div>
+            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartTurler"></canvas></div>
+          </div>
+          <div class="rep-card">
+            <div class="rep-card-head"><i class="fas fa-layer-group"></i> Tür Dağılımı</div>
+            <div id="turlerTable" class="rep-tur-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Yıl Isı Haritası -->
+      <div class="rep-tab" id="rep-yil" style="display:none;">
+        <div class="rep-card">
+          <div class="rep-card-head" style="justify-content:space-between;">
+            <span><i class="fas fa-calendar-days"></i> Yıllık Aktivite Haritası</span>
+            <span class="rhm-year-nav">
+              <button class="rhm-yr-btn" id="rhmPrevYear" title="Önceki yıl"><i class="fas fa-chevron-left"></i></button>
+              <span class="rhm-year-label" id="rhmYearLabel">—</span>
+              <button class="rhm-yr-btn" id="rhmNextYear" title="Sonraki yıl"><i class="fas fa-chevron-right"></i></button>
+            </span>
+          </div>
+          <div class="rhm-stats" id="rhmStats"></div>
+          <div class="rhm-scroll"><div id="yilHeatmap"></div></div>
+          <div class="rhm-legend">
+            <span>Az</span>
+            <span class="rhm-lg-cell" data-lv="0"></span>
+            <span class="rhm-lg-cell" data-lv="1"></span>
+            <span class="rhm-lg-cell" data-lv="2"></span>
+            <span class="rhm-lg-cell" data-lv="3"></span>
+            <span class="rhm-lg-cell" data-lv="4"></span>
+            <span>Çok</span>
+            <span class="rhm-legend-note" id="rhmMetricNote">adet</span>
+          </div>
         </div>
       </div>
 
@@ -6151,6 +6193,8 @@ function renderReportTab(tab){
   if(tab==='trend') renderTrendChart();
   else if(tab==='durum') renderDurumChart();
   else if(tab==='atolye') renderAtolyeChart();
+  else if(tab==='turler') renderTurAnalizi();
+  else if(tab==='yil') renderYilHeatmap();
   else if(tab==='model') renderModelChart();
   else if(tab==='olcu') renderOlcuRenk();
   else if(tab==='termin') renderTerminAnalysis();
@@ -6472,6 +6516,152 @@ function renderWeekHeatmap(){
       }).join('')}
     </div>
     <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:12px;">En yoğun: <strong>${counts.every(c=>c===0) ? 'Veri yok' : days[counts.indexOf(Math.max(...counts))]}</strong></p>`;
+}
+
+// ========== TÜR ANALİZİ ==========
+const REP_TUR_ORDER = ['standart','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel'];
+const REP_TUR_COLORS = {
+  standart:'#a855f7', fermuar:'#3b82f6', lastik:'#10b981', dugme:'#f59e0b',
+  toptan:'#ec4899', satenaskilik:'#8b5cf6', kordon:'#14b8a6', dantel:'#6366f1'
+};
+function _repMutedColor(){
+  try{ return getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#c4b5fd'; }
+  catch(e){ return '#c4b5fd'; }
+}
+function renderTurAnalizi(){
+  const data = getReportData();
+  const stat = {};
+  REP_TUR_ORDER.forEach(t=> stat[t]={count:0, adet:0});
+  data.forEach(i=>{
+    const t = i._type; if(!stat[t]) stat[t]={count:0,adet:0};
+    stat[t].count++; stat[t].adet += _repItemQty(i);
+  });
+  const rows = REP_TUR_ORDER.map(t=>({t, count:stat[t].count, adet:stat[t].adet}))
+    .filter(r=>r.count>0).sort((a,b)=> b.adet-a.adet || b.count-a.count);
+  const totalAdet = rows.reduce((s,r)=>s+r.adet,0);
+  const totalCount = rows.reduce((s,r)=>s+r.count,0);
+
+  destroyChart('turler');
+  const ctx = document.getElementById('chartTurler');
+  if(ctx && rows.length){
+    repCharts.turler = new Chart(ctx,{
+      type:'doughnut',
+      data:{ labels: rows.map(r=>getTypeLabel(r.t).replace(/^\S+\s/,'')),
+        datasets:[{ data: rows.map(r=>r.adet),
+          backgroundColor: rows.map(r=>REP_TUR_COLORS[r.t]||'#888'),
+          borderWidth:0, hoverOffset:10 }] },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{legend:{position:'bottom',labels:{color:_repMutedColor(),boxWidth:12,padding:10,font:{size:11}}}}}
+    });
+  }
+
+  const host = document.getElementById('turlerTable');
+  if(host){
+    if(!rows.length){ host.innerHTML='<div class="rep-empty-mini">Bu dönemde kayıt yok.</div>'; return; }
+    host.innerHTML = rows.map(r=>{
+      const pct = totalAdet ? Math.round(r.adet/totalAdet*100) : 0;
+      const c = REP_TUR_COLORS[r.t]||'#888';
+      return `<div class="rep-tur-row">
+        <div class="rep-tur-top">
+          <span class="rep-tur-name"><span class="rep-tur-dot" style="background:${c}"></span>${getTypeLabel(r.t)}</span>
+          <span class="rep-tur-vals"><b>${r.adet.toLocaleString('tr')}</b> adet · ${r.count} irs.</span>
+        </div>
+        <div class="rep-tur-bar"><div style="width:${Math.max(pct,2)}%;background:${c}"></div><span class="rep-tur-pct">%${pct}</span></div>
+      </div>`;
+    }).join('') +
+    `<div class="rep-tur-total">Toplam: <b>${totalAdet.toLocaleString('tr')}</b> adet · <b>${totalCount}</b> irsaliye</div>`;
+  }
+}
+
+// ========== YIL ISI HARİTASI ==========
+let rhmYear = null;
+const RHM_MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+function renderYilHeatmap(){
+  if(rhmYear === null){ rhmYear = new Date().getFullYear(); }
+  const pad = n => String(n).padStart(2,'0');
+  const all = (typeof getUnifiedList==='function') ? getUnifiedList() : [];
+  const perDay = {};
+  all.forEach(i=>{
+    const ds = (i.tarih || (i.createdAt||'').slice(0,10) || '').slice(0,10);
+    if(!ds || ds.slice(0,4) !== String(rhmYear)) return;
+    perDay[ds] = (perDay[ds]||0) + (_repItemQty(i) || 0);
+    perDay['_cnt_'+ds] = (perDay['_cnt_'+ds]||0) + 1;
+  });
+
+  const first = new Date(rhmYear,0,1);
+  const startOffset = (first.getDay()+6)%7; // Pzt başlangıç
+  const cur = new Date(first); cur.setDate(cur.getDate()-startOffset);
+  const last = new Date(rhmYear,11,31);
+  const weeks = []; let prevMonth = -1; let guard=0;
+  while(cur <= last && guard++ < 60){
+    const week = { cells:[], monthLabel:'' };
+    for(let d=0; d<7; d++){
+      const dt = new Date(cur);
+      const inYear = dt.getFullYear()===rhmYear;
+      const ds = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+      week.cells.push({ ds, inYear, qty: inYear ? (perDay[ds]||0):0, cnt: inYear ? (perDay['_cnt_'+ds]||0):0, day: dt.getDate() });
+      cur.setDate(cur.getDate()+1);
+    }
+    // Ay etiketi: haftadaki ilk YIL-İÇİ günün ayına göre, ay değişince
+    const firstInYear = week.cells.find(c=>c.inYear);
+    if(firstInYear){
+      const m = parseInt(firstInYear.ds.slice(5,7),10) - 1;
+      if(m !== prevMonth){ week.monthLabel = RHM_MONTHS[m]; prevMonth = m; }
+    }
+    weeks.push(week);
+  }
+
+  const vals = Object.keys(perDay).filter(k=>!k.startsWith('_cnt_')).map(k=>perDay[k]);
+  const maxQ = Math.max(1, ...vals);
+  function level(q){ if(q<=0) return 0; if(q < maxQ*0.25) return 1; if(q < maxQ*0.5) return 2; if(q < maxQ*0.75) return 3; return 4; }
+  const LV_BG = [
+    'color-mix(in srgb, var(--text-dim) 12%, transparent)',
+    'color-mix(in srgb, var(--primary) 30%, transparent)',
+    'color-mix(in srgb, var(--primary) 52%, transparent)',
+    'color-mix(in srgb, var(--primary) 74%, transparent)',
+    'var(--primary)'
+  ];
+
+  const weekdayLbls = ['Pzt','','Çrş','','Cum','',''];
+  const monthRow = `<div class="rhm-monthrow" style="grid-template-columns:repeat(${weeks.length},1fr);">`
+    + weeks.map(w=>`<span>${w.monthLabel}</span>`).join('') + `</div>`;
+  const gridHtml = `<div class="rhm-cols" style="grid-template-columns:repeat(${weeks.length},1fr);">`
+    + weeks.map(w=>`<div class="rhm-col">` + w.cells.map(c=>{
+        if(!c.inYear) return `<div class="rhm-cell rhm-empty"></div>`;
+        const lv = level(c.qty);
+        const tip = `${c.ds} — ${c.qty.toLocaleString('tr')} adet${c.cnt?(' · '+c.cnt+' irsaliye'):''}`;
+        return `<div class="rhm-cell" style="background:${LV_BG[lv]};" data-lv="${lv}" title="${tip}"></div>`;
+      }).join('') + `</div>`).join('') + `</div>`;
+
+  const host = document.getElementById('yilHeatmap');
+  if(host){
+    host.innerHTML = monthRow + `<div class="rhm-main"><div class="rhm-weekdays">`
+      + weekdayLbls.map(l=>`<span>${l}</span>`).join('') + `</div>` + gridHtml + `</div>`;
+  }
+
+  // Stats
+  const activeDays = Object.keys(perDay).filter(k=>!k.startsWith('_cnt_') && perDay[k]>0).length;
+  const totalQ = vals.reduce((s,v)=>s+v,0);
+  const totalCnt = Object.keys(perDay).filter(k=>k.startsWith('_cnt_')).reduce((s,k)=>s+perDay[k],0);
+  let best = {ds:'—', qty:0}; Object.keys(perDay).filter(k=>!k.startsWith('_cnt_')).forEach(k=>{ if(perDay[k]>best.qty) best={ds:k, qty:perDay[k]}; });
+  const bestLbl = best.qty>0 ? new Date(best.ds).toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}) : '—';
+  const st = document.getElementById('rhmStats');
+  if(st){
+    st.innerHTML = [
+      ['fa-boxes-stacked', totalQ.toLocaleString('tr'), 'Toplam Adet'],
+      ['fa-file-invoice', totalCnt.toLocaleString('tr'), 'İrsaliye'],
+      ['fa-calendar-check', activeDays, 'Aktif Gün'],
+      ['fa-fire', best.qty>0?(bestLbl+' ('+best.qty.toLocaleString('tr')+')'):'—', 'En Yoğun Gün'],
+    ].map(x=>`<div class="rhm-stat"><i class="fas ${x[0]}"></i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
+  }
+
+  const yl = document.getElementById('rhmYearLabel'); if(yl) yl.textContent = rhmYear;
+  const note = document.getElementById('rhmMetricNote'); if(note) note.textContent = 'adet/gün';
+  const nextBtn = document.getElementById('rhmNextYear');
+  if(nextBtn) nextBtn.disabled = (rhmYear >= new Date().getFullYear());
+  const prev = document.getElementById('rhmPrevYear');
+  if(prev) prev.onclick = ()=>{ rhmYear--; renderYilHeatmap(); };
+  if(nextBtn) nextBtn.onclick = ()=>{ if(rhmYear < new Date().getFullYear()){ rhmYear++; renderYilHeatmap(); } };
 }
 
 // ========== AYLIK KARŞILAŞTIRMA ==========
