@@ -1999,6 +1999,10 @@
       </div>
       <div class="card">
         <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>)</div>
+        <div style="position:relative;margin-bottom:12px;">
+          <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+          <input class="form-input" id="atolyeSearch" placeholder="Atölye ara..." autocomplete="off" oninput="refreshAtolyeList()" style="padding-left:34px;">
+        </div>
         <div id="atolyeList"></div>
       </div>
     </div>
@@ -3580,7 +3584,11 @@ function refreshAtolyeList(){
   document.getElementById('atolyeCount').textContent=list.length;
   const el=document.getElementById('atolyeList');
   if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';return;}
-  el.innerHTML=list.map(a=>{
+  // Arama filtresi — ad veya telefona göre
+  const q=(document.getElementById('atolyeSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const shown = q ? list.filter(a=>((a.name||'').toLocaleLowerCase('tr').includes(q) || (a.telefon||'').toLocaleLowerCase('tr').includes(q))) : list;
+  if(!shown.length){el.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen atölye yok.</p></div>';return;}
+  el.innerHTML=shown.map(a=>{
     const tel = (a.telefon||'').replace(/[^\d+]/g,'');
     const normTel = tel ? _normalizePhoneForWa(tel) : '';
     const waBtn = normTel ? '<a href="javascript:void(0)" onclick="_openWhatsApp(\''+normTel+'\',\'\')" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fab fa-whatsapp"></i></a>' : '';
