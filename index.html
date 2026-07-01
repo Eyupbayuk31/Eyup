@@ -2001,9 +2001,10 @@
         <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>)</div>
         <div style="position:relative;margin-bottom:12px;">
           <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
-          <input class="form-input" id="atolyeSearch" placeholder="Atölye ara..." autocomplete="off" oninput="refreshAtolyeList()" style="padding-left:34px;">
+          <input class="form-input" id="atolyeSearch" placeholder="Atölye ara..." autocomplete="off" oninput="_atolyeSearchChanged()" style="padding-left:34px;">
         </div>
         <div id="atolyeList"></div>
+        <div id="atolyePagination"></div>
       </div>
     </div>
 
@@ -3579,15 +3580,36 @@ function updateAtolyeField(id, field, value){
   refreshAtolyeList();
 }
 
+const ATOLYE_PAGE_SIZE = 10;
+let currentAtolyePage = 1;
+function _atolyeSearchChanged(){
+  currentAtolyePage = 1; // arama degisince ilk sayfaya don
+  refreshAtolyeList();
+}
+function goToAtolyePage(p){
+  currentAtolyePage = p;
+  refreshAtolyeList();
+  const card = document.getElementById('atolyeList');
+  if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function refreshAtolyeList(){
   const list=getData('atolyeler');
   document.getElementById('atolyeCount').textContent=list.length;
   const el=document.getElementById('atolyeList');
-  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';return;}
+  const pagEl=document.getElementById('atolyePagination');
+  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';if(pagEl)pagEl.innerHTML='';return;}
   // Arama filtresi — ad veya telefona göre
   const q=(document.getElementById('atolyeSearch')?.value||'').trim().toLocaleLowerCase('tr');
-  const shown = q ? list.filter(a=>((a.name||'').toLocaleLowerCase('tr').includes(q) || (a.telefon||'').toLocaleLowerCase('tr').includes(q))) : list;
-  if(!shown.length){el.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen atölye yok.</p></div>';return;}
+  const filtered = q ? list.filter(a=>((a.name||'').toLocaleLowerCase('tr').includes(q) || (a.telefon||'').toLocaleLowerCase('tr').includes(q))) : list;
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen atölye yok.</p></div>';if(pagEl)pagEl.innerHTML='';return;}
+
+  // Sayfalama — 10'ar goster
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ATOLYE_PAGE_SIZE));
+  if(currentAtolyePage > totalPages) currentAtolyePage = totalPages;
+  if(currentAtolyePage < 1) currentAtolyePage = 1;
+  const start = (currentAtolyePage - 1) * ATOLYE_PAGE_SIZE;
+  const shown = filtered.slice(start, start + ATOLYE_PAGE_SIZE);
+
   el.innerHTML=shown.map(a=>{
     const tel = (a.telefon||'').replace(/[^\d+]/g,'');
     const normTel = tel ? _normalizePhoneForWa(tel) : '';
@@ -3602,6 +3624,15 @@ function refreshAtolyeList(){
       <button class="btn btn-sm btn-danger" onclick="deleteAtolye(${a.id})"><i class="fas fa-trash"></i></button>
     </div>`;
   }).join('');
+
+  if(pagEl){
+    if(totalPages > 1){
+      renderPagination('atolyePagination', currentAtolyePage, totalPages, 'goToAtolyePage');
+      pagEl.insertAdjacentHTML('beforeend', `<div class="pagination-info">Gösterilen: ${start+1}-${Math.min(start+ATOLYE_PAGE_SIZE,filtered.length)} / Toplam: ${filtered.length} atölye</div>`);
+    } else {
+      pagEl.innerHTML='';
+    }
+  }
 }
 
 // ==================== STOK TAKİBİ ====================
