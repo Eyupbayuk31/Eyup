@@ -13883,14 +13883,17 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 (function(){
   'use strict';
   const AUTH_KEY = 'irsaliye_auth_v1';
+  const AUTH_EXP_KEY = 'irsaliye_auth_exp'; // oturum son geçerlilik zamanı (ms)
   const LAST_USER_KEY = 'irsaliye_last_user';
   const LOCK_KEY = 'irsaliye_login_lock';
   const USERS_KEY = 'irsaliye_users';
   const MAX_ATTEMPTS = 5;
   const LOCK_MS = 30 * 1000;
+  const IDLE_MS = 20 * 60 * 1000; // 20 dk hareketsizlik → otomatik çıkış
 
   let attempts = 0;
   let lockTimer = null;
+  let idleCheckInt = null;
 
   // ── Kullanıcı deposu ──────────────────────────────────────
   function getUsers(){
@@ -13917,19 +13920,34 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   // ─────────────────────────────────────────────────────────
 
   function isAuthed(){
-    try { return (localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY)) === '1'; }
-    catch(e){ return false; }
+    try {
+      const flag = (localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY)) === '1';
+      if(!flag) return false;
+      // Hareketsizlik zaman aşımı: son etkinlikten 20 dk geçtiyse oturum düşer
+      const exp = parseInt(localStorage.getItem(AUTH_EXP_KEY) || '0', 10);
+      if(exp && Date.now() > exp){
+        clearAuth();
+        return false;
+      }
+      return true;
+    } catch(e){ return false; }
   }
   function setAuthed(remember){
     try {
       if(remember) localStorage.setItem(AUTH_KEY,'1');
       else sessionStorage.setItem(AUTH_KEY,'1');
+      bumpExpiry();
     } catch(e){}
+  }
+  // Oturum geçerlilik süresini "şimdi + 20 dk" yap (etkinlikte çağrılır)
+  function bumpExpiry(){
+    try { localStorage.setItem(AUTH_EXP_KEY, String(Date.now() + IDLE_MS)); } catch(e){}
   }
   function clearAuth(){
     try {
       // Auth key'i temizle
       localStorage.removeItem(AUTH_KEY);
+      localStorage.removeItem(AUTH_EXP_KEY);
       sessionStorage.removeItem(AUTH_KEY);
 
       // In-memory cache'i temizle
@@ -13944,6 +13962,49 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
       console.error('clearAuth error:', e);
     }
   }
+
+  // ── Hareketsizlik (idle) zaman aşımı: 20 dk etkinlik yoksa çıkış ──
+  function _authFlagSet(){
+    try { return (localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY)) === '1'; }
+    catch(e){ return false; }
+  }
+  let _actThrottle = 0;
+  function onActivityThrottled(){
+    const now = Date.now();
+    if(now - _actThrottle < 5000) return; // en fazla 5 sn'de bir yaz
+    _actThrottle = now;
+    if(_authFlagSet()) bumpExpiry();
+  }
+  ['mousedown','keydown','touchstart','scroll','mousemove','click'].forEach(function(ev){
+    window.addEventListener(ev, onActivityThrottled, { passive:true });
+  });
+
+  function sessionExpired(){
+    // Yumuşak çıkış: veriyi bozmadan giriş ekranını göster
+    clearAuth();
+    showLogin();
+    try {
+      const et = document.getElementById('loginErrorText');
+      const errEl = document.getElementById('loginError');
+      if(et) et.textContent = '20 dk hareketsizlik nedeniyle oturum kapandı. Lütfen tekrar giriş yapın.';
+      if(errEl) errEl.classList.add('show');
+    } catch(e){}
+    try { if(typeof toast === 'function') toast('Oturum zaman aşımına uğradı 🔒','info'); } catch(e){}
+  }
+  function startIdleWatch(){
+    bumpExpiry();
+    if(idleCheckInt) return;
+    idleCheckInt = setInterval(function(){
+      if(!_authFlagSet()) return; // zaten çıkış yapılmış
+      var exp = 0;
+      try { exp = parseInt(localStorage.getItem(AUTH_EXP_KEY) || '0', 10); } catch(e){}
+      if(exp && Date.now() > exp){
+        stopIdleWatch();
+        sessionExpired();
+      }
+    }, 15000); // 15 sn'de bir kontrol
+  }
+  function stopIdleWatch(){ if(idleCheckInt){ clearInterval(idleCheckInt); idleCheckInt = null; } }
 
   const overlay = document.getElementById('loginOverlay');
   const userInp = document.getElementById('loginUser');
@@ -14217,6 +14278,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
       // otomatik giriş
       setAuthed(true);
+      startIdleWatch();
       try { localStorage.setItem(LAST_USER_KEY, u); } catch(e){}
 
       setTimeout(()=>{
@@ -14281,6 +14343,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
       const matched = findUser(u);
       if(matched && matched.password === p){
         setAuthed(remember);
+        startIdleWatch();
         try { localStorage.setItem(LAST_USER_KEY, u); } catch(e){}
         if(typeof window._logAudit === 'function') window._logAudit('login', { by: u, label: u });
         btn.classList.remove('loading');
@@ -14319,7 +14382,10 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   try {
     const _hasViewerParam = window.location.search.includes('v=') || window.location.hash.includes('v=');
     const _vRendered = !!window._viewerRendered;
-    if(!_vRendered && !_hasViewerParam && !isAuthed()) showLogin();
+    if(!_vRendered && !_hasViewerParam){
+      if(!isAuthed()) showLogin();
+      else startIdleWatch(); // zaten giriş yapılmış → hareketsizlik sayacını başlat
+    }
   } catch(authGateErr){
     console.warn('[auth-gate] hata:', authGateErr);
     try { showLogin(); } catch(_){}
