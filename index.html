@@ -9778,20 +9778,35 @@ function isCurrentUserAdmin(){
   }catch(e){ return true; }
 }
 
+// Normal kullanıcı SADECE "Görünüm (tema)" ve "Hakkında" sekmelerini görür.
+// Bu sekmeler yalnızca admin'e açıktır:
+const SETTINGS_ADMIN_ONLY_TABS = ['genel','veri','kullanicilar'];
+
 function _applyAdminVisibility(){
   const admin = isCurrentUserAdmin();
   // GitHub config kartı — sadece admin
   const ghCard = document.getElementById('githubConfigCard');
   if(ghCard) ghCard.style.display = admin ? '' : 'none';
-  // Kullanıcılar sekmesi — sadece admin
-  const uTab = document.querySelector('.s-tab[data-stab="kullanicilar"]');
-  if(uTab) uTab.style.display = admin ? '' : 'none';
-  // QR yayın URL kartı — sadece admin (isteğe bağlı, şimdilik açık)
+  // Admin'e özel sekmeleri gizle (Genel / Veri / Kullanıcılar)
+  // NOT: class ile gizliyoruz; #page-settings .s-tab display:flex !important
+  // olduğu için inline style.display='none' işe yaramıyor.
+  SETTINGS_ADMIN_ONLY_TABS.forEach(function(name){
+    const tab = document.querySelector('.s-tab[data-stab="'+name+'"]');
+    if(tab) tab.classList.toggle('s-tab-admin-hidden', !admin);
+  });
+  // Normal kullanıcı admin'e özel bir sekmedeyse, Görünüm'e (tema) geç
+  if(!admin){
+    const activeTab = document.querySelector('.s-tab.active');
+    const activeName = activeTab ? activeTab.dataset.stab : null;
+    if(!activeName || SETTINGS_ADMIN_ONLY_TABS.includes(activeName)){
+      if(typeof switchSettingsTab === 'function') switchSettingsTab('gorunum');
+    }
+  }
 }
 
 function switchSettingsTab(tab){
-  // Admin olmayanın Kullanıcılar / GitHub sekmesine doğrudan erişimini engelle
-  if((tab==='kullanicilar') && !isCurrentUserAdmin()){
+  // Admin olmayanın Genel / Veri / Kullanıcılar sekmelerine erişimini engelle
+  if(SETTINGS_ADMIN_ONLY_TABS.includes(tab) && !isCurrentUserAdmin()){
     if(typeof toast==='function') toast('Bu alana erişim yetkiniz yok','danger');
     return;
   }
