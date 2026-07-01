@@ -13889,7 +13889,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   const USERS_KEY = 'irsaliye_users';
   const MAX_ATTEMPTS = 5;
   const LOCK_MS = 30 * 1000;
-  const IDLE_MS = 20 * 60 * 1000; // 20 dk hareketsizlik → otomatik çıkış
+  const IDLE_MS = 60 * 60 * 1000; // 1 saat hareketsizlik → otomatik çıkış
 
   let attempts = 0;
   let lockTimer = null;
@@ -13986,7 +13986,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     try {
       const et = document.getElementById('loginErrorText');
       const errEl = document.getElementById('loginError');
-      if(et) et.textContent = '20 dk hareketsizlik nedeniyle oturum kapandı. Lütfen tekrar giriş yapın.';
+      if(et) et.textContent = '1 saat hareketsizlik nedeniyle oturum kapandı. Lütfen tekrar giriş yapın.';
       if(errEl) errEl.classList.add('show');
     } catch(e){}
     try { if(typeof toast === 'function') toast('Oturum zaman aşımına uğradı 🔒','info'); } catch(e){}
