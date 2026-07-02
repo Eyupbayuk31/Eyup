@@ -13305,15 +13305,21 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   window.V9_THEMES = V9_THEMES;
 
   function v9BuildCard(t){
-    const grad = 'linear-gradient(135deg,'+t.c1+' 0%,'+t.c2+' 100%)';
-    const modeClass = t.lightMode ? ' mode-light' : '';
-    return '<div class="v9-theme-card'+modeClass+'" data-v9id="'+t.id+'" data-v9cat="'+t.cat+'" onclick="v9PickTheme(\''+t.id+'\')" style="--v9-grad:'+grad+'">'
+    // CANLI ÖNİZLEME: frame'e data-theme verildiğinde o temanın TÜM CSS
+    // değişkenleri ([data-theme="x"]{--...} bloklarından) bu alt-ağaca uygulanır.
+    // Yani her kart, temanın gerçek bg/card/primary/text renkleriyle çizilen
+    // mini bir uygulama maketidir — 50 tema için sıfır bakım, %100 doğru.
+    return '<div class="v9-theme-card" data-v9id="'+t.id+'" data-v9cat="'+t.cat+'" onclick="v9PickTheme(\''+t.id+'\')">'
       + '<div class="v9-tc-check"><i class="fas fa-check"></i></div>'
-      + '<div class="v9-tc-hero">'
-        + '<div class="v9-tc-dots">'
-          + '<span class="v9-tc-dot" style="background:'+t.c1+'"></span>'
-          + '<span class="v9-tc-dot" style="background:'+t.c2+'"></span>'
-          + '<span class="v9-tc-dot" style="background:'+t.c3+'"></span>'
+      + '<div class="v9-tc-frame" data-theme="'+t.id+'" aria-hidden="true">'
+        + '<div class="v9m-top"><span class="v9m-logo"></span><span class="v9m-line"></span><span class="v9m-avatar"></span></div>'
+        + '<div class="v9m-wrap">'
+          + '<div class="v9m-side"><i></i><i class="on"></i><i></i><i></i></div>'
+          + '<div class="v9m-main">'
+            + '<div class="v9m-hero"><b></b><u></u></div>'
+            + '<div class="v9m-cards"><span></span><span></span></div>'
+            + '<div class="v9m-btn"></div>'
+          + '</div>'
         + '</div>'
       + '</div>'
       + '<div class="v9-tc-body">'
@@ -13352,19 +13358,39 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
   window.v9PickTheme = function(id){
     const t = V9_THEMES.find(x=>x.id===id); if(!t) return;
-    document.body.classList.remove('v9-theme-changing'); void document.body.offsetWidth;
-    document.body.classList.add('v9-theme-changing');
-    document.body.setAttribute('data-theme', id);
-    document.documentElement.setAttribute('data-theme', id);
 
-    // CSS değişkenlerini dinamik olarak set et
-    const root = document.documentElement;
-    root.style.setProperty('--primary', t.c1);
-    root.style.setProperty('--primary-dark', t.c2);
-    root.style.setProperty('--accent', t.c3);
+    const apply = function(){
+      document.body.classList.remove('v9-theme-changing'); void document.body.offsetWidth;
+      document.body.classList.add('v9-theme-changing');
+      document.body.setAttribute('data-theme', id);
+      document.documentElement.setAttribute('data-theme', id);
+      // NOT: eskiden burada --primary/--primary-dark/--accent inline yazılıyordu.
+      // Bu, CSS'teki tema paletlerini ([data-theme] blokları) eziyor ve
+      // --primary-light/--on-primary gibi diğer değişkenlerle uyumsuzluk
+      // yaratıyordu. Artık paletin tek kaynağı CSS tema blokları.
+      const root = document.documentElement;
+      root.style.removeProperty('--primary');
+      root.style.removeProperty('--primary-dark');
+      root.style.removeProperty('--accent');
+      v9SyncActive();
+    };
+
+    // Yumuşak tema geçişi: View Transitions destekliyorsa çapraz-erime,
+    // yoksa (veya kullanıcı azaltılmış hareket istiyorsa) anında uygula.
+    let reduceMotion = false;
+    try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(_){}
+    if(document.startViewTransition && !reduceMotion && window._v9Ready){
+      try {
+        const vt = document.startViewTransition(apply);
+        // Hızlı ardışık tema değişiminde önceki geçiş iptal edilir ("skipped");
+        // bu beklenen bir durum — promise reddini sessizce yut.
+        if(vt){ ['ready','finished','updateCallbackDone'].forEach(k=>{ try{ vt[k] && vt[k].catch(()=>{}); }catch(_){} }); }
+      } catch(_){ apply(); }
+    } else {
+      apply();
+    }
 
     if(typeof setConfig==='function') setConfig('theme', id);
-    v9SyncActive();
     // Sayfa ilk açılışında bildirim gösterme, sadece kullanıcı seçince göster
     if(window._v9Ready && typeof toast==='function') toast('Tema: '+t.name,'success');
   };
