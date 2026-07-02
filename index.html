@@ -6401,10 +6401,9 @@ function renderModelChart(){
   const data = getReportData();
   const models = {};
   data.forEach(i=>{
-    (i.items||i.urunler||[]).forEach(u=>{
-      const m = u.model||u.urun||'Belirsiz';
-      models[m] = (models[m]||0) + (parseInt(u.adet)||0);
-    });
+    // Her irsaliye kaydında model doğrudan i.model'de; adet _repItemQty ile
+    const m = ((i.model||i.urun||'').toString().trim()) || 'Belirsiz';
+    models[m] = (models[m]||0) + (_repItemQty(i) || 0);
   });
   const sorted = Object.entries(models).sort((a,b)=>b[1]-a[1]).slice(0,10);
   destroyChart('model');
@@ -6412,7 +6411,7 @@ function renderModelChart(){
   if(ctx && sorted.length){
     repCharts.model = new Chart(ctx,{
       type:'bar',
-      data:{labels:sorted.map(x=>x[0]),datasets:[{label:'Adet',data:sorted.map(x=>x[1]),backgroundColor:'#06b6d4',borderRadius:8}]},
+      data:{labels:sorted.map(x=>x[0]),datasets:[{label:'Adet',data:sorted.map(x=>x[1]),backgroundColor:_repPrimaryColor(),borderRadius:8}]},
       options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}}}
     });
   }
@@ -6426,13 +6425,20 @@ function renderModelChart(){
 function renderOlcuRenk(){
   const data = getReportData();
   const olculer = {}, renkler = {};
+  const SN = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+  const BL = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+  const addOlcu = (k,v)=>{ if(v>0) olculer[k]=(olculer[k]||0)+v; };
   data.forEach(i=>{
-    (i.items||i.urunler||[]).forEach(u=>{
-      const o = u.olcu||u.beden||'Belirsiz';
-      const r = u.renk||'Belirsiz';
-      olculer[o] = (olculer[o]||0)+(parseInt(u.adet)||0);
-      renkler[r] = (renkler[r]||0)+(parseInt(u.adet)||0);
-    });
+    // Renk: kayıtta doğrudan i.renk
+    const r = ((i.renk||'').toString().trim()) || 'Belirsiz';
+    renkler[r] = (renkler[r]||0) + (_repItemQty(i) || 0);
+    // Ölçü: poşet için sizes, fermuar/düğme/saten için beden
+    if(i.sizes && typeof i.sizes==='object'){
+      for(const k in i.sizes){ addOlcu(SN[k]||k, parseInt(i.sizes[k])||0); }
+    }
+    if(i.beden && typeof i.beden==='object'){
+      for(const k in i.beden){ const b=i.beden[k]; const v=parseInt(b&&b.adet!=null?b.adet:b)||0; addOlcu(BL[k]||k, v); }
+    }
   });
   const olcuSorted = Object.entries(olculer).sort((a,b)=>b[1]-a[1]).slice(0,15);
   const renkSorted = Object.entries(renkler).sort((a,b)=>b[1]-a[1]).slice(0,15);
@@ -6440,7 +6446,7 @@ function renderOlcuRenk(){
   const cO = document.getElementById('chartOlcu');
   if(cO && olcuSorted.length){
     repCharts.olcu = new Chart(cO,{
-      type:'bar',data:{labels:olcuSorted.map(x=>x[0]),datasets:[{data:olcuSorted.map(x=>x[1]),backgroundColor:'#f59e0b',borderRadius:6}]},
+      type:'bar',data:{labels:olcuSorted.map(x=>x[0]),datasets:[{data:olcuSorted.map(x=>x[1]),backgroundColor:_repPrimaryColor(),borderRadius:6}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
   }
   const cR = document.getElementById('chartRenk');
@@ -6527,6 +6533,10 @@ const REP_TUR_COLORS = {
 function _repMutedColor(){
   try{ return getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#c4b5fd'; }
   catch(e){ return '#c4b5fd'; }
+}
+function _repPrimaryColor(){
+  try{ return getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#7c3aed'; }
+  catch(e){ return '#7c3aed'; }
 }
 function renderTurAnalizi(){
   const data = getReportData();
