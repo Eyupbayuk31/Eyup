@@ -3063,6 +3063,23 @@ select.form-input:focus{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237c3aed' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
+/* Açılır liste seçenekleri: native popup'ta metin görünmez oluyordu
+   (rengi belirsizdi → Windows'ta beyaz/beyaz). Tema renklerine sabitle. */
+select option,
+.form-input option,
+.filter-select option{
+  background-color:var(--bg-card);
+  color:var(--text-main);
+}
+/* Native dropdown popup'ın açık/koyu doğru render olması için */
+select,.form-input,.filter-select{ color-scheme:dark; }
+[data-theme="light"] select,[data-theme="light"] .form-input,[data-theme="light"] .filter-select,
+[data-theme="cream"] select,[data-theme="mint"] select,[data-theme="sky"] select,
+[data-theme="blossom"] select,[data-theme="paper"] select,[data-theme="lavender"] select,
+[data-theme="corporate"] select,[data-theme="monochrome"] select,[data-theme="silver"] select,
+[data-theme="peach"] select,[data-theme="aqua"] select,[data-theme="mauve"] select,
+[data-theme="arctic"] select{ color-scheme:light; }
+
 /* Textarea */
 textarea.form-input{
   resize:vertical;
