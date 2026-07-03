@@ -917,10 +917,19 @@
             const localItem = localMap.get(id);
             const rN = Array.isArray(item._photos) ? item._photos.length : (item._photo ? 1 : 0);
             const lN = Array.isArray(localItem._photos) ? localItem._photos.length : (localItem._photo ? 1 : 0);
+            const remoteAt = item._updatedAt || item.updatedAt || 0;
+            const localAt  = localItem._updatedAt || localItem.updatedAt || 0;
             if(lN > rN){
-              const remoteAt = item._updatedAt || item.updatedAt || '';
-              const localAt  = localItem._updatedAt || localItem.updatedAt || '';
               merged.set(id, (!remoteAt || localAt >= remoteAt) ? localItem : rehydratePhotoBlobs(item, localItem));
+            } else if(localAt && (!remoteAt || localAt >= remoteAt)){
+              // FOTOSUZ (veya esit fotolu) kayitlarda da: yerelde bulut kadar/daha
+              // taze bir zaman damgasi varsa yereli koru. ONCEDEN bu dal HER ZAMAN
+              // bulutu seciyordu — "recent write" 5 sn penceresi disinda yapilan
+              // HER duzenleme/silme, koleksiyondaki BASKA bir kayda yazim gelip
+              // snapshot yeniden tetiklenince bulutun ESKI kopyasiyla GERI
+              // GETIRILIYORDU (kullanicinin bildirdigi "sildigim seyler geri
+              // geliyor" hatasinin koku — foto'suz TUM kayit turlerini etkiliyordu).
+              merged.set(id, localItem);
             } else {
               merged.set(id, rehydratePhotoBlobs(item, localItem));
             }
@@ -963,6 +972,7 @@
         console.warn('[fs] snapshot handler err:', key, err);
       }
     }
+    window._handleSnapshot = handleSnapshot; // test/debug erisimi
 
     // ── Bulut durum rozeti: her cihazda senkronun calisip calismadigi GORUNUR olsun.
     // Yesil = bagli, kirmizi = SDK yok (kayitlar yerel kalir), turuncu = yazma/dinleme hatasi.
@@ -4518,6 +4528,18 @@ function _ftStok(sz){ return _ftGelen(sz) - _ftKullanilan(sz); }
 function _ftBekleyen(sz){ return Math.max(0, (+sz.siparisAdet||0) - _ftGelen(sz)); }
 function _ftNormModel(m){ return (m||'').toString().trim().toLocaleUpperCase('tr'); }
 function _ftNum(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+// Model dokumani her degistiginde damgala — bulut senkron birlestirmesi
+// (handleSnapshot) bu zaman damgasina bakarak yereli mi bulutu mu
+// koruyacagina karar verir. Damgasiz kayitlarda "sildigim geri geliyor"
+// hatasi olusuyordu (bkz. handleSnapshot fotosuz-kayit dali).
+function _ftStamp(m){
+  try{
+    m._updatedAt = Date.now();
+    const u = (typeof localStorage !== 'undefined') ? localStorage.getItem('irsaliye_last_user') : '';
+    if(u) m._updatedBy = u;
+  }catch(_){}
+  return m;
+}
 
 // ── Model seviyesi toplamlar ──
 function _ftModelSip(m){ return (m.sizes||[]).reduce((s,z)=>s+(+z.siparisAdet||0),0); }
@@ -4647,7 +4669,7 @@ function ftSaveOrder(){
     const idx=list.findIndex(x=>x.id===_ftEditModelId); if(idx<0) return;
     const dup=list.find(x=>x.id!==_ftEditModelId && _ftNormModel(x.modelKodu)===_ftNormModel(model));
     if(dup){ toast('Bu model kodu zaten var: '+model,'error'); return; }
-    list[idx]={...list[idx], modelKodu:model, tedarikci, termin};
+    list[idx]=_ftStamp({...list[idx], modelKodu:model, tedarikci, termin});
     setData('fermuarTakip',list);
     ftCloseOrderModal();
     toast('Model bilgileri güncellendi','success');
@@ -4655,7 +4677,7 @@ function ftSaveOrder(){
   } else {
     if(list.find(x=>_ftNormModel(x.modelKodu)===_ftNormModel(model))){ toast('Bu model kodu zaten var: '+model+' — üzerine tıklayıp devam edin','error'); return; }
     const newId=Date.now();
-    list.unshift({id:newId, modelKodu:model, tedarikci, termin, sizes:[], createdAt:new Date().toISOString()});
+    list.unshift(_ftStamp({id:newId, modelKodu:model, tedarikci, termin, sizes:[], createdAt:new Date().toISOString()}));
     setData('fermuarTakip',list);
     ftCloseOrderModal();
     toast('Model eklendi — şimdi cm cm beden girin','success');
@@ -4755,6 +4777,7 @@ function ftAddSizeRow(){
   let list=_ftAll(); const idx=list.findIndex(x=>x.id===m.id); if(idx<0) return;
   list[idx].sizes = list[idx].sizes || [];
   list[idx].sizes.push({id:Date.now()+Math.floor(Math.random()*1000), beden, cm, renk, siparisAdet:siparis, teslimatlar:[], kullanimlar:[]});
+  _ftStamp(list[idx]);
   setData('fermuarTakip',list);
 
   document.getElementById('ftRowBeden').value='';
@@ -4769,6 +4792,7 @@ function ftDeleteSizeRow(modelId, sizeId){
   if(!confirm('Bu cm satırını silmek istiyor musunuz? Teslimat/kullanım geçmişi de silinir.')) return;
   let list=_ftAll(); const idx=list.findIndex(x=>x.id===modelId); if(idx<0) return;
   list[idx].sizes=(list[idx].sizes||[]).filter(z=>z.id!==sizeId);
+  _ftStamp(list[idx]);
   setData('fermuarTakip',list);
   ftRenderDetail(); toast('CM satırı silindi','info');
 }
@@ -4797,6 +4821,7 @@ function ftSaveReceive(){
   sizes[zidx].teslimatlar=sizes[zidx].teslimatlar||[];
   sizes[zidx].teslimatlar.push({id:Date.now(), tarih, adet});
   list[midx].sizes=sizes;
+  _ftStamp(list[midx]);
   setData('fermuarTakip',list);
   ftCloseReceiveModal();
   if(_ftCurrentDetailId===_ftReceiveCtx.modelId) ftRenderDetail();
@@ -4956,6 +4981,7 @@ window.ftConsumeForCut = function(model, beden, no){
     sizes[zidx].kullanimlar=sizes[zidx].kullanimlar||[];
     sizes[zidx].kullanimlar.push({id:Date.now()+Math.floor(Math.random()*1000), tarih:today, adet, no:no||''});
     list[midx].sizes=sizes;
+    _ftStamp(list[midx]);
     changed=true;
   }
   if(changed){ setData('fermuarTakip',list); }
