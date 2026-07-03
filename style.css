@@ -13366,7 +13366,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 
 /* Kart ızgarası */
 .ft-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; margin-top:16px; }
-.ft-card{ background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow-card); transition:transform .2s, box-shadow .2s, border-color .2s; position:relative; overflow:hidden; }
+.ft-card{ background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow-card); transition:transform .2s, box-shadow .2s, border-color .2s; position:relative; overflow:hidden; cursor:pointer; }
 .ft-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(var(--primary),var(--primary-dark)); opacity:.85; }
 .ft-card:hover{ transform:translateY(-3px); box-shadow:0 12px 30px -12px var(--primary-glow); border-color:color-mix(in srgb, var(--primary) 30%, var(--border)); }
 .ft-card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px; }
@@ -13430,3 +13430,63 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-pdf-meta{ font-size:11px; color:var(--text-muted); }
 .ft-pdf-eksik{ margin-left:auto; font-size:10.5px; font-weight:800; color:var(--danger); background:color-mix(in srgb, var(--danger) 12%, transparent); padding:3px 8px; border-radius:999px; white-space:nowrap; }
 .ft-pdf-tam{ margin-left:auto; font-size:10.5px; font-weight:800; color:var(--success); background:color-mix(in srgb, var(--success) 12%, transparent); padding:3px 8px; border-radius:999px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   FERMUAR TAKİP — MODEL → DETAY HİYERARŞİSİ (v2, tema-token)
+   ═══════════════════════════════════════════════════════════════ */
+/* Model kartı: tedarikçi + termin satırı */
+.ft-card-termin{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted); margin-bottom:10px; padding:6px 9px; border-radius:8px; background:color-mix(in srgb, var(--text-dim) 6%, transparent); }
+.ft-card-termin i{ font-size:11px; color:var(--primary); }
+.ft-card-termin.ft-termin-late{ color:var(--danger); background:color-mix(in srgb, var(--danger) 10%, transparent); font-weight:700; }
+.ft-card-termin.ft-termin-late i{ color:var(--danger); }
+
+/* Detay modalı: "ayrı sayfa gibi" — geniş, kendi içinde kaydırmalı */
+.ft-detail-modal{ max-width:920px; width:94vw; max-height:88vh; display:flex; flex-direction:column; padding:22px; }
+.ft-detail-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:16px; flex-shrink:0; }
+.ft-detail-model{ font-size:26px; font-weight:900; color:var(--text-main); letter-spacing:-.02em; line-height:1.1; }
+.ft-detail-meta{ display:flex; gap:16px; flex-wrap:wrap; margin-top:6px; font-size:12.5px; color:var(--text-muted); }
+.ft-detail-meta span{ display:inline-flex; align-items:center; gap:6px; }
+.ft-detail-meta i{ color:var(--primary); font-size:11px; }
+.ft-detail-meta .ft-termin-late{ color:var(--danger); font-weight:700; }
+.ft-detail-meta .ft-termin-late i{ color:var(--danger); }
+
+.ft-detail-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:18px; flex-shrink:0; }
+.ft-dkpi{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:color-mix(in srgb, var(--primary) 6%, transparent); border:1px solid var(--border); }
+.ft-dkpi i{ font-size:14px; color:var(--primary); width:20px; text-align:center; flex-shrink:0; }
+.ft-dkpi b{ display:block; font-size:16px; font-weight:800; color:var(--text-main); font-variant-numeric:tabular-nums; line-height:1.1; }
+.ft-dkpi span{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+
+/* cm/beden ekleme formu */
+.ft-addrow{ background:color-mix(in srgb, var(--primary) 5%, transparent); border:1px solid color-mix(in srgb, var(--primary) 18%, var(--border)); border-radius:14px; padding:14px; margin-bottom:16px; flex-shrink:0; }
+.ft-addrow-title{ font-size:12.5px; font-weight:800; color:var(--primary); margin-bottom:10px; display:flex; align-items:center; gap:7px; text-transform:uppercase; letter-spacing:.03em; }
+.ft-addrow-grid{ display:grid; grid-template-columns:110px 110px 1fr 160px auto; gap:8px; align-items:center; }
+.ft-addrow-grid .form-input{ margin:0; }
+.ft-addrow-grid .btn{ white-space:nowrap; }
+
+/* cm cm sıralı satır listesi */
+.ft-rows{ overflow-y:auto; flex:1; min-height:0; }
+.ft-rowhead{ display:grid; grid-template-columns:70px 70px 1fr 90px 90px 100px 80px 90px 120px; gap:8px; padding:8px 10px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:1; }
+.ft-rowwrap{ border-bottom:1px solid var(--border); }
+.ft-rowwrap:last-child{ border-bottom:none; }
+.ft-row{ display:grid; grid-template-columns:70px 70px 1fr 90px 90px 100px 80px 90px 120px; gap:8px; align-items:center; padding:10px; font-size:12.5px; transition:background .15s; }
+.ft-rowwrap:hover .ft-row{ background:color-mix(in srgb, var(--primary) 4%, transparent); }
+.ft-row-beden{ font-weight:800; color:var(--text-main); }
+.ft-row-cm{ font-weight:800; color:var(--primary); font-variant-numeric:tabular-nums; }
+.ft-row span.pos{ color:var(--success); font-weight:700; font-variant-numeric:tabular-nums; }
+.ft-row span.neg{ color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.ft-row span.bad{ color:var(--danger); font-weight:800; font-variant-numeric:tabular-nums; }
+.ft-row-stok{ font-weight:900; font-variant-numeric:tabular-nums; color:var(--text-main); }
+.ft-row-stok.low{ color:var(--warning); }
+.ft-row-stok.zero{ color:var(--danger); }
+.ft-row-acts{ display:flex; gap:4px; justify-content:flex-end; }
+.ft-row-hist{ padding:0 10px 12px 10px; }
+
+@media(max-width:760px){
+  .ft-addrow-grid{ grid-template-columns:1fr 1fr; }
+  .ft-addrow-grid .btn{ grid-column:1/-1; }
+  .ft-rowhead{ display:none; }
+  .ft-row{ grid-template-columns:1fr 1fr; grid-auto-rows:auto; row-gap:4px; }
+  .ft-row-acts{ grid-column:1/-1; justify-content:flex-start; margin-top:4px; }
+  .ft-detail-modal{ padding:16px; max-height:92vh; }
+  .ft-detail-model{ font-size:21px; }
+}
