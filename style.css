@@ -13420,3 +13420,13 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-rc-stats b{ color:var(--primary); font-variant-numeric:tabular-nums; }
 
 @media(max-width:520px){ .ft-mini{ grid-template-columns:repeat(2,1fr); } }
+
+/* Fermuar Takip: PDF modal model listesi */
+.ft-pdf-list{ max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border); border-radius:10px; padding:8px; background:color-mix(in srgb, var(--text-dim) 4%, transparent); }
+.ft-pdf-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer; transition:background .15s; }
+.ft-pdf-row:hover{ background:color-mix(in srgb, var(--primary) 8%, transparent); }
+.ft-pdf-row input{ width:16px; height:16px; accent-color:var(--primary); flex-shrink:0; }
+.ft-pdf-model{ font-weight:800; font-size:13.5px; color:var(--text-main); }
+.ft-pdf-meta{ font-size:11px; color:var(--text-muted); }
+.ft-pdf-eksik{ margin-left:auto; font-size:10.5px; font-weight:800; color:var(--danger); background:color-mix(in srgb, var(--danger) 12%, transparent); padding:3px 8px; border-radius:999px; white-space:nowrap; }
+.ft-pdf-tam{ margin-left:auto; font-size:10.5px; font-weight:800; color:var(--success); background:color-mix(in srgb, var(--success) 12%, transparent); padding:3px 8px; border-radius:999px; }
