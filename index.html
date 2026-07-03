@@ -956,12 +956,17 @@
           // kullanici basinca taze veriyle cizilir. Diger sayfalardayken
           // her zamanki gibi tazelenir (liste arka planda guncel tutulur).
           const listEl = document.getElementById('page-list');
+          const ftEl   = document.getElementById('page-fermuar-takip');
           if(listEl && listEl.classList.contains('active')){
             window._listRefreshPending = true;
             try { if(typeof window._markListRefreshPending === 'function') window._markListRefreshPending(); } catch(e){}
             // Liste disindaki rozet/ozet vb. icin hafif tazeleme (listeyi cizmez)
             try { if(typeof refreshHome === 'function') refreshHome(); } catch(e){}
             try { if(typeof updateBadge === 'function') updateBadge(); } catch(e){}
+          } else if(ftEl && ftEl.classList.contains('active') && key==='fermuarTakip'){
+            // Fermuar Takip acikken ayni sebeple otomatik yeniden cizmeyiz —
+            // model detay modali acik olabilir, form doldurulmus olabilir.
+            try { if(typeof window._markFtRefreshPending === 'function') window._markFtRefreshPending(); } catch(e){}
           } else {
             refreshUI();
           }
@@ -2007,6 +2012,7 @@
             <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
             <span class="ft-toggle-lbl">İrsaliyede stok kontrolü</span>
           </label>
+          <button class="btn btn-secondary" id="ftRefreshBtn" onclick="ftManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="ftRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
           <button class="btn btn-secondary" onclick="ftOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik Listesi</button>
           <button class="btn btn-primary" onclick="ftOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Model</button>
         </div>
@@ -4567,6 +4573,34 @@ function _ftTerminCls(termin){
   return termin<today ? 'ft-termin-late' : '';
 }
 function _ftFmtDate(ds){ try{ return new Date(ds).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ds; } }
+
+// ── Manuel Yenile ──────────────────────────────────────────
+// Fermuar Takip sayfasi acikken bulut senkronu otomatik yeniden cizmez
+// (model detay modali acik/form dolu olabilir — bkz. handleSnapshot).
+// Yeni veri gelince bu butonda uyari noktasi yanar; tiklaninca tazelenir.
+window._ftRefreshPending = window._ftRefreshPending || false;
+window._markFtRefreshPending = function(){
+  window._ftRefreshPending = true;
+  const dot = document.getElementById('ftRefreshDot');
+  if(dot) dot.style.display = 'inline-block';
+  const btn = document.getElementById('ftRefreshBtn');
+  if(btn) btn.title = 'Yeni veri var — güncellemek için tıklayın';
+};
+function ftManualRefresh(){
+  window._ftRefreshPending = false;
+  const dot = document.getElementById('ftRefreshDot');
+  if(dot) dot.style.display = 'none';
+  const btn = document.getElementById('ftRefreshBtn');
+  if(btn) btn.title = '';
+  renderFermuarTakip();
+  // Model detay modali acıksa onu da tazele
+  try{
+    if(_ftCurrentDetailId!=null && document.getElementById('ftDetailModal').classList.contains('show')){
+      ftRenderDetail();
+    }
+  }catch(_){}
+  if(typeof toast==='function') toast('Fermuar Takip güncellendi','success');
+}
 
 function renderFermuarTakip(){
   const tg=document.getElementById('ftStockControl'); if(tg) tg.checked=ftStockControlOn();
@@ -8449,7 +8483,7 @@ function refreshPage(page){
   else if(page==='list'){currentTypeFilter='all';document.getElementById('listSearch').value='';document.getElementById('filterDate').value='all';document.getElementById('filterAtolye').value='all';document.getElementById('filterDurum').value='all';document.getElementById('filterSort').value='newest';applyFilters();}
   else if(page==='atolye')refreshAtolyeList();
   else if(page==='aksesuar')renderAksesuarTable();
-  else if(page==='fermuar-takip')renderFermuarTakip();
+  else if(page==='fermuar-takip'){ renderFermuarTakip(); window._ftRefreshPending=false; try{ const d=document.getElementById('ftRefreshDot'); if(d) d.style.display='none'; }catch(_){} }
   else if(page==='stok')renderStokList();
   else if(page==='stok-utupaket')renderStokUtuPaket();
   else if(page==='stok-dikim')renderStokDikim();
