@@ -1778,8 +1778,14 @@
       <div class="grid-auto">
         <div class="card">
           <div class="card-title"><i class="fas fa-info-circle"></i> Sevk Bilgileri</div>
+          <div id="fStockMode" class="f-stock-mode"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
-            <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="fModel" placeholder="Örn: FZ-001"></div>
+            <div class="form-group" style="position:relative;"><label>Model Kodu *</label>
+              <div class="f-ac-wrap">
+                <input class="form-input" id="fModel" placeholder="Örn: FZ-001" autocomplete="off">
+                <div class="f-ac" id="fModelAc"></div>
+              </div>
+            </div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="fTarih" type="date"></div>
             <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label>
               <select class="form-input" id="fAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
@@ -3561,6 +3567,8 @@ function showPage(page){
   
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
 
+  if(page==='fermuar'){ try{ ftRenderStockMode(); }catch(_){} }
+
   // Liste sayfasi acikken buluttan hafif polling ile taze tut (canli
   // listener'i tamamlayan guvenlik agi) — diger sayfaya gecince durdur.
   if(page === 'list'){
@@ -5126,6 +5134,93 @@ window.ftConsumeForCut = function(model, beden, no){
   if(changed){ setData('fermuarTakip',list); }
 };
 
+// ── Fermuar İrsaliyesi: Takip'ten model seçme (autocomplete) ────────────
+// İrsaliye kesilirken Model Kodu kutusundan Fermuar Takip'teki açılmış
+// modeller aranır/seçilir. Seçilince renk/termin ve beden/cm satırları
+// (adet = mevcut stok) otomatik doldurulur. Serbest yazma korunur; Takip'te
+// olmayan model de yazılabilir (stok kontrolü açıkken ftValidateBeforeCut
+// engeller, kapalıyken "özel irsaliye" olarak kesilir).
+const _FT_BEDEN_KEYS=['xxs','xs','s','m','l','xl','xxl','3xl'];
+const _FT_BEDEN_MAP={'XXS':'xxs','XS':'xs','S':'s','M':'m','L':'l','XL':'xl','XXL':'xxl','3XL':'3xl'};
+let _ftAcHover=false;
+
+function ftRenderModelAc(q){
+  const box=document.getElementById('fModelAc'); if(!box) return;
+  const all=_ftAll();
+  const query=(q||'').trim().toLocaleLowerCase('tr');
+  const list = query ? all.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(query)) : all.slice();
+  list.sort((a,b)=>_ftNormModel(a.modelKodu).localeCompare(_ftNormModel(b.modelKodu),'tr'));
+  if(!all.length){
+    box.innerHTML='<div class="f-ac-empty"><i class="fas fa-circle-info"></i> Fermuar Takip\'te model yok — serbest yazabilir veya önce Takip\'e ekleyebilirsiniz.</div>';
+    box.style.display='block'; return;
+  }
+  if(!list.length){
+    box.innerHTML='<div class="f-ac-empty">"<i class="fas fa-search"></i> '+esc(query)+'" ile eşleşen Takip modeli yok.</div>';
+    box.style.display='block'; return;
+  }
+  box.innerHTML=list.slice(0,12).map(m=>{
+    const n=(m.sizes||[]).length;
+    const stok=_ftModelStok(m);
+    return '<div class="f-ac-item" onmousedown="event.preventDefault();ftPickModel('+(m.id)+')" onmouseenter="_ftAcHover=true" onmouseleave="_ftAcHover=false">'+
+      '<i class="fas fa-link" style="color:var(--primary);width:16px;text-align:center;flex-shrink:0;"></i>'+
+      '<span style="min-width:0;flex:1;">'+
+        '<span class="f-ac-model">'+esc(m.modelKodu||'—')+'</span>'+
+        '<span class="f-ac-sub">'+(m.tedarikci?esc(m.tedarikci):'Tedarikçi yok')+' · '+n+' cm · stok '+stok.toLocaleString('tr')+'</span>'+
+      '</span>'+
+    '</div>';
+  }).join('');
+  box.style.display='block';
+}
+function ftCloseModelAc(){
+  const box=document.getElementById('fModelAc'); if(box){ box.style.display='none'; box.innerHTML=''; }
+  _ftAcHover=false;
+}
+function ftPickModel(id){
+  const m=_ftAll().find(x=>x.id===id); if(!m){ ftCloseModelAc(); return; }
+  const modelEl=document.getElementById('fModel'); if(modelEl) modelEl.value=m.modelKodu||'';
+  // Renk: ilk size'nin rengi (form tek renk alır)
+  const firstRenk=(m.sizes||[]).map(z=>z.renk).find(r=>r&&r.trim());
+  const renkEl=document.getElementById('fRenk');
+  if(renkEl && firstRenk && !renkEl.value.trim()) renkEl.value=firstRenk;
+  // Termin
+  const termEl=document.getElementById('fTermin');
+  if(termEl && m.termin && !termEl.value) termEl.value=m.termin;
+  // Beden/cm satırları: beden adına göre eşleştir, adet = mevcut stok
+  let filled=0, skipped=0;
+  _ftSizesSorted(m).forEach(z=>{
+    const key=_FT_BEDEN_MAP[(z.beden||'').toString().trim().toLocaleUpperCase('tr')];
+    if(!key){ skipped++; return; }
+    const ec=document.getElementById('fer_'+key+'cm'); const ea=document.getElementById('fer_'+key+'a');
+    if(ec) ec.value=(z.cm!=null?z.cm:'');
+    const stok=_ftStok(z);
+    if(ea){ ea.value = stok>0 ? stok : ''; }
+    filled++;
+  });
+  // Toplamı güncelle
+  let t=0; _FT_BEDEN_KEYS.forEach(s=>{ t+=+(document.getElementById('fer_'+s+'a').value||0); });
+  const tot=document.getElementById('ferToplam'); if(tot) tot.textContent=t;
+  ftCloseModelAc();
+  toast(m.modelKodu+' seçildi · '+filled+' beden dolduruldu'+(skipped?(' ('+skipped+' bedsiz atlandı)'):''),'success');
+}
+
+// Stok kontrolü mod çipi + toggle (İrsaliye sayfasında görünür)
+function ftRenderStockMode(){
+  const host=document.getElementById('fStockMode'); if(!host) return;
+  const on=ftStockControlOn();
+  host.innerHTML='<span class="f-stock-chip '+(on?'on':'off')+'">'+
+      '<i class="fas '+(on?'fa-shield-halved':'fa-feather')+'"></i> '+
+      (on?'Stok kontrolü AÇIK · Takip\'te olmayan model engellenir, stoğu düşer'
+         :'✦ Özel irsaliye · Takip\'te olmasa da kesilir, stok düşmez')+
+    '</span>'+
+    '<button class="btn btn-sm btn-secondary" onclick="ftToggleStockMode()">'+
+      '<i class="fas '+(on?'fa-toggle-off':'fa-toggle-on')+'"></i> '+(on?'Kapat (özel)':'Aç (kontrol)')+
+    '</button>';
+}
+function ftToggleStockMode(){
+  ftToggleStockControl(!ftStockControlOn());
+  ftRenderStockMode();
+}
+
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
 function incNextNo(){setConfig('nextIrsaliyeNo',getNextNo()+1);updateBadge();}
@@ -6380,6 +6475,18 @@ function saveFermuar(){
 document.querySelectorAll('[id^="fer_"][id$="a"]').forEach(el=>{
   el.addEventListener('input',()=>{let t=0;['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{t+=+(document.getElementById('fer_'+s+'a').value||0);});document.getElementById('ferToplam').textContent=t;});
 });
+
+// Fermuar Model Kodu autocomplete: yazdıkça Takip'teki modelleri filtrele.
+// Serbest yazma korunur — eşleşme seçilmezse kullanıcı istediği kodu yazıp
+// kesebilir (stok kontrolü durumuna göre özel irsaliye olarak işlenir).
+(function(){
+  const el=document.getElementById('fModel');
+  if(!el || el._ftAcBound) return; el._ftAcBound=true;
+  el.addEventListener('input', ()=>ftRenderModelAc(el.value));
+  el.addEventListener('focus', ()=>ftRenderModelAc(el.value));
+  el.addEventListener('keydown', e=>{ if(e.key==='Escape'){ ftCloseModelAc(); }});
+  el.addEventListener('blur', ()=>{ setTimeout(()=>{ if(!_ftAcHover) ftCloseModelAc(); }, 150); });
+})();
 
 // ==================== LASTİK ====================
 function saveLastik(){
