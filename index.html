@@ -2151,7 +2151,7 @@
 
     <!-- Modal: PDF / Eksik Listesi -->
     <div class="modal-overlay" id="ftPdfModal">
-      <div class="modal" style="max-width:480px;">
+      <div class="modal ft-pdf-modal">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-file-pdf" style="color:var(--primary);margin-right:7px;"></i>PDF / Eksik Listesi</h3>
           <button onclick="ftClosePdfModal()" class="ft-x"><i class="fas fa-times"></i></button>
@@ -2161,18 +2161,17 @@
           <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
           <input class="form-input" id="ftPdfSearch" placeholder="Model veya tedarikçi ara..." autocomplete="off" oninput="ftPdfFilterModels()" style="padding-left:34px;">
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <button class="btn btn-sm btn-secondary" onclick="ftPdfSelectAll(true)"><i class="fas fa-check-double"></i> Tümünü Seç</button>
-          <button class="btn btn-sm btn-secondary" onclick="ftPdfSelectAll(false)"><i class="fas fa-times"></i> Temizle</button>
-          <label style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-muted);cursor:pointer;user-select:none;">
-            <input type="checkbox" id="ftPdfOnlyMissing" checked style="width:16px;height:16px;accent-color:var(--primary);">
-            Sadece eksiği olanlar
-          </label>
+        <div class="ft-pdf-toolbar">
+          <span class="ft-pdf-summary" id="ftPdfSummary"><b id="ftPdfCount">0</b> model seçili · <b id="ftPdfEksikTotal">0</b> eksik</span>
+          <button class="ft-pdf-chip primary" onclick="ftPdfSelectOnlyMissing()" title="Yalnızca eksiği olanları seç"><i class="fas fa-filter"></i> Sadece eksik</button>
+          <button class="ft-pdf-chip" onclick="ftPdfSelectAll(true)" title="Tümünü seç"><i class="fas fa-check-double"></i> Tümü</button>
+          <button class="ft-pdf-chip" onclick="ftPdfSelectAll(false)" title="Seçimi temizle"><i class="fas fa-rotate-left"></i> Temizle</button>
+          <button class="ft-pdf-chip" id="ftPdfOnlyMissChip" onclick="ftPdfToggleOnlyMissing()" title="PDF çıktısında sadece eksiği olan satırları göster"><i class="fas fa-eye"></i> Çıktı: sadece eksik</button>
         </div>
         <div id="ftPdfModelList" class="ft-pdf-list"></div>
         <div id="ftPdfEmpty" class="rep-empty-mini" style="display:none;">Aramanızla eşleşen model yok.</div>
         <div style="display:flex;gap:10px;margin-top:14px;">
-          <button class="btn btn-primary" style="flex:1;" onclick="ftGeneratePdf()"><i class="fas fa-file-pdf"></i> PDF Oluştur</button>
+          <button class="btn btn-primary" style="flex:1;" id="ftPdfGenBtn" onclick="ftGeneratePdf()"><i class="fas fa-file-pdf"></i> <span id="ftPdfGenLabel">PDF Oluştur</span></button>
           <button class="btn btn-secondary" onclick="ftClosePdfModal()">İptal</button>
         </div>
       </div>
@@ -4947,6 +4946,24 @@ function ftSaveReceive(){
 }
 
 // ── PDF / EKSİK LİSTESİ (model seç → cm cm sıralı döküm) ──
+// Varsayilan: HICBIRI secili degil (eskiden eksik>0 olanlar otomatik
+// isaretli geliyordu; veride cogu modelde eksik oldugu icin "tum modeller
+// secili" gibi gorunuyordu). Kullanici bilincli secer — hizli secim icin
+// "Sadece eksik" chip'i var.
+function ftPdfUpdateSummary(){
+  const host=document.getElementById('ftPdfModelList'); if(!host) return;
+  const rows=[...host.querySelectorAll('.ft-pdf-row')];
+  let count=0, eksikSum=0;
+  rows.forEach(row=>{
+    const chk=row.querySelector('.ft-pdf-chk');
+    if(chk && chk.checked){ count++; eksikSum+=+(row.dataset.eksik||0); }
+    row.classList.toggle('sel', !!(chk&&chk.checked));
+  });
+  const cEl=document.getElementById('ftPdfCount'); if(cEl) cEl.textContent=count.toLocaleString('tr');
+  const eEl=document.getElementById('ftPdfEksikTotal'); if(eEl) eEl.textContent=eksikSum.toLocaleString('tr');
+  const lbl=document.getElementById('ftPdfGenLabel');
+  if(lbl) lbl.textContent = count>0 ? ('PDF Oluştur ('+count+')') : 'PDF Oluştur';
+}
 function ftOpenPdfModal(){
   const all=_ftAll();
   if(!all.length){ toast('Önce fermuar modeli ekleyin','error'); return; }
@@ -4954,10 +4971,13 @@ function ftOpenPdfModal(){
   host.innerHTML=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||'')).map(m=>{
     const eksik=_ftModelBekleyen(m), stok=_ftModelStok(m), n=(m.sizes||[]).length;
     const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr');
-    return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}">
-      <input type="checkbox" class="ft-pdf-chk" value="${m.id}" ${eksik>0?'checked':''}>
-      <span class="ft-pdf-model">${esc(m.modelKodu)}</span>
-      <span class="ft-pdf-meta">${n} cm satırı · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
+    return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
+      <input type="checkbox" class="ft-pdf-chk" value="${m.id}" onchange="ftPdfUpdateSummary()">
+      <span class="ft-pdf-check"></span>
+      <span class="ft-pdf-info">
+        <span class="ft-pdf-model">${esc(m.modelKodu)}</span>
+        <span class="ft-pdf-meta">${n} cm satırı · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
+      </span>
       ${eksik>0?`<span class="ft-pdf-eksik">${eksik.toLocaleString('tr')} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
     </label>`;
   }).join('');
@@ -4965,6 +4985,9 @@ function ftOpenPdfModal(){
   if(searchInp) searchInp.value='';
   const emptyEl=document.getElementById('ftPdfEmpty');
   if(emptyEl) emptyEl.style.display='none';
+  // Cikti filtre chip'i baslangic durumu (varsayilan: acik)
+  ftPdfRenderOnlyMissingChip(true);
+  ftPdfUpdateSummary();
   document.getElementById('ftPdfModal').classList.add('show');
   setTimeout(()=>{ if(searchInp) searchInp.focus(); },80);
 }
@@ -4977,6 +5000,29 @@ function ftPdfSelectAll(on){
     const chk=row.querySelector('.ft-pdf-chk');
     if(chk) chk.checked=on;
   });
+  ftPdfUpdateSummary();
+}
+// Yalnızca eksiği > 0 olan (görünür) modelleri seç — tipik akış.
+function ftPdfSelectOnlyMissing(){
+  document.querySelectorAll('.ft-pdf-row').forEach(row=>{
+    if(row.style.display==='none') return;
+    const chk=row.querySelector('.ft-pdf-chk');
+    if(!chk) return;
+    chk.checked = (+row.dataset.eksik||0) > 0;
+  });
+  ftPdfUpdateSummary();
+}
+// PDF çıktı filtresi: "sadece eksiği olan satırlar" — chip olarak göster.
+// (Eski gizli checkbox yerine JS durumu; varsayılan açık.)
+window._ftPdfOnlyMissing = true;
+function ftPdfToggleOnlyMissing(){
+  window._ftPdfOnlyMissing = !window._ftPdfOnlyMissing;
+  ftPdfRenderOnlyMissingChip();
+}
+function ftPdfRenderOnlyMissingChip(forceChecked){
+  if(forceChecked===true) window._ftPdfOnlyMissing = true;
+  const chip=document.getElementById('ftPdfOnlyMissChip');
+  if(chip) chip.classList.toggle('active', !!window._ftPdfOnlyMissing);
 }
 // Arama: DOM'u yeniden çizmez, sadece eşleşmeyen satırları gizler —
 // checkbox seçim durumları korunur (kullanıcı arama yapıp seçim yapsa da
@@ -4997,7 +5043,7 @@ function ftPdfFilterModels(){
 function ftGeneratePdf(){
   const seciliIds=[...document.querySelectorAll('.ft-pdf-chk:checked')].map(c=>+c.value);
   if(!seciliIds.length){ toast('En az bir model seçin','error'); return; }
-  const onlyMissing=document.getElementById('ftPdfOnlyMissing').checked;
+  const onlyMissing=window._ftPdfOnlyMissing!==false;
   const models=_ftAll().filter(m=>seciliIds.includes(m.id)).sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
 
   let sectionsHtml='', tSip=0,tGel=0,tEksik=0,kalemSayisi=0;
