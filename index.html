@@ -429,7 +429,7 @@
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
       'atolyeler','stoklar','stokHareketler','recycleBin',
-      'irsaliye_users','aksesuarlar','waybillTemplates',
+      'irsaliye_users','aksesuarlar','waybillTemplates','fermuarTakip',
       'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
       'app_settings',        // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
       'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
@@ -1226,6 +1226,7 @@
     <a href="javascript:void(0)" onclick="showPage('stok-utupaket')"><i class="fas fa-box-open"></i><span>Ütü &amp; Paket</span></a>
     <a href="javascript:void(0)" onclick="showPage('stok-dikim')"><i class="fas fa-scissors"></i><span>Dikim</span></a>
     <a href="javascript:void(0)" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
+    <a href="javascript:void(0)" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
 
     <div class="nav-section">Yönetim</div>
     <a href="javascript:void(0)" onclick="showPage('atolye')"><i class="fas fa-industry"></i><span>Atölyeler</span></a>
@@ -1980,6 +1981,85 @@
           <video id="nfVideo" autoplay playsinline muted style="width:100%;max-width:300px;border-radius:8px;display:block;"></video>
         </div>
         <canvas id="nfCanvas" style="display:none;"></canvas>
+      </div>
+    </div>
+
+    <!-- ========== FERMUAR TAKİP (STOK) ========== -->
+    <div class="page" id="page-fermuar-takip">
+      <div class="section-header">
+        <div>
+          <h2><i class="fas fa-link" style="margin-right:8px;color:var(--primary);"></i>Fermuar Takip</h2>
+          <p>Sipariş → gelen → eldeki stok. İrsaliye kesince otomatik düşer.</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label class="ft-toggle" title="Açıkken, takipte kayıtlı olmayan fermuar için irsaliye kesilemez ve kesince stok düşer">
+            <input type="checkbox" id="ftStockControl" onchange="ftToggleStockControl(this.checked)">
+            <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
+            <span class="ft-toggle-lbl">İrsaliyede stok kontrolü</span>
+          </label>
+          <button class="btn btn-primary" onclick="ftOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Sipariş</button>
+        </div>
+      </div>
+
+      <!-- Özet KPI -->
+      <div class="ft-kpis" id="ftKpis"></div>
+
+      <!-- Arama -->
+      <div style="position:relative;margin:16px 0 4px;max-width:420px;">
+        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+        <input class="form-input" id="ftSearch" placeholder="Model, cm veya renk ara..." autocomplete="off" oninput="renderFermuarTakip()" style="padding-left:34px;">
+      </div>
+
+      <!-- Kart ızgarası -->
+      <div class="ft-grid" id="ftGrid"></div>
+    </div>
+
+    <!-- Modal: Yeni / Düzenle Sipariş -->
+    <div class="modal-overlay" id="ftOrderModal">
+      <div class="modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h3 style="font-weight:700;font-size:17px;" id="ftOrderTitle"><i class="fas fa-cart-plus" style="color:var(--primary);margin-right:7px;"></i>Yeni Fermuar Siparişi</h3>
+          <button onclick="ftCloseOrderModal()" class="ft-x"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="ftModel" placeholder="Örn: W1505" autocomplete="off"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+          <div class="form-group"><label>Beden</label>
+            <select class="form-input" id="ftBeden">
+              <option value="">—</option>
+              <option>XXS</option><option>XS</option><option>S</option><option>M</option>
+              <option>L</option><option>XL</option><option>XXL</option><option>3XL</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Uzunluk (cm) *</label><input class="form-input" type="number" id="ftCm" placeholder="Örn: 56" min="0" step="0.5" autocomplete="off"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+          <div class="form-group"><label>Renk</label><input class="form-input" id="ftRenk" placeholder="Örn: Siyah" autocomplete="off"></div>
+          <div class="form-group"><label>Satın Alma Adeti *</label><input class="form-input" type="number" id="ftSiparis" placeholder="Örn: 1500" min="0" autocomplete="off"></div>
+        </div>
+        <div class="ft-hint"><i class="fas fa-circle-info"></i> Stok birimi <b>model + cm</b> ile eşleşir. Aynı model+cm varsa üzerine yazılmaz, uyarılır.</div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="ftSaveOrder()"><i class="fas fa-save"></i> Kaydet</button>
+          <button class="btn btn-secondary" onclick="ftCloseOrderModal()">İptal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Teslimat Gir -->
+    <div class="modal-overlay" id="ftReceiveModal">
+      <div class="modal" style="max-width:420px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-truck-ramp-box" style="color:var(--primary);margin-right:7px;"></i>Teslimat Gir</h3>
+          <button onclick="ftCloseReceiveModal()" class="ft-x"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="ft-receive-ctx" id="ftReceiveCtx"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+          <div class="form-group"><label>Gelen Adet *</label><input class="form-input" type="number" id="ftReceiveAdet" placeholder="Örn: 500" min="1" autocomplete="off"></div>
+          <div class="form-group"><label>Tarih</label><input class="form-input" type="date" id="ftReceiveTarih"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="ftSaveReceive()"><i class="fas fa-check"></i> Teslimatı Kaydet</button>
+          <button class="btn btn-secondary" onclick="ftCloseReceiveModal()">İptal</button>
+        </div>
       </div>
     </div>
 
@@ -3329,7 +3409,7 @@ function groupFermuarBedenByCm(beden){
 window.groupFermuarBedenByCm = groupFermuarBedenByCm;
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip','fermuar-takip':'Fermuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 function showPage(page){
@@ -3342,7 +3422,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','stok-utupaket','stok-dikim','aksesuar','atolye','takvim','reports','signature','templates','geridonusum','settings'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','stok-utupaket','stok-dikim','aksesuar','fermuar-takip','atolye','takvim','reports','signature','templates','geridonusum','settings'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -4351,6 +4431,244 @@ function exportAksesuarToExcel(){
   document.body.removeChild(link);
   toast('Excel dosyası indirildi','success');
 }
+
+// ==================== FERMUAR TAKİP (STOK) ====================
+// Veri: getData('fermuarTakip') → [{id, modelKodu, beden, cm, renk, siparisAdet,
+//   teslimatlar:[{id,tarih,adet}], kullanimlar:[{id,tarih,adet,no}], createdAt}]
+// Stok birimi = model + cm (senaryo: "W1505 / 56cm").
+function _ftAll(){ return getData('fermuarTakip') || []; }
+function _ftGelen(e){ return (e.teslimatlar||[]).reduce((s,t)=>s+(+t.adet||0),0); }
+function _ftKullanilan(e){ return (e.kullanimlar||[]).reduce((s,k)=>s+(+k.adet||0),0); }
+function _ftStok(e){ return _ftGelen(e) - _ftKullanilan(e); }            // eldeki stok
+function _ftBekleyen(e){ return Math.max(0, (+e.siparisAdet||0) - _ftGelen(e)); } // siparişten gelecek
+function _ftNormModel(m){ return (m||'').toString().trim().toLocaleUpperCase('tr'); }
+function _ftNum(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+
+// İrsaliyede stok kontrolü açık mı?
+function ftStockControlOn(){ return getConfig('ftStockControl', false) === true; }
+function ftToggleStockControl(on){ setConfig('ftStockControl', !!on); toast(on?'Stok kontrolü açıldı':'Stok kontrolü kapatıldı', on?'success':'info'); }
+
+// model + cm (+ renk) ile kayıt bul
+function _ftFind(model, cm, renk){
+  const nm=_ftNormModel(model), ncm=_ftNum(cm);
+  const list=_ftAll().filter(e=>_ftNormModel(e.modelKodu)===nm && _ftNum(e.cm)===ncm);
+  if(list.length>1 && renk){
+    const nr=(renk||'').toString().trim().toLocaleLowerCase('tr');
+    const byRenk=list.find(e=>((e.renk||'').toString().trim().toLocaleLowerCase('tr'))===nr);
+    if(byRenk) return byRenk;
+  }
+  return list[0]||null;
+}
+
+function renderFermuarTakip(){
+  // Toggle durumu
+  const tg=document.getElementById('ftStockControl'); if(tg) tg.checked=ftStockControlOn();
+
+  const all=_ftAll();
+  const q=(document.getElementById('ftSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const list = q ? all.filter(e=>((e.modelKodu||'')+' '+(e.cm||'')+' '+(e.renk||'')+' '+(e.beden||'')).toLocaleLowerCase('tr').includes(q)) : all.slice();
+  // en az stoğu kalan / bekleyen üstte
+  list.sort((a,b)=>_ftStok(a)-_ftStok(b));
+
+  // KPI
+  const tSip=all.reduce((s,e)=>s+(+e.siparisAdet||0),0);
+  const tGel=all.reduce((s,e)=>s+_ftGelen(e),0);
+  const tStok=all.reduce((s,e)=>s+_ftStok(e),0);
+  const tBek=all.reduce((s,e)=>s+_ftBekleyen(e),0);
+  const kpi=document.getElementById('ftKpis');
+  if(kpi){
+    kpi.innerHTML=[
+      ['fa-cart-shopping', tSip.toLocaleString('tr'), 'Toplam Sipariş', 'p'],
+      ['fa-truck-ramp-box', tGel.toLocaleString('tr'), 'Toplam Gelen', 'g'],
+      ['fa-warehouse', tStok.toLocaleString('tr'), 'Eldeki Stok', 's'],
+      ['fa-hourglass-half', tBek.toLocaleString('tr'), 'Bekleyen Sipariş', 'a'],
+    ].map(x=>`<div class="ft-kpi ft-kpi-${x[3]}"><div class="ft-kpi-ic"><i class="fas ${x[0]}"></i></div><div class="ft-kpi-body"><div class="ft-kpi-val">${x[1]}</div><div class="ft-kpi-lbl">${x[2]}</div></div></div>`).join('');
+  }
+
+  const grid=document.getElementById('ftGrid');
+  if(!grid) return;
+  if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-link"></i><p>Henüz fermuar siparişi yok. <b>Yeni Sipariş</b> ile ekleyin.</p></div>'; return; }
+  if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen kayıt yok.</p></div>'; return; }
+
+  grid.innerHTML=list.map(e=>{
+    const gel=_ftGelen(e), kul=_ftKullanilan(e), stok=_ftStok(e), sip=+e.siparisAdet||0, bek=_ftBekleyen(e);
+    const pct = sip>0 ? Math.min(100, Math.round(gel/sip*100)) : (gel>0?100:0);
+    let durum, dCls;
+    if(sip>0 && gel>=sip){ durum='Sipariş tamamlandı'; dCls='ok'; }
+    else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
+    else { durum='Bekliyor'; dCls='wait'; }
+    const stokCls = stok<=0 ? 'zero' : (sip>0 && stok < sip*0.15 ? 'low' : 'ok');
+    const cmTxt = e.cm!=null && e.cm!=='' ? (e.cm+' cm') : '—';
+    const bedenTxt = e.beden ? e.beden : '';
+    const renkTxt = e.renk ? e.renk : '';
+    return `<div class="ft-card">
+      <div class="ft-card-head">
+        <div class="ft-card-id">
+          <span class="ft-model">${esc(e.modelKodu)||'—'}</span>
+          <span class="ft-sub">${bedenTxt?('<b>'+esc(bedenTxt)+'</b> · '):''}${cmTxt}${renkTxt?(' · '+esc(renkTxt)):''}</span>
+        </div>
+        <span class="ft-badge ft-badge-${dCls}">${durum}</span>
+      </div>
+
+      <div class="ft-stock ft-stock-${stokCls}">
+        <div class="ft-stock-num">${stok.toLocaleString('tr')}</div>
+        <div class="ft-stock-lbl">Eldeki Stok (adet)</div>
+      </div>
+
+      <div class="ft-prog"><div class="ft-prog-fill" style="width:${pct}%"></div></div>
+      <div class="ft-mini">
+        <div><span>Sipariş</span><b>${sip.toLocaleString('tr')}</b></div>
+        <div><span>Gelen</span><b class="pos">${gel.toLocaleString('tr')}</b></div>
+        <div><span>Kullanılan</span><b class="neg">${kul.toLocaleString('tr')}</b></div>
+        <div><span>Bekleyen</span><b>${bek.toLocaleString('tr')}</b></div>
+      </div>
+
+      <div class="ft-actions">
+        <button class="btn btn-sm btn-primary" onclick="ftOpenReceiveModal(${e.id})"><i class="fas fa-truck-ramp-box"></i> Teslimat Gir</button>
+        <button class="btn btn-sm btn-secondary" onclick="ftToggleHistory(${e.id})"><i class="fas fa-clock-rotate-left"></i> Geçmiş</button>
+        <button class="btn btn-sm btn-secondary" onclick="ftEditOrder(${e.id})" title="Düzenle"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="ftDeleteOrder(${e.id})" title="Sil"><i class="fas fa-trash"></i></button>
+      </div>
+
+      <div class="ft-history" id="ftHist-${e.id}" style="display:none;">${_ftHistoryHtml(e)}</div>
+    </div>`;
+  }).join('');
+}
+
+function _ftHistoryHtml(e){
+  const rows=[];
+  (e.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi'}));
+  (e.kullanimlar||[]).forEach(k=>rows.push({t:k.tarih,ic:'fa-scissors',cls:'neg',txt:'−'+(+k.adet||0)+' kullanıldı'+(k.no?(' ('+k.no+')'):'')}));
+  rows.sort((a,b)=>(b.t||'').localeCompare(a.t||''));
+  if(!rows.length) return '<div class="ft-hist-empty">Henüz hareket yok.</div>';
+  return '<div class="ft-hist-list">'+rows.map(r=>`<div class="ft-hist-row"><i class="fas ${r.ic} ${r.cls}"></i><span class="ft-hist-txt ${r.cls}">${r.txt}</span><span class="ft-hist-date">${r.t?_ftFmtDate(r.t):''}</span></div>`).join('')+'</div>';
+}
+function _ftFmtDate(ds){ try{ return new Date(ds).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ds; } }
+function ftToggleHistory(id){ const el=document.getElementById('ftHist-'+id); if(el) el.style.display = el.style.display==='none'?'block':'none'; }
+
+// ── Yeni / Düzenle Sipariş ──
+let _ftEditId=null;
+function ftOpenOrderModal(){
+  _ftEditId=null;
+  document.getElementById('ftOrderTitle').innerHTML='<i class="fas fa-cart-plus" style="color:var(--primary);margin-right:7px;"></i>Yeni Fermuar Siparişi';
+  ['ftModel','ftCm','ftRenk','ftSiparis'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ftBeden').value='';
+  document.getElementById('ftOrderModal').classList.add('show');
+  setTimeout(()=>document.getElementById('ftModel').focus(),80);
+}
+function ftEditOrder(id){
+  const e=_ftAll().find(x=>x.id===id); if(!e) return;
+  _ftEditId=id;
+  document.getElementById('ftOrderTitle').innerHTML='<i class="fas fa-pen" style="color:var(--primary);margin-right:7px;"></i>Siparişi Düzenle';
+  document.getElementById('ftModel').value=e.modelKodu||'';
+  document.getElementById('ftBeden').value=e.beden||'';
+  document.getElementById('ftCm').value=e.cm!=null?e.cm:'';
+  document.getElementById('ftRenk').value=e.renk||'';
+  document.getElementById('ftSiparis').value=e.siparisAdet!=null?e.siparisAdet:'';
+  document.getElementById('ftOrderModal').classList.add('show');
+}
+function ftCloseOrderModal(){ document.getElementById('ftOrderModal').classList.remove('show'); }
+function ftSaveOrder(){
+  const model=document.getElementById('ftModel').value.trim();
+  const beden=document.getElementById('ftBeden').value;
+  const cm=document.getElementById('ftCm').value.trim();
+  const renk=document.getElementById('ftRenk').value.trim();
+  const siparis=+document.getElementById('ftSiparis').value||0;
+  if(!model){ toast('Model kodu gerekli','error'); return; }
+  if(cm===''){ toast('Uzunluk (cm) gerekli','error'); return; }
+  if(siparis<=0){ toast('Satın alma adeti gerekli','error'); return; }
+  let list=_ftAll();
+  if(_ftEditId){
+    const idx=list.findIndex(x=>x.id===_ftEditId);
+    if(idx<0) return;
+    // çakışma: aynı model+cm başka bir kayıtta mı?
+    const dup=list.find(x=>x.id!==_ftEditId && _ftNormModel(x.modelKodu)===_ftNormModel(model) && _ftNum(x.cm)===_ftNum(cm));
+    if(dup){ toast('Bu model+cm zaten var: '+model+' / '+cm+'cm','error'); return; }
+    list[idx]={...list[idx], modelKodu:model, beden, cm, renk, siparisAdet:siparis};
+    setData('fermuarTakip',list);
+    toast('Sipariş güncellendi','success');
+  } else {
+    if(_ftFind(model, cm, renk)){ toast('Bu model+cm zaten kayıtlı: '+model+' / '+cm+'cm — düzenleyin','error'); return; }
+    list.unshift({id:Date.now(), modelKodu:model, beden, cm, renk, siparisAdet:siparis, teslimatlar:[], kullanimlar:[], createdAt:new Date().toISOString()});
+    setData('fermuarTakip',list);
+    toast('Fermuar siparişi eklendi','success');
+  }
+  ftCloseOrderModal(); renderFermuarTakip();
+}
+function ftDeleteOrder(id){
+  const e=_ftAll().find(x=>x.id===id); if(!e) return;
+  if(!confirm((e.modelKodu||'')+' / '+(e.cm||'')+'cm kaydını silmek istiyor musunuz? Teslimat/kullanım geçmişi de silinir.')) return;
+  setData('fermuarTakip', _ftAll().filter(x=>x.id!==id));
+  renderFermuarTakip(); toast('Kayıt silindi','info');
+}
+
+// ── Teslimat Gir ──
+let _ftReceiveId=null;
+function ftOpenReceiveModal(id){
+  const e=_ftAll().find(x=>x.id===id); if(!e) return;
+  _ftReceiveId=id;
+  document.getElementById('ftReceiveCtx').innerHTML=`<div class="ft-rc-model">${esc(e.modelKodu)} · ${e.cm!=null?e.cm+' cm':''}${e.renk?(' · '+esc(e.renk)):''}</div>
+    <div class="ft-rc-stats"><span>Sipariş <b>${(+e.siparisAdet||0).toLocaleString('tr')}</b></span><span>Gelen <b>${_ftGelen(e).toLocaleString('tr')}</b></span><span>Bekleyen <b>${_ftBekleyen(e).toLocaleString('tr')}</b></span></div>`;
+  document.getElementById('ftReceiveAdet').value='';
+  document.getElementById('ftReceiveTarih').value=new Date().toISOString().slice(0,10);
+  document.getElementById('ftReceiveModal').classList.add('show');
+  setTimeout(()=>document.getElementById('ftReceiveAdet').focus(),80);
+}
+function ftCloseReceiveModal(){ document.getElementById('ftReceiveModal').classList.remove('show'); }
+function ftSaveReceive(){
+  const adet=+document.getElementById('ftReceiveAdet').value||0;
+  const tarih=document.getElementById('ftReceiveTarih').value||new Date().toISOString().slice(0,10);
+  if(adet<=0){ toast('Gelen adet girin','error'); return; }
+  let list=_ftAll(); const idx=list.findIndex(x=>x.id===_ftReceiveId); if(idx<0) return;
+  const e=list[idx];
+  e.teslimatlar=e.teslimatlar||[];
+  e.teslimatlar.push({id:Date.now(), tarih, adet});
+  list[idx]=e; setData('fermuarTakip',list);
+  ftCloseReceiveModal(); renderFermuarTakip();
+  toast('Teslimat kaydedildi: +'+adet+' adet','success');
+}
+
+// ── İRSALİYE ENTEGRASYONU (dışa açık API) ──
+// Fermuar irsaliyesi kaydedilmeden ÖNCE çağrılır. Stok kontrolü açıksa:
+//  - kayıtlı olmayan (model+cm) için engelle,
+//  - stok yetersizse onay iste.
+// Dönüş: {ok:true} → devam; {ok:false} → iptal.
+window.ftValidateBeforeCut = function(model, beden){
+  if(!ftStockControlOn()) return {ok:true};
+  const missing=[], low=[];
+  for(const k in (beden||{})){
+    const bv=beden[k]||{}; const adet=+bv.adet||0; if(adet<=0) continue;
+    const cm=bv.cm;
+    const e=_ftFind(model, cm);
+    if(!e){ missing.push((model||'?')+' / '+(cm!=null?cm+'cm':'?')); continue; }
+    if(_ftStok(e) < adet){ low.push({lbl:(model||'?')+' / '+(cm+'cm'), stok:_ftStok(e), ist:adet}); }
+  }
+  if(missing.length){
+    toast('Takipte kayıtlı olmayan fermuar: '+missing.join(', ')+' — önce Fermuar Takip\'e ekleyin','error');
+    return {ok:false};
+  }
+  if(low.length){
+    const msg='Eldeki stok yetersiz:\n'+low.map(x=>'• '+x.lbl+' — elde '+x.stok+', istenen '+x.ist).join('\n')+'\n\nYine de kesip stoğu eksiye düşürmek istiyor musunuz?';
+    if(typeof confirm==='function' && !confirm(msg)) return {ok:false};
+  }
+  return {ok:true};
+};
+// İrsaliye kaydedildikten SONRA çağrılır → eşleşen model+cm stoğundan düşer.
+window.ftConsumeForCut = function(model, beden, no){
+  if(!ftStockControlOn()) return;
+  let list=_ftAll(); let changed=false;
+  const today=new Date().toISOString().slice(0,10);
+  for(const k in (beden||{})){
+    const bv=beden[k]||{}; const adet=+bv.adet||0; if(adet<=0) continue;
+    const e=_ftFind(model, bv.cm);
+    if(!e) continue;
+    const idx=list.findIndex(x=>x.id===e.id); if(idx<0) continue;
+    list[idx].kullanimlar=list[idx].kullanimlar||[];
+    list[idx].kullanimlar.push({id:Date.now()+Math.floor(Math.random()*1000), tarih:today, adet, no:no||''});
+    changed=true;
+  }
+  if(changed){ setData('fermuarTakip',list); }
+};
 
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
@@ -5578,10 +5896,20 @@ function saveFermuar(){
 
   if(_saveUniIfEditing('fermuar', {model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,beden,totalAdet:total,hideBeden})) return;
 
+  // Fermuar Takip stok kontrolü (açıksa): kayıtlı değilse engelle / yetersizse onay iste
+  try{
+    if(typeof window.ftValidateBeforeCut==='function'){
+      const _chk=window.ftValidateBeforeCut(model, beden);
+      if(_chk && _chk.ok===false) return;
+    }
+  }catch(_){}
+
   const no=getNextNo();
   const item={id:Date.now(),no:'FER-'+String(no).padStart(3,'0'),type:'fermuar',model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,beden,totalAdet:total,hideBeden,durum:'bekliyor',createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'fermuar');
   const list=getData('fermuarlar');list.unshift(item);setData('fermuarlar',list);incNextNo();
+  // İrsaliye kesildi → eşleşen fermuar stoklarından otomatik düş
+  try{ if(typeof window.ftConsumeForCut==='function') window.ftConsumeForCut(model, beden, item.no); }catch(_){}
   _uploadNfPhotosInBackground(item.id,'fermuar');
   ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>document.getElementById(id).value='');
   _syncAtolyeLabel('fAtolye');
@@ -7804,6 +8132,7 @@ function refreshPage(page){
   else if(page==='list'){currentTypeFilter='all';document.getElementById('listSearch').value='';document.getElementById('filterDate').value='all';document.getElementById('filterAtolye').value='all';document.getElementById('filterDurum').value='all';document.getElementById('filterSort').value='newest';applyFilters();}
   else if(page==='atolye')refreshAtolyeList();
   else if(page==='aksesuar')renderAksesuarTable();
+  else if(page==='fermuar-takip')renderFermuarTakip();
   else if(page==='stok')renderStokList();
   else if(page==='stok-utupaket')renderStokUtuPaket();
   else if(page==='stok-dikim')renderStokDikim();
