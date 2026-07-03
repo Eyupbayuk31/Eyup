@@ -10731,22 +10731,50 @@ function switchSettingsTab(tab){
 }
 
 // ── Kullanıcı Yönetimi ────────────────────────────────────
+// Onay durumu: alan yoksa (eski/admin-eklenmis kayitlar) onayli sayilir;
+// sadece acikca approved===false ise onay bekliyor demektir.
+function _userIsApproved(u){ return u && u.approved !== false; }
+
 function renderUserList(){
   const wrap = document.getElementById('userListWrap');
   if(!wrap) return;
   const users = (typeof authGetUsers === 'function') ? authGetUsers() : [];
   if(!users.length){ wrap.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px;">Henüz kullanıcı yok</div>'; return; }
-  wrap.innerHTML = users.map((u,i)=>`
-    <div class="user-row">
+
+  const pendingCount = users.filter(u=>!_userIsApproved(u)).length;
+  const banner = pendingCount>0
+    ? `<div class="pending-banner"><i class="fas fa-user-clock"></i> <b>${pendingCount}</b> kullanıcı onay bekliyor</div>`
+    : '';
+
+  // Onay bekleyenler once, sonra kayit sirasi
+  const ordered = users.map((u,i)=>({u,i})).sort((a,b)=> (_userIsApproved(a.u)===_userIsApproved(b.u)) ? 0 : (_userIsApproved(a.u)?1:-1));
+
+  wrap.innerHTML = banner + ordered.map(({u,i})=>{
+    const pending = !_userIsApproved(u);
+    return `
+    <div class="user-row${pending?' user-row-pending':''}">
       <div class="user-row-info">
         <div class="u-name"><i class="fas fa-user" style="color:var(--primary);margin-right:6px;font-size:12px;"></i>${_escHtml(u.username)}</div>
         <span class="u-role ${u.role==='admin'?'admin':'user'}">${u.role==='admin'?'Admin':'Kullanıcı'}</span>
+        ${pending?'<span class="u-role pending"><i class="fas fa-hourglass-half"></i> Onay Bekliyor</span>':''}
       </div>
       <div class="user-row-actions">
+        ${pending?`<button class="btn btn-xs btn-success" onclick="approveUser(${i})" title="Onayla"><i class="fas fa-check"></i> Onayla</button>`:''}
         <button class="btn btn-xs btn-secondary" onclick="openEditUserModal(${i})" title="Düzenle"><i class="fas fa-pen"></i></button>
         <button class="btn btn-xs btn-danger" onclick="deleteUser(${i})" title="Sil"><i class="fas fa-trash"></i></button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function approveUser(idx){
+  const users = authGetUsers();
+  const u = users[idx]; if(!u) return;
+  u.approved = true;
+  authSaveUsers(users);
+  renderUserList();
+  try{ if(typeof window._logAudit==='function') window._logAudit('user_approve', { by: (localStorage.getItem('irsaliye_last_user')||'?'), label: u.username }); }catch(_){}
+  toast(u.username+' onaylandı ✓ — artık giriş yapabilir','success');
 }
 
 function _escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -10772,7 +10800,9 @@ function saveNewUser(){
   if(pass.length < 3){ toast('Şifre en az 3 karakter olmalı','danger'); return; }
   const users = authGetUsers();
   if(users.find(u=>u.username.toLowerCase()===name.toLowerCase())){ toast('Bu kullanıcı adı zaten var','danger'); return; }
-  users.push({username:name, password:pass, role:role});
+  // Admin dogrudan ekliyor -> zaten onaylanmis sayilir (kendi kayit
+  // olma akisindan farkli olarak onay beklemeye gerek yok).
+  users.push({username:name, password:pass, role:role, approved:true});
   authSaveUsers(users);
   closeAddUserForm();
   renderUserList();
@@ -14808,8 +14838,19 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
         <span class="spinner" aria-hidden="true"></span>
         <span class="btn-text">Kayıt Ol <i class="fas fa-user-plus arrow"></i></span>
       </button>
-      <p class="lg-reg-hint">Kayıt olduğunuzda otomatik olarak giriş yapılır ve hesabınız tüm cihazlara senkronlanır.</p>
+      <p class="lg-reg-hint">Kayıt olduğunuzda hesabınız <b>kurucu onayına</b> gönderilir. Onaylanınca giriş yapabilirsiniz.</p>
     </form>
+
+    <!-- ==================== ONAY BEKLENİYOR EKRANI ==================== -->
+    <div id="pendingApprovalView" style="display:none;">
+      <div class="lg-pending">
+        <div class="lg-pending-icon"><i class="fas fa-hourglass-half"></i></div>
+        <h3>Kurucu Tarafından Onay Bekleniyor</h3>
+        <p>Merhaba <b id="pendingUserName">—</b>, hesabın oluşturuldu ama henüz aktif değil. Yönetici seni onayladığında otomatik olarak içeri alınacaksın.</p>
+        <div class="lg-pending-status" id="pendingStatusMsg"><span class="lg-pending-dot"></span> Onay bekleniyor…</div>
+        <button type="button" class="reset-cancel-btn" onclick="backToLoginFromPending()"><i class="fas fa-arrow-left"></i> Giriş Ekranına Dön</button>
+      </div>
+    </div>
 
     <!-- Alt çubuk: marka + meta -->
     <div class="footer-note">
@@ -15160,6 +15201,56 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   tabLoginBtn.addEventListener('click', ()=> switchMode('login'));
   tabRegBtn.addEventListener('click', ()=> switchMode('register'));
 
+  // ── Onay Bekleniyor ekranı ────────────────────────────────
+  const pendingView   = document.getElementById('pendingApprovalView');
+  const pendingNameEl = document.getElementById('pendingUserName');
+  const pendingStatus = document.getElementById('pendingStatusMsg');
+  let _pendingUsername = null;
+  let _pendingPollTimer = null;
+
+  function showPendingApproval(username){
+    _pendingUsername = username;
+    lgTabs.style.display = 'none';
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'none';
+    resetSection.classList.remove('show');
+    err.classList.remove('show');
+    pendingNameEl.textContent = username;
+    pendingStatus.className = 'lg-pending-status';
+    pendingStatus.innerHTML = '<span class="lg-pending-dot"></span> Onay bekleniyor…';
+    pendingView.style.display = 'block';
+    greet.textContent = 'Az kaldı — kurucu onayı bekleniyor';
+
+    // Canli kontrol: baska bir cihazda admin onaylarsa (bulut senkronu
+    // irsaliye_users'i arka planda gunceller) burada otomatik yakalanip
+    // kullanici bekletilmeden icerı alinir.
+    clearInterval(_pendingPollTimer);
+    _pendingPollTimer = setInterval(()=>{
+      const fresh = findUser(_pendingUsername);
+      if(fresh && fresh.approved !== false){
+        clearInterval(_pendingPollTimer); _pendingPollTimer = null;
+        pendingStatus.className = 'lg-pending-status ok';
+        pendingStatus.innerHTML = '<i class="fas fa-check-circle"></i> Onaylandı! Giriş yapılıyor…';
+        setTimeout(()=>{
+          setAuthed(true);
+          startIdleWatch();
+          try { localStorage.setItem(LAST_USER_KEY, _pendingUsername); } catch(e){}
+          if(typeof window._logAudit === 'function') window._logAudit('login', { by: _pendingUsername, label: _pendingUsername });
+          hideLogin();
+          if(typeof toast === 'function') toast('Onaylandın! Hoş geldin, ' + _pendingUsername + ' 👋', 'success');
+          backToLoginFromPending(true);
+        }, 900);
+      }
+    }, 4000);
+  }
+  window.backToLoginFromPending = function(skipModeSwitch){
+    clearInterval(_pendingPollTimer); _pendingPollTimer = null;
+    pendingView.style.display = 'none';
+    lgTabs.style.display = '';
+    _pendingUsername = null;
+    if(!skipModeSwitch) switchMode('login');
+  };
+
   // Kayıt: şifre göster/gizle
   document.getElementById('regTogglePass').addEventListener('click', function(){
     const isHidden = regPassInp.type === 'password';
@@ -15206,31 +15297,27 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     regBtn.classList.add('loading');
     setTimeout(()=>{
       const users = getUsers();
-      users.push({ username: u, password: p, role: 'user' });
+      // approved:false — kurucu (admin) Ayarlar > Kullanıcılar'dan onaylayana
+      // kadar bu hesapla GİRİŞ YAPILAMAZ (bkz. login submit handler'daki
+      // approved kontrolü). Boylece kayit olan biri aninda tum verilere
+      // erisip silemez.
+      users.push({ username: u, password: p, role: 'user', approved: false });
       saveUsers(users);
       try { if(typeof window._logAudit === 'function') window._logAudit('user_register', { by: u, label: u }); } catch(_){}
 
       regMsg.className = 'ok';
-      regMsg.innerHTML = '<i class="fas fa-check-circle"></i> <span>Hesap oluşturuldu! Giriş yapılıyor…</span>';
+      regMsg.innerHTML = '<i class="fas fa-check-circle"></i> <span>Hesap oluşturuldu! Onay bekleniyor…</span>';
       regBtn.classList.remove('loading');
       regBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span class="btn-text">Kayıt tamam</span>';
       regBtn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
 
-      // otomatik giriş
-      setAuthed(true);
-      startIdleWatch();
-      try { localStorage.setItem(LAST_USER_KEY, u); } catch(e){}
-
       setTimeout(()=>{
-        hideLogin();
-        if(typeof toast === 'function') toast('Hoş geldin, ' + u + ' 👋 Hesabın oluşturuldu.', 'success');
-        // formu ve butonu sıfırla, giriş moduna dön
         regUserInp.value = ''; regPassInp.value = ''; regPass2Inp.value = '';
         regMeter.classList.remove('show');
         regBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span class="btn-text">Kayıt Ol <i class="fas fa-user-plus arrow"></i></span>';
         regBtn.style.background = '';
-        switchMode('login');
-      }, 800);
+        showPendingApproval(u); // "Kurucu Tarafından Onay Bekleniyor" ekranı
+      }, 700);
     }, 450);
   });
   // ─────────────────────────────────────────────────────────
@@ -15281,6 +15368,14 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
     setTimeout(()=>{
       const matched = findUser(u);
+      if(matched && matched.password === p && matched.approved === false){
+        // Sifre dogru ama hesap henuz kurucu tarafindan onaylanmadi —
+        // yanlis-sifre sayacini artirmadan onay ekranina yonlendir.
+        btn.classList.remove('loading');
+        passInp.value = ''; meter.classList.remove('show');
+        showPendingApproval(u);
+        return;
+      }
       if(matched && matched.password === p){
         setAuthed(remember);
         startIdleWatch();
