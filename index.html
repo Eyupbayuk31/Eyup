@@ -2096,6 +2096,10 @@
           <button onclick="ftClosePdfModal()" class="ft-x"><i class="fas fa-times"></i></button>
         </div>
         <div class="ft-hint" style="margin-bottom:12px;"><i class="fas fa-circle-info"></i> Model seçin — hangi bedenden kaç adet <b>eksik</b> (gelmesi gereken) kaldığını gösteren, atölyeye gönderilebilir bir liste oluşturulur.</div>
+        <div style="position:relative;margin-bottom:10px;">
+          <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+          <input class="form-input" id="ftPdfSearch" placeholder="Model veya tedarikçi ara..." autocomplete="off" oninput="ftPdfFilterModels()" style="padding-left:34px;">
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <button class="btn btn-sm btn-secondary" onclick="ftPdfSelectAll(true)"><i class="fas fa-check-double"></i> Tümünü Seç</button>
           <button class="btn btn-sm btn-secondary" onclick="ftPdfSelectAll(false)"><i class="fas fa-times"></i> Temizle</button>
@@ -2105,6 +2109,7 @@
           </label>
         </div>
         <div id="ftPdfModelList" class="ft-pdf-list"></div>
+        <div id="ftPdfEmpty" class="rep-empty-mini" style="display:none;">Aramanızla eşleşen model yok.</div>
         <div style="display:flex;gap:10px;margin-top:14px;">
           <button class="btn btn-primary" style="flex:1;" onclick="ftGeneratePdf()"><i class="fas fa-file-pdf"></i> PDF Oluştur</button>
           <button class="btn btn-secondary" onclick="ftClosePdfModal()">İptal</button>
@@ -4869,17 +4874,46 @@ function ftOpenPdfModal(){
   const host=document.getElementById('ftPdfModelList');
   host.innerHTML=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||'')).map(m=>{
     const eksik=_ftModelBekleyen(m), stok=_ftModelStok(m), n=(m.sizes||[]).length;
-    return `<label class="ft-pdf-row">
+    const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr');
+    return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}">
       <input type="checkbox" class="ft-pdf-chk" value="${m.id}" ${eksik>0?'checked':''}>
       <span class="ft-pdf-model">${esc(m.modelKodu)}</span>
       <span class="ft-pdf-meta">${n} cm satırı · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
       ${eksik>0?`<span class="ft-pdf-eksik">${eksik.toLocaleString('tr')} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
     </label>`;
   }).join('');
+  const searchInp=document.getElementById('ftPdfSearch');
+  if(searchInp) searchInp.value='';
+  const emptyEl=document.getElementById('ftPdfEmpty');
+  if(emptyEl) emptyEl.style.display='none';
   document.getElementById('ftPdfModal').classList.add('show');
+  setTimeout(()=>{ if(searchInp) searchInp.focus(); },80);
 }
 function ftClosePdfModal(){ document.getElementById('ftPdfModal').classList.remove('show'); }
-function ftPdfSelectAll(on){ document.querySelectorAll('.ft-pdf-chk').forEach(c=>c.checked=on); }
+// Sadece GÖRÜNEN (arama ile eşleşen) satırları seç/temizle — gizli
+// satırlardaki mevcut seçimler bozulmaz.
+function ftPdfSelectAll(on){
+  document.querySelectorAll('.ft-pdf-row').forEach(row=>{
+    if(row.style.display==='none') return;
+    const chk=row.querySelector('.ft-pdf-chk');
+    if(chk) chk.checked=on;
+  });
+}
+// Arama: DOM'u yeniden çizmez, sadece eşleşmeyen satırları gizler —
+// checkbox seçim durumları korunur (kullanıcı arama yapıp seçim yapsa da
+// aramayı temizleyince önceki seçimleri kaybolmaz).
+function ftPdfFilterModels(){
+  const q=(document.getElementById('ftPdfSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const rows=document.querySelectorAll('.ft-pdf-row');
+  let anyVisible=false;
+  rows.forEach(row=>{
+    const match = !q || (row.dataset.search||'').includes(q);
+    row.style.display = match ? '' : 'none';
+    if(match) anyVisible=true;
+  });
+  const emptyEl=document.getElementById('ftPdfEmpty');
+  if(emptyEl) emptyEl.style.display = (rows.length && !anyVisible) ? 'block' : 'none';
+}
 
 function ftGeneratePdf(){
   const seciliIds=[...document.querySelectorAll('.ft-pdf-chk:checked')].map(c=>+c.value);
