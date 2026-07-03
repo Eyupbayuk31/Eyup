@@ -1293,8 +1293,6 @@
 
     <div class="nav-section">Stok Takibi</div>
     <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
-    <a href="javascript:void(0)" onclick="showPage('stok-utupaket')"><i class="fas fa-box-open"></i><span>Ütü &amp; Paket</span></a>
-    <a href="javascript:void(0)" onclick="showPage('stok-dikim')"><i class="fas fa-scissors"></i><span>Dikim</span></a>
     <a href="javascript:void(0)" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
     <a href="javascript:void(0)" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
 
@@ -2249,30 +2247,6 @@
       <div class="type-filter-bar" style="margin-bottom:16px;" id="stokTypeFilter"></div>
       <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>Güncelleme</th><th>İşlem</th></tr></thead><tbody id="stokTable"></tbody></table></div><div class="empty-state" id="stokEmpty" style="display:none;"><i class="fas fa-warehouse"></i><p>Henüz stok kaydı yok.</p></div></div>
       <div class="table-mobile" id="stokMobile" style="display:none;"></div>
-    </div>
-
-    <!-- ========== ÜTÜ & PAKET STOĞU ========== -->
-    <div class="page" id="page-stok-utupaket">
-      <div class="section-header">
-        <div><h2><i class="fas fa-box-open" style="color:var(--primary);margin-right:8px;"></i>Ütü &amp; Paket</h2><p>Poşet, Kılçık, Bant Geniş, Bant Dar stokları</p></div>
-        <button class="btn btn-primary" onclick="openStokModal(null,'Poşet')"><i class="fas fa-plus"></i> Ekle</button>
-      </div>
-      <div id="stokUPUyari" style="margin-bottom:12px;"></div>
-      <div class="type-filter-bar" style="margin-bottom:14px;" id="stokUPFilter"></div>
-      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="stokUPTable"></tbody></table></div><div class="empty-state" id="stokUPEmpty" style="display:none;"><i class="fas fa-box-open"></i><p>Henüz kayıt yok.</p></div></div>
-      <div class="table-mobile" id="stokUPMobile" style="display:none;"></div>
-    </div>
-
-    <!-- ========== DİKİM STOĞU ========== -->
-    <div class="page" id="page-stok-dikim">
-      <div class="section-header">
-        <div><h2><i class="fas fa-scissors" style="color:var(--primary);margin-right:8px;"></i>Dikim</h2><p>Fermuar, Düğme, Lastik stokları</p></div>
-        <button class="btn btn-primary" onclick="openStokModal(null,'Fermuar')"><i class="fas fa-plus"></i> Ekle</button>
-      </div>
-      <div id="stokDKUyari" style="margin-bottom:12px;"></div>
-      <div class="type-filter-bar" style="margin-bottom:14px;" id="stokDKFilter"></div>
-      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>İşlem</th></tr></thead><tbody id="stokDKTable"></tbody></table></div><div class="empty-state" id="stokDKEmpty" style="display:none;"><i class="fas fa-scissors"></i><p>Henüz kayıt yok.</p></div></div>
-      <div class="table-mobile" id="stokDKMobile" style="display:none;"></div>
     </div>
 
     <!-- Stok Ekleme/Düzenleme Modalı -->
@@ -3550,7 +3524,7 @@ function groupFermuarBedenByCm(beden){
 window.groupFermuarBedenByCm = groupFermuarBedenByCm;
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip','fermuar-takip':'Fermuar Takip',stok:'Genel Stok','stok-utupaket':'Ütü & Paket Stoğu','stok-dikim':'Dikim Stoğu',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip','fermuar-takip':'Fermuar Takip',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 function showPage(page){
@@ -3563,7 +3537,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','stok-utupaket','stok-dikim','aksesuar','fermuar-takip','atolye','takvim','reports','signature','templates','geridonusum','settings'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','aksesuar','fermuar-takip','atolye','takvim','reports','signature','templates','geridonusum','settings'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -4081,55 +4055,6 @@ function _stokMobileCards(list){
       </div>
     </div>`;
   }).join('');
-}
-
-const STOK_UP_CATS = ['Poşet','Bant Geniş','Bant Dar','Kılçık','Bant'];
-const STOK_DK_CATS = ['Fermuar','Düğme','Lastik'];
-
-function renderStokUtuPaket(){
-  const all = getData('stoklar');
-  const list = all.filter(s => STOK_UP_CATS.includes(s.kategori))
-    .sort((a,b) => getStockStatus(a.miktar,a.minStok).urgent - getStockStatus(b.miktar,b.minStok).urgent ? getStockStatus(b.miktar,b.minStok).urgent - getStockStatus(a.miktar,a.minStok).urgent : 0);
-  // Uyarı paneli
-  const uyari = document.getElementById('stokUPUyari');
-  if(uyari) uyari.innerHTML = _stokUyariPanelHtml(all, STOK_UP_CATS);
-  // Kategori filtre
-  const cats = ['Poşet','Bant Geniş','Bant Dar','Kılçık'];
-  const filterBar = document.getElementById('stokUPFilter');
-  if(filterBar) filterBar.innerHTML = cats.map(c=>{
-    const cnt = list.filter(s=>s.kategori===c).length;
-    if(!cnt) return '';
-    return `<div class="type-chip" onclick="openStokModal(null,'${c}')" style="cursor:pointer;"><i class="fas fa-plus"></i> + ${c} <span class="tc-count">${cnt}</span></div>`;
-  }).join('');
-  // Tablo
-  const sortedList = [...list].sort((a,b) => getStockStatus(b.miktar,b.minStok).urgent - getStockStatus(a.miktar,a.minStok).urgent);
-  const tbody = document.getElementById('stokUPTable');
-  const empty = document.getElementById('stokUPEmpty');
-  const mobile = document.getElementById('stokUPMobile');
-  if(tbody) tbody.innerHTML = sortedList.length ? _stokTableRows(sortedList) : '';
-  if(empty) empty.style.display = sortedList.length ? 'none' : 'flex';
-  if(mobile){ mobile.style.display = sortedList.length ? 'block' : 'none'; mobile.innerHTML = _stokMobileCards(sortedList); }
-}
-
-function renderStokDikim(){
-  const all = getData('stoklar');
-  const list = all.filter(s => STOK_DK_CATS.includes(s.kategori));
-  const uyari = document.getElementById('stokDKUyari');
-  if(uyari) uyari.innerHTML = _stokUyariPanelHtml(all, STOK_DK_CATS);
-  const cats = ['Fermuar','Düğme','Lastik'];
-  const filterBar = document.getElementById('stokDKFilter');
-  if(filterBar) filterBar.innerHTML = cats.map(c=>{
-    const cnt = list.filter(s=>s.kategori===c).length;
-    if(!cnt) return '';
-    return `<div class="type-chip" onclick="openStokModal(null,'${c}')" style="cursor:pointer;"><i class="fas fa-plus"></i> + ${c} <span class="tc-count">${cnt}</span></div>`;
-  }).join('');
-  const sortedList = [...list].sort((a,b) => getStockStatus(b.miktar,b.minStok).urgent - getStockStatus(a.miktar,a.minStok).urgent);
-  const tbody = document.getElementById('stokDKTable');
-  const empty = document.getElementById('stokDKEmpty');
-  const mobile = document.getElementById('stokDKMobile');
-  if(tbody) tbody.innerHTML = sortedList.length ? _stokTableRows(sortedList) : '';
-  if(empty) empty.style.display = sortedList.length ? 'none' : 'flex';
-  if(mobile){ mobile.style.display = sortedList.length ? 'block' : 'none'; mobile.innerHTML = _stokMobileCards(sortedList); }
 }
 
 function renderStokTypeFilter(){
@@ -8758,8 +8683,6 @@ function refreshPage(page){
   else if(page==='aksesuar')renderAksesuarTable();
   else if(page==='fermuar-takip'){ renderFermuarTakip(); window._ftRefreshPending=false; try{ const d=document.getElementById('ftRefreshDot'); if(d) d.style.display='none'; }catch(_){} }
   else if(page==='stok')renderStokList();
-  else if(page==='stok-utupaket')renderStokUtuPaket();
-  else if(page==='stok-dikim')renderStokDikim();
   else if(page==='takvim')renderCalendar();
   else if(page==='lastik')refreshLastikList();
   else if(page==='toptan')refreshToptanList();
@@ -8778,7 +8701,7 @@ function refreshPage(page){
 
 function refreshAll(){
   if(window._isViewerUrl) return;
-  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderStokUtuPaket();}catch(e){}try{renderStokDikim();}catch(e){}try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();refreshKordonList();refreshDantelList();renderRecycleBin();
+  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();refreshKordonList();refreshDantelList();renderRecycleBin();
 }
 
 function loadSettings(){
