@@ -808,12 +808,19 @@
               if(!localItem) return remoteItem;
               const rN = Array.isArray(remoteItem._photos) ? remoteItem._photos.length : (remoteItem._photo ? 1 : 0);
               const lN = Array.isArray(localItem._photos)  ? localItem._photos.length  : (localItem._photo ? 1 : 0);
-              if(lN > rN){
-                const remoteAt = remoteItem._updatedAt || remoteItem.updatedAt || remoteItem._deletedAt || '';
-                const localAt  = localItem._updatedAt  || localItem.updatedAt  || '';
-                if(!remoteAt || localAt >= remoteAt){
-                  photoPushQueue.push([id, localItem]); return localItem;
-                }
+              const remoteAt = remoteItem._updatedAt || remoteItem.updatedAt || remoteItem._deletedAt || 0;
+              const localAt  = localItem._updatedAt  || localItem.updatedAt  || 0;
+              // Yerel-tercihi: yerelde bulut kadar/daha taze bir zaman damgasi
+              // varsa YERELI koru. Bu, handleSnapshot'daki (canli yol) ayni
+              // kuralin bootRead (acilis) yoluna uyarlanmasidir. ONCEDEN bootRead
+              // fotosuz kayitlarda HER ZAMAN bulutu seciyordu — "cm satirini
+              // sildim / duzenledim, sayfayi yenileyince geri geldi/ezildi"
+              // sikayetinin koku buydu (stale remote yereli eziyordu). Damgali
+              // yerel artik korunur; damgasizlarda eski davranis (bulut) gecerli.
+              if(localAt && (!remoteAt || localAt >= remoteAt)){
+                if(lN > rN){ photoPushQueue.push([id, localItem]); }          // fazla foto -> buluta it
+                else if(localAt > remoteAt){ photoPushQueue.push([id, localItem]); } // stale bulut -> yereli it
+                return localItem;
               }
               return rehydratePhotoBlobs(remoteItem, localItem);
             });
@@ -4728,6 +4735,11 @@ function ftDeleteModel(id){
   const m=_ftAll().find(x=>x.id===id); if(!m) return;
   if(!confirm((m.modelKodu||'')+' modelini silmek istiyor musunuz? Tüm cm satırları ve geçmişi de silinir.')) return;
   setData('fermuarTakip', _ftAll().filter(x=>x.id!==id));
+  // Tombstone: silinen id'yi 'deleted_ids' listesine yaz ki offline bir cihaz
+  // sonradan online olup bu kaydi tekrar buluta itmesin (blocklist bootRead'te
+  // kontrol ediliyor — bkz. tombstoneIds). 'addTombstones' yok, global helper
+  // _addTombstones var; syncDelta yoluyla buluta da yazilir (FS_KEYS icinde).
+  try{ _addTombstones([id]); }catch(e){ console.warn('ft tombstone:', e); }
   renderFermuarTakip(); toast('Model silindi','info');
 }
 
