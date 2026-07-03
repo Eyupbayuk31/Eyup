@@ -632,6 +632,54 @@
       return { upserts: upserts.length, deletes: deletes.length };
     }
 
+    // ── Tombstone + veri silme TEK batch'te (atomik) ──────────────────────
+    // Fermuar Takip model silme yarisi: setData('fermuarTakip') ve
+    // _addTombstones([id]) ayri syncDelta cagrilari = ayri Firestore batch'leri.
+    // Tombstone henuz buluta inmeden telefon acilip offline localOnly'yi
+    // geri iterse silinen kayit diriliyordu. Bu helper her iki yazmayi TEK
+    // writeBatch icinde commit eder: ya ikisi de iner ya hicbiri.
+    //
+    // @param dataKey  — silinecek veri koleksiyonu (orn. 'fermuarTakip')
+    // @param deleteIds — o koleksiyondan silinecek id'ler
+    // @param tombIds   — deleted_ids tombstone listesine eklenecek id'ler
+    async function syncDeleteWithTombstone(dataKey, deleteIds, tombIds){
+      if(!window._fs) throw new Error('Firebase SDK hazir degil');
+      const { db, doc, writeBatch } = window._fs;
+      const wb = writeBatch(db);
+
+      for(const id of deleteIds){
+        markWrite(dataKey, id);
+        trackDelete(dataKey, id);
+        wb.delete(doc(db, 'appdata', dataKey, 'items', String(id)));
+      }
+
+      if(tombIds && tombIds.length){
+        const now = Date.now();
+        let list = [];
+        try { const raw = JSON.parse(localStorage.getItem('deleted_ids')); if(Array.isArray(raw)) list = raw; } catch(_){}
+        const have = new Set(list.map(t => String(t && t.id)));
+        const newTomb = [];
+        for(const id of tombIds){
+          if(id == null) continue;
+          const s = String(id);
+          if(have.has(s)) continue;
+          newTomb.push({ id: id, at: now });
+          have.add(s);
+          list.unshift({ id: id, at: now });
+        }
+        if(list.length > 2000) list.length = 2000;
+        try { localStorage.setItem('deleted_ids', JSON.stringify(list)); } catch(_){}
+        for(const t of newTomb){
+          markWrite('deleted_ids', t.id);
+          wb.set(doc(db, 'appdata', 'deleted_ids', 'items', String(t.id)), stripPhotoBlobs(t));
+        }
+      }
+
+      await wb.commit();
+      return { deletes: deleteIds.length, tombstones: tombIds ? tombIds.length : 0 };
+    }
+    window.syncDeleteWithTombstone = syncDeleteWithTombstone;
+
     // ========== CACHE-FREE GETDATA/SETDATA ==========
     // Daha once in-memory _dataCache vardi ama snapshot/bootRead gibi alt
     // katmanlar localStorage'i guncelleyince cache stale kalip "veritabani
@@ -4732,14 +4780,25 @@ function ftSaveOrder(){
   }
 }
 function ftDeleteModel(id){
-  const m=_ftAll().find(x=>x.id===id); if(!m) return;
+  const all=_ftAll();
+  const m=all.find(x=>x.id===id); if(!m) return;
   if(!confirm((m.modelKodu||'')+' modelini silmek istiyor musunuz? Tüm cm satırları ve geçmişi de silinir.')) return;
-  setData('fermuarTakip', _ftAll().filter(x=>x.id!==id));
-  // Tombstone: silinen id'yi 'deleted_ids' listesine yaz ki offline bir cihaz
-  // sonradan online olup bu kaydi tekrar buluta itmesin (blocklist bootRead'te
-  // kontrol ediliyor — bkz. tombstoneIds). 'addTombstones' yok, global helper
-  // _addTombstones var; syncDelta yoluyla buluta da yazilir (FS_KEYS icinde).
-  try{ _addTombstones([id]); }catch(e){ console.warn('ft tombstone:', e); }
+  const next = all.filter(x=>x.id!==id);
+  // Once localStorage'i senkron guncelle (UI hemen tazelensin), sonra bulut
+  // yazmasini ATOMIK helper (syncDeleteWithTombstone) yapar: model silme +
+  // deleted_ids tombstone TEK Firestore batch'inde gider. Onceki yarista
+  // tombstone gec inince telefon offline local'ini geri itiyordu.
+  try { localStorage.setItem('fermuarTakip', JSON.stringify(next)); } catch(e){}
+  (async function(){
+    try {
+      await window.syncDeleteWithTombstone('fermuarTakip', [id], [id]);
+      if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('ok');
+    } catch(err){
+      console.warn('[ft] atomik silme err:', err);
+      try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('err', 'fermuar silinemedi: '+(err&&err.message||err)); }catch(_){}
+      try{ if(typeof toast==='function') toast('⚠️ Buluta yazılamadı, tekrar denemek için Yenile','error'); }catch(_){}
+    }
+  })();
   renderFermuarTakip(); toast('Model silindi','info');
 }
 
