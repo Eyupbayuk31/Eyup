@@ -2062,19 +2062,24 @@
 
     <!-- ========== FERMUAR TAKİP (STOK) ========== -->
     <div class="page" id="page-fermuar-takip">
-      <div class="section-header">
-        <div>
-          <h2><i class="fas fa-link" style="margin-right:8px;color:var(--primary);"></i>Fermuar Takip</h2>
-          <p>Model → tedarikçi/termin → cm cm satın alma/gelen. İrsaliye kesince otomatik düşer.</p>
+      <div class="section-header ft-page-header">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span class="ft-page-badge"><i class="fas fa-link"></i></span>
+          <div>
+            <h2 style="display:flex;align-items:center;gap:0;">Fermuar Takip</h2>
+            <p>Model → tedarikçi/termin → cm cm satın alma/gelen. İrsaliye kesince otomatik düşer.</p>
+          </div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <label class="ft-toggle" title="Açıkken, takipte kayıtlı olmayan fermuar için irsaliye kesilemez ve kesince stok düşer">
-            <input type="checkbox" id="ftStockControl" onchange="ftToggleStockControl(this.checked)">
-            <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
-            <span class="ft-toggle-lbl">İrsaliyede stok kontrolü</span>
-          </label>
-          <button class="btn btn-secondary" id="ftRefreshBtn" onclick="ftManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="ftRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
-          <button class="btn btn-secondary" onclick="ftOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik Listesi</button>
+        <div class="ft-toolbar">
+          <div class="ft-toolbar-group">
+            <label class="ft-toggle" title="Açıkken, takipte kayıtlı olmayan fermuar için irsaliye kesilemez ve kesince stok düşer">
+              <input type="checkbox" id="ftStockControl" onchange="ftToggleStockControl(this.checked)">
+              <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
+              <span class="ft-toggle-lbl">Stok kontrolü</span>
+            </label>
+            <button class="btn btn-secondary" id="ftRefreshBtn" onclick="ftManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="ftRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
+            <button class="btn btn-secondary" onclick="ftOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik</button>
+          </div>
           <button class="btn btn-primary" onclick="ftOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Model</button>
         </div>
       </div>
@@ -2082,10 +2087,13 @@
       <!-- Özet KPI -->
       <div class="ft-kpis" id="ftKpis"></div>
 
-      <!-- Arama -->
-      <div style="position:relative;margin:16px 0 4px;max-width:420px;">
-        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
-        <input class="form-input" id="ftSearch" placeholder="Model veya tedarikçi ara..." autocomplete="off" oninput="renderFermuarTakip()" style="padding-left:34px;">
+      <!-- Arama + sayım -->
+      <div class="ft-search-row">
+        <div class="ft-search-box">
+          <i class="fas fa-search"></i>
+          <input class="form-input" id="ftSearch" placeholder="Model veya tedarikçi ara..." autocomplete="off" oninput="renderFermuarTakip()">
+        </div>
+        <span class="ft-count-chip" id="ftCount">0 model</span>
       </div>
 
       <!-- Model kartı ızgarası -->
@@ -4692,6 +4700,13 @@ function renderFermuarTakip(){
 
   const grid=document.getElementById('ftGrid');
   if(!grid) return;
+  // Canlı sayım çipi (arama varsa filtrelenmiş sayı, yoksa toplam)
+  const countEl=document.getElementById('ftCount');
+  if(countEl){
+    const n=q ? list.length : all.length;
+    countEl.textContent = n.toLocaleString('tr')+' model'+(q?' ('+esc(q)+')':'');
+    countEl.classList.toggle('on', n>0);
+  }
   if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-link"></i><p>Henüz fermuar modeli yok. <b>Yeni Model</b> ile ekleyin: model kodu, tedarikçi, termin girin — sonra cm cm satın alma adetlerini o modelin içinde girersiniz.</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
 
@@ -4705,7 +4720,7 @@ function renderFermuarTakip(){
     else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
     else { durum='Bekliyor'; dCls='wait'; }
     const terminCls=_ftTerminCls(m.termin);
-    return `<div class="ft-card" onclick="ftOpenDetailModal(${m.id})">
+    return `<div class="ft-card ft-card-${dCls}" onclick="ftOpenDetailModal(${m.id})">
       <div class="ft-card-head">
         <div class="ft-card-id">
           <span class="ft-model">${esc(m.modelKodu)||'—'}</span>
@@ -4723,11 +4738,11 @@ function renderFermuarTakip(){
         <div class="ft-stock-lbl">Eldeki Stok (adet)</div>
       </div>
 
-      <div class="ft-prog"><div class="ft-prog-fill" style="width:${pct}%"></div></div>
+      <div class="ft-prog ft-prog-${dCls}"><div class="ft-prog-fill" style="width:${pct}%"></div></div>
       <div class="ft-mini">
         <div><span>Sipariş</span><b>${sip.toLocaleString('tr')}</b></div>
         <div><span>Gelen</span><b class="pos">${gel.toLocaleString('tr')}</b></div>
-        <div><span>Bekleyen</span><b>${bek.toLocaleString('tr')}</b></div>
+        <div><span>Bekleyen</span><b>${bek>0?'<span class="bad">'+bek.toLocaleString('tr')+'</span>':bek.toLocaleString('tr')}</b></div>
         <div><span>CM Satırı</span><b>${sizeCount}</b></div>
       </div>
 
