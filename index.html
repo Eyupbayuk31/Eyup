@@ -4725,8 +4725,8 @@ function ftSaveOrder(){
     if(list.find(x=>_ftNormModel(x.modelKodu)===_ftNormModel(model))){ toast('Bu model kodu zaten var: '+model+' — üzerine tıklayıp devam edin','error'); return; }
     let copySizes=[];
     const src=_ftFindCopySource(model, list);
-    if(src && confirm(src.modelKodu+' modelinin beden dağılımı ('+(src.sizes||[]).length+' satır) bu yeni model için kopyalansın mı?\n\n(Satın alma adetleri de kopyalanır, gerekirse satırdan düzenlersiniz.)')){
-      copySizes = (src.sizes||[]).map((z,i)=>({id:Date.now()+i+Math.floor(Math.random()*100000), beden:z.beden, cm:z.cm, renk:z.renk, siparisAdet:z.siparisAdet, teslimatlar:[], kullanimlar:[]}));
+    if(src && confirm(src.modelKodu+' modelinin beden dağılımı ('+(src.sizes||[]).length+' satır) bu yeni model için kopyalansın mı?\n\n(Beden/cm/renk kopyalanır, satın alma adetlerini kendiniz gireceksiniz.)')){
+      copySizes = (src.sizes||[]).map((z,i)=>({id:Date.now()+i+Math.floor(Math.random()*100000), beden:z.beden, cm:z.cm, renk:z.renk, siparisAdet:0, teslimatlar:[], kullanimlar:[]}));
     }
     const newId=Date.now();
     list.unshift(_ftStamp({id:newId, modelKodu:model, tedarikci, termin, sizes:copySizes, createdAt:new Date().toISOString()}));
