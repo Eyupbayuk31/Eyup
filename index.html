@@ -4538,7 +4538,7 @@ function _ftGelen(sz){ return (sz.teslimatlar||[]).reduce((s,t)=>s+(+t.adet||0),
 function _ftKullanilan(sz){ return (sz.kullanimlar||[]).reduce((s,k)=>s+(+k.adet||0),0); }
 function _ftStok(sz){ return _ftGelen(sz) - _ftKullanilan(sz); }
 function _ftBekleyen(sz){ return Math.max(0, (+sz.siparisAdet||0) - _ftGelen(sz)); }
-function _ftNormModel(m){ return (m||'').toString().trim().toLocaleUpperCase('tr').replace(/İ/g,'I'); }
+function _ftNormModel(m){ return (m||'').toString().normalize('NFC').trim().replace(/\s+/g,' ').toLocaleUpperCase('tr').replace(/İ/g,'I'); }
 function _ftNum(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
 // Model dokumani her degistiginde damgala — bulut senkron birlestirmesi
 // (handleSnapshot) bu zaman damgasina bakarak yereli mi bulutu mu
