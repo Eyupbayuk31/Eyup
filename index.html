@@ -62,7 +62,7 @@
     var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
     var SIZE_NAMES  = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     var BANT_NAMES  = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
-    var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     var typeLabel  = TYPE_NAMES[d.type] || 'İrsaliye';
     var durumBadge = d.durum === 'teslim'
       ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">✓ Teslim Edildi</span>'
@@ -96,7 +96,7 @@
       }
     }
     if(d.beden){
-      var _bo = ['xxs','xs','s','m','l','xl','xxl','3xl'];
+      var _bo = ['xxs','xs','s','m','l','xl','xxl','3xl','tek'];
       var rows3 = Object.keys(d.beden).sort(function(a,b){
         var ia=_bo.indexOf(String(a).toLowerCase()); var ib=_bo.indexOf(String(b).toLowerCase());
         return (ia===-1?999:ia)-(ib===-1?999:ib);
@@ -1813,6 +1813,7 @@
             <table style="min-width:auto;">
               <thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead>
               <tbody>
+                <tr class="fer-row-tek"><td><b style="color:var(--primary)">Tek Beden</b></td><td><input class="form-input" type="number" id="fer_tekcm" placeholder="CM" autocomplete="off" style="width:80px"></td><td><input class="form-input" type="number" id="fer_teka" placeholder="0" autocomplete="off" style="width:80px"></td></tr>
                 <tr><td>XXS</td><td><input class="form-input" type="number" id="fer_xxscm" placeholder="CM" autocomplete="off" style="width:80px"></td><td><input class="form-input" type="number" id="fer_xxsa" placeholder="0" autocomplete="off" style="width:80px"></td></tr>
                 <tr><td>XS</td><td><input class="form-input" type="number" id="fer_xscm" placeholder="CM" autocomplete="off" style="width:80px"></td><td><input class="form-input" type="number" id="fer_xsa" placeholder="0" autocomplete="off" style="width:80px"></td></tr>
                 <tr><td>S</td><td><input class="form-input" type="number" id="fer_scm" placeholder="CM" autocomplete="off" style="width:80px"></td><td><input class="form-input" type="number" id="fer_sa" placeholder="0" autocomplete="off" style="width:80px"></td></tr>
@@ -2144,6 +2145,7 @@
           <div class="ft-addrow-grid">
             <select class="form-input" id="ftRowBeden">
               <option value="">Beden —</option>
+              <option>Tek Beden</option>
               <option>XXS</option><option>XS</option><option>S</option><option>M</option>
               <option>L</option><option>XL</option><option>XXL</option><option>3XL</option>
             </select>
@@ -3495,7 +3497,7 @@ function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(va
 // Beden key'lerini dogal sirada dondur (XXS -> 3XL).
 // Firestore map'leri alfabetik dondurdugu icin for-in ile dolasinca
 // PDF/detay ekranlarinda bedenler karisik cikiyordu.
-const BEDEN_ORDER = ['xxs','xs','s','m','l','xl','xxl','3xl'];
+const BEDEN_ORDER = ['xxs','xs','s','m','l','xl','xxl','3xl','tek'];
 function sortBedenKeys(obj){
   if(!obj) return [];
   return Object.keys(obj).sort((a,b)=>{
@@ -5150,8 +5152,8 @@ window.ftConsumeForCut = function(model, beden, no){
 // (adet = mevcut stok) otomatik doldurulur. Serbest yazma korunur; Takip'te
 // olmayan model de yazılabilir (stok kontrolü açıkken ftValidateBeforeCut
 // engeller, kapalıyken "özel irsaliye" olarak kesilir).
-const _FT_BEDEN_KEYS=['xxs','xs','s','m','l','xl','xxl','3xl'];
-const _FT_BEDEN_MAP={'XXS':'xxs','XS':'xs','S':'s','M':'m','L':'l','XL':'xl','XXL':'xxl','3XL':'3xl'};
+const _FT_BEDEN_KEYS=['xxs','xs','s','m','l','xl','xxl','3xl','tek'];
+const _FT_BEDEN_MAP={'XXS':'xxs','XS':'xs','S':'s','M':'m','L':'l','XL':'xl','XXL':'xxl','3XL':'3xl','TEK BEDEN':'tek','TEK':'tek'};
 let _ftAcHover=false;
 
 function ftRenderModelAc(q){
@@ -5195,22 +5197,34 @@ function ftPickModel(id){
   // Termin
   const termEl=document.getElementById('fTermin');
   if(termEl && m.termin && !termEl.value) termEl.value=m.termin;
-  // Beden/cm satırları: beden adına göre eşleştir, adet = mevcut stok
-  let filled=0, skipped=0;
+  // Önce TÜM beden satırlarını temizle — böylece sadece dolduracaklarımız kalır.
+  _FT_BEDEN_KEYS.forEach(s=>{
+    const ec=document.getElementById('fer_'+s+'cm'); const ea=document.getElementById('fer_'+s+'a');
+    if(ec) ec.value=''; if(ea) ea.value='';
+  });
+  // Beden/cm satırları: SADECE eldeki stoğu (>0) olan bedenleri doldur.
+  // Stoğu olmayan (ör. henüz gelmemiş 59cm) beden forma HİÇ yansımaz —
+  // "sadece adet girilen bedenler gözüksün" isteği. Kullanıcı isterse
+  // manuel olarak diğerlerini de girebilir.
+  let filled=0, skipped=0, bedsiz=0;
   _ftSizesSorted(m).forEach(z=>{
+    const stok=_ftStok(z);
+    if(stok<=0){ skipped++; return; }               // stok yok → forma koyma
     const key=_FT_BEDEN_MAP[(z.beden||'').toString().trim().toLocaleUpperCase('tr')];
-    if(!key){ skipped++; return; }
+    if(!key){ bedsiz++; return; }                   // beden adı eşleşmiyor (boş beden)
     const ec=document.getElementById('fer_'+key+'cm'); const ea=document.getElementById('fer_'+key+'a');
     if(ec) ec.value=(z.cm!=null?z.cm:'');
-    const stok=_ftStok(z);
-    if(ea){ ea.value = stok>0 ? stok : ''; }
+    if(ea) ea.value=stok;
     filled++;
   });
   // Toplamı güncelle
   let t=0; _FT_BEDEN_KEYS.forEach(s=>{ t+=+(document.getElementById('fer_'+s+'a').value||0); });
   const tot=document.getElementById('ferToplam'); if(tot) tot.textContent=t;
   ftCloseModelAc();
-  toast(m.modelKodu+' seçildi · '+filled+' beden dolduruldu'+(skipped?(' ('+skipped+' bedsiz atlandı)'):''),'success');
+  let msg=m.modelKodu+' seçildi · '+filled+' beden dolduruldu';
+  if(skipped) msg+=' ('+skipped+' stoksuz atlandı)';
+  if(bedsiz) msg+=' ('+bedsiz+' bedensiz — manuel girin)';
+  toast(msg, filled?'success':'info');
 }
 
 // Stok kontrolü mod çipi + toggle (İrsaliye sayfasında görünür)
@@ -5800,7 +5814,7 @@ function showDetailUni(id,type){
     } else {
       html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
       html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
-      const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+      const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
       sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bedenLabel[k]||k}: <b>${bv.adet??0}</b> adet (${bv.cm??'-'} cm)</div>`;});
       html+='</div>';
     }
@@ -5840,7 +5854,7 @@ function showDetailUni(id,type){
   if(type==='toptan'&&item.beden){
     html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
-    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     sortBedenKeys(item.beden).forEach(k=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bl[k]||k}: <b>${item.beden[k]}</b></div>`;});
     html+='</div>';
     html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.total||0} adet</div>`;
@@ -5923,7 +5937,7 @@ function editItemUni(id, type){
       if(typeof korUpdateTotal==='function') korUpdateTotal();
     }
     if(type==='fermuar'){
-      let t=0;['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{t+=+(document.getElementById('fer_'+s+'a').value||0);});
+      let t=0;['xxs','xs','s','m','l','xl','xxl','3xl','tek'].forEach(s=>{t+=+(document.getElementById('fer_'+s+'a').value||0);});
       const el=document.getElementById('ferToplam'); if(el) el.textContent=t;
     }
     if(type==='toptan'){
@@ -5996,7 +6010,7 @@ function _clearFormFields(type){
     const t=document.getElementById('iTarih'); if(t) t.value=today;
   } else if(type==='fermuar'){
     ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    ['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{const ec=document.getElementById('fer_'+s+'cm');const ea=document.getElementById('fer_'+s+'a');if(ec)ec.value='';if(ea)ea.value='';});
+    ['xxs','xs','s','m','l','xl','xxl','3xl','tek'].forEach(s=>{const ec=document.getElementById('fer_'+s+'cm');const ea=document.getElementById('fer_'+s+'a');if(ec)ec.value='';if(ea)ea.value='';});
     const tot=document.getElementById('ferToplam'); if(tot) tot.textContent='0';
     const t=document.getElementById('fTarih'); if(t) t.value=today;
   } else if(type==='lastik'){
@@ -6242,7 +6256,7 @@ function generatePDF(id, type, mode) {
       grouped.forEach(g => { html += `<tr><td><b>${g.cm}</b> cm</td><td>${g.adet}</td></tr>`; });
       html += `</tbody></table><div class="total-row" style="font-size:14px;padding:8px 0;">Toplam Adet: ${item.totalAdet||0}</div>`;
     } else {
-      const bedenLabel = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+      const bedenLabel = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
       const bedenCount = Object.keys(item.beden).length;
       const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
       const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
@@ -6286,7 +6300,7 @@ function generatePDF(id, type, mode) {
   }
 
   if (type === 'toptan' && item.beden) {
-    const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     const bedenCount = Object.keys(item.beden).length;
     const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
     const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
@@ -6450,7 +6464,7 @@ function saveFermuar(){
   const teslimAlan=document.getElementById('fTeslimAlan').value.trim();
   const renk=document.getElementById('fRenk').value.trim();
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
-  const sizes=['xxs','xs','s','m','l','xl','xxl','3xl'];const beden={};let total=0;
+  const sizes=['xxs','xs','s','m','l','xl','xxl','3xl','tek'];const beden={};let total=0;
   sizes.forEach(s=>{const cm=+(document.getElementById('fer_'+s+'cm').value||0);const adet=+(document.getElementById('fer_'+s+'a').value||0);if(adet>0)beden[s]={cm,adet};total+=adet;});
   const termin=document.getElementById('fTermin').value;const aciklama=document.getElementById('fAciklama').value.trim();
   const hideBeden=document.getElementById('fHideBeden').checked;
@@ -6483,7 +6497,7 @@ function saveFermuar(){
 
 // Fermuar total live
 document.querySelectorAll('[id^="fer_"][id$="a"]').forEach(el=>{
-  el.addEventListener('input',()=>{let t=0;['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{t+=+(document.getElementById('fer_'+s+'a').value||0);});document.getElementById('ferToplam').textContent=t;});
+  el.addEventListener('input',()=>{let t=0;['xxs','xs','s','m','l','xl','xxl','3xl','tek'].forEach(s=>{t+=+(document.getElementById('fer_'+s+'a').value||0);});document.getElementById('ferToplam').textContent=t;});
 });
 
 // Fermuar Model Kodu autocomplete: yazdıkça Takip'teki modelleri filtrele.
@@ -7327,7 +7341,7 @@ function renderOlcuRenk(){
   const data = getReportData();
   const olculer = {}, renkler = {};
   const SN = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
-  const BL = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+  const BL = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
   const addOlcu = (k,v)=>{ if(v>0) olculer[k]=(olculer[k]||0)+v; };
   data.forEach(i=>{
     // Renk: kayıtta doğrudan i.renk
@@ -8918,7 +8932,7 @@ function updateSelDash(){
   if(items.length<1){hideSelDash();return;}
 
   const beds=['xxs','xs','s','m','l','xl','xxl','3xl'];
-  const bedLabels={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+  const bedLabels={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
   const sizeKeys=['s30','s35','s40','s50','s60','s100'];
   const sizeMap={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
 
@@ -9761,7 +9775,7 @@ function buildShareText(item, type) {
     if (szs.length) text += `\n📏 Ölçüler:\n  ${szs.join('\n  ')}\n`;
   }
   if ((type === 'fermuar' || type === 'toptan') && item.beden) {
-    const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     const bds = sortBedenKeys(item.beden).map(k => {
       const v = type === 'fermuar' ? (item.beden[k]?.adet ?? 0) : item.beden[k];
       return `${bl[k]||k}: ${v}`;
@@ -9906,7 +9920,7 @@ function bulkShareWhatsApp() {
       }
     }
     if ((type === 'fermuar' || type === 'toptan') && item.beden) {
-      const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+      const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
       const bds = sortBedenKeys(item.beden).map(k => {
         const v = type === 'fermuar' ? (item.beden[k] && item.beden[k].adet) : item.beden[k];
         return {k:bl[k]||k, v: +v||0};
@@ -10034,7 +10048,7 @@ function _singleItemPdfHtml(item, type){
       grouped.forEach(g=>{h+=`<tr><td><b>${g.cm}</b> cm</td><td>${g.adet}</td></tr>`;});
       h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
     } else {
-      const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+      const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
       h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
       h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
       sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};h+=`<tr><td><b>${bl[k]||k}</b></td><td>${bv.cm??'-'} cm</td><td>${bv.adet??0}</td></tr>`;});
@@ -10048,7 +10062,7 @@ function _singleItemPdfHtml(item, type){
     h+=`<div class="st">🔘 Düğme Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">ADET</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='toptan'&&item.beden){
-    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     h+=`<div class="st">📦 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
@@ -11314,7 +11328,7 @@ function _fillPageFromData(page, data){
     }
   }
   if(page==='fermuar' && data.beden){
-    ['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{
+    ['xxs','xs','s','m','l','xl','xxl','3xl','tek'].forEach(s=>{
       if(data.beden[s]){
         const ec=document.getElementById('fer_'+s+'cm');const ea=document.getElementById('fer_'+s+'a');
         if(ec) ec.value = data.beden[s].cm||'';
@@ -16224,7 +16238,7 @@ function _renderPublicViewer(d){
   };
   const SIZE_NAMES = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
   const BANT_NAMES = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
-  const BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL'};
+  const BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
 
   const typeLabel = TYPE_NAMES[d.type] || 'İrsaliye';
   const durumBadge = (d.durum === 'teslim')

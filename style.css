@@ -13638,3 +13638,6 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   color:var(--danger); border-color:color-mix(in srgb, var(--danger) 45%, var(--border));
   background:color-mix(in srgb, var(--danger) 10%, transparent);
 }
+
+/* Fermuar irsaliye formu: Tek Beden satırı vurgusu */
+#page-fermuar .fer-row-tek td{ background:color-mix(in srgb, var(--primary) 6%, transparent); }
