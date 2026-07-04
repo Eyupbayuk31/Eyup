@@ -4807,17 +4807,37 @@ function ftRenderDetail(){
           <button class="btn btn-xs btn-danger" onclick="ftDeleteSizeRow(${m.id},${z.id})" title="Sil"><i class="fas fa-trash"></i></button>
         </span>
       </div>
-      <div class="ft-row-hist" id="ftHist-${z.id}" style="display:none;">${_ftHistoryHtml(z)}</div>
+      <div class="ft-row-hist" id="ftHist-${z.id}" style="display:none;">${_ftHistoryHtml(m.id, z)}</div>
     </div>`;
   }).join('');
 }
-function _ftHistoryHtml(z){
+function _ftHistoryHtml(modelId, z){
   const rows=[];
-  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi'}));
-  (z.kullanimlar||[]).forEach(k=>rows.push({t:k.tarih,ic:'fa-scissors',cls:'neg',txt:'−'+(+k.adet||0)+' kullanıldı'+(k.no?(' ('+k.no+')'):'')}));
+  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi',kind:'t',eid:t.id}));
+  (z.kullanimlar||[]).forEach(k=>rows.push({t:k.tarih,ic:'fa-scissors',cls:'neg',txt:'−'+(+k.adet||0)+' kullanıldı'+(k.no?(' ('+k.no+')'):''),kind:'k',eid:k.id}));
   rows.sort((a,b)=>(b.t||'').localeCompare(a.t||''));
   if(!rows.length) return '<div class="ft-hist-empty">Henüz hareket yok.</div>';
-  return '<div class="ft-hist-list">'+rows.map(r=>`<div class="ft-hist-row"><i class="fas ${r.ic} ${r.cls}"></i><span class="ft-hist-txt ${r.cls}">${r.txt}</span><span class="ft-hist-date">${r.t?_ftFmtDate(r.t):''}</span></div>`).join('')+'</div>';
+  return '<div class="ft-hist-list">'+rows.map(r=>
+    `<div class="ft-hist-row"><i class="fas ${r.ic} ${r.cls}"></i><span class="ft-hist-txt ${r.cls}">${r.txt}</span><span class="ft-hist-date">${r.t?_ftFmtDate(r.t):''}</span>`+
+    `<button class="ft-hist-del" onclick="ftDeleteHist(${modelId},${z.id},'${r.kind}',${r.eid})" title="Bu hareketi sil (yanlış giriş)"><i class="fas fa-times"></i></button></div>`
+  ).join('')+'</div>';
+}
+// Tek bir teslimat/kullanım hareketini sil (yanlış giriş düzeltme).
+// Gelen/Stok/Eksik türetilmiş değerler olduğundan otomatik güncellenir.
+function ftDeleteHist(modelId, sizeId, kind, entryId){
+  let list=_ftAll(); const midx=list.findIndex(x=>x.id===modelId); if(midx<0) return;
+  const sizes=list[midx].sizes||[]; const z=sizes.find(s=>s.id===sizeId); if(!z) return;
+  const arrName = kind==='t' ? 'teslimatlar' : 'kullanimlar';
+  const entry=(z[arrName]||[]).find(e=>e.id===entryId); if(!entry) return;
+  const lbl = kind==='t' ? ('+'+(+entry.adet||0)+' geldi') : ('−'+(+entry.adet||0)+' kullanıldı'+(entry.no?(' ('+entry.no+')'):''));
+  if(!confirm('"'+lbl+'" hareketini silmek istiyor musunuz?\n\nStok/gelen değerleri otomatik yeniden hesaplanır.')) return;
+  z[arrName]=(z[arrName]||[]).filter(e=>e.id!==entryId);
+  _ftStamp(list[midx]);
+  setData('fermuarTakip',list);
+  ftRenderDetail();
+  // Geçmiş paneli render sonrası kapanır — kullanıcı bağlamı kaybetmesin, tekrar aç
+  try{ const el=document.getElementById('ftHist-'+sizeId); if(el) el.style.display='block'; }catch(_){}
+  toast('Hareket silindi: '+lbl,'info');
 }
 function ftToggleHistory(sizeId){ const el=document.getElementById('ftHist-'+sizeId); if(el) el.style.display = el.style.display==='none'?'block':'none'; }
 
@@ -10973,9 +10993,18 @@ function saveNewUser(){
 
 function deleteUser(idx){
   const users = authGetUsers();
+  const target = users[idx];
+  if(!target) return;
   if(users.length <= 1){ toast('Son kullanıcı silinemez','danger'); return; }
-  if(users[idx].role==='admin' && users.filter(u=>u.role==='admin').length <= 1){ toast('En az bir admin kalmalı','danger'); return; }
-  if(!confirm(users[idx].username + ' silinsin mi?')) return;
+  // KENDINI SILME KORUMASI: su an giris yapmis oldugun hesabi silemezsin —
+  // yoksa oturum sahipsiz kalir ve o hesapla bir daha giremezsin.
+  const currentUser = (function(){ try{ return localStorage.getItem('irsaliye_last_user')||''; }catch(_){ return ''; } })();
+  if(currentUser && String(target.username).toLowerCase() === String(currentUser).toLowerCase()){
+    toast('Kendi hesabınızı silemezsiniz (şu an bu hesapla giriş yapmış durumdasınız)','danger');
+    return;
+  }
+  if(target.role==='admin' && users.filter(u=>u.role==='admin').length <= 1){ toast('En az bir admin kalmalı','danger'); return; }
+  if(!confirm(target.username + ' silinsin mi?')) return;
   users.splice(idx,1);
   authSaveUsers(users);
   renderUserList();

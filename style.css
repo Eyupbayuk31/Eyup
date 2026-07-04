@@ -13623,3 +13623,18 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   color:var(--warning,#fbbf24);
   margin-left:6px;
 }
+
+/* Fermuar Takip: geçmiş hareketini tek tek silme (yanlış giriş düzeltme) */
+.ft-hist-del{
+  width:22px; height:22px; flex-shrink:0; margin-left:6px;
+  border:1px solid var(--border); border-radius:6px;
+  background:transparent; color:var(--text-dim);
+  font-size:10px; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:all .15s; opacity:.55;
+}
+.ft-hist-row:hover .ft-hist-del{ opacity:1; }
+.ft-hist-del:hover{
+  color:var(--danger); border-color:color-mix(in srgb, var(--danger) 45%, var(--border));
+  background:color-mix(in srgb, var(--danger) 10%, transparent);
+}
