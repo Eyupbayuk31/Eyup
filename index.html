@@ -4723,14 +4723,32 @@ function ftSaveOrder(){
     if(_ftCurrentDetailId===_ftEditModelId) ftRenderDetail(); else renderFermuarTakip();
   } else {
     if(list.find(x=>_ftNormModel(x.modelKodu)===_ftNormModel(model))){ toast('Bu model kodu zaten var: '+model+' — üzerine tıklayıp devam edin','error'); return; }
+    let copySizes=[];
+    const src=_ftFindCopySource(model, list);
+    if(src && confirm(src.modelKodu+' modelinin beden dağılımı ('+(src.sizes||[]).length+' satır) bu yeni model için kopyalansın mı?\n\n(Satın alma adetleri de kopyalanır, gerekirse satırdan düzenlersiniz.)')){
+      copySizes = (src.sizes||[]).map((z,i)=>({id:Date.now()+i+Math.floor(Math.random()*100000), beden:z.beden, cm:z.cm, renk:z.renk, siparisAdet:z.siparisAdet, teslimatlar:[], kullanimlar:[]}));
+    }
     const newId=Date.now();
-    list.unshift(_ftStamp({id:newId, modelKodu:model, tedarikci, termin, sizes:[], createdAt:new Date().toISOString()}));
+    list.unshift(_ftStamp({id:newId, modelKodu:model, tedarikci, termin, sizes:copySizes, createdAt:new Date().toISOString()}));
     setData('fermuarTakip',list);
     ftCloseOrderModal();
-    toast('Model eklendi — şimdi cm cm beden girin','success');
+    toast(copySizes.length ? ('Model eklendi — '+copySizes.length+' beden '+src.modelKodu+"'ten kopyalandı") : 'Model eklendi — şimdi cm cm beden girin','success');
     renderFermuarTakip();
     ftOpenDetailModal(newId); // Kaydet ve Devam Et: direkt detaya gir
   }
+}
+// Model kodu bir mevcut modelin öneki ve ayraçla devam ediyorsa (örn "W1505 RPT 2" -> "W1505") tekrar sipariş sayar.
+function _ftFindCopySource(model, list){
+  const typed=_ftNormModel(model);
+  let best=null, bestLen=0;
+  (list||[]).forEach(m=>{
+    if(!(m.sizes||[]).length) return;
+    const code=_ftNormModel(m.modelKodu);
+    if(!code || code.length>=typed.length || !typed.startsWith(code)) return;
+    if(!/^[\s\-_/]/.test(typed.slice(code.length))) return;
+    if(code.length>bestLen){ best=m; bestLen=code.length; }
+  });
+  return best;
 }
 function ftDeleteModel(id){
   const all=_ftAll();
