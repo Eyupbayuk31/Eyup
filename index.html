@@ -643,22 +643,16 @@
     // @param deleteIds — o koleksiyondan silinecek id'ler
     // @param tombIds   — deleted_ids tombstone listesine eklenecek id'ler
     async function syncDeleteWithTombstone(dataKey, deleteIds, tombIds){
-      if(!window._fs) throw new Error('Firebase SDK hazir degil');
-      const { db, doc, writeBatch } = window._fs;
-      const wb = writeBatch(db);
-
-      for(const id of deleteIds){
-        markWrite(dataKey, id);
-        trackDelete(dataKey, id);
-        wb.delete(doc(db, 'appdata', dataKey, 'items', String(id)));
-      }
-
+      // ONEMLI: Yerel tombstone'lari HER ZAMAN (Firebase hazir olmasa/offline
+      // olsa bile) once yerele yaz. Eskiden bu yazim _fs guard'inin ALTINDAydi;
+      // offline silmede tombstone yerele hic dusmuyor, bir sonraki acilista
+      // (baska cihaz kaydi hala tutuyorsa) kayit geri dirilebiliyordu.
+      const now = Date.now();
+      const newTomb = [];
       if(tombIds && tombIds.length){
-        const now = Date.now();
         let list = [];
         try { const raw = JSON.parse(localStorage.getItem('deleted_ids')); if(Array.isArray(raw)) list = raw; } catch(_){}
         const have = new Set(list.map(t => String(t && t.id)));
-        const newTomb = [];
         for(const id of tombIds){
           if(id == null) continue;
           const s = String(id);
@@ -669,10 +663,20 @@
         }
         if(list.length > 2000) list.length = 2000;
         try { localStorage.setItem('deleted_ids', JSON.stringify(list)); } catch(_){}
-        for(const t of newTomb){
-          markWrite('deleted_ids', t.id);
-          wb.set(doc(db, 'appdata', 'deleted_ids', 'items', String(t.id)), stripPhotoBlobs(t));
-        }
+      }
+
+      if(!window._fs) throw new Error('Firebase SDK hazir degil');
+      const { db, doc, writeBatch } = window._fs;
+      const wb = writeBatch(db);
+
+      for(const id of deleteIds){
+        markWrite(dataKey, id);
+        trackDelete(dataKey, id);
+        wb.delete(doc(db, 'appdata', dataKey, 'items', String(id)));
+      }
+      for(const t of newTomb){
+        markWrite('deleted_ids', t.id);
+        wb.set(doc(db, 'appdata', 'deleted_ids', 'items', String(t.id)), stripPhotoBlobs(t));
       }
 
       await wb.commit();
