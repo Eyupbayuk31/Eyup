@@ -2151,7 +2151,7 @@
             </select>
             <input class="form-input" type="number" id="ftRowCm" placeholder="CM *" min="0" step="0.5" autocomplete="off">
             <input class="form-input" id="ftRowRenk" placeholder="Renk" autocomplete="off">
-            <input class="form-input" type="number" id="ftRowSiparis" placeholder="Satın Alma Adeti *" min="0" autocomplete="off">
+            <input class="form-input" type="number" id="ftRowSiparis" placeholder="Satın Alma Adeti *" min="0" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ftAddSizeRow();}">
             <button class="btn btn-primary" onclick="ftAddSizeRow()"><i class="fas fa-plus"></i> Ekle</button>
           </div>
         </div>
@@ -4865,7 +4865,6 @@ function ftAddSizeRow(){
 
   document.getElementById('ftRowBeden').value='';
   document.getElementById('ftRowCm').value='';
-  document.getElementById('ftRowRenk').value='';
   document.getElementById('ftRowSiparis').value='';
   ftRenderDetail();
   toast(cm+'cm eklendi','success');
