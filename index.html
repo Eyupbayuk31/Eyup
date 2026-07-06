@@ -12411,33 +12411,23 @@ function capturePhoto(){
   stopPhotoCamera(true);
 }
 
-function loadPhotoFromFile(e){
-  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); e.target.value=''; return; }
-  const files = Array.from(e.target.files || []);
-  if(!files.length) return;
-  const total = files.length;
-  if(total > 1) toast('📤 ' + total + ' fotoğraf işleniyor — sırayla yüklenecek','info');
-  files.forEach((f, fileIdx) => {
+// Dosyayı okuyup sıkıştırılmış dataURL'e çevirir (GitHub yüklemesinden bağımsız, saf hazırlık adımı).
+function _readAndCompressPhotoFile(f){
+  return new Promise((resolve) => {
     const r = new FileReader();
     r.onload = (ev) => {
       const img = new Image();
-      img.onload = () => {
-        const c = document.getElementById('photoCanvas');
-        const dataUrl = _compressImageToDataUrl(img, c);
-        // Her fotoğraf için 700ms arayla yükleme başlat (GitHub secondary rate limit önlemi)
-        _savePhotoToWaybill(dataUrl, fileIdx * 700);
-      };
+      img.onload = () => resolve(_compressImageToDataUrl(img, document.getElementById('photoCanvas')));
       img.src = ev.target.result;
     };
     r.readAsDataURL(f);
   });
-  e.target.value = '';
 }
 
-function _savePhotoToWaybill(dataUrl, uploadDelayMs){
-  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
-  let newIndex = 0;
-  const ok = _updateItem(_sigCurrentWaybill.id, _sigCurrentWaybill.type, (item)=>{
+// Fotoğrafı irsaliyenin _photos dizisine ekler (senkron kayıt) — yükleme bundan ayrı, sonra yapılır.
+function _addPhotoRecord(waybillId, waybillType, dataUrl){
+  let newIndex = -1;
+  const ok = _updateItem(waybillId, waybillType, (item)=>{
     const existing = _getPhotosArray(item);
     newIndex = existing.length;
     existing.push({ data: dataUrl, at: new Date().toISOString(), url: '', urlAt: '', urlManual: false });
@@ -12446,13 +12436,45 @@ function _savePhotoToWaybill(dataUrl, uploadDelayMs){
     item._photoAt = existing[0].at;
     return item;
   });
-  if(ok){
+  return ok ? newIndex : -1;
+}
+
+function loadPhotoFromFile(e){
+  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); e.target.value=''; return; }
+  const files = Array.from(e.target.files || []);
+  if(!files.length) return;
+  const waybillId = _sigCurrentWaybill.id, waybillType = _sigCurrentWaybill.type;
+  const total = files.length;
+  if(total > 1) toast('📤 ' + total + ' fotoğraf — biri bitmeden diğeri başlamadan sırayla yüklenecek','info');
+  (async () => {
+    for(let i=0; i<files.length; i++){
+      const dataUrl = await _readAndCompressPhotoFile(files[i]);
+      const newIndex = _addPhotoRecord(waybillId, waybillType, dataUrl);
+      if(newIndex < 0){ toast('Fotoğraf kaydedilemedi ('+(i+1)+'. foto)','error'); continue; }
+      toast('Fotoğraf eklendi (' + (newIndex+1) + '. fotoğraf) — yükleniyor...','success');
+      renderPhotoGallery();
+      renderSigSavedList();
+      refreshSignaturePage();
+      // Bir foto tamamen bitmeden (başarı ya da tüm denemeler tükenip başarısız da olsa)
+      // bir sonrakine geçilmiyor — GitHub'ın aynı branch'e eşzamanlı commit çakışmasını
+      // (409) tetikleyen asıl sebep buydu. Aradaki 4sn bekleme de yükü seyreltir.
+      await _uploadPhotoInBackground(waybillId, waybillType, dataUrl, newIndex);
+      if(i < files.length - 1) await new Promise(r=>setTimeout(r, 4000));
+    }
+  })();
+  e.target.value = '';
+}
+
+function _savePhotoToWaybill(dataUrl){
+  if(!_sigCurrentWaybill){ toast('Önce bir irsaliye seçin','error'); return; }
+  const waybillId = _sigCurrentWaybill.id, waybillType = _sigCurrentWaybill.type;
+  const newIndex = _addPhotoRecord(waybillId, waybillType, dataUrl);
+  if(newIndex >= 0){
     toast('Fotoğraf eklendi (' + (newIndex+1) + '. fotoğraf) — yükleniyor...','success');
     renderPhotoGallery();
     renderSigSavedList();
     refreshSignaturePage();
-    const delay = uploadDelayMs || 0;
-    setTimeout(() => _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, dataUrl, newIndex), delay);
+    _uploadPhotoInBackground(waybillId, waybillType, dataUrl, newIndex);
   } else {
     toast('Fotoğraf kaydedilemedi','error');
   }
@@ -13160,9 +13182,11 @@ async function _publishViewerJsonToGithub(item, type, _attempt){
 }
 
 const _uploadsInFlight = new Set();
+// Not: dönen promise her zaman resolve olur (başarısızlıkta da) — çağıran taraf
+// bir sonraki fotoğrafa geçmeden bunu await ederek sıralı (eş zamansız olmayan) yükleme yapabilir.
 function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
   const flightKey = `${id}__${type}__${photoIndex ?? 'main'}`;
-  if(_uploadsInFlight.has(flightKey)){ toast('⏳ Bu fotoğraf zaten yükleniyor…','info'); return; }
+  if(_uploadsInFlight.has(flightKey)){ toast('⏳ Bu fotoğraf zaten yükleniyor…','info'); return Promise.resolve(); }
   _uploadsInFlight.add(flightKey);
   _updateItem(id, type, (item)=>{
     if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
@@ -13173,7 +13197,7 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
     return item;
   });
 
-  _uploadPhotoToCatbox(dataUrl).then(url=>{
+  return _uploadPhotoToCatbox(dataUrl).then(url=>{
     _uploadsInFlight.delete(flightKey);
     const ok = _updateItem(id, type, (item)=>{
       if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
@@ -13475,11 +13499,15 @@ function _uploadNfPhotosInBackground(savedId, type){
   _newFormPhotos = [];
   renderNewFormPhotoGallery();
   const total = photoCopies.length;
-  if(total > 1) toast('📤 ' + total + ' fotoğraf sıraya alındı — yükleniyor...','info');
-  // GitHub secondary rate limit'e takılmamak için fotoğrafları sırayla gönder (700ms arayla)
-  photoCopies.forEach((p, idx) => {
-    setTimeout(() => _uploadPhotoInBackground(savedId, type, p.data, idx), idx * 700);
-  });
+  if(total > 1) toast('📤 ' + total + ' fotoğraf — sırayla yüklenecek','info');
+  // Sırayla (bir foto tamamen bitmeden diğeri başlamadan) yükle — eş zamanlı PUT'lar
+  // GitHub'ın aynı branch'e commit çakışmasına (409) yol açıyordu, özellikle 5+ fotoda.
+  (async () => {
+    for(let idx=0; idx<photoCopies.length; idx++){
+      await _uploadPhotoInBackground(savedId, type, photoCopies[idx].data, idx);
+      if(idx < photoCopies.length - 1) await new Promise(r=>setTimeout(r, 4000));
+    }
+  })();
 }
 
 function _clearPhotoPreview(){
@@ -13590,16 +13618,24 @@ function retryAllFailedPhotos(){
     return acc;
   }, []);
   if(!failedIndexes.length){ toast('Yüklenmemiş fotoğraf yok','info'); return; }
-  let queued = 0, noData = 0;
-  failedIndexes.forEach((photoIdx, i) => {
+  const waybillId = _sigCurrentWaybill.id, waybillType = _sigCurrentWaybill.type;
+  const toRetry = [];
+  let noData = 0;
+  failedIndexes.forEach((photoIdx) => {
     const p = rawPhotos[photoIdx];
     const dataUrl = p && typeof p.data === 'string' && p.data.startsWith('data:') ? p.data : '';
     if(!dataUrl){ noData++; return; }
-    queued++;
-    setTimeout(() => _uploadPhotoInBackground(_sigCurrentWaybill.id, _sigCurrentWaybill.type, dataUrl, photoIdx), i * 700);
+    toRetry.push({ photoIdx, dataUrl });
   });
-  if(queued) toast('⟳ ' + queued + ' fotoğraf yeniden yükleniyor…','info');
+  if(toRetry.length) toast('⟳ ' + toRetry.length + ' fotoğraf sırayla yeniden yükleniyor…','info');
   if(noData) toast('⚠️ ' + noData + ' fotoğrafın verisi yok — galeriden veya kameradan tekrar ekleyin','error');
+  // Sırayla yükle (bkz. loadPhotoFromFile) — eş zamanlı gönderim GitHub'da 409 çakışmasına yol açıyordu.
+  (async () => {
+    for(let i=0; i<toRetry.length; i++){
+      await _uploadPhotoInBackground(waybillId, waybillType, toRetry[i].dataUrl, toRetry[i].photoIdx);
+      if(i < toRetry.length - 1) await new Promise(r=>setTimeout(r, 4000));
+    }
+  })();
 }
 
 function openPhotoLightbox(idx){
