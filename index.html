@@ -1676,50 +1676,63 @@
 
       <!-- Filter Row: Date + Atölye + Durum + Sort -->
       <div class="filter-row">
-        <select class="filter-select" id="filterDate" onchange="applyFilters()">
-          <option value="all">📅 Tüm Tarihler</option>
-          <option value="today">📅 Bugün</option>
-          <option value="yesterday">📅 Dün</option>
-          <option value="week">📅 Son 7 Gün</option>
-          <option value="month">📅 Bu Ay</option>
-          <option value="lastmonth">📅 Geçen Ay</option>
+        <label class="fsel">
+          <i class="fas fa-calendar-day fsel-lead"></i>
+          <select class="fsel-input" id="filterDate" onchange="applyFilters()">
+            <option value="all">Tüm Tarihler</option>
+            <option value="today">Bugün</option>
+            <option value="yesterday">Dün</option>
+            <option value="week">Son 7 Gün</option>
+            <option value="month">Bu Ay</option>
+            <option value="lastmonth">Geçen Ay</option>
+          </select>
+          <i class="fas fa-chevron-down fsel-chev"></i>
+        </label>
+        <select class="fsel-input" id="filterAtolye" onchange="applyFilters()" style="display:none;">
+          <option value="all">Tüm Atölyeler</option>
         </select>
-        <select class="filter-select" id="filterAtolye" onchange="applyFilters()" style="display:none;">
-          <option value="all">🏭 Tüm Atölyeler</option>
-        </select>
-        <button type="button" class="filter-select" id="filterAtolyeBtn" onclick="openAtolyePicker()" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;">
-          <span id="filterAtolyeLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">🏭 Tüm Atölyeler</span>
-          <i class="fas fa-chevron-down" style="opacity:.6;font-size:11px;flex-shrink:0;"></i>
+        <button type="button" class="fsel fsel-btn" id="filterAtolyeBtn" onclick="openAtolyePicker()">
+          <i class="fas fa-industry fsel-lead"></i>
+          <span id="filterAtolyeLabel" class="fsel-btn-label">Tüm Atölyeler</span>
+          <i class="fas fa-chevron-down fsel-chev"></i>
         </button>
-        <select class="filter-select" id="filterDurum" onchange="applyFilters()">
-          <option value="all">📋 Tüm Durumlar</option>
-          <option value="bekliyor">⏳ Bekliyor</option>
-          <option value="teslim">✅ Teslim Edildi</option>
-          <option value="gecmis">⚠️ Vadesi Geçmiş</option>
-        </select>
-        <select class="filter-select" id="filterSort" onchange="applyFilters()">
-          <option value="newest">🔽 En Yeni</option>
-          <option value="oldest">🔼 En Eski</option>
-          <option value="termin">⏰ Yaklaşan Termin</option>
-        </select>
+        <label class="fsel">
+          <i class="fas fa-circle-info fsel-lead"></i>
+          <select class="fsel-input" id="filterDurum" onchange="applyFilters()">
+            <option value="all">Tüm Durumlar</option>
+            <option value="bekliyor">Bekliyor</option>
+            <option value="teslim">Teslim Edildi</option>
+            <option value="gecmis">Vadesi Geçmiş</option>
+          </select>
+          <i class="fas fa-chevron-down fsel-chev"></i>
+        </label>
+        <label class="fsel">
+          <i class="fas fa-arrow-down-wide-short fsel-lead"></i>
+          <select class="fsel-input" id="filterSort" onchange="applyFilters()">
+            <option value="newest">En Yeni</option>
+            <option value="oldest">En Eski</option>
+            <option value="termin">Yaklaşan Termin</option>
+          </select>
+          <i class="fas fa-chevron-down fsel-chev"></i>
+        </label>
       </div>
 
-      <!-- Export Bar -->
-      <div class="export-bar">
-        <button class="export-btn" id="listRefreshBtn" onclick="manualRefreshList()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="listRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid #1e1b3a;box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
-        <button class="export-btn" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV İndir</button>
-        <button class="export-btn" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel İndir</button>
-        <button class="export-btn" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> Filtrelenmiş CSV</button>
-        <button class="export-btn" onclick="printListPDF()" style="background:linear-gradient(135deg,#ef4444,#dc2626);"><i class="fas fa-file-pdf"></i> PDF Yazdır</button>
-      </div>
-
-      <!-- Date Range -->
+      <!-- Tarih aralığı (özel) — ayrı, sade satır -->
       <div class="date-range-row">
-        <label>Tarih Aralığı:</label>
+        <label><i class="fas fa-calendar-week" style="margin-right:5px;opacity:.7;"></i> Tarih Aralığı</label>
         <input type="date" id="filterDateFrom" onchange="applyFilters()">
         <span style="color:var(--text-dim);">—</span>
         <input type="date" id="filterDateTo" onchange="applyFilters()">
         <button class="btn btn-xs btn-secondary" onclick="clearDateRange()" style="white-space:nowrap;">Temizle</button>
+      </div>
+
+      <!-- Araç çubuğu: yenile + dışa aktarma -->
+      <div class="export-bar">
+        <button class="export-btn ex-refresh" id="listRefreshBtn" onclick="manualRefreshList()"><i class="fas fa-sync-alt"></i> Yenile<span id="listRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
+        <button class="export-btn" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+        <button class="export-btn" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="export-btn" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> Filtreli CSV</button>
+        <button class="export-btn ex-pdf" onclick="printListPDF()"><i class="fas fa-file-pdf"></i> PDF Yazdır</button>
       </div>
 
       <!-- Bulk Action Bar -->
@@ -5489,7 +5502,7 @@ function loadAtolyeFilter(){
   sel.value=current||'all';
   // Aramali picker butonunun label'ini sync et
   const lbl = document.getElementById('filterAtolyeLabel');
-  if(lbl) lbl.textContent = (sel.value === 'all' || !sel.value) ? '🏭 Tüm Atölyeler' : ('🏭 ' + sel.value);
+  if(lbl) lbl.textContent = (sel.value === 'all' || !sel.value) ? 'Tüm Atölyeler' : sel.value;
 }
 
 // === ARAMALI ATOLYE PICKER — hem liste sayfasindaki filtre hem de irsaliye

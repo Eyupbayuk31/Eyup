@@ -4125,6 +4125,32 @@ tr:hover .table-actions-more{
   .ls-num{font-size:19px;}
 }
 
+/* ── Modern filtre alanları (ikon + select + chevron sarmalayıcı) ── */
+.fsel{position:relative;display:inline-flex;align-items:center;gap:9px;flex:1 1 190px;min-width:165px;padding:0 13px;height:46px;background:var(--bg-card);border:1px solid var(--border);border-radius:13px;cursor:pointer;transition:border-color .15s,box-shadow .15s;box-sizing:border-box;}
+.fsel:hover{border-color:color-mix(in srgb,var(--primary) 40%,var(--border));}
+.fsel:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
+.fsel-lead{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary-light);}
+.fsel-input{flex:1;min-width:0;appearance:none;-webkit-appearance:none;-moz-appearance:none;background:transparent;border:0;outline:none;color:var(--text-main);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;}
+.fsel-input option{background:var(--bg-card);color:var(--text-main);font-weight:600;}
+.fsel-chev{font-size:11px;color:var(--text-muted);flex-shrink:0;pointer-events:none;transition:transform .18s;}
+.fsel:focus-within .fsel-chev{transform:rotate(180deg);color:var(--primary-light);}
+.fsel-btn{text-align:left;font-family:inherit;}
+.fsel-btn-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;color:var(--text-main);}
+@media(max-width:640px){
+  .filter-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .fsel{flex:0 0 auto;min-width:158px;}
+}
+
+/* ── Dışa aktarma çubuğu — sade, tek vurgu (renk cümbüşü yerine)
+   #page-list öneki ile daha aşağıdaki nth-child renk kurallarını (aynı özgüllük) geçersiz kılar ── */
+#page-list .export-bar .export-btn{background:color-mix(in srgb,var(--primary) 6%,transparent) !important;color:var(--text-main) !important;border:1px solid var(--border) !important;box-shadow:none !important;border-radius:11px !important;}
+#page-list .export-bar .export-btn:hover{border-color:color-mix(in srgb,var(--primary) 45%,var(--border)) !important;background:color-mix(in srgb,var(--primary) 12%,transparent) !important;transform:translateY(-2px) !important;}
+#page-list .export-bar .export-btn i{color:var(--primary-light) !important;opacity:1 !important;}
+#page-list .export-bar .export-btn.ex-refresh i{color:#60a5fa !important;}
+#page-list .export-bar .export-btn.ex-pdf{background:linear-gradient(135deg,#ef4444,#dc2626) !important;color:#fff !important;border-color:rgba(239,68,68,.4) !important;}
+#page-list .export-bar .export-btn.ex-pdf i{color:#fff !important;}
+#page-list .export-bar .export-btn.ex-pdf:hover{box-shadow:0 6px 18px rgba(239,68,68,.35) !important;background:linear-gradient(135deg,#f05555,#e02b2b) !important;}
+
 .type-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
 .type-badge.standart{background:color-mix(in srgb, var(--primary) 12%, transparent);color:#a78bfa;}
 .type-badge.fermuar{background:rgba(59,130,246,0.12);color:#60a5fa;}
