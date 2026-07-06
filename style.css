@@ -4106,6 +4106,25 @@ tr:hover .table-actions-more{
 .list-stat-mini .lsm-value{font-size:20px;font-weight:800;color:var(--primary);}
 .list-stat-mini .lsm-label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
 
+/* ── Birleşik tür filtre/istatistik şeridi (liste sayfası) ── */
+.ls-strip{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:16px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+.ls-strip::-webkit-scrollbar{height:5px;}
+.ls-strip::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--primary) 30%,transparent);border-radius:3px;}
+.ls-card{flex:1 0 auto;min-width:98px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s,background .16s;text-align:left;font-family:inherit;}
+.ls-card:hover{border-color:color-mix(in srgb,var(--primary) 42%,var(--border));transform:translateY(-2px);}
+.ls-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary-light);margin-bottom:6px;}
+.ls-num{font-size:22px;font-weight:800;line-height:1;color:var(--text-main);font-variant-numeric:tabular-nums;}
+.ls-lbl{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
+.ls-card.active{border-color:var(--primary);background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 16%,var(--bg-card)),color-mix(in srgb,var(--primary) 6%,var(--bg-card)));box-shadow:0 6px 20px -8px var(--primary-glow);}
+.ls-card.active .ls-ic{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;}
+.ls-card.active .ls-num{color:var(--primary-light);}
+.ls-card.active .ls-lbl{color:var(--primary-light);}
+.ls-card-all.active .ls-num,.ls-card-all .ls-num{color:var(--text-main);}
+@media(max-width:640px){
+  .ls-card{min-width:88px;padding:10px 12px;}
+  .ls-num{font-size:19px;}
+}
+
 .type-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
 .type-badge.standart{background:color-mix(in srgb, var(--primary) 12%, transparent);color:#a78bfa;}
 .type-badge.fermuar{background:rgba(59,130,246,0.12);color:#60a5fa;}

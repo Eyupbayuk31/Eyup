@@ -1665,11 +1665,8 @@
         <button class="btn btn-primary" onclick="showPage('new')"><i class="fas fa-plus"></i> Yeni Ekle</button>
       </div>
 
-      <!-- Mini Stats -->
-      <div class="list-stats" id="listStats"></div>
-
-      <!-- Type Filter -->
-      <div class="type-filter-bar" id="typeFilterBar"></div>
+      <!-- Tür filtresi + sayımlar (tek satır: istatistik kartları hem sayı gösterir hem filtreler) -->
+      <div class="ls-strip" id="listStats"></div>
 
       <!-- Search -->
       <div class="search-bar">
@@ -5469,18 +5466,13 @@ function renderTypeFilterBar(){
     {key:'dantel',label:'Dantel',icon:'fas fa-border-all'},
   ];
   
-  document.getElementById('typeFilterBar').innerHTML=types.map(t=>`
-    <div class="type-chip ${currentTypeFilter===t.key?'active':''}" onclick="setTypeFilter('${t.key}')">
-      <i class="${t.icon}"></i> ${t.label} <span class="tc-count">${counts[t.key]||0}</span>
-    </div>
-  `).join('');
-  
-  // Mini stats
-  document.getElementById('listStats').innerHTML=types.filter(t=>t.key!=='all').map(t=>`
-    <div class="list-stat-mini ${currentTypeFilter===t.key?'active':''}" onclick="setTypeFilter('${t.key}')">
-      <div class="lsm-value">${counts[t.key]||0}</div>
-      <div class="lsm-label">${t.label}</div>
-    </div>
+  // Tek satır: hem tür sayımı gösterir hem filtre görevi görür ("Tümü" dahil)
+  document.getElementById('listStats').innerHTML=types.map(t=>`
+    <button type="button" class="ls-card ${currentTypeFilter===t.key?'active':''} ${t.key==='all'?'ls-card-all':''}" onclick="setTypeFilter('${t.key}')">
+      <span class="ls-ic"><i class="${t.icon}"></i></span>
+      <span class="ls-num">${counts[t.key]||0}</span>
+      <span class="ls-lbl">${t.label}</span>
+    </button>
   `).join('');
 }
 
