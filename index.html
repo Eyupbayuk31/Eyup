@@ -5831,15 +5831,27 @@ function showDetailUni(id,type){
   const list=getData(key);const item=list.find(i=>i.id===id);if(!item)return;
   document.getElementById('modalTitle').textContent=(item.no||'Detay')+' — '+getTypeLabel(type);
   
-  let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-    <div><span style="color:var(--text-muted);font-size:11px;">Tür</span><div>${getTypeBadge(type)}</div></div>
-    <div><span style="color:var(--text-muted);font-size:11px;">Tarih</span><div style="font-weight:600;font-size:14px;">${item.tarih||'-'}</div></div>
-    <div><span style="color:var(--text-muted);font-size:11px;">Model/Ürün</span><div style="font-weight:600;font-size:14px;">${item.model||item.urun||'-'}</div></div>
-    <div><span style="color:var(--text-muted);font-size:11px;">Atölye/Firma</span><div style="font-weight:600;font-size:14px;">${item.atolye||item.firma||'-'}</div></div>
-    <div><span style="color:var(--text-muted);font-size:11px;">Durum</span><div><span class="chip ${item.durum==='teslim'?'chip-success':'chip-warning'}">${item.durum==='teslim'?'✓ Teslim':'⏳ Bekliyor'}</span></div></div>
-    ${item.termin?`<div><span style="color:var(--text-muted);font-size:11px;">Termin</span><div style="font-weight:600;font-size:14px;">${item.termin}</div></div>`:''}
-    ${item.teslimEden?`<div><span style="color:var(--text-muted);font-size:11px;">Teslim Eden</span><div style="font-weight:600;font-size:14px;">${item.teslimEden}</div></div>`:''}
-    ${item.teslimAlan?`<div><span style="color:var(--text-muted);font-size:11px;">Teslim Alan</span><div style="font-weight:600;font-size:14px;">${item.teslimAlan}</div></div>`:''}
+  // Termin gecikmiş mi? (bugünden önce ve teslim edilmemiş)
+  let terminLate=false;
+  if(item.termin && item.durum!=='teslim'){
+    try{ terminLate = new Date(item.termin) < new Date(new Date().toDateString()); }catch(_){}
+  }
+  const _tile=(ic,lbl,valHtml,extraCls)=>`<div class="dt-info ${extraCls||''}">
+      <div class="dt-info-ic"><i class="fas ${ic}"></i></div>
+      <div class="dt-info-body"><div class="dt-info-lbl">${lbl}</div><div class="dt-info-val">${valHtml}</div></div>
+    </div>`;
+  const durumHtml = item.durum==='teslim'
+    ? '<span class="dt-pill dt-pill-ok"><i class="fas fa-circle-check"></i> Teslim Edildi</span>'
+    : '<span class="dt-pill dt-pill-wait"><i class="fas fa-hourglass-half"></i> Bekliyor</span>';
+  let html=`<div class="dt-info-grid">
+    ${_tile('fa-tag','Tür', getTypeBadge(type))}
+    ${_tile('fa-calendar-day','Tarih', esc(item.tarih||'-'))}
+    ${_tile('fa-cube','Model / Ürün', esc(item.model||item.urun||'-'), 'dt-info-full dt-info-hero')}
+    ${_tile('fa-industry','Atölye / Firma', esc(item.atolye||item.firma||'-'))}
+    ${_tile('fa-circle-info','Durum', durumHtml)}
+    ${item.termin?_tile('fa-hourglass-half','Termin', esc(item.termin)+(terminLate?' <span class="dt-late">· GECİKTİ</span>':''), terminLate?'dt-info-late':''):''}
+    ${item.teslimEden?_tile('fa-truck-ramp-box','Teslim Eden', esc(item.teslimEden)):''}
+    ${item.teslimAlan?_tile('fa-hand-holding-heart','Teslim Alan', esc(item.teslimAlan)):''}
   </div>`;
   
   // Type-specific details
