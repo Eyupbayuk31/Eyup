@@ -5307,6 +5307,11 @@ tr:hover .table-actions-more{
 .db-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .db-quick-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:16px 8px;border-radius:12px;border:1px solid var(--border);background:var(--glass);font-size:12px;font-weight:700;cursor:pointer;color:var(--text-main);transition:all 0.2s;}
 .db-quick-btn i{font-size:18px}
+/* Üstteki tam-genişlik Hızlı İşlemler: butonlar tek satırda yatay (toolbar) düzeni */
+.db-quick-wide .db-quick-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;}
+.db-quick-wide .db-quick-btn{flex-direction:row;padding:13px 14px;gap:9px;}
+.db-quick-wide .db-quick-btn i{font-size:15px}
+@media(max-width:560px){.db-quick-wide .db-quick-grid{grid-template-columns:1fr 1fr;}}
 .db-quick-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 .db-qb-purple:hover{background:color-mix(in srgb, var(--primary) 12%, transparent);border-color:var(--primary);color:var(--primary)}
 .db-qb-blue:hover{background:rgba(59,130,246,0.12);border-color:#3b82f6;color:#3b82f6}

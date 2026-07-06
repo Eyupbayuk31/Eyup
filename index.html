@@ -1477,6 +1477,19 @@
     </div>
   </div>
 
+  <!-- Hızlı İşlemler — sık kullanılan sayfalara tek tıkla erişim (üstte) -->
+  <div class="card db-quick-wide" style="margin-bottom:16px;">
+    <div class="card-title"><i class="fas fa-bolt"></i> Hızlı İşlemler</div>
+    <div class="db-quick-grid">
+      <button class="db-quick-btn db-qb-purple" onclick="showPage('new')"><i class="fas fa-plus-circle"></i><span>Yeni İrsaliye</span></button>
+      <button class="db-quick-btn db-qb-blue"   onclick="showPage('fermuar')"><i class="fas fa-link"></i><span>Fermuar</span></button>
+      <button class="db-quick-btn db-qb-green"  onclick="showPage('lastik')"><i class="fas fa-ruler"></i><span>Lastik</span></button>
+      <button class="db-quick-btn db-qb-amber"  onclick="showPage('dugme')"><i class="fas fa-circle-dot"></i><span>Düğme</span></button>
+      <button class="db-quick-btn db-qb-pink"   onclick="showPage('toptan')"><i class="fas fa-boxes-stacked"></i><span>Toptan</span></button>
+      <button class="db-quick-btn db-qb-teal"   onclick="showPage('reports')"><i class="fas fa-chart-bar"></i><span>Raporlar</span></button>
+    </div>
+  </div>
+
   <!-- PAKET 4: Ay Karşılaştırma -->
   <div class="db-compare-row">
     <div class="db-compare-card" id="ccThisMonth">
@@ -1491,63 +1504,9 @@
     </div>
   </div>
 
-  <div class="db-mini-row">
-    <div class="db-mini-card" onclick="showPage('list')">
-      <div class="db-mini-icon" style="background:rgba(124,58,237,0.12);color:var(--primary)"><i class="fas fa-box"></i></div>
-      <div class="db-mini-val" id="miniStandart">0</div>
-      <div class="db-mini-lbl">Poset</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('fermuar')">
-      <div class="db-mini-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6"><i class="fas fa-link"></i></div>
-      <div class="db-mini-val" id="miniFermuar">0</div>
-      <div class="db-mini-lbl">Fermuar</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('lastik')">
-      <div class="db-mini-icon" style="background:rgba(16,185,129,0.12);color:#10b981"><i class="fas fa-ruler"></i></div>
-      <div class="db-mini-val" id="miniLastik">0</div>
-      <div class="db-mini-lbl">Lastik</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('dugme')">
-      <div class="db-mini-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b"><i class="fas fa-circle-dot"></i></div>
-      <div class="db-mini-val" id="miniDugme">0</div>
-      <div class="db-mini-lbl">Dugme</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('toptan')">
-      <div class="db-mini-icon" style="background:rgba(236,72,153,0.12);color:#ec4899"><i class="fas fa-boxes-stacked"></i></div>
-      <div class="db-mini-val" id="miniToptan">0</div>
-      <div class="db-mini-lbl">Toptan</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('satenaskilik')">
-      <div class="db-mini-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6"><i class="fas fa-layer-group"></i></div>
-      <div class="db-mini-val" id="miniSaten">0</div>
-      <div class="db-mini-lbl">Saten</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('kordon')">
-      <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-bezier-curve"></i></div>
-      <div class="db-mini-val" id="miniKordon">0</div>
-      <div class="db-mini-lbl">Kordon</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('dantel')">
-      <div class="db-mini-icon" style="background:rgba(99,102,241,0.12);color:#6366f1"><i class="fas fa-border-all"></i></div>
-      <div class="db-mini-val" id="miniDantel">0</div>
-      <div class="db-mini-lbl">Dantel</div>
-    </div>
-    <div class="db-mini-card" onclick="showPage('atolye')">
-      <div class="db-mini-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6"><i class="fas fa-industry"></i></div>
-      <div class="db-mini-val" id="miniAtolye">0</div>
-      <div class="db-mini-lbl">Atolye</div>
-    </div>
-  </div>
-
-  <div class="db-mid-grid">
-    <div class="card">
-      <div class="card-title"><i class="fas fa-chart-bar"></i> Son 7 Gunluk Aktivite <span id="db7dayTotal" style="margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:500"></span></div>
-      <canvas id="db7dayChart" height="160"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title"><i class="fas fa-history"></i> Son Irsaliyeler <button class="btn btn-xs btn-secondary" onclick="showPage('list')" style="margin-left:auto">Tumu</button></div>
-      <div id="dbRecentList"></div>
-    </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title"><i class="fas fa-chart-bar"></i> Son 7 Günlük Aktivite <span id="db7dayTotal" style="margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:500"></span></div>
+    <canvas id="db7dayChart" height="150"></canvas>
   </div>
 
   <div class="db-bot-grid">
@@ -1567,17 +1526,6 @@
     <div class="card">
       <div class="card-title"><i class="fas fa-trophy" style="color:#f59e0b"></i> Top Atölyeler (Bu Ay)</div>
       <div class="db-top-list" id="dbTopAtolye"></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><i class="fas fa-bolt"></i> Hizli Islemler</div>
-      <div class="db-quick-grid">
-        <button class="db-quick-btn db-qb-purple" onclick="showPage('new')"><i class="fas fa-plus-circle"></i><span>Yeni Irsaliye</span></button>
-        <button class="db-quick-btn db-qb-blue"   onclick="showPage('fermuar')"><i class="fas fa-link"></i><span>Fermuar</span></button>
-        <button class="db-quick-btn db-qb-green"  onclick="showPage('lastik')"><i class="fas fa-ruler"></i><span>Lastik</span></button>
-        <button class="db-quick-btn db-qb-amber"  onclick="showPage('dugme')"><i class="fas fa-circle-dot"></i><span>Dugme</span></button>
-        <button class="db-quick-btn db-qb-pink"   onclick="showPage('toptan')"><i class="fas fa-boxes-stacked"></i><span>Toptan</span></button>
-        <button class="db-quick-btn db-qb-teal"   onclick="showPage('reports')"><i class="fas fa-chart-bar"></i><span>Raporlar</span></button>
-      </div>
     </div>
   </div>
 
