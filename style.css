@@ -8819,45 +8819,31 @@ input:focus, select:focus, textarea:focus {
 
 /* ── Type badges — premium pill ── */
 .type-badge {
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:6px !important;
   font-family: var(--font-display-studio) !important;
-  font-size: 9.5px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.7px !important;
-  padding: 3px 9px !important;
-  border-radius: 100px !important;
-  border: 1px solid !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px !important;
+  text-transform: none !important;
+  padding: 4px 11px 4px 9px !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
+.type-badge i { font-size: 10px !important; opacity: 0.85; }
 
-.type-badge.standart {
-  background: rgba(167,139,250,0.1) !important;
-  color: #c4b5fd !important;
-  border-color: rgba(167,139,250,0.25) !important;
-  text-shadow: 0 0 8px rgba(167,139,250,0.4);
-}
-.type-badge.fermuar {
-  background: rgba(96,165,250,0.1) !important;
-  color: #93c5fd !important;
-  border-color: rgba(96,165,250,0.25) !important;
-  text-shadow: 0 0 8px rgba(96,165,250,0.4);
-}
-.type-badge.lastik {
-  background: rgba(52,211,153,0.1) !important;
-  color: #6ee7b7 !important;
-  border-color: rgba(52,211,153,0.25) !important;
-  text-shadow: 0 0 8px rgba(52,211,153,0.4);
-}
-.type-badge.dugme {
-  background: rgba(251,191,36,0.1) !important;
-  color: #fde68a !important;
-  border-color: rgba(251,191,36,0.25) !important;
-  text-shadow: 0 0 8px rgba(251,191,36,0.4);
-}
-.type-badge.toptan {
-  background: rgba(244,114,182,0.1) !important;
-  color: #fbcfe8 !important;
-  border-color: rgba(244,114,182,0.25) !important;
-  text-shadow: 0 0 8px rgba(244,114,182,0.4);
-}
+.type-badge.standart     { background: rgba(167,139,250,0.13) !important; color: #c4b5fd !important; border-color: rgba(167,139,250,0.22) !important; }
+.type-badge.fermuar      { background: rgba(96,165,250,0.13) !important;  color: #93c5fd !important; border-color: rgba(96,165,250,0.22) !important; }
+.type-badge.lastik       { background: rgba(52,211,153,0.13) !important;  color: #6ee7b7 !important; border-color: rgba(52,211,153,0.22) !important; }
+.type-badge.dugme        { background: rgba(251,191,36,0.13) !important;  color: #fcd34d !important; border-color: rgba(251,191,36,0.22) !important; }
+.type-badge.toptan       { background: rgba(244,114,182,0.13) !important; color: #f9a8d4 !important; border-color: rgba(244,114,182,0.22) !important; }
+.type-badge.satenaskilik { background: rgba(45,212,191,0.13) !important;  color: #5eead4 !important; border-color: rgba(45,212,191,0.22) !important; }
+.type-badge.kordon       { background: rgba(251,146,60,0.13) !important;  color: #fdba74 !important; border-color: rgba(251,146,60,0.22) !important; }
+.type-badge.dantel       { background: rgba(232,121,249,0.13) !important; color: #f0abfc !important; border-color: rgba(232,121,249,0.22) !important; }
 
 /* ── Action buttons — elevated style ── */
 .uni-mobile-card .mc-actions-new {
@@ -9248,6 +9234,9 @@ input:focus, select:focus, textarea:focus {
 .table-desktop tbody tr[data-type="lastik"]   { --row-accent: #34d399; --row-glow: rgba(52,211,153,0.12); }
 .table-desktop tbody tr[data-type="dugme"]    { --row-accent: #fbbf24; --row-glow: rgba(251,191,36,0.12); }
 .table-desktop tbody tr[data-type="toptan"]   { --row-accent: #f472b6; --row-glow: rgba(244,114,182,0.12); }
+.table-desktop tbody tr[data-type="satenaskilik"] { --row-accent: #2dd4bf; --row-glow: rgba(45,212,191,0.12); }
+.table-desktop tbody tr[data-type="kordon"]   { --row-accent: #fb923c; --row-glow: rgba(251,146,60,0.12); }
+.table-desktop tbody tr[data-type="dantel"]   { --row-accent: #e879f9; --row-glow: rgba(232,121,249,0.12); }
 
 .table-desktop tbody tr:hover {
   background: var(--row-glow, color-mix(in srgb, var(--primary) 8%, transparent)) !important;

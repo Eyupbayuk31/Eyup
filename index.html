@@ -5743,7 +5743,9 @@ function getTypeLabel(type){
 }
 
 function getTypeBadge(type){
-  return `<span class="type-badge ${type}">${getTypeLabel(type)}</span>`;
+  const icons={standart:'fa-box',fermuar:'fa-link',lastik:'fa-ruler',dugme:'fa-circle-dot',toptan:'fa-boxes-stacked',satenaskilik:'fa-ribbon',kordon:'fa-bezier-curve',dantel:'fa-border-all'};
+  const labels={standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten',kordon:'Kordon',dantel:'Dantel'};
+  return `<span class="type-badge ${type}"><i class="fas ${icons[type]||'fa-tag'}"></i>${labels[type]||type}</span>`;
 }
 
 function getItemDetail(item){
