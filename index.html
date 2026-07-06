@@ -12172,7 +12172,7 @@ function renderSigWaybillList(){
     if(pc) badges.push(`<span class="sig-wb-badge photo">📸 ${pc>1?pc+' Foto':'Fotoğraflı'}</span>`);
     const quickActions = pc ? `
         <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); generatePDF(${JSON.stringify(i.id)},'${i._type}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
-        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); shareIrsaliyeWhatsApp(${JSON.stringify(i.id)},'${i._type}')" title="WhatsApp'tan Gönder" style="color:#25D366;"><i class="fab fa-whatsapp"></i></button>
+        <button class="btn btn-xs" onclick="event.stopPropagation(); shareIrsaliyeWhatsApp(${JSON.stringify(i.id)},'${i._type}')" title="WhatsApp'tan Gönder" style="background:#25D366;color:#fff;border:0;"><i class="fab fa-whatsapp"></i></button>
       ` : '';
     const bodyId = 'sigWbBody-' + _sigRowSafeKey(i._type, i.id);
     return `
@@ -13636,7 +13636,7 @@ function renderPhotoGallery(){
                </div>`;
         return `
         <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
-          ${imgSrc ? `<img src="${imgSrc}" style="width:90px;height:90px;object-fit:cover;display:block;" alt="foto ${idx+1}">` : `<div style="width:90px;height:90px;background:#374151;display:flex;align-items:center;justify-content:center;font-size:22px;">🖼️</div>`}
+          ${imgSrc ? `<img src="${imgSrc}" onclick="openPhotoLightbox(${idx})" style="width:90px;height:90px;object-fit:cover;display:block;cursor:zoom-in;" alt="foto ${idx+1}">` : `<div style="width:90px;height:90px;background:#374151;display:flex;align-items:center;justify-content:center;font-size:22px;">🖼️</div>`}
           <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;">${idx+1}</div>
           ${statusBadge}
           <button onclick="removePhotoAt(${idx})" title="Bu fotoğrafı sil" style="position:absolute;top:3px;right:3px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">✕</button>
