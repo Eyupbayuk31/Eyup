@@ -2090,6 +2090,12 @@
       <!-- Özet KPI -->
       <div class="ft-kpis" id="ftKpis"></div>
 
+      <!-- Aktif / Tamamlananlar sekmesi -->
+      <div class="ft-view-tabs">
+        <button class="btn btn-sm rep-tab-btn active" id="ftTabActive" onclick="ftSetViewTab('active',this)"><i class="fas fa-list-check"></i> Aktif</button>
+        <button class="btn btn-sm rep-tab-btn" id="ftTabDone" onclick="ftSetViewTab('done',this)"><i class="fas fa-check-double"></i> Tamamlananlar</button>
+      </div>
+
       <!-- Arama + sayım -->
       <div class="ft-search-row">
         <div class="ft-search-box">
@@ -4608,21 +4614,42 @@ function ftManualRefresh(){
   if(typeof toast==='function') toast('Fermuar Takip güncellendi','success');
 }
 
+// Sipariş edilen tüm bedenler tam geldiyse model "tamamlandı" sayılır (karttaki "Tamamlandı" rozetiyle aynı kural).
+function _ftIsCompleted(m){
+  const sizeCount=(m.sizes||[]).length;
+  if(!sizeCount) return false;
+  const sip=_ftModelSip(m), gel=_ftModelGelen(m);
+  return sip>0 && gel>=sip;
+}
+let _ftViewTab='active';
+function ftSetViewTab(tab, btn){
+  _ftViewTab=tab;
+  document.querySelectorAll('.ft-view-tabs .rep-tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderFermuarTakip();
+}
 function renderFermuarTakip(){
   const tg=document.getElementById('ftStockControl'); if(tg) tg.checked=ftStockControlOn();
 
   const all=_ftAll();
+  const activeModels=all.filter(m=>!_ftIsCompleted(m));
+  const doneModels=all.filter(m=>_ftIsCompleted(m));
+  const tabModels = _ftViewTab==='done' ? doneModels : activeModels;
+  const doneBtn=document.getElementById('ftTabDone'), activeBtn=document.getElementById('ftTabActive');
+  if(activeBtn) activeBtn.innerHTML='<i class="fas fa-list-check"></i> Aktif ('+activeModels.length.toLocaleString('tr')+')';
+  if(doneBtn) doneBtn.innerHTML='<i class="fas fa-check-double"></i> Tamamlananlar ('+doneModels.length.toLocaleString('tr')+')';
+
   const q=(document.getElementById('ftSearch')?.value||'').trim().toLocaleLowerCase('tr');
-  const list = q ? all.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(q)) : all.slice();
+  const list = q ? tabModels.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(q)) : tabModels.slice();
   list.sort((a,b)=>_ftModelBekleyen(b)-_ftModelBekleyen(a) || (b.createdAt||'').localeCompare(a.createdAt||''));
 
-  // KPI (tüm modeller toplamı)
+  // KPI (görüntülenen sekmedeki modellerin toplamı)
   let tSip=0,tGel=0,tStok=0,tBek=0;
-  all.forEach(m=>{ tSip+=_ftModelSip(m); tGel+=_ftModelGelen(m); tStok+=_ftModelStok(m); tBek+=_ftModelBekleyen(m); });
+  tabModels.forEach(m=>{ tSip+=_ftModelSip(m); tGel+=_ftModelGelen(m); tStok+=_ftModelStok(m); tBek+=_ftModelBekleyen(m); });
   const kpi=document.getElementById('ftKpis');
   if(kpi){
     kpi.innerHTML=[
-      ['fa-layer-group', all.length.toLocaleString('tr'), 'Takipteki Model', 'p'],
+      ['fa-layer-group', tabModels.length.toLocaleString('tr'), _ftViewTab==='done'?'Tamamlanan Model':'Aktif Model', 'p'],
       ['fa-truck-ramp-box', tGel.toLocaleString('tr'), 'Toplam Gelen', 'g'],
       ['fa-warehouse', tStok.toLocaleString('tr'), 'Eldeki Stok', 's'],
       ['fa-hourglass-half', tBek.toLocaleString('tr'), 'Bekleyen Sipariş', 'a'],
@@ -4631,14 +4658,15 @@ function renderFermuarTakip(){
 
   const grid=document.getElementById('ftGrid');
   if(!grid) return;
-  // Canlı sayım çipi (arama varsa filtrelenmiş sayı, yoksa toplam)
+  // Canlı sayım çipi (arama varsa filtrelenmiş sayı, yoksa sekmedeki toplam)
   const countEl=document.getElementById('ftCount');
   if(countEl){
-    const n=q ? list.length : all.length;
+    const n=q ? list.length : tabModels.length;
     countEl.textContent = n.toLocaleString('tr')+' model'+(q?' ('+esc(q)+')':'');
     countEl.classList.toggle('on', n>0);
   }
   if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-link"></i><p>Henüz fermuar modeli yok. <b>Yeni Model</b> ile ekleyin: model kodu, tedarikçi, termin girin — sonra cm cm satın alma adetlerini o modelin içinde girersiniz.</p></div>'; return; }
+  if(!tabModels.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-check-double"></i><p>'+(_ftViewTab==='done'?'Henüz tamamlanan model yok.':'Aktif model yok — hepsi tamamlanmış.')+'</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
 
   grid.innerHTML=list.map(m=>{

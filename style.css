@@ -13362,6 +13362,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-toolbar-group .ft-toggle{ margin:0 4px 0 2px; }
 
 /* Arama satırı + canlı sayım çipi */
+.ft-view-tabs{ display:flex; gap:8px; margin-top:14px; }
 .ft-search-row{ display:flex; align-items:center; gap:12px; margin:16px 0 4px; }
 .ft-search-box{ position:relative; flex:1; max-width:460px; }
 .ft-search-box i{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; pointer-events:none; }
