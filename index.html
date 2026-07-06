@@ -1859,6 +1859,12 @@
           </div>
         </div>
       </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title"><i class="fas fa-list"></i> Düğme Kayıtları (<span id="dugmeCount">0</span>)</div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>Adet</th><th>İşlem</th></tr></thead><tbody id="dugmeTable"></tbody></table></div>
+        <div class="table-mobile" id="dugmeMobile" style="display:none;"></div>
+        <div id="dugmePagination"></div>
+      </div>
     </div>
 
     <!-- ========== SATEN ASKILIK ========== -->
@@ -5810,6 +5816,7 @@ function deleteItemUni(id,type){
   setData('recycleBin',recycle);
   applyFilters();refreshHome();toast('Kayıt geri dönüşüme taşındı','info');
   if(type==='lastik')refreshLastikList();
+  else if(type==='dugme')refreshDugmeList();
   else if(type==='toptan')refreshToptanList();
   else if(type==='kordon')refreshKordonList();
   else if(type==='dantel')refreshDantelList();
@@ -5959,7 +5966,7 @@ function editCurrentModalItem(){
 }
 
 const EDIT_TYPE_PAGE = {standart:'new', fermuar:'fermuar', lastik:'lastik', dugme:'dugme', toptan:'toptan', satenaskilik:'satenaskilik', kordon:'kordon', dantel:'dantel'};
-const EDIT_TYPE_REFRESH = {lastik:'refreshLastikList', toptan:'refreshToptanList', kordon:'refreshKordonList', dantel:'refreshDantelList', satenaskilik:'refreshSatenaskilikList'};
+const EDIT_TYPE_REFRESH = {lastik:'refreshLastikList', dugme:'refreshDugmeList', toptan:'refreshToptanList', kordon:'refreshKordonList', dantel:'refreshDantelList', satenaskilik:'refreshSatenaskilikList'};
 
 // Düzenleme modundaysa mevcut kaydı patch ile günceller ve true döner; değilse false döner (normal oluşturma akışı devam eder)
 function _saveUniIfEditing(type, patch){
@@ -6627,10 +6634,31 @@ function saveDugme(){
   _attachNfPhotosToItem(item,'dugme');
   const list=getData('dugmeler');list.unshift(item);setData('dugmeler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'dugme');
-  ['dModel','dTarih','dAtolye','dTeslimEden','dTeslimAlan','dRenk','dTermin','dAciklama','dAdet'].forEach(id=>document.getElementById(id).value='');
+  ['dModel','dTarih','dAtolye','dTeslimEden','dTeslimAlan','dRenk','dTermin','dAciklama','dAdet'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   _syncAtolyeLabel('dAtolye');
   const today=new Date().toISOString().split('T')[0];document.getElementById('dTarih').value=today;
-  toast('Düğme irsaliyesi kaydedildi: '+item.no);refreshHome();
+  _subListPage.dugme=1;refreshDugmeList();toast('Düğme irsaliyesi kaydedildi: '+item.no);refreshHome();
+}
+
+function deleteDugme(id){deleteItemUni(id,'dugme');}
+function goToDugmePage(p){ _subListPage.dugme = p; refreshDugmeList(); }
+function refreshDugmeList(){
+  const fullList=getData('dugmeler');
+  const countEl=document.getElementById('dugmeCount'); if(countEl) countEl.textContent=fullList.length;
+  const tbody=document.getElementById('dugmeTable');
+  const mobileEl=document.getElementById('dugmeMobile');
+  if(!tbody) return;
+  if(!fullList.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Kayıt yok</td></tr>';
+    if(mobileEl) mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-circle-dot"></i><p>Kayıt yok</p></div>';
+    const pagEl=document.getElementById('dugmePagination');if(pagEl)pagEl.innerHTML='';
+    return;
+  }
+  const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.dugme,PAGE_SIZE);
+  _subListPage.dugme=page;
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${(+i.adet||0).toLocaleString('tr')} adet</td><td><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl) mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:#7c3aed;font-weight:600;">🔘 ${(+i.adet||0).toLocaleString('tr')} adet</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  _renderSubListPagination('dugmePagination',tbody,page,totalPages,total,start,end,'goToDugmePage');
 }
 
 // ==================== TOPTAN ====================
@@ -8834,6 +8862,7 @@ function refreshPage(page){
   else if(page==='stok')renderStokList();
   else if(page==='takvim')renderCalendar();
   else if(page==='lastik')refreshLastikList();
+  else if(page==='dugme')refreshDugmeList();
   else if(page==='toptan')refreshToptanList();
   else if(page==='satenaskilik')refreshSatenaskilikList();
   else if(page==='kordon')refreshKordonList();
@@ -8850,7 +8879,7 @@ function refreshPage(page){
 
 function refreshAll(){
   if(window._isViewerUrl) return;
-  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshToptanList();refreshSatenaskilikList();refreshKordonList();refreshDantelList();renderRecycleBin();
+  loadAtolyeSelects();updateBadge();refreshHome();applyFilters();refreshAtolyeList();renderStokList();try{renderAksesuarTable();}catch(e){}renderCalendar();refreshLastikList();refreshDugmeList();refreshToptanList();refreshSatenaskilikList();refreshKordonList();refreshDantelList();renderRecycleBin();
 }
 
 function loadSettings(){
@@ -10792,7 +10821,7 @@ function goToListPage(p) {
 });
 
 // --- Sub-list pagination (Lastik/Toptan/Kordon/Dantel/Saten Askılık kayıt listeleri) ---
-const _subListPage = { lastik:1, toptan:1, kordon:1, dantel:1, satenaskilik:1 };
+const _subListPage = { lastik:1, dugme:1, toptan:1, kordon:1, dantel:1, satenaskilik:1 };
 function goToLastikPage(p){ _subListPage.lastik = p; refreshLastikList(); }
 function goToToptanPage(p){ _subListPage.toptan = p; refreshToptanList(); }
 function goToKordonPage(p){ _subListPage.kordon = p; refreshKordonList(); }
