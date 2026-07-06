@@ -4702,7 +4702,7 @@ function renderFermuarTakip(){
         <div><span>Sipariş</span><b>${sip.toLocaleString('tr')}</b></div>
         <div><span>Gelen</span><b class="pos">${gel.toLocaleString('tr')}</b></div>
         <div><span>Bekleyen</span><b>${bek>0?'<span class="bad">'+bek.toLocaleString('tr')+'</span>':bek.toLocaleString('tr')}</b></div>
-        <div><span>CM Satırı</span><b>${sizeCount}</b></div>
+        <div><span>Beden</span><b>${sizeCount}</b></div>
       </div>
 
       <div class="ft-actions" onclick="event.stopPropagation()">
@@ -4781,7 +4781,7 @@ function _ftFindCopySource(model, list){
 function ftDeleteModel(id){
   const all=_ftAll();
   const m=all.find(x=>x.id===id); if(!m) return;
-  if(!confirm((m.modelKodu||'')+' modelini silmek istiyor musunuz? Tüm cm satırları ve geçmişi de silinir.')) return;
+  if(!confirm((m.modelKodu||'')+' modelini silmek istiyor musunuz? Tüm bedenler ve geçmişi de silinir.')) return;
   const next = all.filter(x=>x.id!==id);
   // Once localStorage'i senkron guncelle (UI hemen tazelensin), sonra bulut
   // yazmasini ATOMIK helper (syncDeleteWithTombstone) yapar: model silme +
@@ -4835,7 +4835,7 @@ function ftRenderDetail(){
   const sizes=_ftSizesSorted(m);
   const host=document.getElementById('ftDetailRows');
   if(!sizes.length){
-    host.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Henüz cm satırı yok. Yukarıdaki formla ekleyin — <b>küçükten büyüğe cm sırasına</b> göre listelenir.</p></div>';
+    host.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Henüz beden yok. Yukarıdaki formla ekleyin — <b>küçükten büyüğe cm sırasına</b> göre listelenir.</p></div>';
     return;
   }
   host.innerHTML = `<div class="ft-rowhead">
@@ -4917,12 +4917,12 @@ function ftAddSizeRow(){
   setTimeout(()=>{ const el=document.getElementById('ftRowCm'); if(el) el.focus(); },50);
 }
 function ftDeleteSizeRow(modelId, sizeId){
-  if(!confirm('Bu cm satırını silmek istiyor musunuz? Teslimat/kullanım geçmişi de silinir.')) return;
+  if(!confirm('Bu bedeni silmek istiyor musunuz? Teslimat/kullanım geçmişi de silinir.')) return;
   let list=_ftAll(); const idx=list.findIndex(x=>x.id===modelId); if(idx<0) return;
   list[idx].sizes=(list[idx].sizes||[]).filter(z=>z.id!==sizeId);
   _ftStamp(list[idx]);
   setData('fermuarTakip',list);
-  ftRenderDetail(); toast('CM satırı silindi','info');
+  ftRenderDetail(); toast('Beden silindi','info');
 }
 
 // ── Teslimat Gir (model+beden satırı bağlamında) ──
@@ -4987,7 +4987,7 @@ function ftOpenPdfModal(){
       <span class="ft-pdf-check"></span>
       <span class="ft-pdf-info">
         <span class="ft-pdf-model">${esc(m.modelKodu)}</span>
-        <span class="ft-pdf-meta">${n} cm satırı · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
+        <span class="ft-pdf-meta">${n} beden · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
       </span>
       ${eksik>0?`<span class="ft-pdf-eksik">${eksik.toLocaleString('tr')} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
     </label>`;
