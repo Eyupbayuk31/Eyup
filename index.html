@@ -7186,6 +7186,52 @@ function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
   if(badgeLblEl) badgeLblEl.textContent = badgeLbl;
 }
 
+// Giriş sonrası ~2.3sn'lik yükleme ekranı: adımları sırayla tamamlar,
+// arka planda dashboard'u hazırlar, sonra ana sayfaya geçer.
+function runBootSequence(username){
+  var splash = document.getElementById('bootSplash');
+  if(!splash){
+    if(typeof toast==='function') toast('Hoş geldin, '+(username||'')+' 👋','success');
+    return;
+  }
+  var steps = Array.prototype.slice.call(splash.querySelectorAll('.boot-step'));
+  var bar = document.getElementById('bootBarFill');
+  var hint = document.getElementById('bootHint');
+  var hints = ['Kullanıcılar yükleniyor…','İrsaliyeler yükleniyor…','Atölyeler ve stok yükleniyor…','Panel hazırlanıyor…'];
+  steps.forEach(function(s){ s.classList.remove('active','done'); });
+  if(bar) bar.style.width='0%';
+  splash.classList.remove('hide');
+  splash.style.display='flex';
+  splash.setAttribute('aria-hidden','false');
+
+  // Ana sayfayı arka planda hazırla
+  try{ showPage('home'); }catch(_){}
+
+  var stepMs = 520;
+  steps.forEach(function(step, idx){
+    setTimeout(function(){
+      if(idx>0){ steps[idx-1].classList.remove('active'); steps[idx-1].classList.add('done'); }
+      step.classList.add('active');
+      if(hint) hint.textContent = hints[idx]||'';
+      if(bar) bar.style.width = Math.round(((idx+1)/steps.length)*100)+'%';
+      if(idx===steps.length-1){ try{ refreshHome(); }catch(_){} }
+    }, idx*stepMs);
+  });
+
+  var totalMs = steps.length*stepMs; // 4*520 = 2080ms
+  setTimeout(function(){
+    var last=steps[steps.length-1];
+    if(last){ last.classList.remove('active'); last.classList.add('done'); }
+    if(hint) hint.textContent='Hazır ✓';
+  }, totalMs);
+  setTimeout(function(){
+    splash.classList.add('hide');
+    setTimeout(function(){ splash.style.display='none'; splash.setAttribute('aria-hidden','true'); }, 500);
+    if(typeof toast==='function') toast('Hoş geldin, '+(username||'')+' 👋','success');
+  }, totalMs+220); // ~2.3sn
+}
+window.runBootSequence = runBootSequence;
+
 
 function renderHomeChart(irsaliyeler){
   const ctx=document.getElementById('homeChart');if(!ctx)return;
@@ -15101,6 +15147,25 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 
+<!-- ==================== GİRİŞ SONRASI YÜKLEME EKRANI ==================== -->
+<div id="bootSplash" style="display:none;" aria-hidden="true">
+  <div class="lg-mesh" aria-hidden="true"></div>
+  <div class="boot-inner">
+    <div class="boot-brand">
+      <span class="boot-logo">İ</span>
+      <span class="boot-word"><span class="bw1">İrsaliye</span><span class="bw2"><em>Pro</em></span></span>
+    </div>
+    <div class="boot-steps" id="bootSteps">
+      <div class="boot-step" data-i="0"><span class="bs-ic"><i class="fas fa-users"></i></span><span class="bs-tx">Kullanıcılar yükleniyor</span><i class="fas fa-check bs-ok"></i></div>
+      <div class="boot-step" data-i="1"><span class="bs-ic"><i class="fas fa-file-invoice"></i></span><span class="bs-tx">İrsaliyeler yükleniyor</span><i class="fas fa-check bs-ok"></i></div>
+      <div class="boot-step" data-i="2"><span class="bs-ic"><i class="fas fa-industry"></i></span><span class="bs-tx">Atölyeler ve stok yükleniyor</span><i class="fas fa-check bs-ok"></i></div>
+      <div class="boot-step" data-i="3"><span class="bs-ic"><i class="fas fa-gauge-high"></i></span><span class="bs-tx">Panel hazırlanıyor</span><i class="fas fa-check bs-ok"></i></div>
+    </div>
+    <div class="boot-bar"><div class="boot-bar-fill" id="bootBarFill"></div></div>
+    <div class="boot-hint" id="bootHint">Bağlanılıyor…</div>
+  </div>
+</div>
+
 <!-- ==================== GİRİŞ SAYFASI (Eyüp) ==================== -->
 
 <div id="loginOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
@@ -15822,9 +15887,10 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
         btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
         setTimeout(()=>{
           hideLogin();
-          if(typeof toast==='function') toast('Hoş geldin, ' + u + ' 👋', 'success');
           btn.innerHTML = '<span class="spinner"></span><span class="btn-text"><i class="fas fa-sign-in-alt"></i> Giriş Yap</span>';
           btn.style.background = '';
+          if(typeof window.runBootSequence === 'function'){ window.runBootSequence(u); }
+          else if(typeof toast==='function'){ toast('Hoş geldin, ' + u + ' 👋', 'success'); }
         }, 500);
       } else {
         btn.classList.remove('loading');
