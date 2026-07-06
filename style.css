@@ -5878,9 +5878,12 @@ html{scroll-behavior:smooth;}
 .sig-filter-chip{padding:6px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:12px;transition:all 0.2s;}
 .sig-filter-chip:hover{border-color:var(--primary);color:var(--text);}
 .sig-filter-chip.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:var(--on-primary,#fff);border-color:var(--primary);box-shadow:0 2px 8px var(--primary-glow);}
-.sig-wb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;background:var(--bg-card);transition:all 0.15s;}
+.sig-wb-row{margin-bottom:8px;}
+.sig-wb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg-card);transition:all 0.15s;}
 .sig-wb-item:hover{border-color:var(--primary);transform:translateX(2px);}
 .sig-wb-item.selected{border-color:var(--primary);background:color-mix(in srgb, var(--primary) 8%, transparent);box-shadow:0 2px 10px var(--primary-glow);}
+.sig-wb-row.expanded .sig-wb-item{border-radius:var(--radius-sm) var(--radius-sm) 0 0;transform:none;}
+.sig-wb-row.expanded .sig-wb-item:hover{transform:none;}
 .sig-wb-info{flex:1;min-width:0;}
 .sig-wb-no{font-weight:700;color:var(--primary);font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .sig-wb-meta{font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -5888,6 +5891,9 @@ html{scroll-behavior:smooth;}
 .sig-wb-badge.signed{background:rgba(16,185,129,0.15);color:#10b981;}
 .sig-wb-badge.photo{background:rgba(59,130,246,0.15);color:#3b82f6;}
 .sig-wb-badge.type{background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary-light);}
+.sig-wb-quick{display:flex;gap:6px;flex-shrink:0;}
+.sig-wb-chev{color:var(--text-muted);font-size:12px;flex-shrink:0;}
+.sig-wb-body{border:1px solid var(--primary);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:14px;background:var(--bg-card);}
 
 /* ==== TEMPLATES ==== */
 .tpl-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:all 0.25s;position:relative;}

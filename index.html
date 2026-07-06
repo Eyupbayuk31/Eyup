@@ -3345,7 +3345,7 @@
       </div>
 
       <div class="sig-wrap">
-        <div class="card-title"><i class="fas fa-list"></i> İrsaliye Seç</div>
+        <div class="card-title"><i class="fas fa-list"></i> İrsaliyeler</div>
         <div class="form-group">
           <input type="text" id="sigSearchInput" class="form-input" placeholder="🔍 İrsaliye no, model veya atölye ara..." oninput="renderSigWaybillList()">
         </div>
@@ -3354,53 +3354,55 @@
           <button type="button" class="sig-filter-chip" data-sigfilter="bekliyor" onclick="setSigFilter('bekliyor')">⏳ Bekleyen</button>
           <button type="button" class="sig-filter-chip" data-sigfilter="signed" onclick="setSigFilter('signed')">📸 Fotoğraflı</button>
         </div>
-        <div id="sigWaybillList" style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;background:var(--glass);"></div>
+        <div id="sigWaybillList"></div>
         <select id="sigWaybillSelect" style="display:none;" onchange="loadSigForWaybill()"><option value="">— İrsaliye seçin —</option></select>
-        <div id="sigSelectedInfo" style="font-size:12px;color:var(--text-muted);margin-top:10px;"></div>
       </div>
 
-      <!-- Photo Capture -->
-      <div class="photo-capture-wrap">
-        <div class="card-title"><i class="fas fa-camera"></i> Fotoğraf Çek / Ekle <span id="photoCountBadge" style="font-size:11px;font-weight:400;color:var(--text-muted);"></span></div>
-        <div style="display:none;" id="photoLiveBox">
-          <video id="photoVideo" autoplay playsinline muted></video>
-        </div>
-        <!-- Çoklu fotoğraf galerisi -->
-        <div id="photoGallery" style="display:none;margin-bottom:12px;"></div>
-        <div class="sig-actions">
-          <button class="btn btn-primary" id="photoStartBtn" onclick="startPhotoCamera()"><i class="fas fa-video"></i> Kamerayı Aç</button>
-          <button class="btn btn-success" id="photoCaptureBtn" onclick="capturePhoto()" style="display:none;"><i class="fas fa-camera"></i> Çek &amp; Ekle</button>
-          <button class="btn btn-secondary" id="photoStopBtn" onclick="stopPhotoCamera()" style="display:none;"><i class="fas fa-stop"></i> Kapat</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('photoFileInput').click()"><i class="fas fa-upload"></i> Galeriden Ekle</button>
-          <input type="file" id="photoFileInput" accept="image/*" style="display:none;" onchange="loadPhotoFromFile(event)" multiple>
-          <button class="btn btn-danger" onclick="removeAllPhotos()"><i class="fas fa-trash"></i> Tümünü Sil</button>
-        </div>
-        <canvas id="photoCanvas" style="display:none;"></canvas>
-      </div>
+      <!-- Canlı panel (kamera/galeri/kayıtlı fotoğraf durumu) — JS tarafından tıklanan
+           satırın hemen altındaki .sig-wb-body içine taşınır (bkz. renderSigWaybillList).
+           Hiçbir satır seçili değilken bu "garaj"da gizli bekler. -->
+      <div id="sigDetailHolder" style="display:none;">
+        <div id="sigDetailPanel">
+          <div id="sigSelectedInfo" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;"></div>
 
-      <!-- Manual Photo URL Paste (for QR cloud viewing) - ADMIN ONLY -->
-      <div class="sig-wrap" id="photoUrlCard" style="display:none;">
-        <div class="card-title"><i class="fas fa-cloud"></i> QR için Fotoğraf Linki (Bulut)</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.5;">
-          Atölye QR'ı taradığında fotoğrafı <b>internetten</b> yüklemek için link gerekli. Fotoğrafı OneDrive / Google Drive / Dropbox / WhatsApp'a yükleyip <b>paylaşım linkini buraya yapıştırın</b>. Otomatik yükleme denendi ama başarısız oldu veya şirket sırrı içeren fotoğraflar için bu daha güvenli.
-        </div>
-        <div class="form-group">
-          <input type="url" id="photoUrlInput" class="form-input" placeholder="https://1drv.ms/... veya https://drive.google.com/... veya herhangi bir link" onchange="saveManualPhotoUrl(this.value)">
-        </div>
-        <div id="photoUrlStatus" style="font-size:12px;margin-top:6px;"></div>
-        <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7;">
-          <b style="color:var(--primary);">📖 Hızlı rehber:</b><br>
-          <b>OneDrive:</b> Fotoğrafa sağ tıkla → Paylaş → Link kopyala<br>
-          <b>Google Drive:</b> Fotoğrafa sağ tıkla → "Linki al" → "Linkin olan herkes görebilir" seç<br>
-          <b>WhatsApp Web:</b> Fotoğrafı kendine gönder → Açıldığında URL'yi kopyala (geçici)<br>
-          Link yapıştırınca otomatik olarak uygun formata çevrilir.
-        </div>
-      </div>
+          <!-- Photo Capture -->
+          <div class="photo-capture-wrap" style="margin-bottom:12px;">
+            <div class="card-title"><i class="fas fa-camera"></i> Fotoğraf Çek / Ekle <span id="photoCountBadge" style="font-size:11px;font-weight:400;color:var(--text-muted);"></span></div>
+            <div style="display:none;" id="photoLiveBox">
+              <video id="photoVideo" autoplay playsinline muted></video>
+            </div>
+            <!-- Çoklu fotoğraf galerisi -->
+            <div id="photoGallery" style="display:none;margin-bottom:12px;"></div>
+            <div class="sig-actions">
+              <button class="btn btn-primary" id="photoStartBtn" onclick="startPhotoCamera()"><i class="fas fa-video"></i> Kamerayı Aç</button>
+              <button class="btn btn-success" id="photoCaptureBtn" onclick="capturePhoto()" style="display:none;"><i class="fas fa-camera"></i> Çek &amp; Ekle</button>
+              <button class="btn btn-secondary" id="photoStopBtn" onclick="stopPhotoCamera()" style="display:none;"><i class="fas fa-stop"></i> Kapat</button>
+              <button class="btn btn-secondary" onclick="document.getElementById('photoFileInput').click()"><i class="fas fa-upload"></i> Galeriden Ekle</button>
+              <input type="file" id="photoFileInput" accept="image/*" style="display:none;" onchange="loadPhotoFromFile(event)" multiple>
+              <button class="btn btn-danger" onclick="removeAllPhotos()"><i class="fas fa-trash"></i> Tümünü Sil</button>
+            </div>
+            <canvas id="photoCanvas" style="display:none;"></canvas>
+          </div>
 
-      <!-- Saved list -->
-      <div class="sig-wrap">
-        <div class="card-title"><i class="fas fa-list-check"></i> Kayıtlı Fotoğraflar</div>
-        <div id="sigSavedList"></div>
+          <!-- Manual Photo URL Paste (for QR cloud viewing) - ADMIN ONLY -->
+          <div class="sig-wrap" id="photoUrlCard" style="display:none;">
+            <div class="card-title"><i class="fas fa-cloud"></i> QR için Fotoğraf Linki (Bulut)</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.5;">
+              Atölye QR'ı taradığında fotoğrafı <b>internetten</b> yüklemek için link gerekli. Fotoğrafı OneDrive / Google Drive / Dropbox / WhatsApp'a yükleyip <b>paylaşım linkini buraya yapıştırın</b>. Otomatik yükleme denendi ama başarısız oldu veya şirket sırrı içeren fotoğraflar için bu daha güvenli.
+            </div>
+            <div class="form-group">
+              <input type="url" id="photoUrlInput" class="form-input" placeholder="https://1drv.ms/... veya https://drive.google.com/... veya herhangi bir link" onchange="saveManualPhotoUrl(this.value)">
+            </div>
+            <div id="photoUrlStatus" style="font-size:12px;margin-top:6px;"></div>
+            <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7;">
+              <b style="color:var(--primary);">📖 Hızlı rehber:</b><br>
+              <b>OneDrive:</b> Fotoğrafa sağ tıkla → Paylaş → Link kopyala<br>
+              <b>Google Drive:</b> Fotoğrafa sağ tıkla → "Linki al" → "Linkin olan herkes görebilir" seç<br>
+              <b>WhatsApp Web:</b> Fotoğrafı kendine gönder → Açıldığında URL'yi kopyala (geçici)<br>
+              Link yapıştırınca otomatik olarak uygun formata çevrilir.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -12107,7 +12109,6 @@ function refreshSignaturePage(){
 
   // Aranabilir listeyi çiz
   renderSigWaybillList();
-  renderSigSavedList();
 }
 
 function setSigFilter(f){
@@ -12117,6 +12118,9 @@ function setSigFilter(f){
   });
   renderSigWaybillList();
 }
+
+// Satır DOM id'si için güvenli anahtar (id her zaman alfanümerik olmayabilir).
+function _sigRowSafeKey(type, id){ return (type + '_' + id).toString().replace(/[^a-zA-Z0-9_]/g, '_'); }
 
 function renderSigWaybillList(){
   const container = document.getElementById('sigWaybillList');
@@ -12141,6 +12145,12 @@ function renderSigWaybillList(){
     );
   }
 
+  // Canlı panel (kamera akışı, galeri vb.) yeniden çizmeden önce güvenli "garaj"a
+  // alınır — yoksa innerHTML rebuild'de video stream/canvas içeriği kaybolur.
+  const panel = document.getElementById('sigDetailPanel');
+  const holder = document.getElementById('sigDetailHolder');
+  if(panel && holder) holder.appendChild(panel);
+
   if(!list.length){
     container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:6px;opacity:0.5;"></i>Sonuç bulunamadı</div>';
     return;
@@ -12156,31 +12166,61 @@ function renderSigWaybillList(){
     const place = i.atolye || i.firma || '-';
     const date  = i.tarih || '-';
     const badges = [];
-    badges.push(`<span class="sig-wb-badge type">${TYPE_LABEL_MAP[i._type] || i._type}</span>`);
+    badges.push(`<span class="sig-wb-badge type">${esc(TYPE_LABEL_MAP[i._type] || i._type)}</span>`);
     if(i._signature) badges.push('<span class="sig-wb-badge signed">✍️ İmzalı</span>');
     const pc = _getPhotosArray(i).length;
     if(pc) badges.push(`<span class="sig-wb-badge photo">📸 ${pc>1?pc+' Foto':'Fotoğraflı'}</span>`);
+    const quickActions = pc ? `
+        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); generatePDF(${JSON.stringify(i.id)},'${i._type}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); shareIrsaliyeWhatsApp(${JSON.stringify(i.id)},'${i._type}')" title="WhatsApp'tan Gönder" style="color:#25D366;"><i class="fab fa-whatsapp"></i></button>
+      ` : '';
+    const bodyId = 'sigWbBody-' + _sigRowSafeKey(i._type, i.id);
     return `
-      <div class="sig-wb-item ${isSelected?'selected':''}" onclick="selectSigWaybill('${i._type}', ${JSON.stringify(i.id)})">
-        <div class="sig-wb-info">
-          <div class="sig-wb-no">${no} ${badges.join(' ')}</div>
-          <div class="sig-wb-meta">${model} • ${place} • ${date}</div>
+      <div class="sig-wb-row ${isSelected?'expanded':''}">
+        <div class="sig-wb-item ${isSelected?'selected':''}" onclick="selectSigWaybill('${i._type}', ${JSON.stringify(i.id)})">
+          <div class="sig-wb-info">
+            <div class="sig-wb-no">${esc(no)} ${badges.join(' ')}</div>
+            <div class="sig-wb-meta">${esc(model)} • ${esc(place)} • ${esc(date)}</div>
+          </div>
+          <div class="sig-wb-quick" onclick="event.stopPropagation()">${quickActions}</div>
+          <i class="fas fa-chevron-${isSelected?'up':'down'} sig-wb-chev"></i>
         </div>
-        <i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:12px;"></i>
+        <div class="sig-wb-body" id="${bodyId}" style="display:${isSelected?'block':'none'};"></div>
       </div>
     `;
   }).join('');
+
+  // Seçili satır varsa canlı paneli o satırın gövdesine geri tak.
+  if(panel && selKey){
+    const bodyEl = document.getElementById('sigWbBody-' + _sigRowSafeKey(_sigCurrentWaybill.type, _sigCurrentWaybill.id));
+    if(bodyEl) bodyEl.appendChild(panel);
+  }
 }
 
 function selectSigWaybill(type, id){
+  const key = type + '|' + id;
+  const curKey = _sigCurrentWaybill ? (_sigCurrentWaybill.type + '|' + _sigCurrentWaybill.id) : '';
+  if(curKey === key){
+    // Aynı satıra tekrar tıklanınca kapat (akordeon davranışı)
+    _sigCurrentWaybill = null;
+    const sel = document.getElementById('sigWaybillSelect');
+    if(sel) sel.value = '';
+    _clearSignatureCanvasOnly();
+    _clearPhotoPreview();
+    _clearPhotoUrlInput();
+    renderSigWaybillList();
+    return;
+  }
   _sigCurrentWaybill = { id: id, type: type };
   const sel = document.getElementById('sigWaybillSelect');
   if(sel) sel.value = type + '|' + id;
   loadSigForWaybill();
-  renderSigWaybillList(); // seçili olanı vurgulamak için yeniden çiz
-  // Seçim yapılınca imza kutusuna scroll et (kolay olsun)
-  const sigCard = document.querySelector('#page-signature .sig-canvas-wrap');
-  if(sigCard) sigCard.scrollIntoView({behavior:'smooth', block:'center'});
+  renderSigWaybillList(); // seçili satırı genişletip canlı paneli içine taşır
+  // Genişleyen satırın görünür olması için yumuşak kaydırma (mobilde uzun listede kolaylık)
+  setTimeout(() => {
+    const bodyEl = document.getElementById('sigWbBody-' + _sigRowSafeKey(type, id));
+    if(bodyEl) bodyEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 50);
 }
 
 function _initSigCanvas(){
