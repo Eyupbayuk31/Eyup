@@ -1424,7 +1424,7 @@
     </div>
     <div class="db-status-badge" id="dbStatusBadge">
       <div class="db-status-badge-val" id="dbStatusBadgeVal">100%</div>
-      <div class="db-status-badge-lbl">Performans</div>
+      <div class="db-status-badge-lbl" id="dbStatusBadgeLbl">Performans</div>
     </div>
   </div>
 
@@ -7065,7 +7065,9 @@ function refreshHome(){
   var lgEl=document.getElementById('dbPieLegend');
   if(lgEl){
     var tot=allUnified.length||1;
-    var lgRows=[{label:'Bekliyor',val:beklTop,color:'#f59e0b'},{label:'Teslim',val:teslimTop,color:'#10b981'},{label:'Vadesi Gecmis',val:gecTop,color:'#ef4444'}];
+    // Bekliyor slice'i, çakışmayı önlemek için vadesi geçmiş olanları hariç tutar
+    // (doughnut ile aynı) — aksi halde geciken kayıtlar iki kez sayılıp yüzdeler %100'ü aşıyordu.
+    var lgRows=[{label:'Bekliyor',val:Math.max(0,beklTop-gecTop),color:'#f59e0b'},{label:'Teslim',val:teslimTop,color:'#10b981'},{label:'Vadesi Gecmis',val:gecTop,color:'#ef4444'}];
     var lgHtml='';
     lgRows.forEach(function(r){
       lgHtml+='<div class="db-legend-item"><div class="db-legend-dot" style="background:'+r.color+'"></div>'
@@ -7114,7 +7116,10 @@ function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
   var badgeLbl = 'Performans';
 
   var total = allData.length;
-  var teslimRate = total > 0 ? Math.round((teslimAy / total) * 100) : 0;
+  // Teslim oranı: tüm zamanların teslim edilmişleri / toplam (bu-ay teslim ÷ tüm-toplam
+  // karışımı yanıltıcı derecede düşük çıkıyordu).
+  var teslimAllCount = allData.filter(function(i){return i.durum==='teslim';}).length;
+  var teslimRate = total > 0 ? Math.round((teslimAllCount / total) * 100) : 0;
 
   // Durum analizi
   if(gecmis > 5){
