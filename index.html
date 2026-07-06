@@ -1674,11 +1674,15 @@
         <input type="text" id="listSearch" placeholder="İrsaliye no, model, atölye veya kişi ara..." oninput="applyFilters()">
       </div>
 
-      <!-- Filter Row: Date + Atölye + Durum + Sort -->
+      <!-- Filter Row: Date + Atölye + Durum + Sort — özel (tema uyumlu) dropdown'lar -->
       <div class="filter-row">
-        <label class="fsel">
-          <i class="fas fa-calendar-day fsel-lead"></i>
-          <select class="fsel-input" id="filterDate" onchange="applyFilters()">
+        <div class="pdd">
+          <button type="button" class="fsel pdd-trigger" onclick="pddToggle(this)">
+            <span class="fsel-lead"><i class="fas fa-calendar-day"></i></span>
+            <span class="fsel-btn-label pdd-label">Tüm Tarihler</span>
+            <i class="fas fa-chevron-down fsel-chev"></i>
+          </button>
+          <select class="pdd-native" id="filterDate" onchange="applyFilters()">
             <option value="all">Tüm Tarihler</option>
             <option value="today">Bugün</option>
             <option value="yesterday">Dün</option>
@@ -1686,35 +1690,43 @@
             <option value="month">Bu Ay</option>
             <option value="lastmonth">Geçen Ay</option>
           </select>
-          <i class="fas fa-chevron-down fsel-chev"></i>
-        </label>
-        <select class="fsel-input" id="filterAtolye" onchange="applyFilters()" style="display:none;">
+          <div class="pdd-menu"></div>
+        </div>
+        <select class="pdd-native" id="filterAtolye" onchange="applyFilters()" style="display:none;">
           <option value="all">Tüm Atölyeler</option>
         </select>
         <button type="button" class="fsel fsel-btn" id="filterAtolyeBtn" onclick="openAtolyePicker()">
-          <i class="fas fa-industry fsel-lead"></i>
+          <span class="fsel-lead"><i class="fas fa-industry"></i></span>
           <span id="filterAtolyeLabel" class="fsel-btn-label">Tüm Atölyeler</span>
           <i class="fas fa-chevron-down fsel-chev"></i>
         </button>
-        <label class="fsel">
-          <i class="fas fa-circle-info fsel-lead"></i>
-          <select class="fsel-input" id="filterDurum" onchange="applyFilters()">
+        <div class="pdd">
+          <button type="button" class="fsel pdd-trigger" onclick="pddToggle(this)">
+            <span class="fsel-lead"><i class="fas fa-circle-info"></i></span>
+            <span class="fsel-btn-label pdd-label">Tüm Durumlar</span>
+            <i class="fas fa-chevron-down fsel-chev"></i>
+          </button>
+          <select class="pdd-native" id="filterDurum" onchange="applyFilters()">
             <option value="all">Tüm Durumlar</option>
             <option value="bekliyor">Bekliyor</option>
             <option value="teslim">Teslim Edildi</option>
             <option value="gecmis">Vadesi Geçmiş</option>
           </select>
-          <i class="fas fa-chevron-down fsel-chev"></i>
-        </label>
-        <label class="fsel">
-          <i class="fas fa-arrow-down-wide-short fsel-lead"></i>
-          <select class="fsel-input" id="filterSort" onchange="applyFilters()">
+          <div class="pdd-menu"></div>
+        </div>
+        <div class="pdd">
+          <button type="button" class="fsel pdd-trigger" onclick="pddToggle(this)">
+            <span class="fsel-lead"><i class="fas fa-arrow-down-wide-short"></i></span>
+            <span class="fsel-btn-label pdd-label">En Yeni</span>
+            <i class="fas fa-chevron-down fsel-chev"></i>
+          </button>
+          <select class="pdd-native" id="filterSort" onchange="applyFilters()">
             <option value="newest">En Yeni</option>
             <option value="oldest">En Eski</option>
             <option value="termin">Yaklaşan Termin</option>
           </select>
-          <i class="fas fa-chevron-down fsel-chev"></i>
-        </label>
+          <div class="pdd-menu"></div>
+        </div>
       </div>
 
       <!-- Tarih aralığı (özel) — ayrı, sade satır -->
@@ -5599,9 +5611,52 @@ function pickAtolyeForTarget(name){
   closeAtolyePicker();
 }
 
+// ── Özel (tema uyumlu) dropdown — native <select> açılır listesi işletim
+// sistemi tarafından çiziliyor ve koyu temayla uyumsuz beyaz kutu olarak
+// çıkıyordu. Bu bileşen gizli <select>'i state kaynağı olarak tutup görünümü
+// tamamen kendi menümüzle çiziyor.
+function pddSyncLabel(sel){
+  const pdd = sel && sel.closest ? sel.closest('.pdd') : null;
+  if(!pdd) return;
+  const lbl = pdd.querySelector('.pdd-label');
+  const cur = sel.options[sel.selectedIndex];
+  if(lbl && cur) lbl.textContent = cur.textContent;
+}
+function pddSyncAll(){ document.querySelectorAll('.pdd .pdd-native').forEach(pddSyncLabel); }
+function pddBuild(pdd){
+  const sel = pdd.querySelector('.pdd-native');
+  const menu = pdd.querySelector('.pdd-menu');
+  if(!sel || !menu) return;
+  menu.innerHTML = Array.from(sel.options).map((o,i)=>
+    `<button type="button" class="pdd-opt${i===sel.selectedIndex?' active':''}" data-i="${i}">${esc(o.textContent)}<i class="fas fa-check"></i></button>`
+  ).join('');
+}
+function pddToggle(btn){
+  const pdd = btn.closest('.pdd');
+  if(!pdd) return;
+  const isOpen = pdd.classList.contains('open');
+  document.querySelectorAll('.pdd.open').forEach(p=>p.classList.remove('open'));
+  if(!isOpen){ pddBuild(pdd); pdd.classList.add('open'); }
+}
+document.addEventListener('click', function(e){
+  const opt = e.target.closest && e.target.closest('.pdd-opt');
+  if(opt){
+    e.stopPropagation();
+    const pdd = opt.closest('.pdd');
+    const sel = pdd.querySelector('.pdd-native');
+    sel.selectedIndex = +opt.dataset.i;
+    pddSyncLabel(sel);
+    pdd.classList.remove('open');
+    try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(_){ if(typeof applyFilters==='function') applyFilters(); }
+    return;
+  }
+  if(!(e.target.closest && e.target.closest('.pdd'))) document.querySelectorAll('.pdd.open').forEach(p=>p.classList.remove('open'));
+});
+
 function applyFilters(){
   renderTypeFilterBar();
   loadAtolyeFilter();
+  pddSyncAll();
 
   let list=getUnifiedList();
   const now=new Date();
