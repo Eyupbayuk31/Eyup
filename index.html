@@ -3118,7 +3118,12 @@
                 <span>Limit: ~5 MB</span>
               </div>
             </div>
-            <button class="btn btn-secondary" onclick="updateStorageDisplay()" style="width:100%;justify-content:center;"><i class="fas fa-sync-alt"></i> Yenile</button>
+            <div id="storageBreakdown" style="margin-bottom:14px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-secondary" onclick="updateStorageDisplay()" style="flex:1;justify-content:center;min-width:120px;"><i class="fas fa-sync-alt"></i> Yenile</button>
+              <button class="btn btn-primary" onclick="cleanupPhotosManual()" style="flex:1;justify-content:center;min-width:120px;" title="Buluta yüklenmiş fotoğrafların cihazdaki kopyasını siler; bulut kopyaları ve QR görüntüleme etkilenmez"><i class="fas fa-broom"></i> Fotoğraf Önbelleğini Temizle</button>
+            </div>
+            <div class="s-hint"><i class="fas fa-circle-info"></i> Depolamayı en çok fotoğraflar doldurur. Yüklenmiş fotoğrafların yerel kopyası güvenle silinebilir — buluttaki kopya ve QR görüntüleme çalışmaya devam eder.</div>
           </div>
         </div>
 
@@ -10609,7 +10614,63 @@ function updateStorageDisplay(){
     }
   }
 
+  // Neyin ne kadar yer kapladığını göster (fotoğraflar genelde en büyük)
+  const bdEl = document.getElementById('storageBreakdown');
+  if(bdEl){
+    const b = getStorageBreakdown();
+    const row = (label,bytes,color,extra)=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;">
+        <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+        <span style="flex:1;color:var(--text-muted);">${label}</span>
+        <span style="font-weight:700;font-variant-numeric:tabular-nums;">${formatBytes(bytes)}</span>
+        ${extra||''}
+      </div>`;
+    bdEl.innerHTML =
+      row('Fotoğraflar', b.photoBytes, '#a78bfa',
+          (b.uploadedCount||b.unuploadedCount) ? `<span style="font-size:10px;color:var(--text-dim);margin-left:6px;">${b.uploadedCount} yüklü · ${b.unuploadedCount} bekliyor</span>` : '')
+      + row('İrsaliye verileri', b.otherBytes, '#60a5fa')
+      + row('Kayıt/hata logları', b.logBytes, '#f59e0b');
+  }
+
   toast('Depolama bilgisi güncellendi', 'success');
+}
+
+// Depolamayı kategorilere ayırır: fotoğraf base64'leri, veri, loglar.
+function getStorageBreakdown(){
+  const dataKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller'];
+  let photoBytes = 0, uploadedCount = 0, unuploadedCount = 0;
+  dataKeys.forEach(k=>{
+    let raw; try{ raw = JSON.parse(localStorage.getItem(k)||'[]'); }catch(_){ raw = []; }
+    (Array.isArray(raw)?raw:[]).forEach(it=>{
+      if(it && typeof it._photo==='string' && it._photo.startsWith('data:image')) photoBytes += it._photo.length*2;
+      if(it && Array.isArray(it._photos)) it._photos.forEach(p=>{
+        if(p && typeof p.data==='string' && p.data.startsWith('data:image')){
+          photoBytes += p.data.length*2;
+          if(p.url) uploadedCount++; else unuploadedCount++;
+        }
+      });
+    });
+  });
+  let logBytes = 0;
+  for(let k in localStorage){ if(localStorage.hasOwnProperty(k) && /log/i.test(k)){ logBytes += (localStorage[k].length+k.length)*2; } }
+  const total = getStorageUsage();
+  const otherBytes = Math.max(0, total - photoBytes - logBytes);
+  return { total, photoBytes, uploadedCount, unuploadedCount, logBytes, otherBytes };
+}
+
+// Buluta yüklenmiş fotoğrafların cihazdaki base64 kopyasını temizler (güvenli).
+function cleanupPhotosManual(){
+  const b = getStorageBreakdown();
+  if(b.uploadedCount === 0){
+    if(b.unuploadedCount > 0) toast('⚠️ '+b.unuploadedCount+' fotoğraf henüz buluta yüklenmemiş — silinirse kaybolur. Önce Fotoğraf sayfasından yükleyin.','error');
+    else toast('Temizlenecek yüklenmiş fotoğraf yok','info');
+    return;
+  }
+  const before = getStorageUsage();
+  cleanupLocalStoragePhotos();
+  const freed = Math.max(0, before - getStorageUsage());
+  updateStorageDisplay();
+  toast('✓ '+b.uploadedCount+' fotoğrafın yerel kopyası temizlendi — '+formatBytes(freed)+' boşaldı (bulut kopyaları duruyor)','success');
+  if(b.unuploadedCount > 0) toast('ℹ️ '+b.unuploadedCount+' fotoğraf henüz yüklenmediği için tutuldu','info');
 }
 
 function displayErrorLog(){
