@@ -1244,7 +1244,7 @@
       },{once:true});
     }
     var fs=JSON.parse(localStorage.getItem('config_fontSize'));
-    if(fs) document.documentElement.style.fontSize=fs+'px';
+    if(fs){ var _fsv=Math.max(12,Math.min(20,parseInt(fs,10)||14)); document.documentElement.style.zoom=(_fsv/14).toFixed(4); }
   }catch(e){}
 })();
 </script>
@@ -8306,7 +8306,15 @@ function setTheme(theme){
   document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
   const btn=document.querySelector(`[data-theme-btn="${theme}"]`);if(btn)btn.classList.add('active');
 }
-function setFontSize(val){document.body.style.fontSize=val+'px';setConfig('fontSize',val);}
+function setFontSize(val){
+  val = Math.max(12, Math.min(20, parseInt(val,10)||14));
+  // Uygulamadaki metinlerin çoğu sabit px boyutunda olduğundan body font-size
+  // miras yoluyla işe yaramıyordu (slider görünürde bir şey değiştirmiyordu).
+  // Tüm arayüzü ölçekleyen zoom kullanıyoruz: 14 = %100, 20 ≈ %143, 12 ≈ %86.
+  document.documentElement.style.zoom = (val/14).toFixed(4);
+  document.body.style.fontSize = '';
+  setConfig('fontSize',val);
+}
 function updateNextNo(){const val=+document.getElementById('nextNo').value;if(val>0){setConfig('nextIrsaliyeNo',val);updateBadge();}}
 
 function exportData(){
@@ -8887,7 +8895,7 @@ function loadSettings(){
   const theme=getConfig('theme','default');
   document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
   const btn=document.querySelector(`[data-theme-btn="${theme}"]`);if(btn)btn.classList.add('active');
-  const fs=getConfig('fontSize',14);document.getElementById('fontSizeSlider').value=fs;
+  const fs=getConfig('fontSize',14);const fsSl=document.getElementById('fontSizeSlider');if(fsSl)fsSl.value=fs;const fsV=document.getElementById('fsVal');if(fsV)fsV.textContent=fs+'px';
   // QR yayın URL ayarını yükle
   try{ loadPublishUrlIntoInput(); }catch(e){}
   // GitHub yükleme ayarlarını yükle (sadece admin)
