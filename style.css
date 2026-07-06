@@ -5878,6 +5878,9 @@ html{scroll-behavior:smooth;}
 .sig-filter-chip{padding:6px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:12px;transition:all 0.2s;}
 .sig-filter-chip:hover{border-color:var(--primary);color:var(--text);}
 .sig-filter-chip.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:var(--on-primary,#fff);border-color:var(--primary);box-shadow:0 2px 8px var(--primary-glow);}
+.sig-type-chip{padding:4px 11px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:11.5px;transition:all 0.2s;}
+.sig-type-chip:hover{border-color:var(--primary);color:var(--text);}
+.sig-type-chip.active{background:color-mix(in srgb, var(--primary) 14%, transparent);color:var(--primary-light);border-color:color-mix(in srgb, var(--primary) 45%, var(--border));}
 .sig-wb-row{margin-bottom:8px;}
 .sig-wb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg-card);transition:all 0.15s;}
 .sig-wb-item:hover{border-color:var(--primary);transform:translateX(2px);}
