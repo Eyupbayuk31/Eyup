@@ -3477,9 +3477,14 @@ tr:hover .table-actions-more{
   .modal-action-btn{padding:10px 6px;}
   .modal-overlay{padding:0!important;align-items:flex-end!important;}
   .modal-overlay .modal-detail{width:100%!important;border-radius:16px 16px 0 0!important;}
-  .modal-body-new{max-height:40vh!important;padding:16px!important;}
-  .modal-header-new{padding:16px 20px!important;}
-  .modal-actions-new{padding:12px 16px!important;}
+  /* Modal ekranı asla aşmasın; başlık (X) her zaman üstte görünsün, aksiyonlar altta —
+     yalnızca içerik (body) kaydırılsın. Önceden body 40vh + uzun aksiyonlar toplamı
+     80vh'yi aşınca modal alta yaslı olduğu için başlık ekranın üstünden taşıyordu ve
+     kapatma (X) görünmüyordu. */
+  .modal-detail{max-height:92vh!important;overflow:hidden!important;}
+  .modal-header-new{padding:16px 20px!important;flex-shrink:0!important;}
+  .modal-body-new{max-height:none!important;min-height:0!important;flex:1 1 auto!important;padding:16px!important;-webkit-overflow-scrolling:touch;}
+  .modal-actions-new{padding:12px 16px!important;flex-shrink:0!important;}
 }
 
 /* ===== TOAST ===== */
