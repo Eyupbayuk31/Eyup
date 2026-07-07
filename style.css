@@ -8948,6 +8948,39 @@ input:focus, select:focus, textarea:focus {
   transform: rotate(90deg) !important;
 }
 
+/* ═══ Mobil liste kartları — daha derli toplu (kompakt) ═══ */
+.uni-mobile-card { padding: 12px 13px 11px !important; margin-bottom: 9px !important; }
+.mc-header { gap: 7px; align-items: center; }
+.mc-header > div:first-child { min-width: 0; }
+.mc-title { font-size: 13.5px !important; white-space: nowrap; }
+.mc-meta { margin-top: 6px !important; gap: 5px 12px !important; }
+.mc-meta span { font-size: 11px !important; }
+.uni-mobile-card .mc-actions-new { margin-top: 9px !important; padding-top: 9px !important; gap: 8px !important; }
+.uni-mobile-card .action-btn-primary { padding: 9px 12px !important; font-size: 13px !important; border-radius: 9px !important; box-shadow: 0 2px 9px var(--type-glow, var(--primary-glow)) !important; }
+.uni-mobile-card .action-btn-menu { width: 40px !important; height: 40px !important; font-size: 15px !important; border-radius: 9px !important; }
+/* Detay/termin satırlarını sıkılaştır (şablondaki inline stiller) */
+.uni-mobile-card .card-inner > div[style*="text-muted"] { margin-top: 3px !important; }
+
+/* Mobil kartlardaki onay kutusu: bazı Android tarayıcıları native checkbox'ı
+   kocaman beyaz kutu olarak çiziyordu — tema uyumlu, küçük, özel kutu ile değiştir. */
+.uni-mobile-card .bulk-check {
+  appearance: none !important; -webkit-appearance: none !important; -moz-appearance: none !important;
+  box-sizing: border-box !important; align-self: center !important;
+  width: 20px !important; height: 20px !important; min-width: 20px !important; min-height: 20px !important; max-height: 20px !important; flex-shrink: 0 !important;
+  margin: 0 !important; padding: 0 !important; font-size: 12px !important;
+  border: 2px solid color-mix(in oklab, var(--type-color, var(--primary)) 45%, var(--border)) !important;
+  border-radius: 6px !important; background: var(--glass) !important;
+  cursor: pointer !important; position: relative !important; box-shadow: none !important;
+}
+.uni-mobile-card .bulk-check:checked {
+  background: var(--type-color, var(--primary)) !important;
+  border-color: var(--type-color, var(--primary)) !important;
+}
+.uni-mobile-card .bulk-check:checked::after {
+  content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: 900; line-height: 1;
+}
+
 /* ── Card dropdown — glassmorphism ── */
 .card-dropdown-menu {
   backdrop-filter: blur(20px) saturate(1.6) !important;
