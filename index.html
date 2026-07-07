@@ -2066,7 +2066,7 @@
     </div>
 
     <!-- Modal: Yeni / Düzenle Model Siparişi (üst seviye — sadece kimlik bilgisi) -->
-    <div class="modal-overlay" id="ftOrderModal">
+    <div class="modal-overlay" id="ftOrderModal" onclick="if(event.target===this)ftCloseOrderModal()">
       <div class="modal">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
           <h3 style="font-weight:700;font-size:17px;" id="ftOrderTitle"><i class="fas fa-cart-plus" style="color:var(--primary);margin-right:7px;"></i>Yeni Fermuar Modeli</h3>
@@ -2086,7 +2086,7 @@
     </div>
 
     <!-- Modal: Model Detay ("ayrı sayfa gibi") — cm cm beden satırları burada -->
-    <div class="modal-overlay" id="ftDetailModal">
+    <div class="modal-overlay" id="ftDetailModal" onclick="if(event.target===this)ftCloseDetailModal()">
       <div class="modal ft-detail-modal">
         <div class="ft-detail-head">
           <div class="ft-detail-head-l">
@@ -2124,7 +2124,7 @@
     </div>
 
     <!-- Modal: PDF / Eksik Listesi -->
-    <div class="modal-overlay" id="ftPdfModal">
+    <div class="modal-overlay" id="ftPdfModal" onclick="if(event.target===this)ftClosePdfModal()">
       <div class="modal ft-pdf-modal">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-file-pdf" style="color:var(--primary);margin-right:7px;"></i>PDF / Eksik Listesi</h3>
@@ -2152,7 +2152,7 @@
     </div>
 
     <!-- Modal: Teslimat Gir -->
-    <div class="modal-overlay" id="ftReceiveModal">
+    <div class="modal-overlay" id="ftReceiveModal" onclick="if(event.target===this)ftCloseReceiveModal()">
       <div class="modal" style="max-width:420px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-truck-ramp-box" style="color:var(--primary);margin-right:7px;"></i>Teslimat Gir</h3>
@@ -3275,7 +3275,10 @@
     <!-- Kullanıcı düzenleme modalı -->
     <div id="editUserModal">
       <div id="editUserModalCard">
-        <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:16px;"><i class="fas fa-user-pen" style="color:var(--primary);margin-right:6px;"></i> Kullanıcıyı Düzenle</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:var(--text-main);"><i class="fas fa-user-pen" style="color:var(--primary);margin-right:6px;"></i> Kullanıcıyı Düzenle</div>
+          <button type="button" class="modal-close-btn" onclick="closeEditUserModal()" aria-label="Kapat"><i class="fas fa-times"></i></button>
+        </div>
         <input type="hidden" id="editUserOldName">
         <div class="form-group" style="margin-bottom:12px;">
           <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Kullanıcı Adı</label>
@@ -14203,7 +14206,8 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="gs-head">
       <i class="fas fa-search"></i>
       <input type="text" id="gsInput" class="gs-input" placeholder="İrsaliye no, atölye, model, beden, not... ara" autocomplete="off">
-      <span class="gs-kbd">Esc</span>
+      <span class="gs-kbd gs-kbd-esc">Esc</span>
+      <button type="button" class="gs-close" onclick="closeGlobalSearch()" aria-label="Kapat"><i class="fas fa-times"></i></button>
     </div>
     <div class="gs-list" id="gsList"></div>
     <div class="gs-foot">

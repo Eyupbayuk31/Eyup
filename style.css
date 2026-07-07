@@ -7567,6 +7567,8 @@ body::after{
   .gs-head i{color:var(--primary,#2563eb);font-size:18px;}
   .gs-input{flex:1;border:none;outline:none;background:transparent;font-size:16px;color:inherit;font-family:inherit;}
   .gs-kbd{font-size:11px;color:var(--text-muted,#888);border:1px solid var(--border,#e5e7eb);padding:2px 6px;border-radius:4px;}
+  .gs-close{width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--glass);border:1px solid var(--border);color:var(--text-muted);font-size:15px;cursor:pointer;transition:all .15s;}
+  .gs-close:hover{background:var(--primary);color:var(--on-primary,#fff);border-color:var(--primary);}
   .gs-list{overflow-y:auto;max-height:60vh;}
   .gs-item{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border,#f1f1f1);}
   .gs-item.active,.gs-item:hover{background:var(--primary,#2563eb);color:#fff;}
