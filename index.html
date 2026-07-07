@@ -5390,7 +5390,7 @@ function returnStockFromIrsaliye(irsaliye) {
 
 function toggleDurum(id){
   let list=getData('irsaliyeler');const item=list.find(i=>i.id===id);
-  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';setData('irsaliyeler',list);applyFilters();toast('Durum güncellendi');}
+  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';item._updatedAt=Date.now();try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData('irsaliyeler',list);applyFilters();toast('Durum güncellendi');}
 }
 
 // Legacy compat - redirect to new unified function
@@ -5805,7 +5805,7 @@ function renderFilteredList(list){
 function toggleDurumUni(id,type){
   const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);const item=list.find(i=>i.id===id);
-  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';setData(key,list);applyFilters();toast('Durum güncellendi');}
+  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';item._updatedAt=Date.now();try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);applyFilters();toast('Durum güncellendi');}
 }
 
 function deleteItemUni(id,type){
@@ -9309,7 +9309,7 @@ function bulkDurum(durum){
     const type=cb.dataset.type;
     const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     let list=getData(key);const item=list.find(i=>i.id===id);
-    if(item){item.durum=durum;setData(key,list);}
+    if(item){item.durum=durum;item._updatedAt=Date.now();try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);}
   });
   bulkClear();applyFilters();
   toast(checks.length+' kayıt güncellendi');
