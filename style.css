@@ -4397,7 +4397,7 @@ tr:hover .table-actions-more{
   .list-stats{grid-template-columns:repeat(3,1fr);gap:6px;}
   .list-stat-mini{padding:8px 6px;}
   .list-stat-mini .lsm-value{font-size:16px;}
-  #page-stok .stats-grid{grid-template-columns:1fr!important;}
+  #page-stok .stats-grid{grid-template-columns:repeat(3,1fr)!important;}
 }
 
 /* Stock level bar */
@@ -9747,6 +9747,15 @@ input:focus, select:focus, textarea:focus {
   color: #f87171 !important;
 }
 
+/* Mobil: stok özet kartları kompakt 3'lü satır (tek sütun devasa kartlar yerine) */
+@media(max-width:640px){
+  #page-stok .stats-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important;}
+  #page-stok .stat-card{padding:12px 8px!important;text-align:center!important;}
+  #page-stok .stat-card .stat-icon{width:30px!important;height:30px!important;font-size:13px!important;margin:0 auto 6px!important;}
+  #page-stok .stat-card .stat-value{font-size:21px!important;}
+  #page-stok .stat-card .stat-label{font-size:9.5px!important;line-height:1.25!important;}
+}
+
 /* ── Warning panels ── */
 #stokUyariPanel > *,
 #stokUPUyari > *,
@@ -13533,6 +13542,11 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 
 /* KPI şeridi */
 .ft-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:6px; }
+@media(max-width:640px){
+  .ft-kpis{ grid-template-columns:1fr 1fr !important; gap:8px !important; }
+  .ft-kpi{ padding:11px 12px !important; gap:9px !important; }
+  .ft-kpi-ic{ width:32px !important; height:32px !important; font-size:13px !important; }
+}
 .ft-kpi{ display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:14px; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-card); position:relative; overflow:hidden; transition:transform .18s, box-shadow .18s, border-color .18s; }
 .ft-kpi::after{ content:''; position:absolute; left:0; bottom:0; height:3px; width:100%; background:var(--primary); opacity:.5; }
 .ft-kpi:hover{ transform:translateY(-2px); box-shadow:0 10px 24px -12px var(--shadow-card); border-color:color-mix(in srgb, var(--primary) 25%, var(--border)); }
