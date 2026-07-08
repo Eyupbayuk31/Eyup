@@ -11147,36 +11147,60 @@ function switchSettingsTab(tab){
 // sadece acikca approved===false ise onay bekliyor demektir.
 function _userIsApproved(u){ return u && u.approved !== false; }
 
+// İsimden deterministik renk (avatar için)
+function _userHue(name){ let h=0; const s=String(name||'?'); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))%360; return h; }
+function _userAvatar(u){
+  const name=(u&&u.username)||'?';
+  const ch=(name.trim().charAt(0)||'?').toLocaleUpperCase('tr');
+  const admin=u&&u.role==='admin';
+  return `<span class="u-avatar" style="background:hsl(${_userHue(name)} 55% 45%);">${_escHtml(ch)}${admin?'<i class="fas fa-crown u-crown"></i>':''}</span>`;
+}
+function _userRowHtml(u,i,me){
+  const pend=!_userIsApproved(u);
+  const isMe=(u.username||'').toLowerCase()===me;
+  return `<div class="user-row${pend?' user-row-pending':''}">
+    ${_userAvatar(u)}
+    <div class="user-row-info">
+      <div class="u-name">${_escHtml(u.username)}${isMe?'<span class="u-you">Siz</span>':''}</div>
+      <div class="u-badges">
+        <span class="u-role ${u.role==='admin'?'admin':'user'}">${u.role==='admin'?'Admin':'Kullanıcı'}</span>
+        ${pend?'<span class="u-role pending"><i class="fas fa-hourglass-half"></i> Onay Bekliyor</span>':''}
+      </div>
+    </div>
+    <div class="user-row-actions">
+      ${pend
+        ? `<button class="btn btn-xs btn-success" onclick="approveUser(${i})"><i class="fas fa-check"></i> Onayla</button>
+           <button class="btn btn-xs btn-danger" onclick="rejectUser(${i})"><i class="fas fa-xmark"></i> Reddet</button>`
+        : `<button class="btn btn-xs btn-secondary" onclick="openEditUserModal(${i})" title="Düzenle"><i class="fas fa-pen"></i></button>
+           ${isMe?'':`<button class="btn btn-xs btn-danger" onclick="deleteUser(${i})" title="Sil"><i class="fas fa-trash"></i></button>`}`}
+    </div>
+  </div>`;
+}
 function renderUserList(){
   const wrap = document.getElementById('userListWrap');
   if(!wrap) return;
   const users = (typeof authGetUsers === 'function') ? authGetUsers() : [];
   if(!users.length){ wrap.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px;">Henüz kullanıcı yok</div>'; return; }
+  const me = (localStorage.getItem('irsaliye_last_user')||'').toLowerCase();
 
-  const pendingCount = users.filter(u=>!_userIsApproved(u)).length;
-  const banner = pendingCount>0
-    ? `<div class="pending-banner"><i class="fas fa-user-clock"></i> <b>${pendingCount}</b> kullanıcı onay bekliyor</div>`
-    : '';
+  const idx = users.map((u,i)=>({u,i}));
+  const pending = idx.filter(x=>!_userIsApproved(x.u));
+  const active  = idx.filter(x=>_userIsApproved(x.u));
+  const adminCount = active.filter(x=>x.u.role==='admin').length;
 
-  // Onay bekleyenler once, sonra kayit sirasi
-  const ordered = users.map((u,i)=>({u,i})).sort((a,b)=> (_userIsApproved(a.u)===_userIsApproved(b.u)) ? 0 : (_userIsApproved(a.u)?1:-1));
-
-  wrap.innerHTML = banner + ordered.map(({u,i})=>{
-    const pending = !_userIsApproved(u);
-    return `
-    <div class="user-row${pending?' user-row-pending':''}">
-      <div class="user-row-info">
-        <div class="u-name"><i class="fas fa-user" style="color:var(--primary);margin-right:6px;font-size:12px;"></i>${_escHtml(u.username)}</div>
-        <span class="u-role ${u.role==='admin'?'admin':'user'}">${u.role==='admin'?'Admin':'Kullanıcı'}</span>
-        ${pending?'<span class="u-role pending"><i class="fas fa-hourglass-half"></i> Onay Bekliyor</span>':''}
-      </div>
-      <div class="user-row-actions">
-        ${pending?`<button class="btn btn-xs btn-success" onclick="approveUser(${i})" title="Onayla"><i class="fas fa-check"></i> Onayla</button>`:''}
-        <button class="btn btn-xs btn-secondary" onclick="openEditUserModal(${i})" title="Düzenle"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-xs btn-danger" onclick="deleteUser(${i})" title="Sil"><i class="fas fa-trash"></i></button>
-      </div>
+  let html = `<div class="u-summary">
+      <div class="u-sum"><b>${users.length}</b><span>Toplam</span></div>
+      <div class="u-sum"><b>${adminCount}</b><span>Admin</span></div>
+      <div class="u-sum ${pending.length?'warn':''}"><b>${pending.length}</b><span>Bekleyen</span></div>
     </div>`;
-  }).join('');
+
+  if(pending.length){
+    html += `<div class="u-section-title pend"><i class="fas fa-user-clock"></i> Onay Bekleyenler <span class="u-sec-count">${pending.length}</span></div>`;
+    html += pending.map(({u,i})=>_userRowHtml(u,i,me)).join('');
+  }
+  html += `<div class="u-section-title"><i class="fas fa-users"></i> Aktif Kullanıcılar <span class="u-sec-count">${active.length}</span></div>`;
+  html += active.map(({u,i})=>_userRowHtml(u,i,me)).join('');
+  wrap.innerHTML = html;
 }
 
 function approveUser(idx){
@@ -11187,6 +11211,17 @@ function approveUser(idx){
   renderUserList();
   try{ if(typeof window._logAudit==='function') window._logAudit('user_approve', { by: (localStorage.getItem('irsaliye_last_user')||'?'), label: u.username }); }catch(_){}
   toast(u.username+' onaylandı ✓ — artık giriş yapabilir','success');
+}
+
+function rejectUser(idx){
+  const users = authGetUsers();
+  const u = users[idx]; if(!u) return;
+  if(!confirm('"'+u.username+'" adlı kayıt reddedilsin mi? Kullanıcı silinir, tekrar kayıt olması gerekir.')) return;
+  users.splice(idx,1);
+  authSaveUsers(users);
+  renderUserList();
+  try{ if(typeof window._logAudit==='function') window._logAudit('user_reject', { by: (localStorage.getItem('irsaliye_last_user')||'?'), label: u.username }); }catch(_){}
+  toast(u.username+' reddedildi','info');
 }
 
 function _escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
