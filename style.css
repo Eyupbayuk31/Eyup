@@ -8293,6 +8293,14 @@ body::after{
 }
 
 body.logged-out { overflow: hidden !important; }
+/* Kimlik doğrulanmadan önce uygulama kabuğunu gizle — login ekranı gelene kadar
+   içerik görünmesin (flash önleme). Login overlay ve boot splash etkilenmez. */
+html.pre-auth #sidebar,
+html.pre-auth #mainContent,
+html.pre-auth .bottom-nav,
+html.pre-auth .fab,
+html.pre-auth .sidebar-overlay { visibility: hidden !important; }
+html.pre-auth, html.pre-auth body { background: var(--bg-main, #0b0713) !important; }
 
 /* ---- Kullanıcı Yönetimi (Ayarlar) ---- */
 .user-list-wrap{display:flex;flex-direction:column;gap:8px;margin-top:12px;}

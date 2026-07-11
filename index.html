@@ -1264,6 +1264,18 @@
 </head>
 <body>
 
+<!-- Kimlik doğrulanana kadar uygulama içeriğini gizle (login'den önce içerik "flash"
+     etmesini önler). Senkron çalışır — tarayıcı boyamadan önce sınıfı ekler. -->
+<script>
+(function(){ try{
+  if(/[?&]v=/.test(location.search)) return; // QR görüntüleyici modu — dokunma
+  var a = localStorage.getItem('irsaliye_auth_v1') || sessionStorage.getItem('irsaliye_auth_v1');
+  var exp = parseInt(localStorage.getItem('irsaliye_auth_exp')||'0',10);
+  var authed = a==='1' && (!exp || Date.now() < exp);
+  if(!authed) document.documentElement.classList.add('pre-auth');
+}catch(e){ /* hata: aç (fail-open) — sonsuza dek gizli kalmasın */ } })();
+</script>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -15660,6 +15672,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   function hideLogin(){
     overlay.style.display = 'none';
     document.body.classList.remove('logged-out');
+    document.documentElement.classList.remove('pre-auth'); // giriş başarılı — uygulamayı göster
     stopClock();
   }
 
