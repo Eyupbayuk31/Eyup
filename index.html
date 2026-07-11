@@ -2441,17 +2441,23 @@
         </div>
       </div>
 
-      <!-- Ölçü / Renk -->
+      <!-- Ölçü / Renk — Ütü&Paket (poşet/bant) ve Dikim (beden) ayrı -->
       <div class="rep-tab" id="rep-olcu" style="display:none;">
         <div class="rep-two-col">
           <div class="rep-card">
-            <div class="rep-card-head"><i class="fas fa-ruler"></i> Ölçü Dağılımı</div>
-            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartOlcu"></canvas></div>
+            <div class="rep-card-head"><i class="fas fa-box"></i> Ütü &amp; Paket — Poşet / Bant Ölçüleri</div>
+            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartOlcuPaket"></canvas></div>
+            <div id="olcuPaketEmpty" class="rep-empty-mini" style="display:none;">Bu dönemde poşet / bant kaydı yok.</div>
           </div>
           <div class="rep-card">
-            <div class="rep-card-head"><i class="fas fa-palette"></i> Renk Dağılımı</div>
-            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartRenk"></canvas></div>
+            <div class="rep-card-head"><i class="fas fa-scissors"></i> Dikim — Beden Dağılımı</div>
+            <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartOlcuDikim"></canvas></div>
+            <div id="olcuDikimEmpty" class="rep-empty-mini" style="display:none;">Bu dönemde beden kaydı yok.</div>
           </div>
+        </div>
+        <div class="rep-card" style="margin-top:14px;">
+          <div class="rep-card-head"><i class="fas fa-palette"></i> Renk Dağılımı</div>
+          <div class="rep-chart-wrap rep-chart-sm"><canvas id="chartRenk"></canvas></div>
         </div>
       </div>
 
@@ -7486,31 +7492,41 @@ function renderModelChart(){
 
 function renderOlcuRenk(){
   const data = getReportData();
-  const olculer = {}, renkler = {};
+  // Ütü & Paket (poşet ölçüleri + bant) ve Dikim (beden) ayrı toplanır — bunlar
+  // farklı iş kolları, tek grafikte karışmamalı.
+  const paket = {}, dikim = {}, renkler = {};
   const SN = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
+  const BN = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
   const BL = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-  const addOlcu = (k,v)=>{ if(v>0) olculer[k]=(olculer[k]||0)+v; };
+  const add = (o,k,v)=>{ if(v>0) o[k]=(o[k]||0)+v; };
   data.forEach(i=>{
-    // Renk: kayıtta doğrudan i.renk
     const r = ((i.renk||'').toString().trim()) || 'Belirsiz';
     renkler[r] = (renkler[r]||0) + (_repItemQty(i) || 0);
-    // Ölçü: poşet için sizes, fermuar/düğme/saten için beden
-    if(i.sizes && typeof i.sizes==='object'){
-      for(const k in i.sizes){ addOlcu(SN[k]||k, parseInt(i.sizes[k])||0); }
-    }
-    if(i.beden && typeof i.beden==='object'){
-      for(const k in i.beden){ const b=i.beden[k]; const v=parseInt(b&&b.adet!=null?b.adet:b)||0; addOlcu(BL[k]||k, v); }
-    }
+    // Ütü & Paket: poşet ölçüleri (sizes) + bant/kılçık
+    if(i.sizes && typeof i.sizes==='object'){ for(const k in i.sizes) add(paket, SN[k]||k, parseInt(i.sizes[k])||0); }
+    if(i.bant && typeof i.bant==='object'){ for(const k in i.bant) add(paket, BN[k]||k, parseInt(i.bant[k])||0); }
+    // Dikim: beden dağılımı (fermuar/toptan/saten...)
+    if(i.beden && typeof i.beden==='object'){ for(const k in i.beden){ const b=i.beden[k]; const v=parseInt(b&&b.adet!=null?b.adet:b)||0; add(dikim, BL[k]||k, v); } }
   });
-  const olcuSorted = Object.entries(olculer).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  const renkSorted = Object.entries(renkler).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  destroyChart('olcu'); destroyChart('renk');
-  const cO = document.getElementById('chartOlcu');
-  if(cO && olcuSorted.length){
-    repCharts.olcu = new Chart(cO,{
-      type:'bar',data:{labels:olcuSorted.map(x=>x[0]),datasets:[{data:olcuSorted.map(x=>x[1]),backgroundColor:_repPrimaryColor(),borderRadius:6}]},
+  const paketSorted = Object.entries(paket).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const dikimSorted = Object.entries(dikim).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const renkSorted  = Object.entries(renkler).sort((a,b)=>b[1]-a[1]).slice(0,15);
+
+  destroyChart('paket'); destroyChart('dikim'); destroyChart('renk');
+
+  function barChart(key, canvasId, emptyId, rows, color){
+    const c = document.getElementById(canvasId);
+    const empty = document.getElementById(emptyId);
+    if(!c) return;
+    if(!rows.length){ c.style.display='none'; if(empty) empty.style.display='block'; return; }
+    c.style.display=''; if(empty) empty.style.display='none';
+    repCharts[key] = new Chart(c,{
+      type:'bar',data:{labels:rows.map(x=>x[0]),datasets:[{data:rows.map(x=>x[1]),backgroundColor:color,borderRadius:6}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
   }
+  barChart('paket','chartOlcuPaket','olcuPaketEmpty', paketSorted, '#a855f7');
+  barChart('dikim','chartOlcuDikim','olcuDikimEmpty', dikimSorted, _repPrimaryColor());
+
   const cR = document.getElementById('chartRenk');
   if(cR && renkSorted.length){
     const palette = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7','#eab308','#0ea5e9','#22c55e'];
@@ -8288,7 +8304,63 @@ function filterRepTablo(val){
 }
 
 function printReports(){
-  window.print();
+  const page = document.getElementById('page-reports');
+  if(!page){ window.print(); return; }
+  // Aktif rapor sekmesi (yalnızca onu bas — tüm sayfa/gizli sekmeler/kabuk boş sayfa yapıyordu)
+  const tabs = Array.prototype.slice.call(page.querySelectorAll('.rep-tab'));
+  const active = tabs.filter(function(t){ return t.style.display !== 'none'; })[0] || tabs[0];
+  if(!active){ window.print(); return; }
+  const activeBtn = page.querySelector('.rep-tab-btn.active');
+  const repName = activeBtn ? activeBtn.textContent.trim() : 'Rapor';
+  const period = (document.getElementById('repRangeInfo')||{}).textContent || '';
+
+  // KPI'ları temiz değer/etiket olarak çıkar
+  let kpiHtml = '';
+  page.querySelectorAll('#repKpis .rep-kpi').forEach(function(k){
+    const val = (k.querySelector('.rep-kpi-val')||{}).textContent || '';
+    const lbl = (k.querySelector('.rep-kpi-lbl')||{}).textContent || '';
+    if(val||lbl) kpiHtml += '<div class="pk"><div class="pkv">'+val+'</div><div class="pkl">'+lbl+'</div></div>';
+  });
+
+  // Aktif sekmeyi klonla; canvas grafikleri görsele çevir (canvas innerHTML ile taşınmaz)
+  const clone = active.cloneNode(true);
+  const srcCanvas = active.querySelectorAll('canvas');
+  const clCanvas = clone.querySelectorAll('canvas');
+  clCanvas.forEach(function(cv, idx){
+    const orig = srcCanvas[idx];
+    let url = '';
+    try{ if(orig && orig.width) url = orig.toDataURL('image/png'); }catch(_){}
+    const img = document.createElement('img');
+    if(url) img.src = url;
+    cv.parentNode.replaceChild(img, cv);
+  });
+
+  const now = new Date();
+  const win = window.open('', '_blank');
+  if(!win){ toast('Yazdırma penceresi açılamadı (pop-up engeli olabilir)','error'); return; }
+  win.document.write(
+    '<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Rapor — '+repName+'</title><style>'+
+    '*{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:22px;}'+
+    'h1{font-size:19px;margin:0 0 3px;} .sub{color:#666;font-size:12.5px;margin-bottom:16px;}'+
+    '.pks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}'+
+    '.pk{border:1px solid #ddd;border-radius:8px;padding:10px 12px;} .pkv{font-size:20px;font-weight:800;} .pkl{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.03em;}'+
+    '.rep-card{border:1px solid #e5e5e5;border-radius:8px;padding:12px 14px;margin-bottom:12px;page-break-inside:avoid;}'+
+    '.rep-card-head{font-weight:700;margin-bottom:10px;font-size:13px;}'+
+    '.rep-two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}'+
+    '.rep-chart-wrap{width:100%;} img{max-width:100%;height:auto;display:block;}'+
+    'table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;}'+
+    '.rep-stat{border:1px solid #eee;border-radius:8px;padding:10px;} .rep-stat-val{font-size:18px;font-weight:800;} .rep-stat-lbl{font-size:11px;color:#666;}'+
+    '.rep-empty-mini{color:#888;font-size:12px;text-align:center;padding:16px 0;}'+
+    '@media print{ body{margin:12mm;} @page{margin:10mm;} }'+
+    '</style></head><body>'+
+    '<h1>İrsaliye Pro — Raporlar</h1>'+
+    '<div class="sub"><b>'+repName+'</b> · '+period+' · '+now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</div>'+
+    (kpiHtml ? '<div class="pks">'+kpiHtml+'</div>' : '')+
+    '<div>'+clone.innerHTML+'</div>'+
+    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},350);};<\/scr'+'ipt>'+
+    '</body></html>'
+  );
+  win.document.close();
 }
 
 // Hook: reports sayfası açıldığında tüm raporları render et
