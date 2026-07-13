@@ -5055,12 +5055,16 @@ function ftGeneratePdf(){
   let sectionsHtml='', tSip=0,tGel=0,tEksik=0,kalemSayisi=0;
   models.forEach(m=>{
     let sizes=_ftSizesSorted(m); // zaten cm cm sıralı
-    let rows=sizes.map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z), stok:_ftStok(z)}));
-    if(onlyMissing) rows=rows.filter(r=>r.eksik>0);
+    const allRows=sizes.map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z), stok:_ftStok(z)}));
+    let rows = onlyMissing ? allRows.filter(r=>r.eksik>0) : allRows;
     if(!rows.length) return;
     kalemSayisi+=rows.length;
-    const mSip=rows.reduce((s,r)=>s+r.siparis,0), mGel=rows.reduce((s,r)=>s+r.gelen,0), mEksik=rows.reduce((s,r)=>s+r.eksik,0);
+    // Özet/model toplamları MODELİN TAMAMI üzerinden hesaplanır (tam gelmiş,
+    // tabloda gizlenen bedenler dahil) — yoksa "Toplam Sipariş" yalnızca eksik
+    // satırları toplayıp modelin gerçek siparişinden düşük çıkıyordu.
+    const mSip=allRows.reduce((s,r)=>s+r.siparis,0), mGel=allRows.reduce((s,r)=>s+r.gelen,0), mEksik=allRows.reduce((s,r)=>s+r.eksik,0);
     tSip+=mSip; tGel+=mGel; tEksik+=mEksik;
+    const hiddenCount = allRows.length - rows.length;
     const trRows=rows.map((r,i)=>`<tr${r.eksik>0?' class="mis"':''}>
       <td>${i+1}</td><td>${esc(r.beden)}</td><td><b>${r.cm!=null?r.cm+' cm':'—'}</b></td><td>${esc(r.renk)}</td>
       <td class="num">${r.siparis.toLocaleString('tr')}</td>
@@ -5070,8 +5074,8 @@ function ftGeneratePdf(){
     </tr>`).join('');
     sectionsHtml+=`<div class="msec">
       <div class="msec-hd"><span class="msec-model">${esc(m.modelKodu)}</span>
-        <span class="msec-meta">${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}</span>
-        <span class="msec-tot">Eksik: <b>${mEksik.toLocaleString('tr')}</b></span>
+        <span class="msec-meta">${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}${hiddenCount>0?(' · '+hiddenCount+' beden tam geldi (gizlendi)'):''}</span>
+        <span class="msec-tot">Sipariş <b>${mSip.toLocaleString('tr')}</b> · Eksik <b>${mEksik.toLocaleString('tr')}</b></span>
       </div>
       <table><thead><tr><th>#</th><th>Beden</th><th>CM</th><th>Renk</th><th style="text-align:right;">Sipariş</th><th style="text-align:right;">Gelen</th><th style="text-align:right;">EKSİK</th><th style="text-align:right;">Eldeki</th></tr></thead>
       <tbody>${trRows}</tbody></table>
