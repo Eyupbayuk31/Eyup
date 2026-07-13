@@ -5199,15 +5199,19 @@ let _ftAcHover=false;
 function ftRenderModelAc(q){
   const box=document.getElementById('fModelAc'); if(!box) return;
   const all=_ftAll();
+  // Tamamlanmış modelleri öneride gösterme — kalabalık yapıyor, yeni irsaliye
+  // genelde aktif (tamamlanmamış) modellerden kesilir.
+  const active = all.filter(m=>!_ftIsCompleted(m));
   const query=(q||'').trim().toLocaleLowerCase('tr');
-  const list = query ? all.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(query)) : all.slice();
+  const list = query ? active.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(query)) : active.slice();
   list.sort((a,b)=>_ftNormModel(a.modelKodu).localeCompare(_ftNormModel(b.modelKodu),'tr'));
   if(!all.length){
     box.innerHTML='<div class="f-ac-empty"><i class="fas fa-circle-info"></i> Fermuar Takip\'te model yok — serbest yazabilir veya önce Takip\'e ekleyebilirsiniz.</div>';
     box.style.display='block'; return;
   }
   if(!list.length){
-    box.innerHTML='<div class="f-ac-empty">"<i class="fas fa-search"></i> '+esc(query)+'" ile eşleşen Takip modeli yok.</div>';
+    const msg = query ? ('"'+esc(query)+'" ile eşleşen aktif model yok.') : 'Aktif (tamamlanmamış) model yok — serbest yazabilirsiniz.';
+    box.innerHTML='<div class="f-ac-empty"><i class="fas fa-search"></i> '+msg+'</div>';
     box.style.display='block'; return;
   }
   box.innerHTML=list.slice(0,12).map(m=>{
