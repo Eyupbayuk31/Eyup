@@ -4991,8 +4991,9 @@ function ftOpenPdfModal(){
   if(searchInp) searchInp.value='';
   const emptyEl=document.getElementById('ftPdfEmpty');
   if(emptyEl) emptyEl.style.display='none';
-  // Cikti filtre chip'i baslangic durumu (varsayilan: acik)
-  ftPdfRenderOnlyMissingChip(true);
+  // Cikti filtre chip'i: mevcut durumu yansit (varsayilan KAPALI — tam gelen
+  // bedenler de listede gorunsun; isteyen chip ile sadece-eksik'e gecebilir).
+  ftPdfRenderOnlyMissingChip();
   ftPdfUpdateSummary();
   document.getElementById('ftPdfModal').classList.add('show');
   setTimeout(()=>{ if(searchInp) searchInp.focus(); },80);
@@ -5019,8 +5020,8 @@ function ftPdfSelectOnlyMissing(){
   ftPdfUpdateSummary();
 }
 // PDF çıktı filtresi: "sadece eksiği olan satırlar" — chip olarak göster.
-// (Eski gizli checkbox yerine JS durumu; varsayılan açık.)
-window._ftPdfOnlyMissing = true;
+// Varsayılan KAPALI: tam gelen bedenler de listede görünsün.
+window._ftPdfOnlyMissing = false;
 function ftPdfToggleOnlyMissing(){
   window._ftPdfOnlyMissing = !window._ftPdfOnlyMissing;
   ftPdfRenderOnlyMissingChip();
