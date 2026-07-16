@@ -17023,88 +17023,9 @@ if(_origShowPage){
   });
 })();
 
-// ========== SWIPE GESTURES ==========
-(function(){
-  let startX = 0;
-  let currentX = 0;
-  let swiping = false;
-  let swipeTarget = null;
-
-  document.addEventListener('touchstart', function(e){
-    const target = e.target.closest('.uni-mobile-card, .db-recent-item');
-    if(!target) return;
-
-    swipeTarget = target;
-    startX = e.touches[0].clientX;
-    swiping = true;
-
-    // Swipe container oluştur
-    if(!target.querySelector('.swipe-actions')){
-      const actions = document.createElement('div');
-      actions.className = 'swipe-actions';
-      actions.innerHTML = `
-        <div class="swipe-action swipe-delete"><i class="fas fa-trash"></i> Sil</div>
-        <div class="swipe-action swipe-edit"><i class="fas fa-pen"></i> Düzenle</div>
-      `;
-      target.appendChild(actions);
-      target.style.position = 'relative';
-    }
-  }, {passive: true});
-
-  document.addEventListener('touchmove', function(e){
-    if(!swiping || !swipeTarget) return;
-    currentX = e.touches[0].clientX;
-    const diff = currentX - startX;
-
-    if(Math.abs(diff) > 10){
-      e.preventDefault();
-      swipeTarget.style.transform = `translateX(${diff}px)`;
-
-      const actions = swipeTarget.querySelector('.swipe-actions');
-      if(actions){
-        if(diff < -50){
-          actions.style.right = '0';
-          actions.style.left = 'auto';
-          actions.querySelector('.swipe-delete').style.display = 'flex';
-          actions.querySelector('.swipe-edit').style.display = 'none';
-        } else if(diff > 50){
-          actions.style.left = '0';
-          actions.style.right = 'auto';
-          actions.querySelector('.swipe-edit').style.display = 'flex';
-          actions.querySelector('.swipe-delete').style.display = 'none';
-        }
-      }
-    }
-  });
-
-  document.addEventListener('touchend', function(){
-    if(!swiping || !swipeTarget) return;
-    const diff = currentX - startX;
-
-    if(diff < -100){
-      // Sağa kaydır - Sil
-      if(navigator.vibrate) navigator.vibrate([50, 50, 50]);
-      const id = parseInt(swipeTarget.dataset.id, 10);
-      const type = swipeTarget.dataset.type || 'standart';
-      if(id && confirm('Silmek istediğinize emin misiniz?')){
-        deleteItemUni(id, type);
-      }
-    } else if(diff > 100){
-      // Sola kaydır - Düzenle
-      if(navigator.vibrate) navigator.vibrate(50);
-      const id = parseInt(swipeTarget.dataset.id, 10);
-      const type = swipeTarget.dataset.type || 'standart';
-      if(id){ if(EDIT_TYPE_PAGE[type]) editItemUni(id, type); else showDetailUni(id, type); }
-    }
-
-    // Reset
-    swipeTarget.style.transform = '';
-    swiping = false;
-    swipeTarget = null;
-    startX = 0;
-    currentX = 0;
-  });
-})();
+// NOT: Swipe (kaydırarak sil/düzenle) kodu, bu script bloğu bir üstteki
+// "_origShowPage yeniden tanımlandı" hatası yüzünden hiç çalışmıyordu; ayrı
+// bir <script> bloğuna (sayfa sonuna) taşındı ki her koşulda çalışsın.
 
 // ==================== QR VIEWER EARLY CHECK ====================
 // Tüm fonksiyonlar tanımlandıktan sonra, sayfa yüklenmeden önce QR kontrolü yap
@@ -17125,6 +17046,67 @@ if(_origShowPage){
   if(!window._isViewerUrl) return;
   if(typeof _checkAndRenderPublicViewer !== 'function') return;
   try { _checkAndRenderPublicViewer(); } catch(e){ console.error('sync viewer check failed:', e); }
+})();
+</script>
+
+<!-- ========== SWIPE (KAYDIRARAK SİL/DÜZENLE) — ayrı, kendi başına çalışan blok ========== -->
+<script>
+// Mobil kartlarda: sola kaydır = sil, sağa kaydır = düzenle/detay.
+// Yön kilidi + passive:false ile dikey scroll ile çakışmaz; buton/menü/checkbox
+// üstünde başlayan dokunuşlar swipe başlatmaz (tıklamalar bozulmaz).
+(function(){
+  var SEL = '.uni-mobile-card, .mobile-card';
+  var NO_SWIPE = 'button, a, input, select, textarea, label, .action-btn-menu, .card-dropdown-menu, .bulk-check, .mc-actions, .mc-actions-new';
+  var TH = 90, MAX = 140;
+  var sx=0, sy=0, cx=0, active=false, locked=false, horiz=false, el=null;
+
+  document.addEventListener('touchstart', function(e){
+    if(e.target.closest(NO_SWIPE)) return;
+    var t = e.target.closest(SEL);
+    if(!t || !t.dataset || !t.dataset.id) return;
+    el=t; sx=cx=e.touches[0].clientX; sy=e.touches[0].clientY;
+    active=true; locked=false; horiz=false;
+    t.style.transition='';
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    if(!active || !el) return;
+    var x=e.touches[0].clientX, y=e.touches[0].clientY;
+    var dx=x-sx, dy=y-sy;
+    if(!locked){
+      if(Math.abs(dx)<8 && Math.abs(dy)<8) return;
+      locked=true; horiz=Math.abs(dx)>Math.abs(dy);
+      if(!horiz){ active=false; el=null; return; }
+    }
+    if(horiz){
+      e.preventDefault();
+      cx=x;
+      var d=Math.max(-MAX, Math.min(MAX, dx));
+      el.style.transform='translateX('+d+'px)';
+      el.style.background = dx<-40 ? 'rgba(239,68,68,0.13)' : (dx>40 ? 'rgba(59,130,246,0.13)' : '');
+    }
+  }, {passive:false});
+
+  function endSwipe(){
+    if(!active || !el){ active=false; el=null; return; }
+    var dx=cx-sx, t=el;
+    t.style.transition='transform .2s ease, background .2s ease';
+    t.style.transform=''; t.style.background='';
+    var id=parseInt(t.dataset.id,10);
+    var type=t.dataset.type||'standart';
+    active=false; el=null;
+    if(!id) return;
+    if(dx < -TH){
+      try{ navigator.vibrate && navigator.vibrate(40); }catch(_){}
+      if(typeof deleteItemUni==='function') deleteItemUni(id, type); // kendi onayını sorar
+    } else if(dx > TH){
+      try{ navigator.vibrate && navigator.vibrate(25); }catch(_){}
+      if(typeof EDIT_TYPE_PAGE!=='undefined' && EDIT_TYPE_PAGE[type] && typeof editItemUni==='function') editItemUni(id, type);
+      else if(typeof showDetailUni==='function') showDetailUni(id, type);
+    }
+  }
+  document.addEventListener('touchend', endSwipe);
+  document.addEventListener('touchcancel', endSwipe);
 })();
 </script>
 </body>
