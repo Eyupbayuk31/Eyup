@@ -13829,3 +13829,39 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 
 /* Fermuar irsaliye formu: Tek Beden satırı vurgusu */
 #page-fermuar .fer-row-tek td{ background:color-mix(in srgb, var(--primary) 6%, transparent); }
+
+/* ============================================================
+   Kaydırarak Sil / Düzenle — animasyonlu reveal (mobil)
+   Sola kaydır → kırmızı "Sil" paneli açılır
+   Sağa kaydır → mavi "Düzenle" paneli açılır
+   .card-inner içeriği paneller üzerinde kayar, bırakınca geri yaylanır
+   ============================================================ */
+.uni-mobile-card.sw-active{ overflow:hidden !important; }
+.uni-mobile-card.sw-active .card-inner{
+  background:var(--bg-card);
+  border-radius:11px;
+  will-change:transform;
+}
+.sw-action{
+  position:absolute; top:0; bottom:0; width:60%;
+  display:flex; align-items:center; gap:9px;
+  padding:0 20px; margin:0;
+  font-weight:700; font-size:15px; letter-spacing:.2px;
+  color:#fff; opacity:0; z-index:0; pointer-events:none;
+  border-radius:14px;
+  transition:opacity .12s ease;
+}
+.sw-action i{ font-size:19px; transition:transform .16s cubic-bezier(.34,1.5,.5,1); }
+.sw-action span{ line-height:1; }
+.sw-action.sw-del{
+  right:0; justify-content:flex-end; text-align:right;
+  background:linear-gradient(90deg,
+    rgba(239,68,68,0) 0%, rgba(239,68,68,.18) 35%, rgba(220,38,38,.95) 100%);
+}
+.sw-action.sw-edit{
+  left:0; justify-content:flex-start; text-align:left;
+  background:linear-gradient(90deg,
+    rgba(37,99,235,.95) 0%, rgba(59,130,246,.18) 65%, rgba(59,130,246,0) 100%);
+}
+.sw-action.sw-armed i{ transform:scale(1.28); }
+.sw-action.sw-armed{ filter:saturate(1.15) brightness(1.05); }

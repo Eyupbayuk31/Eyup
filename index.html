@@ -17051,51 +17051,100 @@ window.hideLoading = function(){
 // üstünde başlayan dokunuşlar swipe başlatmaz (tıklamalar bozulmaz).
 (function(){
   var SEL = '.uni-mobile-card, .mobile-card';
-  var NO_SWIPE = 'button, a, input, select, textarea, label, .action-btn-menu, .card-dropdown-menu, .bulk-check, .mc-actions, .mc-actions-new';
-  var TH = 90, MAX = 140;
-  var sx=0, sy=0, cx=0, active=false, locked=false, horiz=false, el=null;
+  var NO_SWIPE = 'button, a, input, select, textarea, label, .action-btn-menu, .card-dropdown-menu, .bulk-check, .mc-actions, .mc-actions-new, .chip';
+  var TH = 80, MAX = 130;
+  var sx=0, sy=0, cx=0, active=false, locked=false, horiz=false;
+  var card=null, inner=null, del=null, edit=null;
+
+  // Kartın içine (bir kez) sil/düzenle panellerini enjekte et
+  function ensureLayers(c){
+    inner = c.querySelector('.card-inner');
+    if(!inner) return false;
+    del = c.querySelector(':scope > .sw-del');
+    edit = c.querySelector(':scope > .sw-edit');
+    if(!del){
+      del = document.createElement('div');
+      del.className = 'sw-action sw-del';
+      del.innerHTML = '<span>Sil</span><i class="fas fa-trash"></i>';
+      c.insertBefore(del, c.firstChild);
+    }
+    if(!edit){
+      edit = document.createElement('div');
+      edit.className = 'sw-action sw-edit';
+      edit.innerHTML = '<i class="fas fa-pen"></i><span>Düzenle</span>';
+      c.insertBefore(edit, c.firstChild);
+    }
+    return true;
+  }
 
   document.addEventListener('touchstart', function(e){
     if(e.target.closest(NO_SWIPE)) return;
     var t = e.target.closest(SEL);
     if(!t || !t.dataset || !t.dataset.id) return;
-    el=t; sx=cx=e.touches[0].clientX; sy=e.touches[0].clientY;
+    if(!ensureLayers(t)) return;
+    card=t; sx=cx=e.touches[0].clientX; sy=e.touches[0].clientY;
     active=true; locked=false; horiz=false;
-    t.style.transition='';
+    inner.style.transition='';
   }, {passive:true});
 
   document.addEventListener('touchmove', function(e){
-    if(!active || !el) return;
+    if(!active || !card) return;
     var x=e.touches[0].clientX, y=e.touches[0].clientY;
     var dx=x-sx, dy=y-sy;
     if(!locked){
-      if(Math.abs(dx)<8 && Math.abs(dy)<8) return;
-      locked=true; horiz=Math.abs(dx)>Math.abs(dy);
-      if(!horiz){ active=false; el=null; return; }
+      if(Math.abs(dx)<10 && Math.abs(dy)<10) return;
+      locked = true;
+      horiz = Math.abs(dx) > Math.abs(dy)*1.2;   // net yatay hareket iste
+      if(!horiz){ active=false; card=null; return; }
+      card.classList.add('sw-active');
     }
     if(horiz){
       e.preventDefault();
       cx=x;
-      var d=Math.max(-MAX, Math.min(MAX, dx));
-      el.style.transform='translateX('+d+'px)';
-      el.style.background = dx<-40 ? 'rgba(239,68,68,0.13)' : (dx>40 ? 'rgba(59,130,246,0.13)' : '');
+      // eşik ötesinde hafif direnç (lastik hissi)
+      var raw = dx;
+      var d = Math.abs(raw) <= MAX ? raw
+              : (raw<0 ? -1 : 1) * (MAX + (Math.abs(raw)-MAX)*0.35);
+      d = Math.max(-MAX-30, Math.min(MAX+30, d));
+      inner.style.transform = 'translateX('+d+'px)';
+      var p = Math.min(1, Math.abs(d)/TH);
+      if(d < 0){
+        del.style.opacity = p; edit.style.opacity = 0;
+        del.classList.toggle('sw-armed', Math.abs(d) >= TH);
+      } else if(d > 0){
+        edit.style.opacity = p; del.style.opacity = 0;
+        edit.classList.toggle('sw-armed', d >= TH);
+      } else {
+        del.style.opacity = 0; edit.style.opacity = 0;
+      }
     }
   }, {passive:false});
 
+  function snapBack(){
+    if(inner){
+      inner.style.transition='transform .24s cubic-bezier(.34,1.3,.64,1)';
+      inner.style.transform='';
+    }
+    if(del){ del.style.opacity=0; del.classList.remove('sw-armed'); }
+    if(edit){ edit.style.opacity=0; edit.classList.remove('sw-armed'); }
+    var c=card;
+    if(c) setTimeout(function(){ c.classList.remove('sw-active'); }, 260);
+  }
+
   function endSwipe(){
-    if(!active || !el){ active=false; el=null; return; }
-    var dx=cx-sx, t=el;
-    t.style.transition='transform .2s ease, background .2s ease';
-    t.style.transform=''; t.style.background='';
-    var id=parseInt(t.dataset.id,10);
-    var type=t.dataset.type||'standart';
-    active=false; el=null;
+    if(!active || !card){ active=false; card=null; return; }
+    var dx=cx-sx;
+    var id=parseInt(card.dataset.id,10);
+    var type=card.dataset.type||'standart';
+    active=false;
+    snapBack();
+    card=null;
     if(!id) return;
     if(dx < -TH){
-      try{ navigator.vibrate && navigator.vibrate(40); }catch(_){}
+      try{ navigator.vibrate && navigator.vibrate(35); }catch(_){}
       if(typeof deleteItemUni==='function') deleteItemUni(id, type); // kendi onayını sorar
     } else if(dx > TH){
-      try{ navigator.vibrate && navigator.vibrate(25); }catch(_){}
+      try{ navigator.vibrate && navigator.vibrate(22); }catch(_){}
       if(typeof EDIT_TYPE_PAGE!=='undefined' && EDIT_TYPE_PAGE[type] && typeof editItemUni==='function') editItemUni(id, type);
       else if(typeof showDetailUni==='function') showDetailUni(id, type);
     }
