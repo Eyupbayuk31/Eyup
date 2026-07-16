@@ -16920,17 +16920,12 @@ window.hideLoading = function(){
   if(el) el.classList.remove('show');
 };
 
-// Sayfa geçişlerinde loading göster
-const _origShowPage = window.showPage;
-if(_origShowPage){
-  window.showPage = function(page){
-    showLoading();
-    setTimeout(()=>{
-      _origShowPage(page);
-      hideLoading();
-    }, 300);
-  };
-}
+// NOT: Buradaki eski "300ms loading + showPage sarmalayıcı" kaldırıldı.
+// (1) Her sayfa geçişine gereksiz 300ms gecikme ekliyordu.
+// (2) 'const _origShowPage' başka bir blokta zaten tanımlı olduğundan
+//     "already declared" SyntaxError'u atıp BU KOMPLE SCRIPT BLOĞUNU
+//     çökertiyordu — atölye favorileri, aşağı-çek-yenile ve eski QR yedeği
+//     bu yüzden hiç çalışmıyordu. Sarmalayıcı gidince blok normal çalışıyor.
 
 // ========== PULL TO REFRESH ==========
 (function(){
