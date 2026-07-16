@@ -3534,10 +3534,23 @@ window.groupFermuarBedenByCm = groupFermuarBedenByCm;
 const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip','fermuar-takip':'Fermuar Takip',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
+// Sayfa değişirken açık modal/panelleri kapat — yoksa modal yeni sayfanın
+// üstünde açık kalıp "iki sayfa iç içe" görünüyordu (login ve boot splash hariç).
+function _closeOpenModalsForNav(){
+  document.querySelectorAll('.modal-overlay.show').forEach(function(m){ m.classList.remove('show'); });
+  var gs=document.getElementById('gsOverlay'); if(gs) gs.classList.remove('show');
+  var eu=document.getElementById('editUserModal'); if(eu) eu.classList.remove('show');
+  try{ if(typeof closeAtolyePicker==='function') closeAtolyePicker(); }catch(_){}
+  try{ if(typeof closeShareMenu==='function') closeShareMenu(); }catch(_){}
+  try{ if(typeof closeAllMenus==='function') closeAllMenus(); }catch(_){}
+  document.querySelectorAll('.card-dropdown-menu.show').forEach(function(m){ m.classList.remove('show'); });
+}
+
 function showPage(page){
   if(window._editUni && EDIT_TYPE_PAGE[window._editUni.type] !== page){
     _silentCancelEditUni();
   }
+  try{ _closeOpenModalsForNav(); }catch(_){}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   
