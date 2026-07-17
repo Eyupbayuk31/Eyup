@@ -4622,12 +4622,31 @@ function ftManualRefresh(){
   if(typeof toast==='function') toast('Fermuar Takip güncellendi','success');
 }
 
-// Sipariş edilen tüm bedenler tam geldiyse model "tamamlandı" sayılır (karttaki "Tamamlandı" rozetiyle aynı kural).
+// Model "tamamlandı" = tüm sipariş geldi VE eldeki stok bitti (hepsi kullanıldı),
+// ya da kullanıcı elle "Tamamla" dedi. Sadece mal gelmiş ama stok elde duruyorsa
+// model AKTİF kalır (stok kullanılabilsin, irsaliye kesilebilsin).
 function _ftIsCompleted(m){
   const sizeCount=(m.sizes||[]).length;
   if(!sizeCount) return false;
-  const sip=_ftModelSip(m), gel=_ftModelGelen(m);
-  return sip>0 && gel>=sip;
+  // Elle işaretleme önceliklidir (üç durumlu):
+  //   true  → kullanıcı "Tamamla" dedi
+  //   false → kullanıcı "Geri Al" dedi (stok bitmiş olsa bile aktif kalsın)
+  if(m.tamamlandi===true) return true;
+  if(m.tamamlandi===false) return false;
+  // Otomatik: sipariş tam geldi VE elde stok kalmadı (hepsi kullanıldı).
+  // Sadece "geldi" olması yetmez — gelen mallar elde stok olarak durduğu
+  // sürece model aktif kalır ki irsaliye kesilebilsin ("elimde gözüksün").
+  const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m);
+  return sip>0 && gel>=sip && stok<=0;
+}
+function ftToggleDone(id, val){
+  let list=_ftAll();
+  const m=list.find(x=>x.id===id); if(!m) return;
+  m.tamamlandi=val;
+  if(typeof _ftStamp==='function') _ftStamp(m);
+  setData('fermuarTakip', list);
+  renderFermuarTakip();
+  if(typeof toast==='function') toast(val?'Model tamamlandı olarak işaretlendi':'Model tekrar aktif listede','success');
 }
 let _ftViewTab='active';
 function ftSetViewTab(tab, btn){
@@ -4682,8 +4701,10 @@ function renderFermuarTakip(){
     const pct = sip>0 ? Math.min(100, Math.round(gel/sip*100)) : (gel>0?100:0);
     const sizeCount=(m.sizes||[]).length;
     let durum, dCls;
+    const done=_ftIsCompleted(m);
     if(!sizeCount){ durum='Beden girilmedi'; dCls='wait'; }
-    else if(sip>0 && gel>=sip){ durum='Tamamlandı'; dCls='ok'; }
+    else if(done){ durum='Tamamlandı'; dCls='ok'; }
+    else if(sip>0 && gel>=sip && stok>0){ durum='Stokta · hazır'; dCls='ready'; }
     else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
     else { durum='Bekliyor'; dCls='wait'; }
     const terminCls=_ftTerminCls(m.termin);
@@ -4715,6 +4736,9 @@ function renderFermuarTakip(){
 
       <div class="ft-actions" onclick="event.stopPropagation()">
         <button class="btn btn-sm btn-primary" onclick="ftOpenDetailModal(${m.id})"><i class="fas fa-list"></i> Detay / CM Gir</button>
+        ${done
+          ? `<button class="btn btn-sm btn-secondary" onclick="ftToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
+          : `<button class="btn btn-sm btn-secondary" onclick="ftToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
         <button class="btn btn-sm btn-secondary" onclick="ftEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
         <button class="btn btn-sm btn-danger" onclick="ftDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
       </div>

@@ -13608,6 +13608,12 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-prog-fill{ height:100%; border-radius:5px; background:linear-gradient(90deg, var(--primary), var(--primary-light)); transition:width .5s cubic-bezier(.4,0,.2,1); }
 .ft-prog-ok .ft-prog-fill{ background:linear-gradient(90deg, var(--success), color-mix(in srgb, var(--success) 60%, var(--primary))); }
 .ft-prog-partial .ft-prog-fill{ background:linear-gradient(90deg, var(--warning), var(--primary)); }
+.ft-prog-ready .ft-prog-fill{ background:linear-gradient(90deg, #3b82f6, #60a5fa); }
+/* "Stokta · kullanıma hazır": tam geldi ama elde stok var → mavi */
+.ft-card-ready::before{ background:linear-gradient(#3b82f6, #2563eb); }
+.ft-card-ready{ border-color:color-mix(in srgb, #3b82f6 24%, var(--border)); }
+.ft-card-ready:hover{ border-color:color-mix(in srgb, #3b82f6 42%, var(--border)); box-shadow:0 12px 30px -12px color-mix(in srgb, #3b82f6 42%, transparent); }
+.ft-badge-ready{ background:color-mix(in srgb, #3b82f6 18%, transparent); color:#60a5fa; }
 .ft-mini{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px; padding-top:12px; border-top:1px solid color-mix(in srgb, var(--border) 70%, transparent); }
 .ft-mini div{ text-align:center; padding:7px 4px; border-radius:9px; background:color-mix(in srgb, var(--text-dim) 6%, transparent); }
 .ft-mini span{ display:block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); }
