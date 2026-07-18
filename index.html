@@ -9376,7 +9376,8 @@ function updateSelDash(){
 
   dash.classList.add('show');
   dash.style.display='block';
-  setTimeout(()=>{dash.scrollIntoView({behavior:'smooth',block:'start'});},150);
+  // NOT: Seçim yapınca otomatik en alta (dashboard'a) KAYDIRMA yok.
+  // Kullanıcı liste başında kalır; özet panelini görmek isterse kendi iner.
 }
 
 function toggleSelDashDetail(){
@@ -10611,6 +10612,7 @@ function bulkExportPDF(){
   const w=_openHtmlWindow(_buildBulkHTML(items),'width=1000,height=700');
   if(!w){ toast('Popup engellendi! İzin verin.','error'); return; }
   toast(items.length+' kayıt için PDF önizlemesi açıldı — "PDF İndir" ile kaydedin','success');
+  bulkClear(); // parti bitti: seçimi temizle
 }
 
 function bulkPrint(){
@@ -10620,6 +10622,9 @@ function bulkPrint(){
   if(!w){ toast('Popup engellendi!','error'); return; }
   _whenWindowReady(w, () => setTimeout(() => { try{ w.print(); }catch(e){} }, 500));
   toast(items.length+' kayıt yazdırılıyor','info');
+  // Bu yazdırma partisi bitti — seçimi temizle ki bir sonraki yazdırmaya
+  // eski kayıtlar taşınmasın (aksi halde 2+2 seçimde 4 kayıt çıkıyordu).
+  bulkClear();
 }
 
 
@@ -14530,6 +14535,7 @@ function printListPDF(){
     const w=_openHtmlWindow(_buildBulkHTML(selected),'width=1000,height=700');
     if(!w){ toast('Popup engellendi! İzin verin.','error'); return; }
     toast(selected.length+' irsaliye için PDF hazırlanıyor','success');
+    bulkClear(); // parti bitti: seçimi temizle (sonraki yazdırmaya taşınmasın)
     return;
   }
   const list = window._lastFilteredList || [];
