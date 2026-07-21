@@ -17067,11 +17067,17 @@ AK.renderSmart = function(bytes,type){ return window.pdfjsLib.getDocument({data:
 AK._pngUrl = function(bytes,fn){ var bin='',u=new Uint8Array(bytes); for(var i=0;i<u.length;i++) bin+=String.fromCharCode(u[i]); return 'data:image/'+(/jpe?g$/i.test(fn)?'jpeg':'png')+';base64,'+btoa(bin); };
 
 // ---- ZIP işle ----
-// PDF metninden model kodu yakala (ör. "I6391AX/YL155" → I6391AX + renk YL155)
+// PDF metninden model kodu yakala — farklı DeFacto formatlarını dener:
+//  I6391AX/YL155  ·  I6391AX-(YL155, Solid)  ·  FIXTURE I6391AX / YL155  ·  yalın I6391AX
 AK._detectModel = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){ return pdf.getPage(1).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
-  var t=tc.items.map(function(x){return x.str;}).join(' ');
-  var m=t.match(/\b([A-Z]\d{3,5}[A-Z]{1,2})\s*\/\s*([A-Z]{1,3}\d{2,4})\b/);
-  return m ? {model:m[1], renk:m[2]} : null;
+  var t=tc.items.map(function(x){return x.str;}).join(' ').replace(/\s+/g,' ');
+  var m=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{1,3}\d{2,4})/);           // MODEL/COLOR
+  if(m) return {model:m[1], renk:m[2]};
+  m=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*-\s*\(\s*([A-Z]{1,3}\d{2,4})/);            // MODEL-(COLOR
+  if(m) return {model:m[1], renk:m[2]};
+  m=t.match(/\b([A-Z]\d{4}[A-Z]{2})\b/);                                          // yalın MODEL
+  if(m) return {model:m[1], renk:''};
+  return null;
 }); }).catch(function(){ return null; }); };
 // libarchive.js — RAR / 7z / diğer arşivler için (ZIP hızlı yol: JSZip). Lazy CDN.
 AK._arch=null;
@@ -17115,7 +17121,7 @@ AK.processEntries = function(entries){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
         if(/\.(png|jpe?g)$/i.test(name)){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); return; }
         if(cat.type==='unknown'){ out.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
-        var pre = (!det.model && (cat.type==='icbarkod'||cat.type==='fiyat'||cat.type==='lot')) ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk) det.renk=d.renk; } }) : Promise.resolve();
+        var pre = (!det.model && (cat.type==='icbarkod'||cat.type==='fiyat'||cat.type==='lot'||cat.type==='yikama')) ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk&&d.renk) det.renk=d.renk; } }) : Promise.resolve();
         return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:imgs}); });
       });
     }, Promise.resolve()).then(function(){ out.detected=det; return out; });
