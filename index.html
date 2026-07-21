@@ -3451,7 +3451,7 @@
           <div class="ak-field"><label>Aşama</label>
             <div class="ak-seg">
               <button type="button" id="akSegDikim" class="ak-seg-btn active" onclick="AK.setAsama('dikim')">🧵 Dikim</button>
-              <button type="button" id="akSegUtu" class="ak-seg-btn" onclick="AK.setAsama('utupaket')">📦 Ütü &amp; Paket</button>
+              <button type="button" id="akSegUtu" class="ak-seg-btn" onclick="AK.setAsama('utupaket')">📦 Ütü Paket</button>
             </div>
           </div>
         </div>
@@ -17001,12 +17001,12 @@ AK.TYPES = {
   yikama:      {label:'Yıkama',                 stage:'dikim',    req:true},
   lisansEtiketi:{label:'Lisans Etiketi',        stage:'dikim',    req:false},
   fiyat:       {label:'Fiyat Kartı',            stage:'utupaket', req:true},
-  susKarti:    {label:'Süs Kartı',              stage:'utupaket', req:false},
+  susKarti:    {label:'Süs Kartı (Kart Arkası + İp)', stage:'utupaket', req:false},
   lisansKarti: {label:'Lisans Kartı',           stage:'utupaket', req:false},
   lot:         {label:'Lot Sticker',            stage:'utupaket', req:true}
 };
 AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','lisansKarti','lot'] };
-AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü & Paket' };
+AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü Paket' };
 // Kanonik beden sırası (XXS→4XL). Aktif bedenler dosyalardan tespit edilir.
 AK.SIZES = [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL'],['4xl','4XL']];
 AK._activeSizes = function(){
@@ -17032,7 +17032,8 @@ AK.LS_MAP='ak_codemap_v2'; AK.LS_REC='ak_records_v2';
 AK.SEED = {
   pdf: [ {m:'stampsticker',type:'icbarkod'}, {m:'pricesticker',type:'fiyat'},
          {m:'washinginstruction',type:'yikama'}, {m:'lotsticker',type:'lot'} ],
-  png: { 'AULBW13728':{type:'dokuma',renk:'Beyaz'}, 'AULBW13729':{type:'dokuma',renk:'Siyah'} }
+  png: { 'AULBW13728':{type:'dokuma',renk:'Beyaz'}, 'AULBW13729':{type:'dokuma',renk:'Siyah'},
+         'AULTH13740':{type:'susKarti'} }
 };
 // Firestore senkronu: kayıtlar dizi (id'li) → doğrudan; kod tablosu obje
 // olduğu için tek-elemanlı dizi (array-of-one) formatında saklanır.
@@ -17489,7 +17490,7 @@ AK._renderColorPage = function(pdf, c){
   pdf.setTextColor.apply(pdf,ACC); pdf.setFontSize(11);
   T((AK.state.model||'—')+'  ·  '+(c.renk||'—'), M, y+2); y+=6;
   pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
-  var asamaLbl = AK.state.asama==='dikim'?'Dikim':'Ütü & Paket';
+  var asamaLbl = AK.state.asama==='dikim'?'Dikim':'Ütü Paket';
   T('Model: '+(AK.state.model||'—')+'    PO: '+(c.po||'—')+'    Aşama: '+asamaLbl+(AK.state.atolye?('    Atölye: '+AK.state.atolye):''), M, y+2); y+=5;
   line(); y+=5;
   // ---- adet dökümü ----
@@ -17591,7 +17592,7 @@ AK.renderRecords = function(){
       '<select class="form-input ak-recsel" onchange="AK._recFilter.asama=this.value; AK._renderRecList();">'+
         '<option value="all"'+(f.asama==='all'?' selected':'')+'>Tüm aşamalar</option>'+
         '<option value="dikim"'+(f.asama==='dikim'?' selected':'')+'>🧵 Dikim</option>'+
-        '<option value="utupaket"'+(f.asama==='utupaket'?' selected':'')+'>📦 Ütü &amp; Paket</option>'+
+        '<option value="utupaket"'+(f.asama==='utupaket'?' selected':'')+'>📦 Ütü Paket</option>'+
       '</select>'+
       '<button class="btn btn-xs btn-secondary" onclick="AK.clearRecords()" title="Tümünü sil"><i class="fas fa-trash-can"></i></button>'+
     '</div>'+
