@@ -17003,10 +17003,9 @@ AK.TYPES = {
   fiyat:       {label:'Fiyat Kartı',            stage:'utupaket', req:true},
   susKarti:    {label:'Süs Kartı',              stage:'utupaket', req:false},
   kartArka:    {label:'Kart Arkası + İp',       stage:'utupaket', req:false},
-  lisansKarti: {label:'Lisans Kartı',           stage:'utupaket', req:false},
-  lot:         {label:'Lot Sticker',            stage:'utupaket', req:true}
+  lisansKarti: {label:'Lisans Kartı',           stage:'utupaket', req:false}
 };
-AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','kartArka','lisansKarti','lot'] };
+AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','kartArka','lisansKarti'] };
 AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü Paket' };
 // Kanonik beden sırası (XXS→4XL). Aktif bedenler dosyalardan tespit edilir.
 AK.SIZES = [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL'],['4xl','4XL']];
@@ -17032,7 +17031,7 @@ AK._labelNote = function(renk, pref){ return 'Mal rengi '+(renk||'—')+' olduğ
 AK.LS_MAP='ak_codemap_v2'; AK.LS_REC='ak_records_v2';
 AK.SEED = {
   pdf: [ {m:'stampsticker',type:'icbarkod'}, {m:'pricesticker',type:'fiyat'},
-         {m:'washinginstruction',type:'yikama'}, {m:'lotsticker',type:'lot'} ],
+         {m:'washinginstruction',type:'yikama'} ],
   png: { 'AULBW13728':{type:'dokuma',renk:'Beyaz'}, 'AULBW13729':{type:'dokuma',renk:'Siyah'},
          'AULTH13740':{type:'kartArka'} }
 };
@@ -17079,7 +17078,8 @@ AK.loadLibs = function(){
 // ---- Dosya sınıflandırma ----
 AK.categorize = function(fn){
   var map=AK.map(); var low=fn.toLowerCase().split('/').pop();
-  if(low.slice(-4)==='.pdf'){ for(var i=0;i<map.pdf.length;i++){ if(low.indexOf(map.pdf[i].m)>=0) return {type:map.pdf[i].type}; } return {type:'unknown'}; }
+  if(low.indexOf('lotsticker')>=0) return null; // Lot sticker kontrol edilmiyor → yok say
+  if(low.slice(-4)==='.pdf'){ for(var i=0;i<map.pdf.length;i++){ if(map.pdf[i].type!=='lot' && low.indexOf(map.pdf[i].m)>=0) return {type:map.pdf[i].type}; } return {type:'unknown'}; }
   if(/\.(png|jpe?g)$/.test(low)){
     var mm=fn.match(/AUL[A-Z]{2}\d+/i);
     if(mm){ var code=mm[0].toUpperCase(); if(map.png[code]) return {type:map.png[code].type, renk:map.png[code].renk, code:code}; return {type:'unknown', code:code}; }
@@ -17236,9 +17236,8 @@ AK.processEntries = function(entries){
           var nocode=list.filter(function(x){return !x.code;}).map(function(x){return x.url;});
           if(nocode.length) shared.push({name:name,type:'yikama',code:null,renk:null,images:nocode});
         }); }
-        // lot / diğer → ortak
-        var pre = (!det.model && cat.type==='lot') ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk&&d.renk) det.renk=d.renk; } }) : Promise.resolve();
-        return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ shared.push({name:name,type:cat.type,code:null,renk:null,images:imgs}); });
+        // diğer (dokuma / lisans / süs / kart arkası) → ortak
+        return AK.renderSmart(bytes,cat.type).then(function(imgs){ shared.push({name:name,type:cat.type,code:null,renk:null,images:imgs}); });
       });
     }, Promise.resolve()).then(function(){ return { detected:det, byColor:byColor, shared:shared, sizes:Object.keys(sizeSet) }; });
   });
@@ -17337,7 +17336,7 @@ AK.matchesHtml = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var shown = c.files.filter(function(f){ return f.type==='unknown' || order.indexOf(f.type)>=0; });
   if(!shown.length) return '<div class="ak-miss"><i class="fas fa-circle-info"></i> Bu ZIP\'te bu aşamaya ait aksesuar bulunamadı.</div>';
-  var ICON={dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',kartArka:'fa-address-card',lisansKarti:'fa-id-badge',lot:'fa-boxes-stacked'};
+  var ICON={dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',kartArka:'fa-address-card',lisansKarti:'fa-id-badge'};
   var cards = shown.map(function(f){
     if(f.type==='unknown'){
       var opts = order.map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('');
@@ -17470,7 +17469,7 @@ AK.buildFoyHtml = function(c){
 // karşılığına çevir (ç/ö/ü Latin-1'de var, korunur).
 AK._tr = function(s){ return (''+(s==null?'':s)).replace(/[İıŞşĞğ]/g, function(ch){ return {'İ':'I','ı':'i','Ş':'S','ş':'s','Ğ':'G','ğ':'g'}[ch]; }); };
 // Aksesuar başına makul görsel yüksekliği (mm) — derli toplu, sayfaya sığsın.
-AK._CAP = { dokuma:20, icbarkod:58, yikama:62, fiyat:70, lot:44, susKarti:64, kartArka:64, lisansKarti:64, lisansEtiketi:26 };
+AK._CAP = { dokuma:20, icbarkod:58, yikama:62, fiyat:70, susKarti:64, kartArka:64, lisansKarti:64, lisansEtiketi:26 };
 AK._renderColorPage = function(pdf, c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
@@ -17525,6 +17524,9 @@ AK._renderColorPage = function(pdf, c){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
       var w=cw, h=w*pr.height/pr.width;
       if(h>cap){ h=cap; w=h*pr.width/pr.height; if(w>cw){ w=cw; h=w*pr.height/pr.width; } }
+      // Garanti: hiçbir görsel tek sayfanın kullanılabilir yüksekliğini aşmasın.
+      var pageMax = H-2*M-4;
+      if(h>pageMax){ h=pageMax; w=h*pr.width/pr.height; if(w>cw){ w=cw; h=w*pr.height/pr.width; } }
       if(big && ii>0){ pdf.addPage(); y=M; } else { need(h+3); }
       var xoff=M+(cw-w)/2;
       pdf.addImage(url,'PNG',xoff,y,w,h,undefined,'FAST'); y+=h+3;
