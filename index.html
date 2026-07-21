@@ -17320,19 +17320,22 @@ AK.buildPdf = function(c){
   pdf.setTextColor(180,190,205); pdf.setFontSize(7); T('TOPLAM', tx+colw/2, y+4, {align:'center'});
   pdf.setTextColor(255,255,255); pdf.setFontSize(11); T(String(tot), tx+colw/2, y+9.6, {align:'center'});
   y+=bh+6;
-  // ---- aksesuarlar (derli toplu — makul boy, sayfaya sığar) ----
+  // ---- aksesuarlar ----
+  // Yıkama küçük kalmasın diye KENDİ SAYFASINDA ve büyük basılır (2. kağıt).
+  // Diğerleri (dokuma, iç barkod...) 1. sayfada derli toplu kalır.
   files.forEach(function(f,fi){
+    var big = (f.type==='yikama');
     var label=(fi+1)+'. '+AK.TYPES[f.type].label+(f.renk?'  ·  '+f.renk:'')+(f.images.length>1?'  ('+f.images.length+' sayfa)':'');
-    need(10+(AK._CAP[f.type]||60));
+    if(big){ pdf.addPage(); y=M; } else { need(10+(AK._CAP[f.type]||60)); }
     pdf.setFillColor(244,246,250); pdf.rect(M,y,cw,6.5,'F');
     pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold'); pdf.setFontSize(10);
     T(label, M+2.5, y+4.5); y+=8;
-    var cap=AK._CAP[f.type]||60;
-    f.images.forEach(function(url){
+    var cap = big ? 232 : (AK._CAP[f.type]||60);
+    f.images.forEach(function(url,ii){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
       var w=cw, h=w*pr.height/pr.width;
       if(h>cap){ h=cap; w=h*pr.width/pr.height; if(w>cw){ w=cw; h=w*pr.height/pr.width; } }
-      need(h+3);
+      if(big && ii>0){ pdf.addPage(); y=M; } else { need(h+3); }
       var xoff=M+(cw-w)/2;
       pdf.addImage(url,'PNG',xoff,y,w,h,undefined,'FAST'); y+=h+3;
     });
