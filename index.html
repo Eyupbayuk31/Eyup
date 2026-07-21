@@ -2078,7 +2078,7 @@
       <div class="ft-search-row">
         <div class="ft-search-box">
           <i class="fas fa-search"></i>
-          <input class="form-input" id="ftSearch" placeholder="Model veya tedarikçi ara..." autocomplete="off" oninput="renderFermuarTakip()">
+          <input class="form-input" id="ftSearch" placeholder="Model, renk veya tedarikçi ara..." autocomplete="off" oninput="renderFermuarTakip()">
         </div>
         <span class="ft-count-chip" id="ftCount">0 model</span>
       </div>
@@ -4751,7 +4751,7 @@ function renderFermuarTakip(){
   if(doneBtn) doneBtn.innerHTML='<i class="fas fa-check-double"></i> Tamamlananlar ('+doneModels.length.toLocaleString('tr')+')';
 
   const q=(document.getElementById('ftSearch')?.value||'').trim().toLocaleLowerCase('tr');
-  const list = q ? tabModels.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(q)) : tabModels.slice();
+  const list = q ? tabModels.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr').includes(q)) : tabModels.slice();
   list.sort((a,b)=>_ftModelBekleyen(b)-_ftModelBekleyen(a) || (b.createdAt||'').localeCompare(a.createdAt||''));
 
   // KPI (görüntülenen sekmedeki modellerin toplamı)
@@ -4801,10 +4801,11 @@ function renderFermuarTakip(){
         <span class="ft-badge ft-badge-${dCls}">${durum}</span>
       </div>
 
-      ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
-
-      <div class="ft-card-termin ${terminCls}">
-        <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(m.termin):'—'}${terminCls?' · GECİKTİ':''}
+      <div class="ft-card-meta">
+        ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
+        <div class="ft-card-termin ${terminCls}">
+          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(m.termin):'—'}${terminCls?' · GECİKTİ':''}
+        </div>
       </div>
 
       <div class="ft-stock ${stok<=0&&sizeCount?'ft-stock-zero':(sip>0&&stok<sip*0.15?'ft-stock-low':'')}">
@@ -5105,13 +5106,13 @@ function ftOpenPdfModal(){
   const host=document.getElementById('ftPdfModelList');
   host.innerHTML=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||'')).map(m=>{
     const eksik=_ftModelBekleyen(m), stok=_ftModelStok(m), n=(m.sizes||[]).length;
-    const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr');
+    const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr');
     return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
       <input type="checkbox" class="ft-pdf-chk" value="${m.id}" onchange="ftPdfUpdateSummary()">
       <span class="ft-pdf-check"></span>
       <span class="ft-pdf-info">
         <span class="ft-pdf-model">${esc(m.modelKodu)}</span>
-        <span class="ft-pdf-meta">${n} beden · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
+        <span class="ft-pdf-meta">${m.renk?(esc(m.renk)+' · '):''}${n} beden · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
       </span>
       ${eksik>0?`<span class="ft-pdf-eksik">${eksik.toLocaleString('tr')} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
     </label>`;
@@ -17296,7 +17297,7 @@ AK.renderAsamaInfo = function(){
   el.innerHTML='Bu aşamada beklenen aksesuarlar: <b>'+items+'</b>';
 };
 
-AK.addColor = function(){ AK.state.colors.push({ id:AK._cid++, renk:'', po:'', adet:{xs:'',s:'',m:'',l:'',xl:'',xxl:''}, files:null, zipName:'' }); AK.renderColors(); };
+AK.addColor = function(){ var ad={}; AK.SIZES.forEach(function(b){ ad[b[0]]=''; }); AK.state.colors.push({ id:AK._cid++, renk:'', po:'', adet:ad, files:null, zipName:'' }); AK.renderColors(); };
 AK.removeColor = function(id){ AK.state.colors=AK.state.colors.filter(function(c){return c.id!==id;}); AK.renderColors(); };
 AK._c = function(id){ return AK.state.colors.filter(function(c){return c.id===id;})[0]; };
 
@@ -17342,14 +17343,14 @@ AK.renderColors = function(){
     return '<div class="ak-color" data-cid="'+c.id+'"'+rail+'>'+
       '<div class="ak-color-head">'+
         '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+swatch+
-        '<input class="form-input ak-inp-renk" placeholder="Renk (ör. Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)">'+
+        '<input class="form-input ak-inp-renk" placeholder="Renk (ör. Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)" onchange="AK.renderColors()">'+
         '<input class="form-input" placeholder="PO no" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)" style="max-width:130px;">'+
         status+
         '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
       '</div>'+
       '<div class="ak-color-body">'+
       '<div class="ak-adet"><span class="ak-adet-lbl">Adet</span>'+beds+'<span class="ak-tot">Σ '+tot.toLocaleString('tr')+'</span></div>'+
-      '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+
+      '<div class="ak-drop'+((c.zipNames&&c.zipNames.length)?' loaded':'')+'" onclick="this.querySelector(\'input\').click()"><i class="fas '+((c.zipNames&&c.zipNames.length)?'fa-circle-check':'fa-file-zipper')+'"></i>'+
         ((c.zipNames&&c.zipNames.length)
           ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
           : 'ZIP / RAR dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Yıkama ayrı arşivse ikisini birden seçebilir ya da sırayla ekleyebilirsin</div>')+
@@ -17364,7 +17365,7 @@ AK.renderColors = function(){
   }).join('');
 };
 AK.setField = function(id,f,v){ var c=AK._c(id); if(c){ c[f]=v; } };
-AK.setAdet = function(id,k,v){ var c=AK._c(id); if(c){ c.adet[k]=v; var el=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-tot'); if(el){ var tot=AK._adetTotal(c.adet); el.textContent='Toplam: '+tot.toLocaleString('tr'); } } };
+AK.setAdet = function(id,k,v){ var c=AK._c(id); if(c){ c.adet[k]=v; var el=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-tot'); if(el){ var tot=AK._adetTotal(c.adet); el.textContent='Σ '+tot.toLocaleString('tr'); } } };
 
 AK.matchesHtml = function(c){
   if(!c.files) return '';
@@ -17374,7 +17375,10 @@ AK.matchesHtml = function(c){
   var ICON={dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',kartArka:'fa-address-card',lisansKarti:'fa-id-badge'};
   var cards = shown.map(function(f){
     if(f.type==='unknown'){
-      var opts = order.map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('');
+      // Tüm tipler seçilebilir (aşama gruplu) — dokuma PNG'si Ütü Paket'teyken de etiketlenebilsin
+      var opts = Object.keys(AK.STAGE_ORDER).map(function(st){
+        return '<optgroup label="'+AK.STAGE_LABEL[st]+'">'+AK.STAGE_ORDER[st].map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('')+'</optgroup>';
+      }).join('');
       return '<div class="ak-match ak-unknown">'+
         '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas fa-question"></i></span>'+(f.images[0]?'<img src="'+f.images[0]+'">':'<i class="fas fa-file-pdf" style="font-size:26px;color:#c0392b"></i>')+'</div>'+
         '<div class="ak-m-meta"><span class="ak-m-badge">Bilinmiyor</span>'+
@@ -17402,16 +17406,19 @@ AK.rebuildColors = function(){
   var colorCount=codes.length;
   var newColors = codes.map(function(k,ci){
     var col=m.byColor[k]; var files=[];
-    if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:col.renk||null,code:col.code||null,name:'icbarkod:'+k});
-    if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:col.renk||null,code:col.code||null,name:'fiyat:'+k});
+    var key=col.code||col.renk||'_'; var p=prev[key]||{};
+    // Etkin renk: kullanıcı elle düzelttiyse ONUN yazdığı kalır, yoksa tespit edilen.
+    var effRenk = (p.renk&&p.renk!==col.renk ? p.renk : (col.renk||p.renk||'')) || null;
+    if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:effRenk,code:col.code||null,name:'icbarkod:'+k});
+    if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:effRenk,code:col.code||null,name:'fiyat:'+k});
     // Yıkama: renk koduna göre eşlenmiş (renk-özel)
-    if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:col.renk||null,name:'yikama:'+k});
+    if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:effRenk,name:'yikama:'+k});
     // Ortak dosyalar. Dokuma etiketi MAL RENGİNE göre seçilir (açık→beyaz,
     // koyu→siyah); uygun olmayan etiket gizlenir + açıklama eklenir.
-    var labelPref = AK._labelForGarment(col.renk);
+    var labelPref = AK._labelForGarment(effRenk);
     m.shared.forEach(function(s){
       if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
-        files.push({type:'yikama',images:[s.images[ci]],renk:col.renk||null,name:'yikamaS:'+k}); return;
+        files.push({type:'yikama',images:[s.images[ci]],renk:effRenk,name:'yikamaS:'+k}); return;
       }
       if(s.type==='dokuma' && labelPref){
         var lr=(s.renk||'').toLowerCase();
@@ -17419,17 +17426,16 @@ AK.rebuildColors = function(){
         if(isWhite||isBlack){
           var match=(labelPref==='white'&&isWhite)||(labelPref==='black'&&isBlack);
           if(!match) return; // uygun olmayan etiket rengini atla
-          files.push(Object.assign({}, s, {note: AK._labelNote(col.renk, labelPref)})); return;
+          files.push(Object.assign({}, s, {note: AK._labelNote(effRenk, labelPref)})); return;
         }
       }
       files.push(s);
     });
-    var key=col.code||col.renk||'_'; var p=prev[key]||{};
     // Adet: kullanıcı elle girdiyse koru; yoksa fiyat kartından otomatik.
     var beds=AK.SIZES.map(function(b){return b[0];}); var padet=p.adet||{};
     var hasUser=beds.some(function(bk){ return padet[bk]!=='' && padet[bk]!=null && padet[bk]!==undefined; });
     var adet; if(hasUser){ adet=padet; } else if(col.adet){ adet={}; beds.forEach(function(bk){ if(col.adet[bk]!=null) adet[bk]=col.adet[bk]; }); } else { adet={}; }
-    return { id:p.id||(AK._cid++), code:col.code||null, renk:col.renk||(p.renk||''), po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice() };
+    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice() };
   });
   AK.state.colors = newColors.length ? newColors : AK.state.colors;
   if(!AK.state.colors.length) AK.addColor();
