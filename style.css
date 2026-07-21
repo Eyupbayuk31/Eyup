@@ -13884,6 +13884,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-substep{font-size:12px;font-weight:500;color:var(--text-muted);}
 .ak-addcolor{margin-left:auto;}
 .ak-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ak-grid3{display:grid;grid-template-columns:1.2fr 1fr 1.2fr;gap:14px;align-items:start;}
 .ak-field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;}
 .ak-seg{display:flex;gap:8px;}
 .ak-seg-btn{flex:1;padding:11px;border:1.5px solid var(--border);background:var(--glass);color:var(--text-main);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;}
@@ -13936,4 +13937,4 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-code-row .ak-cc{font-family:ui-monospace,monospace;font-weight:700;}
 .ak-code-row .ak-ct{color:var(--text-muted);margin-left:auto;}
 .ak-code-row .ak-cx{border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px;}
-@media (max-width:640px){.ak-grid2{grid-template-columns:1fr;}.ak-codeadd{grid-template-columns:1fr 1fr;}}
+@media (max-width:640px){.ak-grid2{grid-template-columns:1fr;}.ak-grid3{grid-template-columns:1fr;}.ak-codeadd{grid-template-columns:1fr 1fr;}}
