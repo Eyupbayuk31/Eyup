@@ -17001,11 +17001,12 @@ AK.TYPES = {
   yikama:      {label:'Yıkama',                 stage:'dikim',    req:true},
   lisansEtiketi:{label:'Lisans Etiketi',        stage:'dikim',    req:false},
   fiyat:       {label:'Fiyat Kartı',            stage:'utupaket', req:true},
-  susKarti:    {label:'Süs Kartı (Kart Arkası + İp)', stage:'utupaket', req:false},
+  susKarti:    {label:'Süs Kartı',              stage:'utupaket', req:false},
+  kartArka:    {label:'Kart Arkası + İp',       stage:'utupaket', req:false},
   lisansKarti: {label:'Lisans Kartı',           stage:'utupaket', req:false},
   lot:         {label:'Lot Sticker',            stage:'utupaket', req:true}
 };
-AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','lisansKarti','lot'] };
+AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','kartArka','lisansKarti','lot'] };
 AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü Paket' };
 // Kanonik beden sırası (XXS→4XL). Aktif bedenler dosyalardan tespit edilir.
 AK.SIZES = [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL'],['4xl','4XL']];
@@ -17033,7 +17034,7 @@ AK.SEED = {
   pdf: [ {m:'stampsticker',type:'icbarkod'}, {m:'pricesticker',type:'fiyat'},
          {m:'washinginstruction',type:'yikama'}, {m:'lotsticker',type:'lot'} ],
   png: { 'AULBW13728':{type:'dokuma',renk:'Beyaz'}, 'AULBW13729':{type:'dokuma',renk:'Siyah'},
-         'AULTH13740':{type:'susKarti'} }
+         'AULTH13740':{type:'kartArka'} }
 };
 // Firestore senkronu: kayıtlar dizi (id'li) → doğrudan; kod tablosu obje
 // olduğu için tek-elemanlı dizi (array-of-one) formatında saklanır.
@@ -17336,7 +17337,7 @@ AK.matchesHtml = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var shown = c.files.filter(function(f){ return f.type==='unknown' || order.indexOf(f.type)>=0; });
   if(!shown.length) return '<div class="ak-miss"><i class="fas fa-circle-info"></i> Bu ZIP\'te bu aşamaya ait aksesuar bulunamadı.</div>';
-  var ICON={dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',lisansKarti:'fa-id-badge',lot:'fa-boxes-stacked'};
+  var ICON={dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',kartArka:'fa-address-card',lisansKarti:'fa-id-badge',lot:'fa-boxes-stacked'};
   var cards = shown.map(function(f){
     if(f.type==='unknown'){
       var opts = order.map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('');
@@ -17469,7 +17470,7 @@ AK.buildFoyHtml = function(c){
 // karşılığına çevir (ç/ö/ü Latin-1'de var, korunur).
 AK._tr = function(s){ return (''+(s==null?'':s)).replace(/[İıŞşĞğ]/g, function(ch){ return {'İ':'I','ı':'i','Ş':'S','ş':'s','Ğ':'G','ğ':'g'}[ch]; }); };
 // Aksesuar başına makul görsel yüksekliği (mm) — derli toplu, sayfaya sığsın.
-AK._CAP = { dokuma:20, icbarkod:58, yikama:62, fiyat:70, lot:44, susKarti:64, lisansKarti:64, lisansEtiketi:26 };
+AK._CAP = { dokuma:20, icbarkod:58, yikama:62, fiyat:70, lot:44, susKarti:64, kartArka:64, lisansKarti:64, lisansEtiketi:26 };
 AK._renderColorPage = function(pdf, c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
