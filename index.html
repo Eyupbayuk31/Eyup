@@ -17167,8 +17167,12 @@ AK.renderColors = function(){
         '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
       '</div>'+
       '<div class="ak-adet"><span class="ak-adet-lbl">Adet:</span>'+beds+'<span class="ak-tot">Toplam: '+tot.toLocaleString('tr')+'</span></div>'+
-      '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+(c.zipName?('<b>'+c.zipName+'</b> — değiştirmek için tıkla'):'ZIP / RAR dosyasını seç / sürükle')+
-        '<input type="file" accept=".zip,.rar,.7z" onchange="AK.onZip('+c.id+', this.files[0])"></div>'+
+      '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+
+        ((c.zipNames&&c.zipNames.length)
+          ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
+          : 'ZIP / RAR dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Yıkama ayrı arşivse ikisini birden seçebilir ya da sırayla ekleyebilirsin</div>')+
+        '<input type="file" accept=".zip,.rar,.7z" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
+        ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
@@ -17204,21 +17208,31 @@ AK.matchesHtml = function(c){
   return '<div class="ak-matches">'+cards+'</div>'+miss;
 };
 
-AK.onZip = function(id,file){
-  if(!file) return; var c=AK._c(id); if(!c) return; c.zipName=file.name;
+// Birden çok arşiv desteklenir (yıkama genelde AYRI arşivde gelir) → BİRLEŞTİRİLİR.
+AK.onZip = function(id, fileList){
+  var c=AK._c(id); if(!c) return;
+  var files = (fileList && fileList.length!==undefined) ? Array.prototype.slice.call(fileList) : (fileList?[fileList]:[]);
+  files = files.filter(Boolean); if(!files.length) return;
+  c.zipNames = c.zipNames || [];
   var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
-  AK._extractEntries(file).then(function(entries){ return AK.processEntries(entries); }).then(function(files){
-    c.files=files;
-    var det=files.detected||{};
-    // PO otomatik: dosya adından (ör. 1965467_...) — boşsa doldur
-    if(!c.po && det.po){ c.po=det.po; }
-    // Renk otomatik: dokuma dosyasının rengi > PDF'ten yakalanan renk
-    if(!c.renk){ var d=files.filter(function(f){return f.renk;})[0]; if(d) c.renk=d.renk; else if(det.renk) c.renk=det.renk; }
-    // Model otomatik: PDF içeriğinden — Model kutusu boşsa doldur
-    if(!AK.state.model && det.model){ AK.state.model=det.model; var mi=document.getElementById('akModel'); if(mi) mi.value=det.model; }
-    AK.renderColors();
-  }).catch(function(e){ c.zipName=''; alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
+  files.reduce(function(chain,f){
+    return chain.then(function(){
+      return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
+        // BİRLEŞTİR: mevcut + yeni (dosya adına göre tekilleştir → aynı arşiv tekrar atılırsa yenilenir)
+        var map={}; (c.files||[]).forEach(function(x){ map[x.name]=x; }); res.forEach(function(x){ map[x.name]=x; });
+        c.files = Object.keys(map).map(function(k){ return map[k]; });
+        if(c.zipNames.indexOf(f.name)<0) c.zipNames.push(f.name);
+        var det=res.detected||{};
+        if(!c.po && det.po) c.po=det.po;
+        if(!c.renk){ var d=(c.files||[]).filter(function(x){return x.renk;})[0]; if(d) c.renk=d.renk; else if(det.renk) c.renk=det.renk; }
+        if(!AK.state.model && det.model){ AK.state.model=det.model; var mi=document.getElementById('akModel'); if(mi) mi.value=det.model; }
+      });
+    });
+  }, Promise.resolve()).then(function(){ AK.renderColors(); })
+  .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
+// Yüklenen arşivleri temizle
+AK.clearZips = function(id){ var c=AK._c(id); if(!c) return; c.files=null; c.zipNames=[]; AK.renderColors(); };
 AK.tag = function(id,name,type){
   var c=AK._c(id); if(!c||!c.files) return;
   var f=c.files.filter(function(x){return x.name===name;})[0]; if(!f) return;
