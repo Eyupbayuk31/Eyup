@@ -17046,7 +17046,7 @@ AK.categorize = function(fn){
 AK._pageCanvas = function(pdf,n,scale){ return pdf.getPage(n).then(function(page){ var vp=page.getViewport({scale:scale}); var c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height); var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); return page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){ return {c:c,ctx:ctx,page:page,vp:vp}; }); }); };
 AK._trim = function(c,ctx){ var d=ctx.getImageData(0,0,c.width,c.height).data; var minx=c.width,miny=c.height,maxx=0,maxy=0,ink=0; for(var y=0;y<c.height;y++)for(var x=0;x<c.width;x++){ var i=(y*c.width+x)*4; if(d[i]<245||d[i+1]<245||d[i+2]<245){ ink++; if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y; } } if(!ink) return {url:c.toDataURL('image/png'),ink:0}; var pad=8; minx=Math.max(0,minx-pad);miny=Math.max(0,miny-pad);maxx=Math.min(c.width,maxx+pad);maxy=Math.min(c.height,maxy+pad); var w=maxx-minx,h=maxy-miny; var o=document.createElement('canvas');o.width=w;o.height=h; var octx=o.getContext('2d');octx.fillStyle='#fff';octx.fillRect(0,0,w,h);octx.drawImage(c,minx,miny,w,h,0,0,w,h); return {url:o.toDataURL('image/png'),ink:ink}; };
 AK._findSizePage = function(pdf,size){ var i=1; function next(){ if(i>pdf.numPages) return Promise.resolve(1); return pdf.getPage(i).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ var t=tc.items.map(function(x){return x.str;}).join(' ').replace(/\s*:\s*/g,':').replace(/\s+/g,' '); if(new RegExp('SIZE:'+size+'(?![A-Za-z])','i').test(t)) return i; i++; return next(); }); } return next(); };
-AK._cropBig = function(pdf,letter,scale){ return AK._pageCanvas(pdf,1,scale).then(function(o){ return o.page.getTextContent().then(function(tc){ var best=null; tc.items.forEach(function(it){ if(it.str.trim()===letter){ var h=Math.hypot(it.transform[2],it.transform[3]); if(!best||h>best.h) best={h:h,x:it.transform[4],y:it.transform[5]}; } }); if(!best) return AK._trim(o.c,o.ctx); var vpt=o.vp.convertToViewportPoint(best.x,best.y); function mm(v){return v*scale*72/25.4;} var x0=Math.max(0,vpt[0]-mm(6)),y0=Math.max(0,vpt[1]-mm(6)),w=Math.min(o.c.width-x0,mm(45)),h=Math.min(o.c.height-y0,mm(72)); var cc=document.createElement('canvas');cc.width=w;cc.height=h; var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,x0,y0,w,h,0,0,w,h); return AK._trim(cc,cx); }); }); };
+AK._cropBig = function(pdf,letter,scale,pageNum){ return AK._pageCanvas(pdf,pageNum||1,scale).then(function(o){ return o.page.getTextContent().then(function(tc){ var best=null; tc.items.forEach(function(it){ if(it.str.trim()===letter){ var h=Math.hypot(it.transform[2],it.transform[3]); if(!best||h>best.h) best={h:h,x:it.transform[4],y:it.transform[5]}; } }); if(!best) return AK._trim(o.c,o.ctx); var vpt=o.vp.convertToViewportPoint(best.x,best.y); function mm(v){return v*scale*72/25.4;} var x0=Math.max(0,vpt[0]-mm(6)),y0=Math.max(0,vpt[1]-mm(6)),w=Math.min(o.c.width-x0,mm(45)),h=Math.min(o.c.height-y0,mm(72)); var cc=document.createElement('canvas');cc.width=w;cc.height=h; var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,x0,y0,w,h,0,0,w,h); return AK._trim(cc,cx); }); }); };
 // Sayfayı metin içeriğinin sınırına kırp (boş şablon kutularını atar → içerik büyür/okunur).
 AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,scale).then(function(o){ return o.page.getTextContent().then(function(tc){
   var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9,any=false;
@@ -17058,6 +17058,36 @@ AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,sc
   var cc=document.createElement('canvas');cc.width=w;cc.height=h;var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,minx,miny,w,h,0,0,w,h);
   return AK._trim(cc,cx);
 }); }); };
+// Bir sayfanın metninden {code, model, renk, size} çıkar
+AK._pageInfo = function(t){
+  t=t.replace(/\s+/g,' ');
+  var cm=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{2}\d{2,4})/);        // MODEL/COLORCODE
+  var sz=t.match(/SIZE\s*:\s*([A-Za-z]+)/i);
+  var nm=t.match(/\b([A-Z][a-z]{2,12})\s+SIZE\s*:/);                          // renk adı (SIZE'dan önce)
+  return { code: cm?cm[2]:null, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: nm?nm[1]:null };
+};
+// İç Barkod: renge göre grupla, her renk için M sayfasını üret → [{code,renk,model,url}]
+AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
+  var infos=[]; var i=1;
+  function scan(){ if(i>pdf.numPages) return Promise.resolve(); var pageNum=i;
+    return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
+      var info=AK._pageInfo(tc.items.map(function(x){return x.str;}).join(' ')); info.page=pageNum; infos.push(info); i++; return scan(); }); }
+  return scan().then(function(){
+    var byCode={};
+    infos.forEach(function(p){ var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, first:p.page}; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
+    var keys=Object.keys(byCode); var out=[];
+    return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; return AK._pageCanvas(pdf, info.mPage||info.first, 3.5).then(function(o){ out.push({code:info.code, renk:info.renk, model:info.model, url:AK._trim(o.c,o.ctx).url}); }); }); }, Promise.resolve()).then(function(){ return out; });
+  });
+}); };
+// Fiyat: renk başına sayfa; her sayfada M etiketini kırp → [{code,url}]
+AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
+  var out=[]; var i=1;
+  function scan(){ if(i>pdf.numPages) return Promise.resolve(out); var pageNum=i;
+    return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
+      var info=AK._pageInfo(tc.items.map(function(x){return x.str;}).join(' '));
+      return AK._cropBig(pdf,'M',3.6,pageNum).then(function(r){ out.push({code:info.code, url:r.url}); i++; return scan(); }); }); }
+  return scan();
+}); };
 AK.renderSmart = function(bytes,type){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
   if(type==='icbarkod') return AK._findSizePage(pdf,'M').then(function(p){ return AK._pageCanvas(pdf,p,3.5); }).then(function(o){ return [AK._trim(o.c,o.ctx).url]; });
   if(type==='fiyat') return AK._cropBig(pdf,'M',3.6).then(function(r){ return [r.url]; });
@@ -17110,21 +17140,28 @@ AK._extractEntries = function(file){
   });
 };
 // Çıkarılan girişleri işle → aksesuar listesi (+ otomatik PO/Model/Renk)
+// Sonuç: { detected:{po,model}, byColor:{CODE:{code,renk,icbarkod:[],fiyat:[]}}, shared:[...] }
+// icbarkod/fiyat renk-özel; dokuma/lot/yıkama/askı ORTAK (tüm renklere).
 AK.processEntries = function(entries){
   return AK.loadLibs().then(function(){
     var names=entries.map(function(e){ return e.name; });
     var pos={}; names.forEach(function(n){ var mm=n.split('/').pop().match(/^(\d{6,8})[_\-]/); if(mm) pos[mm[1]]=(pos[mm[1]]||0)+1; });
     var detPo=Object.keys(pos).sort(function(a,b){return pos[b]-pos[a];})[0]||'';
-    var out=[]; var det={po:detPo, model:'', renk:''};
+    var det={po:detPo, model:'', renk:''};
+    var byColor={}; var shared=[];
+    function ensureColor(code,renk,model){ code=code||'_'; if(!byColor[code]) byColor[code]={code:(code==='_'?null:code), renk:renk||null, icbarkod:[], fiyat:[]}; if(renk&&!byColor[code].renk) byColor[code].renk=renk; if(model&&!det.model) det.model=model; return byColor[code]; }
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
-        if(/\.(png|jpe?g)$/i.test(name)){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); return; }
-        if(cat.type==='unknown'){ out.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
-        var pre = (!det.model && (cat.type==='icbarkod'||cat.type==='fiyat'||cat.type==='lot'||cat.type==='yikama')) ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk&&d.renk) det.renk=d.renk; } }) : Promise.resolve();
-        return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:imgs}); });
+        if(/\.(png|jpe?g)$/i.test(name)){ shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
+        if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
+        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; }); }); }
+        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code).fiyat=x.url?[x.url]:[]; }); }); }
+        // lot / yıkama / diğer → ortak
+        var pre = (!det.model && cat.type==='lot') ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk&&d.renk) det.renk=d.renk; } }) : Promise.resolve();
+        return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ shared.push({name:name,type:cat.type,code:null,renk:null,images:imgs}); });
       });
-    }, Promise.resolve()).then(function(){ out.detected=det; return out; });
+    }, Promise.resolve()).then(function(){ return { detected:det, byColor:byColor, shared:shared }; });
   });
 };
 
@@ -17208,31 +17245,54 @@ AK.matchesHtml = function(c){
   return '<div class="ak-matches">'+cards+'</div>'+miss;
 };
 
-// Birden çok arşiv desteklenir (yıkama genelde AYRI arşivde gelir) → BİRLEŞTİRİLİR.
+// Çok renk + çok arşiv: birleşik veri AK._merged'de tutulur, renk kartları
+// oradan yeniden kurulur (her tespit edilen renk = 1 kart).
+AK._merged = null; AK._zipNames = [];
+AK.rebuildColors = function(){
+  var m=AK._merged; if(!m){ if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); return; }
+  var prev={}; AK.state.colors.forEach(function(c){ prev[c.code||c.renk||'_']=c; });
+  var codes=Object.keys(m.byColor);
+  var colorCount=codes.length;
+  var newColors = codes.map(function(k,ci){
+    var col=m.byColor[k]; var files=[];
+    if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:col.renk||null,code:col.code||null,name:'icbarkod:'+k});
+    if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:col.renk||null,code:col.code||null,name:'fiyat:'+k});
+    // ortak dosyalar; çok renkli yıkamada sayfa i → renk i
+    m.shared.forEach(function(s){
+      if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
+        files.push({type:'yikama',images:[s.images[ci]],renk:col.renk||null,name:'yikama:'+k});
+      } else { files.push(s); }
+    });
+    var key=col.code||col.renk||'_'; var p=prev[key]||{};
+    return { id:p.id||(AK._cid++), code:col.code||null, renk:col.renk||(p.renk||''), po:p.po||m.detected.po||'', adet:p.adet||{s:'',m:'',l:'',xl:'',xxl:''}, files:files, zipNames:AK._zipNames.slice() };
+  });
+  AK.state.colors = newColors.length ? newColors : AK.state.colors;
+  if(!AK.state.colors.length) AK.addColor();
+  if(!AK.state.model && m.detected.model){ AK.state.model=m.detected.model; var mi=document.getElementById('akModel'); if(mi) mi.value=m.detected.model; }
+  AK.renderColors();
+};
+// Birden çok arşiv + birden çok renk. Tümü AK._merged'de birikir.
 AK.onZip = function(id, fileList){
-  var c=AK._c(id); if(!c) return;
   var files = (fileList && fileList.length!==undefined) ? Array.prototype.slice.call(fileList) : (fileList?[fileList]:[]);
   files = files.filter(Boolean); if(!files.length) return;
-  c.zipNames = c.zipNames || [];
   var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
   files.reduce(function(chain,f){
     return chain.then(function(){
       return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
-        // BİRLEŞTİR: mevcut + yeni (dosya adına göre tekilleştir → aynı arşiv tekrar atılırsa yenilenir)
-        var map={}; (c.files||[]).forEach(function(x){ map[x.name]=x; }); res.forEach(function(x){ map[x.name]=x; });
-        c.files = Object.keys(map).map(function(k){ return map[k]; });
-        if(c.zipNames.indexOf(f.name)<0) c.zipNames.push(f.name);
-        var det=res.detected||{};
-        if(!c.po && det.po) c.po=det.po;
-        if(!c.renk){ var d=(c.files||[]).filter(function(x){return x.renk;})[0]; if(d) c.renk=d.renk; else if(det.renk) c.renk=det.renk; }
-        if(!AK.state.model && det.model){ AK.state.model=det.model; var mi=document.getElementById('akModel'); if(mi) mi.value=det.model; }
+        if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''}};
+        var M=AK._merged;
+        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[]}); if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.renk&&!dst.renk) dst.renk=src.renk; });
+        var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
+        if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
+        if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
+        if(AK._zipNames.indexOf(f.name)<0) AK._zipNames.push(f.name);
       });
     });
-  }, Promise.resolve()).then(function(){ AK.renderColors(); })
+  }, Promise.resolve()).then(function(){ AK.rebuildColors(); })
   .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
-// Yüklenen arşivleri temizle
-AK.clearZips = function(id){ var c=AK._c(id); if(!c) return; c.files=null; c.zipNames=[]; AK.renderColors(); };
+// Yüklenen arşivleri/renkleri temizle
+AK.clearZips = function(id){ AK._merged=null; AK._zipNames=[]; AK.state.colors=[]; AK.addColor(); AK.renderColors(); };
 AK.tag = function(id,name,type){
   var c=AK._c(id); if(!c||!c.files) return;
   var f=c.files.filter(function(x){return x.name===name;})[0]; if(!f) return;
