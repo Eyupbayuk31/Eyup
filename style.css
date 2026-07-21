@@ -13683,6 +13683,8 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
    FERMUAR TAKİP — MODEL → DETAY HİYERARŞİSİ (v2, tema-token)
    ═══════════════════════════════════════════════════════════════ */
 /* Model kartı: tedarikçi + termin satırı */
+.ft-card-renk{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; color:var(--text); margin-bottom:10px; padding:5px 11px 5px 9px; border-radius:999px; background:color-mix(in srgb, var(--primary) 9%, transparent); border:1px solid var(--border); letter-spacing:.2px; }
+.ft-card-renk .ft-renk-dot{ width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.15), inset 0 0 0 1px rgba(0,0,0,.25); flex:0 0 auto; }
 .ft-card-termin{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted); margin-bottom:10px; padding:6px 9px; border-radius:8px; background:color-mix(in srgb, var(--text-dim) 6%, transparent); }
 .ft-card-termin i{ font-size:11px; color:var(--primary); }
 .ft-card-termin.ft-termin-late{ color:var(--danger); background:color-mix(in srgb, var(--danger) 10%, transparent); font-weight:700; }

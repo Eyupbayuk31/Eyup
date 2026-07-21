@@ -4727,6 +4727,18 @@ function ftSetViewTab(tab, btn){
   if(btn) btn.classList.add('active');
   renderFermuarTakip();
 }
+// Renk adı → kart üzerindeki nokta için hex (bulunamazsa nötr gri).
+function _ftRenkHex(name){
+  const r=(name||'').toLowerCase().trim();
+  const map={siyah:'#141414',black:'#141414',beyaz:'#f5f5f5',white:'#f5f5f5',ekru:'#eadfc8',ecru:'#eadfc8',krem:'#f0e6d2',cream:'#f0e6d2',
+    gri:'#9aa0a6',grey:'#9aa0a6',gray:'#9aa0a6',antrasit:'#3a3f45',lacivert:'#1e2a52',navy:'#1e2a52',mavi:'#2563eb',blue:'#2563eb',
+    kırmızı:'#dc2626',kirmizi:'#dc2626',red:'#dc2626',bordo:'#7f1d1d',yeşil:'#16a34a',yesil:'#16a34a',green:'#16a34a',haki:'#6b7043',
+    sarı:'#eab308',sari:'#eab308',hardal:'#c99a1e',turuncu:'#ea580c',orange:'#ea580c',pembe:'#ec4899',pink:'#ec4899',pudra:'#e8b4b8',
+    mor:'#7c3aed',purple:'#7c3aed',lila:'#b57edc',kahverengi:'#78350f',kahve:'#78350f',brown:'#78350f',bej:'#d8c3a5',beige:'#d8c3a5',
+    taba:'#a0522d',turkuaz:'#14b8a6',mint:'#a7f3d0',petrol:'#0e7490',somon:'#fa8072',indigo:'#4338ca',taş:'#c4b8a8',tas:'#c4b8a8'};
+  for(const k in map){ if(r===k || r.indexOf(k)>=0) return map[k]; }
+  return '#9aa0a6';
+}
 function renderFermuarTakip(){
   const tg=document.getElementById('ftStockControl'); if(tg) tg.checked=ftStockControlOn();
 
@@ -4788,6 +4800,8 @@ function renderFermuarTakip(){
         </div>
         <span class="ft-badge ft-badge-${dCls}">${durum}</span>
       </div>
+
+      ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
 
       <div class="ft-card-termin ${terminCls}">
         <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(m.termin):'—'}${terminCls?' · GECİKTİ':''}
