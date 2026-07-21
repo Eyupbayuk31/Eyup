@@ -17531,7 +17531,7 @@ AK.generateAll = function(){
   try{ var url=URL.createObjectURL(pdf.output('blob')); var w=window.open(url,'_blank'); if(!w) pdf.save(fname); }catch(e){ try{ pdf.save(fname); }catch(_){ alert('PDF açılamadı.'); return; } }
   // kayıtlar
   var recs=AK.recs();
-  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ recs.unshift({ ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }); });
+  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ recs.unshift({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }); });
   if(recs.length>300) recs=recs.slice(0,300);
   AK.saveRecs(recs); AK.renderRecords();
   if(typeof toast==='function') toast('Tüm renkler tek PDF olarak hazırlandı ✓','success');
@@ -17554,25 +17554,60 @@ AK.generate = function(id){
     if(!w){ pdf.save(fname); } // popup engelliyse direkt indir
   }catch(e){ try{ pdf.save(fname); }catch(_){ alert('PDF açılamadı.'); return; } }
   var recs=AK.recs();
-  recs.unshift({ ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) });
+  recs.unshift({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) });
   if(recs.length>200) recs=recs.slice(0,200);
   AK.saveRecs(recs); AK.renderRecords();
   if(typeof toast==='function') toast('Föy PDF oluşturuldu ✓','success');
 };
 
+AK._esc = function(s){ return (''+(s==null?'':s)).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];}); };
+AK._recFilter = {q:'', asama:'all'};
 AK.renderRecords = function(){
   var host=document.getElementById('akRecords'); if(!host) return;
   var recs=AK.recs();
-  if(!recs.length){ host.innerHTML='<div class="ak-empty">Henüz kayıt yok. Föy oluşturunca burada listelenir.</div>'; return; }
-  host.innerHTML=recs.map(function(r,i){
-    var tot=['xs','s','m','l','xl','xxl'].reduce(function(s,k){return s+(parseInt(r.adet&&r.adet[k],10)||0);},0);
+  if(!recs.length){ host.innerHTML='<div class="ak-empty"><i class="fas fa-clock-rotate-left" style="font-size:24px;display:block;margin-bottom:8px;opacity:.5;"></i>Henüz kayıt yok. Föy oluşturunca burada listelenir.</div>'; return; }
+  var f=AK._recFilter;
+  host.innerHTML =
+    '<div class="ak-recbar">'+
+      '<div class="ak-recsearch"><i class="fas fa-magnifying-glass"></i><input id="akRecQ" class="form-input" placeholder="Model · PO · renk · atölye ara…" value="'+AK._esc(f.q)+'" oninput="AK._recFilter.q=this.value; AK._renderRecList();"></div>'+
+      '<select class="form-input ak-recsel" onchange="AK._recFilter.asama=this.value; AK._renderRecList();">'+
+        '<option value="all"'+(f.asama==='all'?' selected':'')+'>Tüm aşamalar</option>'+
+        '<option value="dikim"'+(f.asama==='dikim'?' selected':'')+'>🧵 Dikim</option>'+
+        '<option value="utupaket"'+(f.asama==='utupaket'?' selected':'')+'>📦 Ütü &amp; Paket</option>'+
+      '</select>'+
+      '<button class="btn btn-xs btn-secondary" onclick="AK.clearRecords()" title="Tümünü sil"><i class="fas fa-trash-can"></i></button>'+
+    '</div>'+
+    '<div id="akRecList"></div>';
+  AK._renderRecList();
+};
+AK._renderRecList = function(){
+  var el=document.getElementById('akRecList'); if(!el) return;
+  var f=AK._recFilter||{q:'',asama:'all'}; var q=(f.q||'').toLowerCase().trim();
+  var recs=AK.recs().filter(function(r){
+    if(f.asama!=='all' && r.asama!==f.asama) return false;
+    if(q){ var hay=((r.model||'')+' '+(r.po||'')+' '+(r.renk||'')+' '+(r.atolye||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+    return true;
+  });
+  var total=AK.recs().length;
+  if(!recs.length){ el.innerHTML='<div class="ak-empty">Eşleşen kayıt yok.</div>'; return; }
+  el.innerHTML='<div class="ak-reccount">'+recs.length+' / '+total+' kayıt</div>'+recs.map(function(r){
+    var tot=Object.keys(r.adet||{}).reduce(function(s,k){return s+(parseInt(r.adet[k],10)||0);},0);
+    var rid=r.id?("'"+AK._esc(r.id)+"'"):r.ts;
     return '<div class="ak-rec"><div class="ak-rec-ic '+r.asama+'">'+(r.asama==='dikim'?'🧵':'📦')+'</div>'+
-      '<div class="ak-rec-body"><div class="ak-rec-t">'+r.model+' · '+(r.renk||'—')+'</div>'+
-      '<div class="ak-rec-s">PO '+(r.po||'—')+' · '+(AK.STAGE_LABEL[r.asama]||r.asama)+' · '+tot.toLocaleString('tr')+' adet · '+r.tarih+'</div></div>'+
-      '<div class="ak-rec-act"><button class="btn btn-xs btn-danger" onclick="AK.delRecord('+i+')"><i class="fas fa-trash"></i></button></div></div>';
+      '<div class="ak-rec-body">'+
+        '<div class="ak-rec-t">'+AK._esc(r.model||'—')+' <span class="ak-rec-renk">· '+AK._esc(r.renk||'—')+'</span></div>'+
+        '<div class="ak-rec-s"><span class="ak-rec-tag"><i class="fas fa-hashtag"></i>'+AK._esc(r.po||'—')+'</span>'+
+          (r.atolye?'<span class="ak-rec-tag"><i class="fas fa-industry"></i>'+AK._esc(r.atolye)+'</span>':'')+
+          '<span class="ak-rec-tag">'+(AK.STAGE_LABEL[r.asama]||r.asama)+'</span>'+
+          '<span class="ak-rec-tag"><i class="fas fa-layer-group"></i>'+tot.toLocaleString('tr')+'</span>'+
+          '<span class="ak-rec-tag"><i class="fas fa-calendar"></i>'+AK._esc(r.tarih||'')+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="ak-rec-act"><button class="btn btn-xs btn-danger" onclick="AK.delRecord('+rid+')"><i class="fas fa-trash"></i></button></div></div>';
   }).join('');
 };
-AK.delRecord = function(i){ var recs=AK.recs(); recs.splice(i,1); AK.saveRecs(recs); AK.renderRecords(); };
+AK.delRecord = function(id){ var recs=AK.recs().filter(function(r){ return (r.id!=null? r.id!==id : r.ts!==id); }); AK.saveRecs(recs); AK.renderRecords(); };
+AK.clearRecords = function(){ if(!confirm('Tüm aksesuar kontrol kayıtları silinsin mi?')) return; AK.saveRecs([]); AK.renderRecords(); };
 
 // ---- Kod tablosu modalı ----
 AK.openCodeTable = function(){ AK.renderCodeTable(); document.getElementById('akCodeModal').classList.add('show'); };
