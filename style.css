@@ -13622,9 +13622,13 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-mini b.neg{ color:var(--danger); }
 .ft-mini b .bad{ color:var(--danger); font-weight:800; }
 
-.ft-actions{ display:grid; grid-template-columns:1fr auto auto auto; gap:6px; align-items:stretch; }
+/* Üst satır: birincil eylem (Detay / CM Gir) tam genişlik; alt satır: Tamamla + düzenle + sil */
+.ft-actions{ display:grid; grid-template-columns:1fr auto auto; gap:7px; align-items:stretch; }
 .ft-actions .btn{ white-space:nowrap; }
-.ft-actions .btn:not(:first-child){ padding-left:11px; padding-right:11px; }
+.ft-actions .btn:first-child{ grid-column:1 / -1; font-weight:800; padding-top:10px; padding-bottom:10px; }
+.ft-actions .btn:nth-child(2){ min-width:0; }               /* Tamamla/Geri Al: kalan alanı doldurur */
+.ft-actions .btn:nth-child(2) span,.ft-actions .btn:nth-child(2){ overflow:hidden; text-overflow:ellipsis; }
+.ft-actions .btn:nth-child(n+3){ width:42px; padding-left:0; padding-right:0; justify-content:center; }  /* ikon butonlar kare */
 
 .ft-history{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); }
 .ft-hist-list{ display:flex; flex-direction:column; gap:6px; }
