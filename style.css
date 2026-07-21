@@ -5425,7 +5425,7 @@ tr:hover .table-actions-more{
 .share-opt i { font-size: 22px; }
 .share-opt.wa i { color: #25D366; }
 .share-opt.mail i { color: #ea4335; }
-.share-opt.copy i { color: #7c3aed; }
+.share-opt.copy i { color: var(--primary); }
 .share-opt.print i { color: #3b82f6; }
 .share-opt.pdf i { color: #ef4444; }
 .share-opt.download i { color: #10b981; }
@@ -7602,10 +7602,10 @@ body::after{
 #bootSplash .lg-mesh{position:absolute; inset:-10%; z-index:-1;}
 .boot-inner{width:min(90vw,360px); display:flex; flex-direction:column; align-items:center; gap:22px;}
 .boot-brand{display:flex; align-items:center; gap:14px; opacity:0; animation:bootFade .6s ease .05s forwards;}
-.boot-logo{width:52px; height:52px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-family:var(--font-serif,'Instrument Serif',Georgia,serif); font-size:30px; color:#fff; background:linear-gradient(135deg,#a78bfa,#7c3aed); box-shadow:0 8px 26px -6px rgba(124,58,237,.6);}
+.boot-logo{width:52px; height:52px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-family:var(--font-serif,'Instrument Serif',Georgia,serif); font-size:30px; color:var(--on-primary,#fff); background:linear-gradient(135deg,var(--primary-light),var(--primary)); box-shadow:0 8px 26px -6px color-mix(in srgb, var(--primary) 60%, transparent);}
 .boot-word{display:flex; flex-direction:column; line-height:.88; font-family:var(--font-serif,'Instrument Serif',Georgia,serif); letter-spacing:-1px;}
 .boot-word .bw1{font-size:27px;}
-.boot-word .bw2{font-size:27px; margin-top:-2px; background:linear-gradient(135deg,#c4b5fd 0%,#a78bfa 45%,#7c3aed 85%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+.boot-word .bw2{font-size:27px; margin-top:-2px; background:linear-gradient(135deg,var(--primary-light) 0%,var(--primary) 45%,var(--primary-dark) 85%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
 .boot-word .bw2 em{font-style:italic;}
 .boot-steps{width:100%; display:flex; flex-direction:column; gap:9px;}
 .boot-step{display:flex; align-items:center; gap:12px; padding:11px 14px; border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:12px; background:color-mix(in srgb,var(--primary,#7c3aed) 4%,transparent); opacity:.4; transform:translateY(6px); transition:opacity .35s,transform .35s,border-color .35s,background .35s;}
@@ -7620,7 +7620,7 @@ body::after{
 .boot-step.done .bs-ok{opacity:1; transform:none;}
 @keyframes bootPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--primary,#7c3aed) 32%,transparent);}50%{box-shadow:0 0 0 5px transparent;}}
 .boot-bar{width:100%; height:4px; border-radius:99px; background:color-mix(in srgb,var(--primary,#7c3aed) 10%,rgba(255,255,255,.05)); overflow:hidden;}
-.boot-bar-fill{height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,#a78bfa,#7c3aed); transition:width .3s ease;}
+.boot-bar-fill{height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,var(--primary-light),var(--primary)); transition:width .3s ease;}
 .boot-hint{font-size:12px; color:var(--text-muted); letter-spacing:.2px; min-height:16px;}
 @keyframes bootFade{to{opacity:1;}}
 @media(prefers-reduced-motion:reduce){ .boot-step.active .bs-ic{animation:none;} }
@@ -7656,8 +7656,8 @@ body::after{
 .lg-grid {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-image:
-    linear-gradient(rgba(167,139,250,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(167,139,250,0.05) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px);
   background-size: 44px 44px, 44px 44px;
   mask-image: radial-gradient(ellipse at center, black 25%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 80%);
@@ -7717,10 +7717,10 @@ body::after{
   content: ''; position: absolute; inset: 0; border-radius: inherit;
   padding: 1px;
   background: linear-gradient(135deg,
-    rgba(167,139,250,0.5) 0%,
+    color-mix(in srgb, var(--primary-light) 55%, transparent) 0%,
     color-mix(in srgb, var(--primary) 0%, transparent) 30%,
     color-mix(in srgb, var(--primary) 0%, transparent) 70%,
-    rgba(192,132,252,0.35) 100%);
+    color-mix(in srgb, var(--primary) 38%, transparent) 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
   pointer-events: none;
@@ -7800,8 +7800,8 @@ body::after{
   margin: 0 0 24px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(167,139,250,0.35) 30%,
-    rgba(167,139,250,0.35) 70%,
+    color-mix(in srgb, var(--primary) 32%, transparent) 30%,
+    color-mix(in srgb, var(--primary) 32%, transparent) 70%,
     transparent 100%);
 }
 
