@@ -17008,7 +17008,7 @@ AK._adetTotal = function(adet){ if(!adet) return 0; return AK._activeSizes().red
 // Mal (ürün) rengine göre dokuma etiket rengi: açık→beyaz, koyu→siyah.
 AK._labelForGarment = function(renk){
   var r=(renk||'').toLowerCase();
-  if(/(ekru|ecru|beyaz|white|krem|cream|ivory|fildişi|bej|beige|off\s*white|kırık\s*beyaz|kirik\s*beyaz)/.test(r)) return 'white';
+  if(/(ekru|ecru|beyaz|white|krem|cream|ivory|fildişi|bej|beige|gri|grey|gray|off\s*white|kırık\s*beyaz|kirik\s*beyaz|açık|acik)/.test(r)) return 'white';
   if(/(siyah|black|lacivert|navy|antrasit|anthracite|koyu)/.test(r)) return 'black';
   return null;
 };
