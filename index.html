@@ -3424,9 +3424,12 @@
     <!-- ==================== AKSESUAR KONTROL ==================== -->
     <div class="page" id="page-akskontrol">
       <div class="ak-head">
-        <div><h2><i class="fas fa-clipboard-check" style="color:var(--primary);margin-right:8px;"></i>Aksesuar Kontrol</h2><p>DeFacto aksesuar dosyalarından (ZIP) kontrol föyü üret — aşama & renk bazlı</p></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-primary btn-sm" onclick="AK.generateAll()"><i class="fas fa-file-pdf"></i> Toplu PDF (Tüm Renkler)</button>
+        <div class="ak-htitle">
+          <div class="ak-hicon"><i class="fas fa-clipboard-check"></i></div>
+          <div><h2>Aksesuar Kontrol</h2><p>DeFacto aksesuar arşivinden aşama &amp; renk bazlı kontrol föyü üret</p></div>
+        </div>
+        <div class="ak-hbtns">
+          <button class="btn btn-primary btn-sm" onclick="AK.generateAll()"><i class="fas fa-file-pdf"></i> Toplu PDF</button>
           <button class="btn btn-secondary btn-sm" onclick="AK.openCodeTable()"><i class="fas fa-table-list"></i> Kod Tablosu</button>
         </div>
       </div>
@@ -17242,23 +17245,55 @@ AK.addColor = function(){ AK.state.colors.push({ id:AK._cid++, renk:'', po:'', a
 AK.removeColor = function(id){ AK.state.colors=AK.state.colors.filter(function(c){return c.id!==id;}); AK.renderColors(); };
 AK._c = function(id){ return AK.state.colors.filter(function(c){return c.id===id;})[0]; };
 
+// Renk adından örnek renk (swatch) hex'i
+AK._colorHex = function(renk){
+  var r=(renk||'').toLowerCase(); if(!r) return null;
+  var map={siyah:'#141414',black:'#141414',beyaz:'#f5f5f5',white:'#f5f5f5',ekru:'#eadfc8',ecru:'#eadfc8',krem:'#f2e9d5',cream:'#f2e9d5',ivory:'#f5f0e1',bej:'#d8c3a0',beige:'#d8c3a0',gri:'#9aa0a6',grey:'#9aa0a6',gray:'#9aa0a6',antrasit:'#3a3f47',lacivert:'#1e2a52',navy:'#1e2a52',mavi:'#2563eb',blue:'#2563eb',kırmızı:'#dc2626',kirmizi:'#dc2626',red:'#dc2626',bordo:'#7f1d34','yeşil':'#16a34a',yesil:'#16a34a',green:'#16a34a','sarı':'#eab308',sari:'#eab308',yellow:'#eab308',pembe:'#ec4899',pink:'#ec4899',mor:'#7c3aed',turuncu:'#ea580c',kahve:'#78462a',haki:'#6b7042',yl155:'#eab308',gr256:'#9aa0a6',bk81:'#141414',nv248:'#1e2a52'};
+  for(var k in map){ if(r.indexOf(k)>=0) return map[k]; }
+  return null;
+};
+AK._missingFor = function(c){
+  var order=AK.STAGE_ORDER[AK.state.asama];
+  var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
+  return order.filter(function(t){ return AK.TYPES[t].req && !have.some(function(f){return f.type===t;}); }).map(function(t){ return AK.TYPES[t].label; });
+};
 AK.renderColors = function(){
   var host=document.getElementById('akColors'); if(!host) return;
-  if(!AK.state.colors.length){ host.innerHTML='<div class="ak-empty">Henüz renk yok — “Renk Ekle” ile başlayın.</div>'; return; }
-  host.innerHTML = AK.state.colors.map(function(c,idx){
+  if(!AK.state.colors.length){ host.innerHTML='<div class="ak-empty"><i class="fas fa-swatchbook" style="font-size:26px;display:block;margin-bottom:8px;opacity:.5;"></i>Henüz renk yok — arşiv yükleyin, renkler otomatik gelsin (ya da “Renk Ekle”).</div>'; return; }
+  // Özet şeridi
+  var nLoaded=AK.state.colors.filter(function(c){return c.files&&c.files.length;}).length;
+  var grand=AK.state.colors.reduce(function(s,c){return s+AK._adetTotal(c.adet);},0);
+  var anyMiss=AK.state.colors.some(function(c){return c.files&&c.files.length&&AK._missingFor(c).length;});
+  var summary='<div class="ak-summary">'+
+    '<span class="ak-chip"><i class="fas fa-palette"></i> <b>'+AK.state.colors.length+'</b> renk</span>'+
+    (nLoaded?'<span class="ak-chip ok"><i class="fas fa-box-open"></i> <b>'+nLoaded+'</b> dosyalı</span>':'')+
+    (grand>0?'<span class="ak-chip"><i class="fas fa-layer-group"></i> Toplam <b>'+grand.toLocaleString('tr')+'</b> adet</span>':'')+
+    (anyMiss?'<span class="ak-chip warn"><i class="fas fa-triangle-exclamation"></i> Eksik aksesuar var</span>':(nLoaded?'<span class="ak-chip ok"><i class="fas fa-circle-check"></i> Hepsi tamam</span>':''))+
+    '</div>';
+  host.innerHTML = summary + AK.state.colors.map(function(c,idx){
     var tot=AK._adetTotal(c.adet);
     var beds=AK._activeSizes().map(function(b){
       return '<div class="ak-bd"><span>'+b[1]+'</span><input class="form-input" type="number" min="0" value="'+(c.adet[b[0]]||'')+'" oninput="AK.setAdet('+c.id+',\''+b[0]+'\',this.value)"></div>';
     }).join('');
     var matchHtml = AK.matchesHtml(c);
-    return '<div class="ak-color" data-cid="'+c.id+'">'+
+    var hex=AK._colorHex(c.renk);
+    var swatch = hex ? '<span class="ak-swatch" style="background:'+hex+'"></span>' : '';
+    var rail = hex ? ' style="--ak-crail:'+hex+'"' : '';
+    var loaded = c.files&&c.files.length;
+    var miss = loaded ? AK._missingFor(c) : null;
+    var status = !loaded ? '' : (miss.length
+      ? '<span class="ak-status miss"><i class="fas fa-triangle-exclamation"></i> Eksik: '+miss.join(', ')+'</span>'
+      : '<span class="ak-status ok"><i class="fas fa-circle-check"></i> Hazır</span>');
+    return '<div class="ak-color" data-cid="'+c.id+'"'+rail+'>'+
       '<div class="ak-color-head">'+
-        '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+
-        '<input class="form-input" placeholder="Renk (ör. YL155 / Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)">'+
-        '<input class="form-input" placeholder="PO no" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)">'+
+        '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+swatch+
+        '<input class="form-input ak-inp-renk" placeholder="Renk (ör. Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)">'+
+        '<input class="form-input" placeholder="PO no" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)" style="max-width:130px;">'+
+        status+
         '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
       '</div>'+
-      '<div class="ak-adet"><span class="ak-adet-lbl">Adet:</span>'+beds+'<span class="ak-tot">Toplam: '+tot.toLocaleString('tr')+'</span></div>'+
+      '<div class="ak-color-body">'+
+      '<div class="ak-adet"><span class="ak-adet-lbl">Adet</span>'+beds+'<span class="ak-tot">Σ '+tot.toLocaleString('tr')+'</span></div>'+
       '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+
         ((c.zipNames&&c.zipNames.length)
           ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
@@ -17268,6 +17303,7 @@ AK.renderColors = function(){
       matchHtml+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
+      '</div>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -17280,26 +17316,25 @@ AK.matchesHtml = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var shown = c.files.filter(function(f){ return f.type==='unknown' || order.indexOf(f.type)>=0; });
   if(!shown.length) return '<div class="ak-miss"><i class="fas fa-circle-info"></i> Bu ZIP\'te bu aşamaya ait aksesuar bulunamadı.</div>';
+  var ICON={dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',lisansKarti:'fa-id-badge',lot:'fa-boxes-stacked'};
   var cards = shown.map(function(f){
     if(f.type==='unknown'){
       var opts = order.map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('');
       return '<div class="ak-match ak-unknown">'+
-        (f.images[0]?'<div class="ak-m-img"><img src="'+f.images[0]+'"></div>':'<div class="ak-m-img"><i class="fas fa-file-pdf" style="font-size:26px;color:#c0392b"></i></div>')+
+        '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas fa-question"></i></span>'+(f.images[0]?'<img src="'+f.images[0]+'">':'<i class="fas fa-file-pdf" style="font-size:26px;color:#c0392b"></i>')+'</div>'+
         '<div class="ak-m-meta"><span class="ak-m-badge">Bilinmiyor</span>'+
         '<div class="ak-m-sub">'+(f.code||f.name.split('/').pop())+'</div>'+
         '<select class="form-input ak-m-tag" onchange="AK.tag('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\',this.value)"><option value="">— tipini seç —</option>'+opts+'<option value="__ignore">Yoksay</option></select>'+
         '</div></div>';
     }
     return '<div class="ak-match">'+
-      '<div class="ak-m-img"><img src="'+(f.images[0]||'')+'"></div>'+
+      '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas '+(ICON[f.type]||'fa-file')+'"></i></span><img src="'+(f.images[0]||'')+'"></div>'+
       '<div class="ak-m-meta"><div class="ak-m-type">'+AK.TYPES[f.type].label+'</div>'+
       '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div>'+
       (f.note?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+f.note+'</div>':'')+
       '</div></div>';
   }).join('');
-  var missing = order.filter(function(t){ return AK.TYPES[t].req && !shown.some(function(f){return f.type===t;}); }).map(function(t){return AK.TYPES[t].label;});
-  var miss = missing.length ? '<div class="ak-miss"><i class="fas fa-triangle-exclamation"></i> Eksik: '+missing.join(', ')+'</div>' : '';
-  return '<div class="ak-matches">'+cards+'</div>'+miss;
+  return '<div class="ak-matches">'+cards+'</div>';
 };
 
 // Çok renk + çok arşiv: birleşik veri AK._merged'de tutulur, renk kartları
