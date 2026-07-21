@@ -1310,6 +1310,7 @@
     <div class="nav-section">Stok Takibi</div>
     <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
     <a href="javascript:void(0)" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
+    <a href="javascript:void(0)" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
     <a href="javascript:void(0)" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
 
     <div class="nav-section">Yönetim</div>
@@ -3420,6 +3421,57 @@
       <div id="tplList"></div>
     </div>
 
+    <!-- ==================== AKSESUAR KONTROL ==================== -->
+    <div class="page" id="page-akskontrol">
+      <div class="ak-head">
+        <div><h2><i class="fas fa-clipboard-check" style="color:var(--primary);margin-right:8px;"></i>Aksesuar Kontrol</h2><p>DeFacto aksesuar dosyalarından (ZIP) kontrol föyü üret — aşama & renk bazlı</p></div>
+        <button class="btn btn-secondary btn-sm" onclick="AK.openCodeTable()"><i class="fas fa-table-list"></i> Kod Tablosu</button>
+      </div>
+
+      <div class="ak-card">
+        <div class="ak-step"><span class="ak-n">1</span> Model & Aşama</div>
+        <div class="ak-grid2">
+          <div class="ak-field"><label>Model Kodu</label><input id="akModel" class="form-input" placeholder="ör. I6391AX" autocomplete="off" oninput="AK.touch()"></div>
+          <div class="ak-field"><label>Aşama</label>
+            <div class="ak-seg">
+              <button type="button" id="akSegDikim" class="ak-seg-btn active" onclick="AK.setAsama('dikim')">🧵 Dikim</button>
+              <button type="button" id="akSegUtu" class="ak-seg-btn" onclick="AK.setAsama('utupaket')">📦 Ütü &amp; Paket</button>
+            </div>
+          </div>
+        </div>
+        <div class="ak-info" id="akAsamaInfo"></div>
+      </div>
+
+      <div class="ak-card">
+        <div class="ak-step"><span class="ak-n">2</span> Renkler <span class="ak-substep">— her renk: PO, adet, ZIP</span>
+          <button class="btn btn-primary btn-sm ak-addcolor" onclick="AK.addColor()"><i class="fas fa-plus"></i> Renk Ekle</button>
+        </div>
+        <div id="akColors"></div>
+      </div>
+
+      <div class="ak-card">
+        <div class="ak-step"><span class="ak-n"><i class="fas fa-clock-rotate-left"></i></span> Kayıtlar</div>
+        <div id="akRecords"></div>
+      </div>
+    </div>
+
+    <!-- Kod Tablosu modalı -->
+    <div class="modal-overlay" id="akCodeModal">
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header"><h3><i class="fas fa-table-list" style="color:var(--primary);margin-right:7px;"></i>Etiket Kod Tablosu</h3><button class="modal-close" onclick="AK.closeCodeTable()">&times;</button></div>
+        <div class="modal-body">
+          <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;">Dosya adındaki kodlar aksesuar tipini (ve varsa rengi) belirler. Bilinmeyen kod gelince buraya eklenir, bir daha sorulmaz.</p>
+          <div id="akCodeList"></div>
+          <div class="ak-codeadd">
+            <input id="akNewCode" class="form-input" placeholder="Kod (ör. AULBW13730)" autocomplete="off">
+            <select id="akNewType" class="form-input"></select>
+            <input id="akNewRenk" class="form-input" placeholder="Renk (ops.)" autocomplete="off">
+            <button class="btn btn-primary btn-sm" onclick="AK.addCode()"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -3531,7 +3583,7 @@ function groupFermuarBedenByCm(beden){
 window.groupFermuarBedenByCm = groupFermuarBedenByCm;
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip','fermuar-takip':'Fermuar Takip',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',akskontrol:'Aksesuar Kontrol','fermuar-takip':'Fermuar Takip',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 // Sayfa değişirken açık modal/panelleri kapat — yoksa modal yeni sayfanın
@@ -3557,7 +3609,7 @@ function showPage(page){
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','aksesuar','fermuar-takip','atolye','takvim','reports','signature','templates','geridonusum','settings'];
+  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','aksesuar','akskontrol','fermuar-takip','atolye','takvim','reports','signature','templates','geridonusum','settings'];
   const idx=pages.indexOf(page);
   if(idx>=0&&links[idx])links[idx].classList.add('active');
   
@@ -3569,6 +3621,7 @@ function showPage(page){
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
 
   if(page==='fermuar'){ try{ ftRenderStockMode(); }catch(_){} }
+  if(page==='akskontrol'){ try{ if(window.AK) AK.onOpen(); }catch(_){} }
 
   // Liste sayfasi acikken buluttan hafif polling ile taze tut (canli
   // listener'i tamamlayan guvenlik agi) — diger sayfaya gecince durdur.
@@ -16918,5 +16971,288 @@ window.hideLoading = function(){
   document.addEventListener('touchcancel', endSwipe);
 })();
 </script>
+<!-- ========== AKSESUAR KONTROL — modül ========== -->
+<script>
+(function(){
+'use strict';
+var AK = {};
+window.AK = AK;
+
+// ---- Aksesuar tipleri ----
+AK.TYPES = {
+  dokuma:      {label:'Dokuma (Marka Etiketi)', stage:'dikim',    req:true},
+  icbarkod:    {label:'İç Barkod',              stage:'dikim',    req:true},
+  yikama:      {label:'Yıkama',                 stage:'dikim',    req:true},
+  lisansEtiketi:{label:'Lisans Etiketi',        stage:'dikim',    req:false},
+  fiyat:       {label:'Fiyat Kartı',            stage:'utupaket', req:true},
+  susKarti:    {label:'Süs Kartı',              stage:'utupaket', req:false},
+  lisansKarti: {label:'Lisans Kartı',           stage:'utupaket', req:false},
+  lot:         {label:'Lot Sticker',            stage:'utupaket', req:true}
+};
+AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','lisansKarti','lot'] };
+AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü & Paket' };
+
+// ---- Kod tablosu (localStorage, tohumlu) ----
+AK.LS_MAP='ak_codemap_v2'; AK.LS_REC='ak_records_v2';
+AK.SEED = {
+  pdf: [ {m:'stampsticker',type:'icbarkod'}, {m:'pricesticker',type:'fiyat'},
+         {m:'washinginstruction',type:'yikama'}, {m:'lotsticker',type:'lot'} ],
+  png: { 'AULBW13728':{type:'dokuma',renk:'Beyaz'}, 'AULBW13729':{type:'dokuma',renk:'Siyah'} }
+};
+AK.map = function(){ try{ return JSON.parse(localStorage.getItem(AK.LS_MAP)) || JSON.parse(JSON.stringify(AK.SEED)); }catch(e){ return JSON.parse(JSON.stringify(AK.SEED)); } };
+AK.saveMap = function(m){ try{ localStorage.setItem(AK.LS_MAP, JSON.stringify(m)); }catch(e){} };
+AK.recs = function(){ try{ return JSON.parse(localStorage.getItem(AK.LS_REC))||[]; }catch(e){ return []; } };
+AK.saveRecs = function(r){ try{ localStorage.setItem(AK.LS_REC, JSON.stringify(r)); }catch(e){} };
+
+// ---- Kütüphaneler (lazy CDN) ----
+AK._libs=null;
+AK.loadLibs = function(){
+  if(AK._libs) return AK._libs;
+  AK._libs = new Promise(function(resolve,reject){
+    function haveZip(){ return typeof window.JSZip!=='undefined'; }
+    function havePdf(){ return typeof window.pdfjsLib!=='undefined'; }
+    var need=[];
+    if(!haveZip()) need.push('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    if(!havePdf()) need.push('pdf');
+    var done=0, total=need.length; if(!total){ resolve(); return; }
+    function step(){ if(++done>=total){ if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs'; resolve(); } }
+    if(need.indexOf('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js')>=0){
+      var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; s.onload=step; s.onerror=function(){reject(new Error('JSZip yüklenemedi'));}; document.head.appendChild(s);
+    }
+    if(need.indexOf('pdf')>=0){
+      var m=document.createElement('script'); m.type='module';
+      m.textContent="import * as p from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs'; window.pdfjsLib=p; window.dispatchEvent(new Event('ak-pdf-ready'));";
+      window.addEventListener('ak-pdf-ready', step, {once:true});
+      m.onerror=function(){reject(new Error('pdf.js yüklenemedi'));};
+      document.head.appendChild(m);
+    }
+  });
+  return AK._libs;
+};
+
+// ---- Dosya sınıflandırma ----
+AK.categorize = function(fn){
+  var map=AK.map(); var low=fn.toLowerCase().split('/').pop();
+  if(low.slice(-4)==='.pdf'){ for(var i=0;i<map.pdf.length;i++){ if(low.indexOf(map.pdf[i].m)>=0) return {type:map.pdf[i].type}; } return {type:'unknown'}; }
+  if(/\.(png|jpe?g)$/.test(low)){
+    var mm=fn.match(/AUL[A-Z]{2}\d+/i);
+    if(mm){ var code=mm[0].toUpperCase(); if(map.png[code]) return {type:map.png[code].type, renk:map.png[code].renk, code:code}; return {type:'unknown', code:code}; }
+    return {type:'unknown'};
+  }
+  return null;
+};
+
+// ---- pdf.js render yardımcıları ----
+AK._pageCanvas = function(pdf,n,scale){ return pdf.getPage(n).then(function(page){ var vp=page.getViewport({scale:scale}); var c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height); var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); return page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){ return {c:c,ctx:ctx,page:page,vp:vp}; }); }); };
+AK._trim = function(c,ctx){ var d=ctx.getImageData(0,0,c.width,c.height).data; var minx=c.width,miny=c.height,maxx=0,maxy=0,ink=0; for(var y=0;y<c.height;y++)for(var x=0;x<c.width;x++){ var i=(y*c.width+x)*4; if(d[i]<245||d[i+1]<245||d[i+2]<245){ ink++; if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y; } } if(!ink) return {url:c.toDataURL('image/png'),ink:0}; var pad=8; minx=Math.max(0,minx-pad);miny=Math.max(0,miny-pad);maxx=Math.min(c.width,maxx+pad);maxy=Math.min(c.height,maxy+pad); var w=maxx-minx,h=maxy-miny; var o=document.createElement('canvas');o.width=w;o.height=h; var octx=o.getContext('2d');octx.fillStyle='#fff';octx.fillRect(0,0,w,h);octx.drawImage(c,minx,miny,w,h,0,0,w,h); return {url:o.toDataURL('image/png'),ink:ink}; };
+AK._findSizePage = function(pdf,size){ var i=1; function next(){ if(i>pdf.numPages) return Promise.resolve(1); return pdf.getPage(i).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ var t=tc.items.map(function(x){return x.str;}).join(' ').replace(/\s*:\s*/g,':').replace(/\s+/g,' '); if(new RegExp('SIZE:'+size+'(?![A-Za-z])','i').test(t)) return i; i++; return next(); }); } return next(); };
+AK._cropBig = function(pdf,letter,scale){ return AK._pageCanvas(pdf,1,scale).then(function(o){ return o.page.getTextContent().then(function(tc){ var best=null; tc.items.forEach(function(it){ if(it.str.trim()===letter){ var h=Math.hypot(it.transform[2],it.transform[3]); if(!best||h>best.h) best={h:h,x:it.transform[4],y:it.transform[5]}; } }); if(!best) return AK._trim(o.c,o.ctx); var vpt=o.vp.convertToViewportPoint(best.x,best.y); function mm(v){return v*scale*72/25.4;} var x0=Math.max(0,vpt[0]-mm(6)),y0=Math.max(0,vpt[1]-mm(6)),w=Math.min(o.c.width-x0,mm(45)),h=Math.min(o.c.height-y0,mm(72)); var cc=document.createElement('canvas');cc.width=w;cc.height=h; var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,x0,y0,w,h,0,0,w,h); return AK._trim(cc,cx); }); }); };
+AK.renderSmart = function(bytes,type){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
+  if(type==='icbarkod') return AK._findSizePage(pdf,'M').then(function(p){ return AK._pageCanvas(pdf,p,3); }).then(function(o){ return [AK._trim(o.c,o.ctx).url]; });
+  if(type==='fiyat') return AK._cropBig(pdf,'M',3.2).then(function(r){ return [r.url]; });
+  if(type==='yikama'){ var out=[]; var i=1; function nx(){ if(i>pdf.numPages) return Promise.resolve(out.length?out:null); return pdf.getPage(i).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ var txt=tc.items.map(function(x){return x.str;}).join('').replace(/\s/g,''); if(txt.length<120){ i++; return nx(); } return AK._pageCanvas(pdf,i,2.4).then(function(o){ out.push(AK._trim(o.c,o.ctx).url); i++; return nx(); }); }); } return nx().then(function(r){ if(r) return r; return AK._pageCanvas(pdf,1,2.4).then(function(o){ return [AK._trim(o.c,o.ctx).url]; }); }); }
+  return AK._pageCanvas(pdf,1,2.4).then(function(o){ return [AK._trim(o.c,o.ctx).url]; });
+}); };
+AK._pngUrl = function(bytes,fn){ var bin='',u=new Uint8Array(bytes); for(var i=0;i<u.length;i++) bin+=String.fromCharCode(u[i]); return 'data:image/'+(/jpe?g$/i.test(fn)?'jpeg':'png')+';base64,'+btoa(bin); };
+
+// ---- ZIP işle ----
+AK.processZip = function(zipBytes){
+  return AK.loadLibs().then(function(){ return JSZip.loadAsync(zipBytes); }).then(function(zip){
+    var names=Object.keys(zip.files).filter(function(n){ return !zip.files[n].dir; });
+    var out=[];
+    return names.reduce(function(chain,name){
+      return chain.then(function(){
+        var cat=AK.categorize(name); if(!cat) return;
+        return zip.files[name].async('uint8array').then(function(bytes){
+          if(/\.(png|jpe?g)$/i.test(name)){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); return; }
+          if(cat.type==='unknown'){ out.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
+          return AK.renderSmart(bytes,cat.type).then(function(imgs){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:imgs}); });
+        });
+      });
+    }, Promise.resolve()).then(function(){ return out; });
+  });
+};
+
+// ================= STATE + UI =================
+AK.state = { model:'', asama:'dikim', colors:[] };
+AK._cid = 1;
+AK.touch = function(){ AK.state.model = (document.getElementById('akModel')||{}).value || ''; };
+AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords(); };
+
+AK.setAsama = function(a){ AK.state.asama=a;
+  document.getElementById('akSegDikim').classList.toggle('active', a==='dikim');
+  document.getElementById('akSegUtu').classList.toggle('active', a==='utupaket');
+  AK.renderAsamaInfo(); AK.renderColors();
+};
+AK.renderAsamaInfo = function(){
+  var el=document.getElementById('akAsamaInfo'); if(!el) return;
+  var order=AK.STAGE_ORDER[AK.state.asama];
+  var items=order.map(function(t){ return AK.TYPES[t].label + (AK.TYPES[t].req?'':' <i>(varsa)</i>'); }).join(' · ');
+  el.innerHTML='Bu aşamada beklenen aksesuarlar: <b>'+items+'</b>';
+};
+
+AK.addColor = function(){ AK.state.colors.push({ id:AK._cid++, renk:'', po:'', adet:{s:'',m:'',l:'',xl:'',xxl:''}, files:null, zipName:'' }); AK.renderColors(); };
+AK.removeColor = function(id){ AK.state.colors=AK.state.colors.filter(function(c){return c.id!==id;}); AK.renderColors(); };
+AK._c = function(id){ return AK.state.colors.filter(function(c){return c.id===id;})[0]; };
+
+AK.renderColors = function(){
+  var host=document.getElementById('akColors'); if(!host) return;
+  if(!AK.state.colors.length){ host.innerHTML='<div class="ak-empty">Henüz renk yok — “Renk Ekle” ile başlayın.</div>'; return; }
+  host.innerHTML = AK.state.colors.map(function(c,idx){
+    var tot=['s','m','l','xl','xxl'].reduce(function(s,k){return s+(parseInt(c.adet[k],10)||0);},0);
+    var beds=[['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']].map(function(b){
+      return '<div class="ak-bd"><span>'+b[1]+'</span><input class="form-input" type="number" min="0" value="'+(c.adet[b[0]]||'')+'" oninput="AK.setAdet('+c.id+',\''+b[0]+'\',this.value)"></div>';
+    }).join('');
+    var matchHtml = AK.matchesHtml(c);
+    return '<div class="ak-color" data-cid="'+c.id+'">'+
+      '<div class="ak-color-head">'+
+        '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+
+        '<input class="form-input" placeholder="Renk (ör. YL155 / Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)">'+
+        '<input class="form-input" placeholder="PO no" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)">'+
+        '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
+      '</div>'+
+      '<div class="ak-adet"><span class="ak-adet-lbl">Adet:</span>'+beds+'<span class="ak-tot">Toplam: '+tot.toLocaleString('tr')+'</span></div>'+
+      '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+(c.zipName?('<b>'+c.zipName+'</b> — değiştirmek için tıkla'):'ZIP dosyasını seç / sürükle')+
+        '<input type="file" accept=".zip" onchange="AK.onZip('+c.id+', this.files[0])"></div>'+
+      matchHtml+
+      '<div class="ak-gen">'+
+        '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+};
+AK.setField = function(id,f,v){ var c=AK._c(id); if(c){ c[f]=v; } };
+AK.setAdet = function(id,k,v){ var c=AK._c(id); if(c){ c.adet[k]=v; var el=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-tot'); if(el){ var tot=['s','m','l','xl','xxl'].reduce(function(s,kk){return s+(parseInt(c.adet[kk],10)||0);},0); el.textContent='Toplam: '+tot.toLocaleString('tr'); } } };
+
+AK.matchesHtml = function(c){
+  if(!c.files) return '';
+  var order=AK.STAGE_ORDER[AK.state.asama];
+  var shown = c.files.filter(function(f){ return f.type==='unknown' || order.indexOf(f.type)>=0; });
+  if(!shown.length) return '<div class="ak-miss"><i class="fas fa-circle-info"></i> Bu ZIP\'te bu aşamaya ait aksesuar bulunamadı.</div>';
+  var cards = shown.map(function(f){
+    if(f.type==='unknown'){
+      var opts = order.map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('');
+      return '<div class="ak-match ak-unknown">'+
+        (f.images[0]?'<div class="ak-m-img"><img src="'+f.images[0]+'"></div>':'<div class="ak-m-img"><i class="fas fa-file-pdf" style="font-size:26px;color:#c0392b"></i></div>')+
+        '<div class="ak-m-meta"><span class="ak-m-badge">Bilinmiyor</span>'+
+        '<div class="ak-m-sub">'+(f.code||f.name.split('/').pop())+'</div>'+
+        '<select class="form-input ak-m-tag" onchange="AK.tag('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\',this.value)"><option value="">— tipini seç —</option>'+opts+'<option value="__ignore">Yoksay</option></select>'+
+        '</div></div>';
+    }
+    return '<div class="ak-match">'+
+      '<div class="ak-m-img"><img src="'+(f.images[0]||'')+'"></div>'+
+      '<div class="ak-m-meta"><div class="ak-m-type">'+AK.TYPES[f.type].label+'</div>'+
+      '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div></div></div>';
+  }).join('');
+  var missing = order.filter(function(t){ return AK.TYPES[t].req && !shown.some(function(f){return f.type===t;}); }).map(function(t){return AK.TYPES[t].label;});
+  var miss = missing.length ? '<div class="ak-miss"><i class="fas fa-triangle-exclamation"></i> Eksik: '+missing.join(', ')+'</div>' : '';
+  return '<div class="ak-matches">'+cards+'</div>'+miss;
+};
+
+AK.onZip = function(id,file){
+  if(!file) return; var c=AK._c(id); if(!c) return; c.zipName=file.name;
+  var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
+  file.arrayBuffer().then(function(buf){ return AK.processZip(new Uint8Array(buf)); }).then(function(files){
+    c.files=files;
+    // renk otomatik: dokuma dosyasından renk gelirse ve renk boşsa doldur
+    if(!c.renk){ var d=files.filter(function(f){return f.renk;})[0]; if(d) c.renk=d.renk; }
+    AK.renderColors();
+  }).catch(function(e){ alert('ZIP işlenemedi: '+(e&&e.message||e)); AK.renderColors(); });
+};
+AK.tag = function(id,name,type){
+  var c=AK._c(id); if(!c||!c.files) return;
+  var f=c.files.filter(function(x){return x.name===name;})[0]; if(!f) return;
+  if(type==='__ignore'){ f.type='ignored'; AK.renderColors(); return; }
+  if(!type) return;
+  // kodu tabloya kaydet (bir daha sorma)
+  if(f.code){ var m=AK.map(); m.png[f.code]={type:type, renk:c.renk||undefined}; AK.saveMap(m); }
+  // PDF ise şimdi render et
+  if(f.pdfBytes && !f.images.length){ AK.renderSmart(f.pdfBytes,type).then(function(imgs){ f.images=imgs; f.type=type; AK.renderColors(); }); }
+  else { f.type=type; AK.renderColors(); }
+};
+
+// ================= FÖY + PDF =================
+AK.buildFoyHtml = function(c){
+  var order=AK.STAGE_ORDER[AK.state.asama];
+  var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
+  files.sort(function(a,b){ return order.indexOf(a.type)-order.indexOf(b.type); });
+  var tot=['s','m','l','xl','xxl'].reduce(function(s,k){return s+(parseInt(c.adet[k],10)||0);},0);
+  var bedCells=[['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']].map(function(b){
+    return '<div class="qc'+(b[0]==='m'?' hi':'')+'"><span>'+b[1]+'</span><b>'+((parseInt(c.adet[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
+  }).join('')+'<div class="qc total"><span>TOPLAM</span><b>'+tot.toLocaleString('tr')+'</b></div>';
+  var acc = files.map(function(f,i){
+    var imgs=f.images.map(function(u){ return '<div class="fimg"><img src="'+u+'"></div>'; }).join('');
+    return '<div class="fsec"><div class="fsh"><span class="fn">'+(i+1)+'</span> '+AK.TYPES[f.type].label+(f.renk?' <em>· '+f.renk+'</em>':'')+(f.images.length>1?' <span class="pg">'+f.images.length+' sayfa</span>':'')+'</div>'+imgs+'<div class="fchk"><span></span> Kontrol edildi</div></div>';
+  }).join('');
+  var esc=function(s){ return (''+(s||'')).replace(/[&<>"]/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x];}); };
+  var css='body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:#16223b;margin:0;background:#fff;} .wrap{max-width:800px;margin:0 auto;padding:26px;} .mast{display:flex;justify-content:space-between;border-bottom:2.5px solid #16223b;padding-bottom:10px;} .mb{font-family:Georgia,serif;font-weight:700;font-size:16px} .ms{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3f3fb0;font-weight:800} .mr{text-align:right;font-size:11px;line-height:1.6} h1{font-size:22px;margin:14px 0 2px} .mdl{font-family:ui-monospace,monospace;color:#3f3fb0;font-weight:700} .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0} .chip{border:1px solid #dce2ec;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700} .chip.st{background:#ecebfb;border-color:#3f3fb0;color:#3f3fb0} .qty{border:1px solid #dce2ec;border-radius:10px;overflow:hidden;margin:12px 0} .qh{background:#f4f6fa;padding:7px 12px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #dce2ec} .qcells{display:grid;grid-template-columns:repeat(6,1fr)} .qc{padding:8px;text-align:center;border-left:1px solid #eee} .qc span{display:block;font-size:9px;font-weight:800;color:#667;text-transform:uppercase} .qc b{font-size:15px;font-family:ui-monospace,monospace} .qc.hi{background:#ecebfb;color:#3f3fb0} .qc.total{background:#16223b} .qc.total span{color:#aab} .qc.total b{color:#fff} .fsec{border:1px solid #dce2ec;border-radius:11px;overflow:hidden;margin-bottom:12px} .fsh{background:#f4f6fa;padding:8px 12px;font-size:13px;font-weight:800;border-bottom:1px solid #dce2ec} .fsh .fn{display:inline-flex;width:20px;height:20px;background:#16223b;color:#fff;border-radius:6px;align-items:center;justify-content:center;font-size:11px;margin-right:6px} .fsh .pg{background:#ecebfb;color:#3f3fb0;font-size:9px;padding:2px 7px;border-radius:5px;font-weight:800} .fimg{background:#fff;padding:10px;text-align:center;border-top:1px solid #f0f0f0} .fimg img{max-width:100%;max-height:360px} .fchk{padding:7px 12px;font-size:11px;color:#667;border-top:1px solid #eee} .fchk span{display:inline-block;width:13px;height:13px;border:1.5px solid #bbb;border-radius:4px;vertical-align:middle;margin-right:6px} .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px;padding-top:14px;border-top:2px solid #16223b} .sb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667;font-weight:800} .sl{margin-top:26px;border-top:1.3px solid #bbb} .no-print{margin:14px auto;max-width:800px;padding:0 26px;display:flex;gap:8px} .no-print button{padding:10px 18px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px} @media print{.no-print{display:none}}';
+  var today=new Date().toLocaleDateString('tr-TR');
+  var body='<div class="no-print" id="akCtl"><button style="background:#16a34a;color:#fff" onclick="window.opener&&window.opener._downloadElementAsPDF(document.getElementById(\'sheet\'),\''+esc(c.po||'')+'_'+esc(c.renk||'renk')+'.pdf\',document.getElementById(\'akCtl\'))">📥 PDF İndir</button><button style="background:#3f3fb0;color:#fff" onclick="window.print()">🖨️ Yazdır</button></div>'+
+    '<div class="wrap" id="sheet"><div class="mast"><div><div class="mb">İrsaliye Pro</div><div class="ms">Aksesuar Kontrol</div></div><div class="mr">Model: <b>'+esc(AK.state.model||'—')+'</b><br>PO: <b>'+esc(c.po||'—')+'</b><br>Tarih: <b>'+today+'</b></div></div>'+
+    '<h1>Aksesuar Kontrol Föyü</h1><div class="mdl">'+esc(AK.state.model||'')+' · '+esc(c.renk||'')+'</div>'+
+    '<div class="chips"><span class="chip st">'+AK.STAGE_LABEL[AK.state.asama]+'</span><span class="chip">Renk: '+esc(c.renk||'—')+'</span><span class="chip">PO: '+esc(c.po||'—')+'</span></div>'+
+    '<div class="qty"><div class="qh">Adet Dökümü — beden beden</div><div class="qcells">'+bedCells+'</div></div>'+
+    acc+
+    '<div class="sign"><div><div class="sb">Kontrol Eden</div><div class="sl"></div></div><div><div class="sb">Tarih</div><div class="sl"></div></div><div><div class="sb">Sonuç · İmza</div><div class="sl"></div></div></div>'+
+    '</div>';
+  return '<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Aksesuar Kontrol — '+esc(AK.state.model)+' '+esc(c.renk)+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+};
+
+AK.generate = function(id){
+  var c=AK._c(id); if(!c) return;
+  if(!AK.state.model){ alert('Önce Model Kodu girin.'); return; }
+  if(!c.files){ alert('Önce bu renk için ZIP yükleyin.'); return; }
+  var order=AK.STAGE_ORDER[AK.state.asama];
+  var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
+  if(!have.length){ alert('Bu aşamaya ait aksesuar bulunamadı. Bilinmeyen dosyaları etiketleyin.'); return; }
+  var html=AK.buildFoyHtml(c);
+  var w = (typeof _openHtmlWindow==='function') ? _openHtmlWindow(html,'width=1000,height=760') : (function(){ var win=window.open('','_blank','width=1000,height=760'); if(win){ win.document.write(html); win.document.close(); } return win; })();
+  if(!w){ alert('Popup engellendi! İzin verin.'); return; }
+  // kayıt (hafif)
+  var recs=AK.recs();
+  recs.unshift({ ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) });
+  if(recs.length>200) recs=recs.slice(0,200);
+  AK.saveRecs(recs); AK.renderRecords();
+  if(typeof toast==='function') toast('Föy oluşturuldu — pencereden PDF indirin','success');
+};
+
+AK.renderRecords = function(){
+  var host=document.getElementById('akRecords'); if(!host) return;
+  var recs=AK.recs();
+  if(!recs.length){ host.innerHTML='<div class="ak-empty">Henüz kayıt yok. Föy oluşturunca burada listelenir.</div>'; return; }
+  host.innerHTML=recs.map(function(r,i){
+    var tot=['s','m','l','xl','xxl'].reduce(function(s,k){return s+(parseInt(r.adet&&r.adet[k],10)||0);},0);
+    return '<div class="ak-rec"><div class="ak-rec-ic '+r.asama+'">'+(r.asama==='dikim'?'🧵':'📦')+'</div>'+
+      '<div class="ak-rec-body"><div class="ak-rec-t">'+r.model+' · '+(r.renk||'—')+'</div>'+
+      '<div class="ak-rec-s">PO '+(r.po||'—')+' · '+(AK.STAGE_LABEL[r.asama]||r.asama)+' · '+tot.toLocaleString('tr')+' adet · '+r.tarih+'</div></div>'+
+      '<div class="ak-rec-act"><button class="btn btn-xs btn-danger" onclick="AK.delRecord('+i+')"><i class="fas fa-trash"></i></button></div></div>';
+  }).join('');
+};
+AK.delRecord = function(i){ var recs=AK.recs(); recs.splice(i,1); AK.saveRecs(recs); AK.renderRecords(); };
+
+// ---- Kod tablosu modalı ----
+AK.openCodeTable = function(){ AK.renderCodeTable(); document.getElementById('akCodeModal').classList.add('show'); };
+AK.closeCodeTable = function(){ document.getElementById('akCodeModal').classList.remove('show'); };
+AK.renderCodeTable = function(){
+  var m=AK.map(); var list=document.getElementById('akCodeList');
+  var sel=document.getElementById('akNewType');
+  if(sel && !sel.options.length){ sel.innerHTML=Object.keys(AK.TYPES).map(function(t){return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>';}).join(''); }
+  var rows=Object.keys(m.png).map(function(code){ var v=m.png[code]; return '<div class="ak-code-row"><span class="ak-cc">'+code+'</span> <span>'+(AK.TYPES[v.type]?AK.TYPES[v.type].label:v.type)+(v.renk?' · '+v.renk:'')+'</span><span class="ak-ct"></span><button class="ak-cx" onclick="AK.delCode(\''+code+'\')">&times;</button></div>'; });
+  var pdfRows=m.pdf.map(function(r){ return '<div class="ak-code-row"><span class="ak-cc">*'+r.m+'*</span> <span>'+(AK.TYPES[r.type]?AK.TYPES[r.type].label:r.type)+' (PDF)</span></div>'; });
+  list.innerHTML = pdfRows.join('')+rows.join('') || '<div class="ak-empty">Kod yok.</div>';
+};
+AK.addCode = function(){
+  var code=(document.getElementById('akNewCode').value||'').trim().toUpperCase();
+  var type=document.getElementById('akNewType').value; var renk=(document.getElementById('akNewRenk').value||'').trim();
+  if(!code||!type) return;
+  var m=AK.map(); m.png[code]={type:type}; if(renk) m.png[code].renk=renk; AK.saveMap(m);
+  document.getElementById('akNewCode').value=''; document.getElementById('akNewRenk').value='';
+  AK.renderCodeTable();
+};
+AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); AK.renderCodeTable(); };
+
+})();
+</script>
+
 </body>
 </html>
