@@ -17005,7 +17005,8 @@ AK._activeSizes = function(){
   if(AK._merged && AK._merged.sizes) AK._merged.sizes.forEach(function(s){ present[s]=true; });
   (AK.state.colors||[]).forEach(function(c){ if(c.adet) Object.keys(c.adet).forEach(function(k){ if(c.adet[k]!=='' && c.adet[k]!=null) present[k]=true; }); });
   var act=AK.SIZES.filter(function(b){ return present[b[0]]; });
-  return act.length ? act : [['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']];
+  // Dosya yoksa (elle giriş) tüm yaygın bedenleri göster ki hiçbiri eksik kalmasın.
+  return act.length ? act : [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL']];
 };
 AK._adetTotal = function(adet){ if(!adet) return 0; return AK._activeSizes().reduce(function(s,b){ return s+(parseInt(adet[b[0]],10)||0); },0); };
 // Mal (ürün) rengine göre dokuma etiket rengi: açık→beyaz, koyu→siyah.
