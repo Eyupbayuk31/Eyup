@@ -13686,8 +13686,11 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 /* ═══════════════════════════════════════════════════════════════
    FERMUAR TAKİP — MODEL → DETAY HİYERARŞİSİ (v2, tema-token)
    ═══════════════════════════════════════════════════════════════ */
-/* Model kartı: tedarikçi + termin satırı */
-.ft-card-renk{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; color:var(--text); margin-bottom:10px; padding:5px 11px 5px 9px; border-radius:999px; background:color-mix(in srgb, var(--primary) 9%, transparent); border:1px solid var(--border); letter-spacing:.2px; }
+/* Model kartı: renk + termin tek kompakt satırda */
+.ft-card-meta{ display:flex; align-items:stretch; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.ft-card-meta .ft-card-renk, .ft-card-meta .ft-card-termin{ margin-bottom:0; }
+.ft-card-meta .ft-card-termin{ flex:1; min-width:150px; }
+.ft-card-renk{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px; padding:5px 11px 5px 9px; border-radius:999px; background:color-mix(in srgb, var(--primary) 9%, transparent); border:1px solid var(--border); letter-spacing:.2px; white-space:nowrap; }
 .ft-card-renk .ft-renk-dot{ width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.15), inset 0 0 0 1px rgba(0,0,0,.25); flex:0 0 auto; }
 .ft-card-termin{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted); margin-bottom:10px; padding:6px 9px; border-radius:8px; background:color-mix(in srgb, var(--text-dim) 6%, transparent); }
 .ft-card-termin i{ font-size:11px; color:var(--primary); }
@@ -13943,6 +13946,10 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-drop{border:2px dashed color-mix(in srgb,var(--primary) 24%,var(--border));border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .18s;color:var(--text-muted);font-size:13px;position:relative;background:color-mix(in srgb,var(--primary) 3%,transparent);}
 .ak-drop:hover,.ak-drop.drag{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,transparent);color:var(--primary);}
 .ak-drop i{font-size:22px;display:block;margin-bottom:7px;color:color-mix(in srgb,var(--primary) 75%,var(--text-muted));}
+/* Arşiv yüklendi: başarı durumu — bir bakışta "tamam" okunur */
+.ak-drop.loaded{border-style:solid;border-color:color-mix(in srgb,var(--success) 45%,var(--border));background:color-mix(in srgb,var(--success) 7%,transparent);color:var(--text-main);}
+.ak-drop.loaded i{color:var(--success);}
+.ak-drop.loaded:hover{border-color:var(--success);background:color-mix(in srgb,var(--success) 11%,transparent);}
 .ak-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
 .ak-matches{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:11px;}
 .ak-match{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);transition:transform .16s,box-shadow .16s,border-color .16s;}
@@ -13990,4 +13997,15 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-code-row .ak-cc{font-family:ui-monospace,monospace;font-weight:700;}
 .ak-code-row .ak-ct{color:var(--text-muted);margin-left:auto;}
 .ak-code-row .ak-cx{border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px;}
-@media (max-width:640px){.ak-grid2{grid-template-columns:1fr;}.ak-grid3{grid-template-columns:1fr;}.ak-codeadd{grid-template-columns:1fr 1fr;}}
+@media (max-width:640px){
+  .ak-grid2{grid-template-columns:1fr;}
+  .ak-grid3{grid-template-columns:1fr;}
+  .ak-codeadd{grid-template-columns:1fr 1fr;}
+  .ak-head{padding:14px 16px;}
+  .ak-card{padding:15px 14px;}
+  .ak-adet .ak-bd input{width:62px;}
+  .ak-adet .ak-tot{width:100%;margin-left:0;text-align:center;}
+  .ak-matches{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;}
+  .ak-color-head{padding:11px 12px;}
+  .ak-color-body{padding:12px;}
+}
