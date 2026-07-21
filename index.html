@@ -17005,6 +17005,14 @@ AK._activeSizes = function(){
   return act.length ? act : [['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']];
 };
 AK._adetTotal = function(adet){ if(!adet) return 0; return AK._activeSizes().reduce(function(s,b){ return s+(parseInt(adet[b[0]],10)||0); },0); };
+// Mal (ürün) rengine göre dokuma etiket rengi: açık→beyaz, koyu→siyah.
+AK._labelForGarment = function(renk){
+  var r=(renk||'').toLowerCase();
+  if(/(ekru|ecru|beyaz|white|krem|cream|ivory|fildişi|bej|beige|off\s*white|kırık\s*beyaz|kirik\s*beyaz)/.test(r)) return 'white';
+  if(/(siyah|black|lacivert|navy|antrasit|anthracite|koyu)/.test(r)) return 'black';
+  return null;
+};
+AK._labelNote = function(renk, pref){ return 'Mal rengi '+(renk||'—')+' olduğu için '+(pref==='white'?'BEYAZ/EKRU':'SİYAH')+' dokuma etiket kullanılacak.'; };
 
 // ---- Kod tablosu (localStorage, tohumlu) ----
 AK.LS_MAP='ak_codemap_v2'; AK.LS_REC='ak_records_v2';
@@ -17285,7 +17293,9 @@ AK.matchesHtml = function(c){
     return '<div class="ak-match">'+
       '<div class="ak-m-img"><img src="'+(f.images[0]||'')+'"></div>'+
       '<div class="ak-m-meta"><div class="ak-m-type">'+AK.TYPES[f.type].label+'</div>'+
-      '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div></div></div>';
+      '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div>'+
+      (f.note?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+f.note+'</div>':'')+
+      '</div></div>';
   }).join('');
   var missing = order.filter(function(t){ return AK.TYPES[t].req && !shown.some(function(f){return f.type===t;}); }).map(function(t){return AK.TYPES[t].label;});
   var miss = missing.length ? '<div class="ak-miss"><i class="fas fa-triangle-exclamation"></i> Eksik: '+missing.join(', ')+'</div>' : '';
@@ -17306,18 +17316,29 @@ AK.rebuildColors = function(){
     if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:col.renk||null,code:col.code||null,name:'fiyat:'+k});
     // Yıkama: renk koduna göre eşlenmiş (renk-özel)
     if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:col.renk||null,name:'yikama:'+k});
-    // Ortak dosyalar (dokuma/lot/askı + kodsuz yıkama). Kodsuz yıkama çok
-    // renkliyse ve sayfa sayısı renk sayısına eşitse sayfa i → renk i.
+    // Ortak dosyalar. Dokuma etiketi MAL RENGİNE göre seçilir (açık→beyaz,
+    // koyu→siyah); uygun olmayan etiket gizlenir + açıklama eklenir.
+    var labelPref = AK._labelForGarment(col.renk);
     m.shared.forEach(function(s){
       if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
-        files.push({type:'yikama',images:[s.images[ci]],renk:col.renk||null,name:'yikamaS:'+k});
-      } else { files.push(s); }
+        files.push({type:'yikama',images:[s.images[ci]],renk:col.renk||null,name:'yikamaS:'+k}); return;
+      }
+      if(s.type==='dokuma' && labelPref){
+        var lr=(s.renk||'').toLowerCase();
+        var isWhite=/beyaz|white|ekru|ecru|krem|bej/.test(lr), isBlack=/siyah|black/.test(lr);
+        if(isWhite||isBlack){
+          var match=(labelPref==='white'&&isWhite)||(labelPref==='black'&&isBlack);
+          if(!match) return; // uygun olmayan etiket rengini atla
+          files.push(Object.assign({}, s, {note: AK._labelNote(col.renk, labelPref)})); return;
+        }
+      }
+      files.push(s);
     });
     var key=col.code||col.renk||'_'; var p=prev[key]||{};
     // Adet: kullanıcı elle girdiyse koru; yoksa fiyat kartından otomatik.
-    var beds=['xs','s','m','l','xl','xxl']; var padet=p.adet||{};
+    var beds=AK.SIZES.map(function(b){return b[0];}); var padet=p.adet||{};
     var hasUser=beds.some(function(bk){ return padet[bk]!=='' && padet[bk]!=null && padet[bk]!==undefined; });
-    var adet; if(hasUser){ adet=padet; } else if(col.adet){ adet={}; beds.forEach(function(bk){ adet[bk]=(col.adet[bk]!=null?col.adet[bk]:''); }); } else { adet={xs:'',s:'',m:'',l:'',xl:'',xxl:''}; }
+    var adet; if(hasUser){ adet=padet; } else if(col.adet){ adet={}; beds.forEach(function(bk){ if(col.adet[bk]!=null) adet[bk]=col.adet[bk]; }); } else { adet={}; }
     return { id:p.id||(AK._cid++), code:col.code||null, renk:col.renk||(p.renk||''), po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice() };
   });
   AK.state.colors = newColors.length ? newColors : AK.state.colors;
@@ -17442,6 +17463,7 @@ AK._renderColorPage = function(pdf, c){
     pdf.setFillColor(244,246,250); pdf.rect(M,y,cw,6.5,'F');
     pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold'); pdf.setFontSize(10);
     T(label, M+2.5, y+4.5); y+=8;
+    if(f.note){ pdf.setTextColor(180,60,20); pdf.setFont('helvetica','bolditalic'); pdf.setFontSize(8.5); T('» '+f.note, M+2, y); pdf.setFont('helvetica','normal'); y+=5; }
     var cap = big ? 232 : (AK._CAP[f.type]||60);
     f.images.forEach(function(url,ii){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
