@@ -7777,7 +7777,7 @@ body::after{
 #loginCard h1 .b-line2 {
   display: block;
   margin-top: -4px;
-  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 40%, #7c3aed 80%);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 45%, var(--primary-dark) 85%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -8109,11 +8109,11 @@ body::after{
   margin-top: 6px;
   font-family: var(--font-body, sans-serif);
   font-size: 15px; font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+  color: var(--on-primary, #fff);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 50%, var(--primary-dark) 100%);
   background-size: 200% 100%;
   background-position: 0% 50%;
-  border: 1px solid rgba(167,139,250,0.4);
+  border: 1px solid color-mix(in srgb, var(--primary-light) 45%, transparent);
   border-radius: var(--radius, 12px);
   cursor: pointer;
   position: relative;
@@ -8160,8 +8160,8 @@ body::after{
 #loginCard .login-btn .spinner {
   display: none;
   width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
+  border: 2px solid color-mix(in srgb, var(--on-primary, #fff) 30%, transparent);
+  border-top-color: var(--on-primary, #fff);
   border-radius: 50%;
   animation: lgSpin 0.7s linear infinite;
   position: relative; z-index: 1;
