@@ -16995,6 +16995,16 @@ AK.TYPES = {
 };
 AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','lisansKarti','lot'] };
 AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü & Paket' };
+// Kanonik beden sırası (XXS→4XL). Aktif bedenler dosyalardan tespit edilir.
+AK.SIZES = [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL'],['4xl','4XL']];
+AK._activeSizes = function(){
+  var present={};
+  if(AK._merged && AK._merged.sizes) AK._merged.sizes.forEach(function(s){ present[s]=true; });
+  (AK.state.colors||[]).forEach(function(c){ if(c.adet) Object.keys(c.adet).forEach(function(k){ if(c.adet[k]!=='' && c.adet[k]!=null) present[k]=true; }); });
+  var act=AK.SIZES.filter(function(b){ return present[b[0]]; });
+  return act.length ? act : [['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']];
+};
+AK._adetTotal = function(adet){ if(!adet) return 0; return AK._activeSizes().reduce(function(s,b){ return s+(parseInt(adet[b[0]],10)||0); },0); };
 
 // ---- Kod tablosu (localStorage, tohumlu) ----
 AK.LS_MAP='ak_codemap_v2'; AK.LS_REC='ak_records_v2';
@@ -17080,6 +17090,7 @@ AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:b
     var byCode={};
     infos.forEach(function(p){ var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, first:p.page}; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
     var keys=Object.keys(byCode); var out=[];
+    var szSet={}; infos.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; }); out.sizes=Object.keys(szSet);
     return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; return AK._pageCanvas(pdf, info.mPage||info.first, 3.5).then(function(o){ out.push({code:info.code, renk:info.renk, model:info.model, url:AK._trim(o.c,o.ctx).url}); }); }); }, Promise.resolve()).then(function(){ return out; });
   });
 }); };
@@ -17177,15 +17188,15 @@ AK.processEntries = function(entries){
     var pos={}; names.forEach(function(n){ var mm=n.split('/').pop().match(/^(\d{6,8})[_\-]/); if(mm) pos[mm[1]]=(pos[mm[1]]||0)+1; });
     var detPo=Object.keys(pos).sort(function(a,b){return pos[b]-pos[a];})[0]||'';
     var det={po:detPo, model:'', renk:''};
-    var byColor={}; var shared=[];
+    var byColor={}; var shared=[]; var sizeSet={};
     function ensureColor(code,renk,model){ code=code||'_'; if(!byColor[code]) byColor[code]={code:(code==='_'?null:code), renk:renk||null, icbarkod:[], fiyat:[], yikama:[], adet:null}; if(renk&&!byColor[code].renk) byColor[code].renk=renk; if(model&&!det.model) det.model=model; return byColor[code]; }
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
         if(/\.(png|jpe?g)$/i.test(name)){ shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
-        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; }); }); }
-        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code); col.fiyat=x.url?[x.url]:[]; if(x.adet && Object.keys(x.adet).length) col.adet=x.adet; }); }); }
+        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
+        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code); col.fiyat=x.url?[x.url]:[]; if(x.adet && Object.keys(x.adet).length){ col.adet=x.adet; Object.keys(x.adet).forEach(function(sz){ sizeSet[sz]=true; }); } }); }); }
         if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
           var coded=list.filter(function(x){return x.code;});
           if(coded.length){ coded.forEach(function(x){ ensureColor(x.code,x.renk).yikama=[x.url]; }); }
@@ -17197,7 +17208,7 @@ AK.processEntries = function(entries){
         var pre = (!det.model && cat.type==='lot') ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk&&d.renk) det.renk=d.renk; } }) : Promise.resolve();
         return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ shared.push({name:name,type:cat.type,code:null,renk:null,images:imgs}); });
       });
-    }, Promise.resolve()).then(function(){ return { detected:det, byColor:byColor, shared:shared }; });
+    }, Promise.resolve()).then(function(){ return { detected:det, byColor:byColor, shared:shared, sizes:Object.keys(sizeSet) }; });
   });
 };
 
@@ -17227,8 +17238,8 @@ AK.renderColors = function(){
   var host=document.getElementById('akColors'); if(!host) return;
   if(!AK.state.colors.length){ host.innerHTML='<div class="ak-empty">Henüz renk yok — “Renk Ekle” ile başlayın.</div>'; return; }
   host.innerHTML = AK.state.colors.map(function(c,idx){
-    var tot=['xs','s','m','l','xl','xxl'].reduce(function(s,k){return s+(parseInt(c.adet[k],10)||0);},0);
-    var beds=[['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']].map(function(b){
+    var tot=AK._adetTotal(c.adet);
+    var beds=AK._activeSizes().map(function(b){
       return '<div class="ak-bd"><span>'+b[1]+'</span><input class="form-input" type="number" min="0" value="'+(c.adet[b[0]]||'')+'" oninput="AK.setAdet('+c.id+',\''+b[0]+'\',this.value)"></div>';
     }).join('');
     var matchHtml = AK.matchesHtml(c);
@@ -17254,7 +17265,7 @@ AK.renderColors = function(){
   }).join('');
 };
 AK.setField = function(id,f,v){ var c=AK._c(id); if(c){ c[f]=v; } };
-AK.setAdet = function(id,k,v){ var c=AK._c(id); if(c){ c.adet[k]=v; var el=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-tot'); if(el){ var tot=['xs','s','m','l','xl','xxl'].reduce(function(s,kk){return s+(parseInt(c.adet[kk],10)||0);},0); el.textContent='Toplam: '+tot.toLocaleString('tr'); } } };
+AK.setAdet = function(id,k,v){ var c=AK._c(id); if(c){ c.adet[k]=v; var el=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-tot'); if(el){ var tot=AK._adetTotal(c.adet); el.textContent='Toplam: '+tot.toLocaleString('tr'); } } };
 
 AK.matchesHtml = function(c){
   if(!c.files) return '';
@@ -17322,8 +17333,9 @@ AK.onZip = function(id, fileList){
   files.reduce(function(chain,f){
     return chain.then(function(){
       return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
-        if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''}};
-        var M=AK._merged;
+        if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''},sizes:[]};
+        var M=AK._merged; if(!M.sizes) M.sizes=[];
+        (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
         Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[],yikama:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
@@ -17353,8 +17365,8 @@ AK.buildFoyHtml = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
   files.sort(function(a,b){ return order.indexOf(a.type)-order.indexOf(b.type); });
-  var tot=['xs','s','m','l','xl','xxl'].reduce(function(s,k){return s+(parseInt(c.adet[k],10)||0);},0);
-  var bedCells=[['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']].map(function(b){
+  var tot=AK._adetTotal(c.adet);
+  var bedCells=AK._activeSizes().map(function(b){
     return '<div class="qc'+(b[0]==='m'?' hi':'')+'"><span>'+b[1]+'</span><b>'+((parseInt(c.adet[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
   }).join('')+'<div class="qc total"><span>TOPLAM</span><b>'+tot.toLocaleString('tr')+'</b></div>';
   var acc = files.map(function(f,i){
@@ -17406,7 +17418,7 @@ AK._renderColorPage = function(pdf, c){
   T('Model: '+(AK.state.model||'—')+'    PO: '+(c.po||'—')+'    Aşama: '+asamaLbl+(AK.state.atolye?('    Atölye: '+AK.state.atolye):''), M, y+2); y+=5;
   line(); y+=5;
   // ---- adet dökümü ----
-  var beds=[['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']];
+  var beds=AK._activeSizes();
   var tot=beds.reduce(function(s,b){return s+(parseInt(c.adet[b[0]],10)||0);},0);
   pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5); pdf.setTextColor.apply(pdf,MUT);
   T('ADET DÖKÜMÜ (beden beden)', M, y); y+=4;
