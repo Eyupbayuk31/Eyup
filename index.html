@@ -17088,6 +17088,19 @@ AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
       return AK._cropBig(pdf,'M',3.6,pageNum).then(function(r){ out.push({code:info.code, url:r.url}); i++; return scan(); }); }); }
   return scan();
 }); };
+// Yıkama: dolu sayfaları renk koduna göre → [{code,renk,url}] (boş sayfalar atlanır).
+// Renk kodu: footer'da MODEL-(RENKKODU veya MODEL/RENKKODU.
+AK._yikamaColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
+  var out=[]; var i=1;
+  function scan(){ if(i>pdf.numPages) return Promise.resolve(out); var pageNum=i;
+    return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
+      var full=tc.items.map(function(x){return x.str;}).join(' ');
+      if(full.replace(/\s/g,'').length<120){ i++; return scan(); } // boş şablon sayfası
+      var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{2,4})/);
+      var nm=full.replace(/\s+/g,' ').match(/\b([A-Z][a-z]{2,12})\)/);
+      return AK._textCrop(pdf,pageNum,3.4).then(function(r){ out.push({code:cm?cm[2]:null, renk:nm?nm[1]:null, url:r.url}); i++; return scan(); }); }); }
+  return scan();
+}); };
 AK.renderSmart = function(bytes,type){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
   if(type==='icbarkod') return AK._findSizePage(pdf,'M').then(function(p){ return AK._pageCanvas(pdf,p,3.5); }).then(function(o){ return [AK._trim(o.c,o.ctx).url]; });
   if(type==='fiyat') return AK._cropBig(pdf,'M',3.6).then(function(r){ return [r.url]; });
@@ -17149,7 +17162,7 @@ AK.processEntries = function(entries){
     var detPo=Object.keys(pos).sort(function(a,b){return pos[b]-pos[a];})[0]||'';
     var det={po:detPo, model:'', renk:''};
     var byColor={}; var shared=[];
-    function ensureColor(code,renk,model){ code=code||'_'; if(!byColor[code]) byColor[code]={code:(code==='_'?null:code), renk:renk||null, icbarkod:[], fiyat:[]}; if(renk&&!byColor[code].renk) byColor[code].renk=renk; if(model&&!det.model) det.model=model; return byColor[code]; }
+    function ensureColor(code,renk,model){ code=code||'_'; if(!byColor[code]) byColor[code]={code:(code==='_'?null:code), renk:renk||null, icbarkod:[], fiyat:[], yikama:[]}; if(renk&&!byColor[code].renk) byColor[code].renk=renk; if(model&&!det.model) det.model=model; return byColor[code]; }
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
@@ -17157,7 +17170,14 @@ AK.processEntries = function(entries){
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; }); }); }
         if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code).fiyat=x.url?[x.url]:[]; }); }); }
-        // lot / yıkama / diğer → ortak
+        if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
+          var coded=list.filter(function(x){return x.code;});
+          if(coded.length){ coded.forEach(function(x){ ensureColor(x.code,x.renk).yikama=[x.url]; }); }
+          // kodsuz sayfalar (eski tip) → ortak (tüm renklere)
+          var nocode=list.filter(function(x){return !x.code;}).map(function(x){return x.url;});
+          if(nocode.length) shared.push({name:name,type:'yikama',code:null,renk:null,images:nocode});
+        }); }
+        // lot / diğer → ortak
         var pre = (!det.model && cat.type==='lot') ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk&&d.renk) det.renk=d.renk; } }) : Promise.resolve();
         return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ shared.push({name:name,type:cat.type,code:null,renk:null,images:imgs}); });
       });
@@ -17257,10 +17277,13 @@ AK.rebuildColors = function(){
     var col=m.byColor[k]; var files=[];
     if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:col.renk||null,code:col.code||null,name:'icbarkod:'+k});
     if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:col.renk||null,code:col.code||null,name:'fiyat:'+k});
-    // ortak dosyalar; çok renkli yıkamada sayfa i → renk i
+    // Yıkama: renk koduna göre eşlenmiş (renk-özel)
+    if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:col.renk||null,name:'yikama:'+k});
+    // Ortak dosyalar (dokuma/lot/askı + kodsuz yıkama). Kodsuz yıkama çok
+    // renkliyse ve sayfa sayısı renk sayısına eşitse sayfa i → renk i.
     m.shared.forEach(function(s){
       if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
-        files.push({type:'yikama',images:[s.images[ci]],renk:col.renk||null,name:'yikama:'+k});
+        files.push({type:'yikama',images:[s.images[ci]],renk:col.renk||null,name:'yikamaS:'+k});
       } else { files.push(s); }
     });
     var key=col.code||col.renk||'_'; var p=prev[key]||{};
@@ -17281,7 +17304,7 @@ AK.onZip = function(id, fileList){
       return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
         if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''}};
         var M=AK._merged;
-        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[]}); if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.renk&&!dst.renk) dst.renk=src.renk; });
+        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[],yikama:[]}); if(!dst.yikama) dst.yikama=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.renk&&!dst.renk) dst.renk=src.renk; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
