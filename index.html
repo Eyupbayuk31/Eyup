@@ -17073,22 +17073,50 @@ AK._detectModel = function(bytes){ return window.pdfjsLib.getDocument({data:byte
   var m=t.match(/\b([A-Z]\d{3,5}[A-Z]{1,2})\s*\/\s*([A-Z]{1,3}\d{2,4})\b/);
   return m ? {model:m[1], renk:m[2]} : null;
 }); }).catch(function(){ return null; }); };
-AK.processZip = function(zipBytes){
-  return AK.loadLibs().then(function(){ return JSZip.loadAsync(zipBytes); }).then(function(zip){
-    var names=Object.keys(zip.files).filter(function(n){ return !zip.files[n].dir; });
-    // PO'yu dosya adından yakala (ör. 1965467_StampSticker.pdf → 1965467)
+// libarchive.js — RAR / 7z / diğer arşivler için (ZIP hızlı yol: JSZip). Lazy CDN.
+AK._arch=null;
+AK.loadArchive = function(){
+  if(AK._arch) return AK._arch;
+  AK._arch = import('https://cdn.jsdelivr.net/npm/libarchive.js@1.3.0/main.js').then(function(m){
+    var A = m.Archive || (m.default && m.default.Archive);
+    A.init({ workerUrl:'https://cdn.jsdelivr.net/npm/libarchive.js@1.3.0/dist/worker-bundle.js' });
+    return A;
+  });
+  return AK._arch;
+};
+// Arşivi aç → [{name,bytes}]. ZIP: JSZip (hızlı/sağlam). RAR/7z: libarchive.
+AK._extractEntries = function(file){
+  return file.slice(0,8).arrayBuffer().then(function(head){
+    var b=new Uint8Array(head);
+    var isZip=(b[0]===0x50&&b[1]===0x4B);
+    if(isZip){
+      return file.arrayBuffer().then(function(ab){ return AK.loadLibs().then(function(){ return JSZip.loadAsync(new Uint8Array(ab)); }); }).then(function(zip){
+        var names=Object.keys(zip.files).filter(function(n){ return !zip.files[n].dir; });
+        return names.reduce(function(ch,n){ return ch.then(function(arr){ return zip.files[n].async('uint8array').then(function(u){ arr.push({name:n,bytes:u}); return arr; }); }); }, Promise.resolve([]));
+      });
+    }
+    // RAR / 7z / diğer → libarchive
+    return AK.loadArchive().then(function(A){ return A.open(file); }).then(function(archive){ return archive.extractFiles(); }).then(function(tree){
+      var entries=[];
+      (function walk(o,pre){ Object.keys(o||{}).forEach(function(k){ var v=o[k]; if(v && typeof v.arrayBuffer==='function'){ entries.push({name:(pre?pre+'/':'')+k, f:v}); } else if(v && typeof v==='object'){ walk(v,(pre?pre+'/':'')+k); } }); })(tree,'');
+      return Promise.all(entries.map(function(e){ return e.f.arrayBuffer().then(function(ab){ return {name:e.name, bytes:new Uint8Array(ab)}; }); }));
+    });
+  });
+};
+// Çıkarılan girişleri işle → aksesuar listesi (+ otomatik PO/Model/Renk)
+AK.processEntries = function(entries){
+  return AK.loadLibs().then(function(){
+    var names=entries.map(function(e){ return e.name; });
     var pos={}; names.forEach(function(n){ var mm=n.split('/').pop().match(/^(\d{6,8})[_\-]/); if(mm) pos[mm[1]]=(pos[mm[1]]||0)+1; });
     var detPo=Object.keys(pos).sort(function(a,b){return pos[b]-pos[a];})[0]||'';
     var out=[]; var det={po:detPo, model:'', renk:''};
-    return names.reduce(function(chain,name){
+    return entries.reduce(function(chain,e){
       return chain.then(function(){
-        var cat=AK.categorize(name); if(!cat) return;
-        return zip.files[name].async('uint8array').then(function(bytes){
-          if(/\.(png|jpe?g)$/i.test(name)){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); return; }
-          if(cat.type==='unknown'){ out.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
-          var pre = (!det.model && (cat.type==='icbarkod'||cat.type==='fiyat'||cat.type==='lot')) ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk) det.renk=d.renk; } }) : Promise.resolve();
-          return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:imgs}); });
-        });
+        var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
+        if(/\.(png|jpe?g)$/i.test(name)){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); return; }
+        if(cat.type==='unknown'){ out.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
+        var pre = (!det.model && (cat.type==='icbarkod'||cat.type==='fiyat'||cat.type==='lot')) ? AK._detectModel(bytes.slice(0)).then(function(d){ if(d){ det.model=d.model; if(!det.renk) det.renk=d.renk; } }) : Promise.resolve();
+        return pre.then(function(){ return AK.renderSmart(bytes,cat.type); }).then(function(imgs){ out.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:imgs}); });
       });
     }, Promise.resolve()).then(function(){ out.detected=det; return out; });
   });
@@ -17133,8 +17161,8 @@ AK.renderColors = function(){
         '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
       '</div>'+
       '<div class="ak-adet"><span class="ak-adet-lbl">Adet:</span>'+beds+'<span class="ak-tot">Toplam: '+tot.toLocaleString('tr')+'</span></div>'+
-      '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+(c.zipName?('<b>'+c.zipName+'</b> — değiştirmek için tıkla'):'ZIP dosyasını seç / sürükle')+
-        '<input type="file" accept=".zip" onchange="AK.onZip('+c.id+', this.files[0])"></div>'+
+      '<div class="ak-drop" onclick="this.querySelector(\'input\').click()"><i class="fas fa-file-zipper"></i>'+(c.zipName?('<b>'+c.zipName+'</b> — değiştirmek için tıkla'):'ZIP / RAR dosyasını seç / sürükle')+
+        '<input type="file" accept=".zip,.rar,.7z" onchange="AK.onZip('+c.id+', this.files[0])"></div>'+
       matchHtml+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
@@ -17173,7 +17201,7 @@ AK.matchesHtml = function(c){
 AK.onZip = function(id,file){
   if(!file) return; var c=AK._c(id); if(!c) return; c.zipName=file.name;
   var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
-  file.arrayBuffer().then(function(buf){ return AK.processZip(new Uint8Array(buf)); }).then(function(files){
+  AK._extractEntries(file).then(function(entries){ return AK.processEntries(entries); }).then(function(files){
     c.files=files;
     var det=files.detected||{};
     // PO otomatik: dosya adından (ör. 1965467_...) — boşsa doldur
@@ -17183,7 +17211,7 @@ AK.onZip = function(id,file){
     // Model otomatik: PDF içeriğinden — Model kutusu boşsa doldur
     if(!AK.state.model && det.model){ AK.state.model=det.model; var mi=document.getElementById('akModel'); if(mi) mi.value=det.model; }
     AK.renderColors();
-  }).catch(function(e){ alert('ZIP işlenemedi: '+(e&&e.message||e)); AK.renderColors(); });
+  }).catch(function(e){ c.zipName=''; alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
 AK.tag = function(id,name,type){
   var c=AK._c(id); if(!c||!c.files) return;
