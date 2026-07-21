@@ -433,6 +433,8 @@
       'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
       'app_settings',        // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
       'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
+      'ak_records_v2',       // Aksesuar Kontrol kayitlari (id'li dizi) — cihazlar arasi senkron
+      'ak_codemap_v2',       // Aksesuar Kontrol kod tablosu — array-of-one formatinda
       'deleted_ids'          // TOMBSTONE: kalici silinen id'ler — offline cihazlar geri diriltmesin
     ];
     const RECENT_WRITE_MS = 5000;
@@ -1009,6 +1011,13 @@
         const prevJSON = JSON.stringify(local);
         if(prevJSON !== nextJSON){
           try { localStorage.setItem(key, nextJSON); } catch(e){}
+          // Aksesuar Kontrol: buluttan gelen kayıt/kod değişimini canlı yansıt
+          if((key==='ak_records_v2'||key==='ak_codemap_v2') && window.AK){
+            try{ var akEl=document.getElementById('page-akskontrol');
+              if(key==='ak_records_v2' && akEl && akEl.classList.contains('active') && typeof AK.renderRecords==='function') AK.renderRecords();
+              if(key==='ak_codemap_v2'){ var cm=document.getElementById('akCodeModal'); if(cm && cm.classList.contains('show') && typeof AK.renderCodeTable==='function') AK.renderCodeTable(); }
+            }catch(_){}
+          }
           // Liste sayfasi ACIKKEN otomatik yeniden cizmeyiz: ekran titremesin
           // ve kullanicinin yaptigi secim kaybolmasin. Veri sessizce
           // localStorage'a yazilir, "Yenile" butonunda uyari noktasi yanar;
@@ -17025,10 +17034,19 @@ AK.SEED = {
          {m:'washinginstruction',type:'yikama'}, {m:'lotsticker',type:'lot'} ],
   png: { 'AULBW13728':{type:'dokuma',renk:'Beyaz'}, 'AULBW13729':{type:'dokuma',renk:'Siyah'} }
 };
-AK.map = function(){ try{ return JSON.parse(localStorage.getItem(AK.LS_MAP)) || JSON.parse(JSON.stringify(AK.SEED)); }catch(e){ return JSON.parse(JSON.stringify(AK.SEED)); } };
-AK.saveMap = function(m){ try{ localStorage.setItem(AK.LS_MAP, JSON.stringify(m)); }catch(e){} };
-AK.recs = function(){ try{ return JSON.parse(localStorage.getItem(AK.LS_REC))||[]; }catch(e){ return []; } };
-AK.saveRecs = function(r){ try{ localStorage.setItem(AK.LS_REC, JSON.stringify(r)); }catch(e){} };
+// Firestore senkronu: kayıtlar dizi (id'li) → doğrudan; kod tablosu obje
+// olduğu için tek-elemanlı dizi (array-of-one) formatında saklanır.
+AK._get = function(key){ try{ if(typeof window.getData==='function') return window.getData(key); return JSON.parse(localStorage.getItem(key)); }catch(e){ return null; } };
+AK._set = function(key,val){ try{ if(typeof window.setData==='function'){ window.setData(key,val); } else { localStorage.setItem(key,JSON.stringify(val)); } }catch(e){} };
+AK.map = function(){
+  var raw=AK._get(AK.LS_MAP);
+  if(Array.isArray(raw)&&raw[0]&&raw[0].png){ return {pdf:raw[0].pdf||AK.SEED.pdf, png:raw[0].png}; }   // senkron formatı
+  if(raw&&raw.png){ return raw; }                                                                        // eski yerel obje formatı
+  return JSON.parse(JSON.stringify(AK.SEED));
+};
+AK.saveMap = function(m){ AK._set(AK.LS_MAP, [{id:'ak_codemap', pdf:m.pdf||[], png:m.png||{}}]); };
+AK.recs = function(){ var r=AK._get(AK.LS_REC); return Array.isArray(r)?r:[]; };
+AK.saveRecs = function(r){ AK._set(AK.LS_REC, r); };
 
 // ---- Kütüphaneler (lazy CDN) ----
 AK._libs=null;
