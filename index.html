@@ -17582,28 +17582,54 @@ AK._renderColorPage = function(pdf, c){
   pdf.setTextColor(255,255,255); pdf.setFontSize(11); T(String(tot), tx+colw/2, y+9.6, {align:'center'});
   y+=bh+6;
   // ---- aksesuarlar ----
-  // Yıkama küçük kalmasın diye KENDİ SAYFASINDA ve büyük basılır (2. kağıt).
-  // Diğerleri (dokuma, iç barkod...) 1. sayfada derli toplu kalır.
+  // Düzen: SOL = sistemdeki görsel (arşivden), SAĞ = gelen numunenin
+  // YAPIŞTIRILACAĞI kesikli kutu → sistemdeki ile gelen yan yana kanıt olur.
+  // Yıkama kendi sayfasında büyük basılır; yapıştırma kutusu altına gelir.
+  var LEFTW=106, GAP=6, RIGHTW=cw-LEFTW-GAP;
+  function pasteBox(x,yy,w,h){
+    try{ pdf.setLineDashPattern([1.6,1.4],0); }catch(_){ }
+    pdf.setDrawColor(150,158,172); pdf.setLineWidth(0.4);
+    try{ pdf.roundedRect(x,yy,w,h,2.5,2.5); }catch(_){ pdf.rect(x,yy,w,h); }
+    try{ pdf.setLineDashPattern([],0); }catch(_){ }
+    pdf.setTextColor(150,158,172); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
+    T('GELEN NUMUNE', x+w/2, yy+h/2-1.2, {align:'center'});
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(6.8);
+    T('buraya yapıştırın', x+w/2, yy+h/2+2.6, {align:'center'});
+  }
   files.forEach(function(f,fi){
     var big = (f.type==='yikama');
     var label=(fi+1)+'. '+AK.TYPES[f.type].label+(f.renk?'  ·  '+f.renk:'')+(f.images.length>1?'  ('+f.images.length+' sayfa)':'');
-    if(big){ pdf.addPage(); y=M; } else { need(10+(AK._CAP[f.type]||60)); }
+    if(big){ pdf.addPage(); y=M; } else { need(14+(AK._CAP[f.type]||60)); }
     pdf.setFillColor(244,246,250); pdf.rect(M,y,cw,6.5,'F');
     pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold'); pdf.setFontSize(10);
     T(label, M+2.5, y+4.5); y+=8;
     if(f.note){ pdf.setTextColor(180,60,20); pdf.setFont('helvetica','bolditalic'); pdf.setFontSize(8.5); T('» '+f.note, M+2, y); pdf.setFont('helvetica','normal'); y+=5; }
-    var cap = big ? 232 : (AK._CAP[f.type]||60);
+    var cap = big ? 218 : (AK._CAP[f.type]||60);
+    if(!big){
+      // kolon başlıkları
+      pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.8);
+      T('SİSTEMDEKİ (arşivden)', M, y+2.2); T('GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
+    }
     f.images.forEach(function(url,ii){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
-      var w=cw, h=w*pr.height/pr.width;
-      if(h>cap){ h=cap; w=h*pr.width/pr.height; if(w>cw){ w=cw; h=w*pr.height/pr.width; } }
+      var colw2 = big ? cw : LEFTW;
+      var w=colw2, h=w*pr.height/pr.width;
+      if(h>cap){ h=cap; w=h*pr.width/pr.height; if(w>colw2){ w=colw2; h=w*pr.height/pr.width; } }
       // Garanti: hiçbir görsel tek sayfanın kullanılabilir yüksekliğini aşmasın.
       var pageMax = H-2*M-4;
-      if(h>pageMax){ h=pageMax; w=h*pr.width/pr.height; if(w>cw){ w=cw; h=w*pr.height/pr.width; } }
+      if(h>pageMax){ h=pageMax; w=h*pr.width/pr.height; if(w>colw2){ w=colw2; h=w*pr.height/pr.width; } }
       if(big && ii>0){ pdf.addPage(); y=M; } else { need(h+3); }
-      var xoff=M+(cw-w)/2;
-      pdf.addImage(url,'PNG',xoff,y,w,h,undefined,'FAST'); y+=h+3;
+      if(big){
+        // yıkama: ortalanmış büyük görsel
+        pdf.addImage(url,'PNG',M+(cw-w)/2,y,w,h,undefined,'FAST'); y+=h+3;
+      } else {
+        // sola hizalı görsel; ilk görselin yanına yapıştırma kutusu
+        pdf.addImage(url,'PNG',M,y,w,h,undefined,'FAST');
+        if(ii===0){ pasteBox(M+LEFTW+GAP, y, RIGHTW, Math.max(h,22)); }
+        y+=h+3;
+      }
     });
+    if(big && f.images.length){ need(32); pasteBox(M, y, cw, 28); y+=31; }
     y+=2;
   });
   // ---- imza ----
