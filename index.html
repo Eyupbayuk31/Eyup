@@ -17051,7 +17051,7 @@ AK._foySizes = function(c){ var all=AK._activeSizes(); var ad=(c&&c.adet)||{}; v
 AK._labelForGarment = function(renk){
   var r=(renk||'').toLowerCase();
   if(/(ekru|ecru|beyaz|white|krem|cream|ivory|fildişi|bej|beige|gri|grey|gray|off\s*white|kırık\s*beyaz|kirik\s*beyaz|açık|acik)/.test(r)) return 'white';
-  if(/(siyah|black|lacivert|navy|antrasit|anthracite|koyu)/.test(r)) return 'black';
+  if(/(siyah|black|lacivert|navy|antrasit|anthracite|koyu|bordo|bordeaux|burgundy|maroon|mor|purple|indigo|petrol|kahve|kahverengi|brown)/.test(r)) return 'black';
   return null;
 };
 AK._labelNote = function(renk, pref){ return 'Mal rengi '+(renk||'—')+' olduğu için '+(pref==='white'?'BEYAZ/EKRU':'SİYAH')+' dokuma etiket kullanılacak.'; };
