@@ -17660,7 +17660,39 @@ AK.generate = function(id, mode){
 };
 
 AK._esc = function(s){ return (''+(s==null?'':s)).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];}); };
-AK._recFilter = {q:'', asama:'all'};
+AK._recFilter = {q:'', asama:'all', page:1};
+AK._recSel = {}; // seçili kayıtlar: id -> pdfKey (toplu yazdırma için)
+
+// ---- Toplu yazdırma: seçili kayıtların PDF'lerini birleştirip TEK pencerede yazdır ----
+AK._loadPdfLib = function(){ if(window.PDFLib) return Promise.resolve(); if(AK._pdflibP) return AK._pdflibP;
+  AK._pdflibP=new Promise(function(res,rej){ var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js'; s.onload=function(){ res(); }; s.onerror=function(){ AK._pdflibP=null; rej(new Error('pdf-lib yüklenemedi')); }; document.head.appendChild(s); });
+  return AK._pdflibP; };
+AK._mergeBlobs = function(blobs){ return AK._loadPdfLib().then(function(){ var PL=window.PDFLib;
+  return PL.PDFDocument.create().then(function(out){
+    return blobs.reduce(function(ch,b){ return ch.then(function(){ return b.arrayBuffer(); })
+      .then(function(ab){ return PL.PDFDocument.load(ab); })
+      .then(function(src){ return out.copyPages(src, src.getPageIndices()); })
+      .then(function(pages){ pages.forEach(function(pg){ out.addPage(pg); }); });
+    }, Promise.resolve()).then(function(){ return out.save(); })
+    .then(function(bytes){ return new Blob([bytes],{type:'application/pdf'}); });
+  }); }); };
+AK.toggleRecSel = function(id,key,on){ if(on) AK._recSel[id]=key; else delete AK._recSel[id]; AK._updateBulkBtn(); };
+AK.clearRecSel = function(){ AK._recSel={}; AK._renderRecList(); };
+AK._updateBulkBtn = function(){ var n=Object.keys(AK._recSel).length;
+  var b=document.getElementById('akRecBulkBtn'); if(b){ b.style.display=n?'':'none'; b.innerHTML='<i class="fas fa-print"></i> Yazdır ('+n+')'; }
+  var c=document.getElementById('akRecSelClear'); if(c) c.style.display=n?'':'none'; };
+AK.printSelected = function(){
+  var keys=[]; Object.keys(AK._recSel).forEach(function(id){ var k=AK._recSel[id]; if(keys.indexOf(k)<0) keys.push(k); });
+  if(!keys.length) return;
+  Promise.all(keys.map(function(k){ return AK.getPdfBlob(k); })).then(function(blobs){
+    var have=blobs.filter(Boolean); var missing=blobs.length-have.length;
+    if(missing && typeof toast==='function') toast(missing+' PDF bu cihazda kayıtlı değil, atlandı','error');
+    if(!have.length) return;
+    if(have.length===1){ AK._printBlob(have[0]); return; }
+    AK._mergeBlobs(have).then(function(merged){ AK._printBlob(merged); })
+      .catch(function(){ if(typeof toast==='function') toast('Birleştirilemedi — ayrı sekmelerde açılıyor','error'); have.forEach(function(b){ AK._openBlob(b); }); });
+  });
+};
 AK.renderRecords = function(){
   var host=document.getElementById('akRecords'); if(!host) return;
   var recs=AK.recs();
@@ -17668,31 +17700,50 @@ AK.renderRecords = function(){
   var f=AK._recFilter;
   host.innerHTML =
     '<div class="ak-recbar">'+
-      '<div class="ak-recsearch"><i class="fas fa-magnifying-glass"></i><input id="akRecQ" class="form-input" placeholder="Model · PO · renk · atölye ara…" value="'+AK._esc(f.q)+'" oninput="AK._recFilter.q=this.value; AK._renderRecList();"></div>'+
-      '<select class="form-input ak-recsel" onchange="AK._recFilter.asama=this.value; AK._renderRecList();">'+
+      '<div class="ak-recsearch"><i class="fas fa-magnifying-glass"></i><input id="akRecQ" class="form-input" placeholder="Model · PO · renk · atölye ara…" value="'+AK._esc(f.q)+'" oninput="AK._recFilter.q=this.value; AK._recFilter.page=1; AK._renderRecList();"></div>'+
+      '<select class="form-input ak-recsel" onchange="AK._recFilter.asama=this.value; AK._recFilter.page=1; AK._renderRecList();">'+
         '<option value="all"'+(f.asama==='all'?' selected':'')+'>Tüm aşamalar</option>'+
         '<option value="dikim"'+(f.asama==='dikim'?' selected':'')+'>🧵 Dikim</option>'+
         '<option value="utupaket"'+(f.asama==='utupaket'?' selected':'')+'>📦 Ütü Paket</option>'+
       '</select>'+
+      '<button class="btn btn-xs btn-primary" id="akRecBulkBtn" style="display:none;" onclick="AK.printSelected()"><i class="fas fa-print"></i> Yazdır</button>'+
+      '<button class="btn btn-xs btn-secondary" id="akRecSelClear" style="display:none;" onclick="AK.clearRecSel()" title="Seçimi temizle"><i class="fas fa-xmark"></i></button>'+
       '<button class="btn btn-xs btn-secondary" onclick="AK.clearRecords()" title="Tümünü sil"><i class="fas fa-trash-can"></i></button>'+
     '</div>'+
     '<div id="akRecList"></div>';
   AK._renderRecList();
 };
+// Sayfa numarası butonları (1 … n, aktif vurgulu)
+AK._pagerHtml = function(page,pages){
+  if(pages<=1) return '';
+  function btn(pg,lbl,on,dis){ return '<button class="ak-pg'+(on?' on':'')+'"'+(dis?' disabled':'')+' onclick="AK._recFilter.page='+pg+';AK._renderRecList()">'+lbl+'</button>'; }
+  var out=[btn(page-1,'&lsaquo;',false,page<=1)];
+  var shown=[]; for(var i=1;i<=pages;i++){ if(i===1||i===pages||Math.abs(i-page)<=1) shown.push(i); }
+  var last=0; shown.forEach(function(i){ if(i-last>1) out.push('<span class="ak-pg-dots">…</span>'); out.push(btn(i,i,i===page,false)); last=i; });
+  out.push(btn(page+1,'&rsaquo;',false,page>=pages));
+  return '<div class="ak-pager">'+out.join('')+'</div>';
+};
+AK._REC_PER_PAGE = 10;
 AK._renderRecList = function(){
   var el=document.getElementById('akRecList'); if(!el) return;
-  var f=AK._recFilter||{q:'',asama:'all'}; var q=(f.q||'').toLowerCase().trim();
+  var f=AK._recFilter||{q:'',asama:'all',page:1}; var q=(f.q||'').toLowerCase().trim();
   var recs=AK.recs().filter(function(r){
     if(f.asama!=='all' && r.asama!==f.asama) return false;
     if(q){ var hay=((r.model||'')+' '+(r.po||'')+' '+(r.renk||'')+' '+(r.atolye||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
     return true;
   });
   var total=AK.recs().length;
-  if(!recs.length){ el.innerHTML='<div class="ak-empty">Eşleşen kayıt yok.</div>'; return; }
-  el.innerHTML='<div class="ak-reccount">'+recs.length+' / '+total+' kayıt</div>'+recs.map(function(r){
+  if(!recs.length){ el.innerHTML='<div class="ak-empty">Eşleşen kayıt yok.</div>'; AK._updateBulkBtn(); return; }
+  var PER=AK._REC_PER_PAGE, pages=Math.max(1,Math.ceil(recs.length/PER));
+  if(!f.page||f.page<1) f.page=1; if(f.page>pages) f.page=pages;
+  var slice=recs.slice((f.page-1)*PER, f.page*PER);
+  el.innerHTML='<div class="ak-reccount">'+recs.length+' / '+total+' kayıt'+(pages>1?' · sayfa '+f.page+'/'+pages:'')+'</div>'+slice.map(function(r){
     var tot=Object.keys(r.adet||{}).reduce(function(s,k){return s+(parseInt(r.adet[k],10)||0);},0);
     var rid=r.id?("'"+AK._esc(r.id)+"'"):r.ts;
-    return '<div class="ak-rec"><div class="ak-rec-ic '+r.asama+'">'+(r.asama==='dikim'?'🧵':'📦')+'</div>'+
+    var chk = r.pdfKey
+      ? '<label class="ak-rec-chk" title="Toplu yazdırmak için seç"><input type="checkbox"'+(AK._recSel[r.id]?' checked':'')+' onchange="AK.toggleRecSel(\''+AK._esc(r.id)+'\',\''+AK._esc(r.pdfKey)+'\',this.checked)"><span></span></label>'
+      : '<span class="ak-rec-chk ph"></span>';
+    return '<div class="ak-rec">'+chk+'<div class="ak-rec-ic '+r.asama+'">'+(r.asama==='dikim'?'🧵':'📦')+'</div>'+
       '<div class="ak-rec-body">'+
         '<div class="ak-rec-t">'+AK._esc(r.model||'—')+' <span class="ak-rec-renk">· '+AK._esc(r.renk||'—')+'</span></div>'+
         '<div class="ak-rec-s"><span class="ak-rec-tag"><i class="fas fa-hashtag"></i>'+AK._esc(r.po||'—')+'</span>'+
@@ -17706,11 +17757,13 @@ AK._renderRecList = function(){
         (r.pdfKey?('<button class="btn btn-xs btn-secondary" onclick="AK.openRec(\''+AK._esc(r.pdfKey)+'\',\''+AK._esc(r.fname||'foy.pdf')+'\')" title="PDF aç"><i class="fas fa-file-pdf"></i></button>'+
         '<button class="btn btn-xs btn-secondary" onclick="AK.printRec(\''+AK._esc(r.pdfKey)+'\')" title="Yazdır"><i class="fas fa-print"></i></button>'):'')+
         '<button class="btn btn-xs btn-danger" onclick="AK.delRecord('+rid+')" title="Kaydı sil"><i class="fas fa-trash"></i></button></div></div>';
-  }).join('');
+  }).join('')+AK._pagerHtml(f.page,pages);
+  AK._updateBulkBtn();
 };
 AK.delRecord = function(id){
   var all=AK.recs(); var dead=all.filter(function(r){ return !(r.id!=null? r.id!==id : r.ts!==id); });
   var recs=all.filter(function(r){ return (r.id!=null? r.id!==id : r.ts!==id); });
+  delete AK._recSel[id];
   AK.saveRecs(recs); AK.renderRecords();
   // Silinen kaydın PDF'ini başka kayıt kullanmıyorsa depodan da sil
   dead.forEach(function(r){ if(r.pdfKey && !recs.some(function(x){ return x.pdfKey===r.pdfKey; })) AK.delPdfBlob(r.pdfKey); });

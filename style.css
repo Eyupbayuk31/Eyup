@@ -13989,6 +13989,22 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-rec .ak-rec-t{font-size:13.5px;font-weight:700;}
 .ak-rec .ak-rec-act{display:flex;gap:6px;flex-shrink:0;}
 .ak-empty{text-align:center;color:var(--text-muted);font-size:13px;padding:22px;}
+/* kayıt seçimi (toplu yazdırma) */
+.ak-rec-chk{display:flex;align-items:center;flex-shrink:0;cursor:pointer;position:relative;}
+.ak-rec-chk input{position:absolute;opacity:0;width:0;height:0;pointer-events:none;}
+.ak-rec-chk span{width:19px;height:19px;border-radius:6px;border:2px solid var(--border);background:var(--bg-card);display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;}
+.ak-rec-chk span::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;font-size:9px;color:var(--on-primary,#fff);opacity:0;transform:scale(.5);transition:opacity .15s,transform .15s;}
+.ak-rec-chk input:checked+span{background:var(--primary);border-color:var(--primary);box-shadow:0 0 8px color-mix(in srgb,var(--primary) 40%,transparent);}
+.ak-rec-chk input:checked+span::after{opacity:1;transform:scale(1);}
+.ak-rec-chk:hover span{border-color:var(--primary);}
+.ak-rec-chk.ph{width:19px;cursor:default;}
+/* sayfalama */
+.ak-pager{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:14px;flex-wrap:wrap;}
+.ak-pg{min-width:32px;height:32px;padding:0 9px;border-radius:9px;border:1px solid var(--border);background:var(--glass);color:var(--text-main);font-weight:700;font-size:12.5px;cursor:pointer;transition:all .15s;}
+.ak-pg:hover:not(:disabled):not(.on){border-color:var(--primary);color:var(--primary);}
+.ak-pg.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary,#fff);box-shadow:0 4px 10px -4px var(--primary-glow,rgba(124,58,237,.5));}
+.ak-pg:disabled{opacity:.35;cursor:default;}
+.ak-pg-dots{color:var(--text-muted);padding:0 3px;font-weight:700;}
 /* kod tablosu */
 .ak-codeadd{display:grid;grid-template-columns:1.3fr 1.3fr 1fr auto;gap:7px;margin-top:12px;align-items:center;}
 .ak-codeadd input,.ak-codeadd select{padding:8px !important;font-size:12px;}
