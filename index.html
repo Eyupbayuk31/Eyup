@@ -17701,9 +17701,27 @@ AK.uploadArchive = function(file,zk){
     });
   }).catch(function(e){ console.warn('[AK] arşiv buluta yüklenemedi',e); return null; });
 };
-// zipKeys için File dizisi getir: önce yerel IndexedDB, yoksa buluttaki URL'den indir (+yerel cache)
-AK._getArchiveFiles = function(zipKeys){
-  var links=AK.zipLinks();
+// GitHub bulut yükleme yapılandırılmış mı?
+AK._ghReady = function(){ try{ var c=(typeof _getGithubConfig==='function')?_getGithubConfig():null; return !!(c&&c.token&&c.owner&&c.repo); }catch(e){ return false; } };
+// zipKeys için bilinen bulut URL'leri (senkron haritadan)
+AK._urlsFor = function(zipKeys){ var m=AK.zipLinks(); var o={}; (zipKeys||[]).forEach(function(k){ if(m[k]) o[k]=m[k]; }); return o; };
+// zipKeys'in TÜMÜNÜ buluta yükle (eksik olanları), URL haritasını döndür.
+// GitHub yoksa {} döner. Föy üretiminde çağrılır → kayıt kendi URL'ini taşır.
+AK._ensureUploaded = function(zipKeys){
+  if(!AK._ghReady()) return Promise.resolve({});
+  var links=AK.zipLinks(); var urls={};
+  return Promise.all((zipKeys||[]).map(function(k){
+    if(links[k]){ urls[k]=links[k]; return Promise.resolve(); }
+    return AK.getZipBlob(k).then(function(b){
+      if(!b) return; var nm=(k||'').split('|')[0]||'arsiv.zip'; var file; try{ file=new File([b],nm); }catch(e){ b.name=nm; file=b; }
+      return AK.uploadArchive(file,k).then(function(u){ if(u) urls[k]=u; });
+    });
+  })).then(function(){ return urls; });
+};
+// zipKeys için File dizisi getir: önce yerel IndexedDB, yoksa buluttaki URL'den indir (+yerel cache).
+// urls: kaydın kendi taşıdığı URL'ler (senkron haritadan bağımsız çalışsın).
+AK._getArchiveFiles = function(zipKeys, urls){
+  var links=Object.assign({}, AK.zipLinks(), urls||{});
   return Promise.all(zipKeys.map(function(k){
     return AK.getZipBlob(k).then(function(b){
       if(b) return b;
@@ -17715,6 +17733,27 @@ AK._getArchiveFiles = function(zipKeys){
       }).catch(function(){ return null; });
     });
   })).then(function(files){ if(files.some(function(x){ return !x; })) return null; return files; });
+};
+// Kaydı önce yereldeki bilinen URL'lerle sakla (hemen görünür), sonra arka
+// planda eksik arşivleri yükleyip kaydın zipUrls'ini tamamla.
+AK._finalizeRec = function(recBase, cap){
+  recBase.zipUrls = AK._urlsFor(recBase.zipKeys); // o an bilinen URL'ler
+  var recs=AK._upsertRec(AK.recs(), recBase);
+  if(recs.length>cap) recs=recs.slice(0,cap);
+  AK.saveRecs(recs); AK.renderRecords(); AK._pruneBlobs();
+  if(!AK._ghReady()){
+    if(typeof toast==='function') toast('☁️ Bulut yükleme kapalı — bu föy yalnızca bu cihazda açılır. Başka cihazdan erişim için Ayarlar › GitHub Bulut Yükleme\'yi doldur.','info');
+    return;
+  }
+  AK._ensureUploaded(recBase.zipKeys).then(function(urls){
+    if(!urls || !Object.keys(urls).length) return;
+    var list=AK.recs(); var key=AK._recKey(recBase);
+    var idx=-1; for(var i=0;i<list.length;i++){ if(list[i].id===recBase.id || AK._recKey(list[i])===key){ idx=i; break; } }
+    if(idx>=0){ var cur=list[idx].zipUrls||{}; var merged=Object.assign({},cur,urls);
+      // değişiklik varsa kaydet (gereksiz senkron olmasın)
+      if(JSON.stringify(cur)!==JSON.stringify(merged)){ list[idx].zipUrls=merged; AK.saveRecs(list); }
+    }
+  }).catch(function(e){ console.warn('[AK] arşiv yükleme tamamlanamadı',e); });
 };
 AK.getPdfBlob  = function(key){ return AK._idbGet('pdfs',key); }; // eski kayıtlar için
 AK.delPdfBlob  = function(key){ return AK._idbDel('pdfs',key); };
@@ -17739,7 +17778,7 @@ AK._recById = function(id){ return AK.recs().filter(function(r){ return String(r
 AK._recBlob = function(r){
   // Yeni kayıtlar: saklanan/buluttaki arşivden aynı ayarlarla yeniden üret
   if(r.zipKeys && r.zipKeys.length){
-    return AK._getArchiveFiles(r.zipKeys).then(function(files){
+    return AK._getArchiveFiles(r.zipKeys, r.zipUrls).then(function(files){
       if(!files) return null; // ne yerelde ne bulutta bulundu
       var M={byColor:{},shared:[],detected:{po:'',model:''},sizes:[]};
       return AK._processFilesInto(files, M).then(function(){
@@ -17781,11 +17820,7 @@ AK.generateAll = function(mode){
   var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
   if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk+aşama varsa güncellenir
-  var recs=AK.recs();
-  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ recs=AK._upsertRec(recs, { id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }); });
-  if(recs.length>300) recs=recs.slice(0,300);
-  AK.saveRecs(recs); AK.renderRecords();
-  AK._pruneBlobs();
+  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }, 300); });
   if(typeof toast==='function') toast(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓','success');
 };
 
@@ -17815,10 +17850,7 @@ AK.generate = function(id, mode){
   var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
   if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
-  var recs=AK._upsertRec(AK.recs(), { id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) });
-  if(recs.length>200) recs=recs.slice(0,200);
-  AK.saveRecs(recs); AK.renderRecords();
-  AK._pruneBlobs();
+  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) }, 200);
   if(typeof toast==='function') toast(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓','success');
 };
 
