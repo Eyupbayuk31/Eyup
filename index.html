@@ -17780,15 +17780,28 @@ AK.generateAll = function(mode){
   var fname=((AK.state.model||'foy')+'_TUM_RENKLER').replace(/[^\w.\-]+/g,'_')+'.pdf';
   var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
   if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
-  // kayıtlar: renk başına 1 kayıt; kaynak arşiv anahtarlarıyla (yeniden üretilebilir)
+  // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk+aşama varsa güncellenir
   var recs=AK.recs();
-  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ recs.unshift({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }); });
+  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ recs=AK._upsertRec(recs, { id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }); });
   if(recs.length>300) recs=recs.slice(0,300);
   AK.saveRecs(recs); AK.renderRecords();
   AK._pruneBlobs();
   if(typeof toast==='function') toast(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓','success');
 };
 
+// Kayıt tekilleştirme: aynı model+PO+renk+aşama tek kayıt olsun (2. arşiv/yıkama
+// eklenip tekrar üretilince yeni satır açma, mevcudu güncelle).
+AK._recKey = function(r){ return ((r.model||'')+'|'+(r.po||'')+'|'+(r.renk||'')+'|'+(r.asama||'')).toLowerCase().trim(); };
+AK._upsertRec = function(recs, rec){
+  var key=AK._recKey(rec);
+  var out=recs.filter(function(r){
+    if(AK._recKey(r)!==key) return true;
+    if(r.id!=null) delete AK._recSel[String(r.id)]; // eski kaydın seçimi kalmasın
+    return false;
+  });
+  out.unshift(rec);
+  return out;
+};
 AK.generate = function(id, mode){
   var c=AK._c(id); if(!c) return;
   if(!AK.state.model){ alert('Önce Model Kodu girin.'); return; }
@@ -17802,8 +17815,7 @@ AK.generate = function(id, mode){
   var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
   if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
-  var recs=AK.recs();
-  recs.unshift({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) });
+  var recs=AK._upsertRec(AK.recs(), { id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) });
   if(recs.length>200) recs=recs.slice(0,200);
   AK.saveRecs(recs); AK.renderRecords();
   AK._pruneBlobs();
