@@ -17638,7 +17638,7 @@ AK._renderColorPage = function(pdf, c){
         y+=h+3;
       }
     });
-    if(big && f.images.length){ need(32); pasteBox(M, y, cw, 28); y+=31; }
+    // Yıkama sadece referans PNG'dir — yapıştırılacak numune yok, ekstra kutu koyma.
     y+=2;
   });
   // ---- imza ----
