@@ -17131,11 +17131,22 @@ AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,sc
 // Renk kodu ön eki → Türkçe renk adı (DeFacto: NV251=Lacivert, BK81=Siyah...).
 // Barkod metnindeki "Solid" gibi desen kelimeleri güvenilmez; kod ön eki nettir.
 AK._CODE_RENK = { BK:'Siyah', BL:'Mavi', NV:'Lacivert', WH:'Beyaz', EC:'Ekru', EK:'Ekru',
-  CR:'Krem', GR:'Gri', GY:'Gri', AN:'Antrasit', RD:'Kırmızı', RE:'Kırmızı', BG:'Bordo',
+  CR:'Krem', GR:'Gri', GY:'Gri', AN:'Antrasit', RD:'Kırmızı', RE:'Kırmızı', BG:'Bej',
   GN:'Yeşil', KH:'Haki', YL:'Sarı', MU:'Hardal', OR:'Turuncu', PK:'Pembe', PW:'Pudra',
   PR:'Mor', PU:'Mor', BR:'Kahverengi', BN:'Kahverengi', BE:'Bej', TN:'Taba', LI:'Lila',
   TR:'Turkuaz', MN:'Mint', PT:'Petrol', SL:'Somon', IN:'İndigo', ST:'Taş' };
 AK._codeRenk = function(code){ if(!code) return null; var p=(''+code).toUpperCase().match(/^([A-Z]{2})/); return p?(AK._CODE_RENK[p[1]]||null):null; };
+// Desen/doku kelimeleri renk adı DEĞİLDİR — bunlar gelirse kod ön ekine düşülür.
+AK._NOT_RENK = /^(solid|melange|marl|print|printed|stripe|striped|check|checked|plaid|jacquard|slub|washed|basic|regular|woven|knit)$/i;
+// Barkoddaki İngilizce renk adı → Türkçe (bilinmiyorsa olduğu gibi kalır).
+AK._EN_TR = { beige:'Bej', black:'Siyah', white:'Beyaz', navy:'Lacivert', grey:'Gri', gray:'Gri',
+  red:'Kırmızı', green:'Yeşil', yellow:'Sarı', pink:'Pembe', purple:'Mor', brown:'Kahverengi',
+  ecru:'Ekru', khaki:'Haki', blue:'Mavi', orange:'Turuncu', bordeaux:'Bordo', burgundy:'Bordo',
+  maroon:'Bordo', lilac:'Lila', turquoise:'Turkuaz', anthracite:'Antrasit', cream:'Krem',
+  ivory:'Krem', salmon:'Somon', mustard:'Hardal', stone:'Taş', indigo:'İndigo', mint:'Mint',
+  olive:'Haki', coral:'Mercan', fuchsia:'Fuşya' };
+// Metinden gelen adı doğrula: desen kelimesiyse null; İngilizceyse Türkçeleştir.
+AK._renkFromText = function(nm){ if(!nm) return null; if(AK._NOT_RENK.test(nm)) return null; return AK._EN_TR[nm.toLowerCase()]||nm; };
 // Bir sayfanın metninden {code, model, renk, size} çıkar
 AK._pageInfo = function(t){
   t=t.replace(/\s+/g,' ');
@@ -17143,8 +17154,9 @@ AK._pageInfo = function(t){
   var sz=t.match(/SIZE\s*:\s*([A-Za-z]+)/i);
   var nm=t.match(/\b([A-Z][a-z]{2,12})\s+SIZE\s*:/);                          // renk adı (SIZE'dan önce)
   var code=cm?cm[2]:null;
-  // Kod ön ekinden gelen renk adı öncelikli (metin "Solid" gibi yanlış olabilir).
-  var renk=AK._codeRenk(code) || (nm?nm[1]:null);
+  // Önce barkod METNİNDEKİ gerçek renk adı (Beige→Bej); desen kelimesiyse
+  // ("Solid" vb.) kod ön ekinden tahmine düşülür.
+  var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
   return { code: code, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: renk };
 };
 // İç Barkod: renge göre grupla, her renk için M sayfasını üret → [{code,renk,model,url}]
@@ -17192,7 +17204,7 @@ AK._yikamaColors = function(bytes){ return window.pdfjsLib.getDocument({data:byt
       if(full.replace(/\s/g,'').length<120){ i++; return scan(); } // boş şablon sayfası
       var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{2,4})/);
       var nm=full.replace(/\s+/g,' ').match(/\b([A-Z][a-z]{2,12})\)/);
-      var code=cm?cm[2]:null; var renk=AK._codeRenk(code) || (nm?nm[1]:null);
+      var code=cm?cm[2]:null; var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
       return AK._textCrop(pdf,pageNum,3.4).then(function(r){ out.push({code:code, renk:renk, url:r.url}); i++; return scan(); }); }); }
   return scan();
 }); };
@@ -17304,7 +17316,7 @@ AK._c = function(id){ return AK.state.colors.filter(function(c){return c.id===id
 // Renk adından örnek renk (swatch) hex'i
 AK._colorHex = function(renk){
   var r=(renk||'').toLowerCase(); if(!r) return null;
-  var map={siyah:'#141414',black:'#141414',beyaz:'#f5f5f5',white:'#f5f5f5',ekru:'#eadfc8',ecru:'#eadfc8',krem:'#f2e9d5',cream:'#f2e9d5',ivory:'#f5f0e1',bej:'#d8c3a0',beige:'#d8c3a0',gri:'#9aa0a6',grey:'#9aa0a6',gray:'#9aa0a6',antrasit:'#3a3f47',lacivert:'#1e2a52',navy:'#1e2a52',mavi:'#2563eb',blue:'#2563eb',kırmızı:'#dc2626',kirmizi:'#dc2626',red:'#dc2626',bordo:'#7f1d34','yeşil':'#16a34a',yesil:'#16a34a',green:'#16a34a','sarı':'#eab308',sari:'#eab308',yellow:'#eab308',pembe:'#ec4899',pink:'#ec4899',mor:'#7c3aed',turuncu:'#ea580c',kahve:'#78462a',haki:'#6b7042',yl155:'#eab308',gr256:'#9aa0a6',bk81:'#141414',nv248:'#1e2a52'};
+  var map={siyah:'#141414',black:'#141414',beyaz:'#f5f5f5',white:'#f5f5f5',ekru:'#eadfc8',ecru:'#eadfc8',krem:'#f2e9d5',cream:'#f2e9d5',ivory:'#f5f0e1',bej:'#d8c3a0',beige:'#d8c3a0',gri:'#9aa0a6',grey:'#9aa0a6',gray:'#9aa0a6',antrasit:'#3a3f47',lacivert:'#1e2a52',navy:'#1e2a52',mavi:'#2563eb',blue:'#2563eb',kırmızı:'#dc2626',kirmizi:'#dc2626',red:'#dc2626',bordo:'#7f1d34','yeşil':'#16a34a',yesil:'#16a34a',green:'#16a34a','sarı':'#eab308',sari:'#eab308',yellow:'#eab308',pembe:'#ec4899',pink:'#ec4899',mor:'#7c3aed',turuncu:'#ea580c',kahve:'#78462a',haki:'#6b7042',hardal:'#c99a1e',pudra:'#e8b4b8',taba:'#a0522d',lila:'#b57edc',turkuaz:'#14b8a6',mint:'#a7f3d0',petrol:'#0e7490',somon:'#fa8072',indigo:'#4338ca','taş':'#c4b8a8',tas:'#c4b8a8',mercan:'#ff7f50','fuşya':'#d63384',fusya:'#d63384',yl155:'#eab308',gr256:'#9aa0a6',bk81:'#141414',nv248:'#1e2a52'};
   for(var k in map){ if(r.indexOf(k)>=0) return map[k]; }
   return null;
 };
