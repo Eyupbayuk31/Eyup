@@ -17303,11 +17303,15 @@ AK.setAsama = function(a){ AK.state.asama=a;
   document.getElementById('akSegUtu').classList.toggle('active', a==='utupaket');
   AK.renderAsamaInfo(); AK.renderColors();
 };
+AK._TYPE_ICON = {dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',kartArka:'fa-address-card',lisansKarti:'fa-id-badge'};
 AK.renderAsamaInfo = function(){
   var el=document.getElementById('akAsamaInfo'); if(!el) return;
   var order=AK.STAGE_ORDER[AK.state.asama];
-  var items=order.map(function(t){ return AK.TYPES[t].label + (AK.TYPES[t].req?'':' <i>(varsa)</i>'); }).join(' · ');
-  el.innerHTML='Bu aşamada beklenen aksesuarlar: <b>'+items+'</b>';
+  var chips=order.map(function(t){
+    var opt=!AK.TYPES[t].req;
+    return '<span class="ak-exp'+(opt?' opt':'')+'"><i class="fas '+(AK._TYPE_ICON[t]||'fa-file')+'"></i>'+AK._esc(AK.TYPES[t].label)+(opt?'<em>opsiyonel</em>':'')+'</span>';
+  }).join('');
+  el.innerHTML='<div class="ak-exp-lbl"><i class="fas fa-list-check"></i> '+AK.STAGE_LABEL[AK.state.asama]+' aşamasında beklenen aksesuarlar</div><div class="ak-exp-row">'+chips+'</div>';
 };
 
 AK.addColor = function(){ var ad={}; AK.SIZES.forEach(function(b){ ad[b[0]]=''; }); AK.state.colors.push({ id:AK._cid++, renk:'', po:'', adet:ad, files:null, zipName:'' }); AK.renderColors(); };
@@ -17772,6 +17776,20 @@ AK._mergeBlobs = function(blobs){ return AK._loadPdfLib().then(function(){ var P
     }, Promise.resolve()).then(function(){ return out.save(); })
     .then(function(bytes){ return new Blob([bytes],{type:'application/pdf'}); });
   }); }); };
+// Kayıtları buluttan yenile: anında yereli çiz, arka planda cloud resync,
+// bitince tekrar çiz. Buton ikonu döner.
+AK.refreshRecords = function(){
+  var btn=document.getElementById('akRecRefresh'); var ic=btn?btn.querySelector('i'):null;
+  if(ic) ic.classList.add('fa-spin'); if(btn) btn.disabled=true;
+  var done=function(msg,typ){ if(ic) ic.classList.remove('fa-spin'); AK.renderRecords();
+    if(typeof toast==='function') toast(msg||'Kayıtlar güncellendi', typ||'success'); };
+  try{
+    if(typeof window._resyncFromCloud==='function'){
+      Promise.resolve(window._resyncFromCloud()).then(function(){ done(); })
+        .catch(function(){ done('Yerelden yenilendi (bulut erişilemedi)','info'); });
+    } else { done('Yerelden yenilendi','info'); }
+  }catch(_){ done('Yerelden yenilendi','info'); }
+};
 AK.toggleRecSel = function(id,on){ if(on) AK._recSel[id]=1; else delete AK._recSel[id]; AK._updateBulkBtn(); };
 AK.clearRecSel = function(){ AK._recSel={}; AK._renderRecList(); };
 AK._updateBulkBtn = function(){ var n=Object.keys(AK._recSel).length;
@@ -17804,6 +17822,7 @@ AK.renderRecords = function(){
       '</select>'+
       '<button class="btn btn-xs btn-primary" id="akRecBulkBtn" style="display:none;" onclick="AK.printSelected()"><i class="fas fa-print"></i> Yazdır</button>'+
       '<button class="btn btn-xs btn-secondary" id="akRecSelClear" style="display:none;" onclick="AK.clearRecSel()" title="Seçimi temizle"><i class="fas fa-xmark"></i></button>'+
+      '<button class="btn btn-xs btn-secondary" id="akRecRefresh" onclick="AK.refreshRecords()" title="Buluttan yenile"><i class="fas fa-rotate"></i></button>'+
       '<button class="btn btn-xs btn-secondary" onclick="AK.clearRecords()" title="Tümünü sil"><i class="fas fa-trash-can"></i></button>'+
     '</div>'+
     '<div id="akRecList"></div>';
