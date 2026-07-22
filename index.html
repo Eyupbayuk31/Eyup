@@ -17611,10 +17611,11 @@ AK._renderColorPage = function(pdf, c){
     T(label, M+2.5, y+4.5); y+=8;
     if(f.note){ pdf.setTextColor(180,60,20); pdf.setFont('helvetica','bolditalic'); pdf.setFontSize(8.5); T('» '+f.note, M+2, y); pdf.setFont('helvetica','normal'); y+=5; }
     var cap = big ? 218 : (AK._CAP[f.type]||60);
+    var SYSIND = 18; // sistem görselini kolon içinde sağa kaydır (gelen kutusuna yaklaşsın)
     if(!big){
       // kolon başlıkları
       pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.8);
-      T('SİSTEMDEKİ (arşivden)', M, y+2.2); T('GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
+      T('SİSTEMDEKİ (arşivden)', M+SYSIND, y+2.2); T('GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
     }
     f.images.forEach(function(url,ii){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
@@ -17629,8 +17630,10 @@ AK._renderColorPage = function(pdf, c){
         // yıkama: ortalanmış büyük görsel
         pdf.addImage(url,'PNG',M+(cw-w)/2,y,w,h,undefined,'FAST'); y+=h+3;
       } else {
-        // sola hizalı görsel; ilk görselin yanına yapıştırma kutusu
-        pdf.addImage(url,'PNG',M,y,w,h,undefined,'FAST');
+        // sistem görseli kolon içinde sağa kaydırılır (boşluk kadar, en çok SYSIND);
+        // böylece gelen numune kutusuna bir tık yakın durur.
+        var xoff=M+Math.min(Math.max(LEFTW-w,0),SYSIND);
+        pdf.addImage(url,'PNG',xoff,y,w,h,undefined,'FAST');
         if(ii===0){ pasteBox(M+LEFTW+GAP, y, RIGHTW, Math.max(h,22)); }
         y+=h+3;
       }
