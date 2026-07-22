@@ -17044,6 +17044,9 @@ AK._activeSizes = function(){
   return act.length ? act : [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL']];
 };
 AK._adetTotal = function(adet){ if(!adet) return 0; return AK._activeSizes().reduce(function(s,b){ return s+(parseInt(adet[b[0]],10)||0); },0); };
+// Föy'de basılacak bedenler: SADECE adedi olanlar (model XXS/3XL içermiyorsa
+// arşivde barkod sayfası olsa bile föye yazılmasın). Hepsi boşsa yine de göster.
+AK._foySizes = function(c){ var all=AK._activeSizes(); var ad=(c&&c.adet)||{}; var f=all.filter(function(b){ return (parseInt(ad[b[0]],10)||0) > 0; }); return f.length ? f : all; };
 // Mal (ürün) rengine göre dokuma etiket rengi: açık→beyaz, koyu→siyah.
 AK._labelForGarment = function(renk){
   var r=(renk||'').toLowerCase();
@@ -17520,8 +17523,9 @@ AK.buildFoyHtml = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
   files.sort(function(a,b){ return order.indexOf(a.type)-order.indexOf(b.type); });
-  var tot=AK._adetTotal(c.adet);
-  var bedCells=AK._activeSizes().map(function(b){
+  var foyBeds=AK._foySizes(c);
+  var tot=foyBeds.reduce(function(s,b){ return s+(parseInt(c.adet[b[0]],10)||0); },0);
+  var bedCells=foyBeds.map(function(b){
     return '<div class="qc'+(b[0]==='m'?' hi':'')+'"><span>'+b[1]+'</span><b>'+((parseInt(c.adet[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
   }).join('')+'<div class="qc total"><span>TOPLAM</span><b>'+tot.toLocaleString('tr')+'</b></div>';
   var acc = files.map(function(f,i){
@@ -17573,7 +17577,7 @@ AK._renderColorPage = function(pdf, c){
   T('Model: '+(AK.state.model||'—')+'    PO: '+(c.po||'—')+'    Aşama: '+asamaLbl+(AK.state.atolye?('    Atölye: '+AK.state.atolye):''), M, y+2); y+=5;
   line(); y+=5;
   // ---- adet dökümü ----
-  var beds=AK._activeSizes();
+  var beds=AK._foySizes(c); // sadece adedi olan bedenler (XXS/3XL yoksa yazma)
   var tot=beds.reduce(function(s,b){return s+(parseInt(c.adet[b[0]],10)||0);},0);
   pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5); pdf.setTextColor.apply(pdf,MUT);
   T('ADET DÖKÜMÜ (beden beden)', M, y); y+=4;
