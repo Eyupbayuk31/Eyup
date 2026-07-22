@@ -13908,8 +13908,18 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-seg-btn{flex:1;padding:11px 8px;border:1.5px solid var(--border);background:var(--glass);color:var(--text-main);border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;}
 .ak-seg-btn:hover{border-color:color-mix(in srgb,var(--primary) 40%,var(--border));}
 .ak-seg-btn.active{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 30%,transparent);}
-.ak-info{margin-top:13px;font-size:12.5px;color:var(--text-muted);background:color-mix(in srgb,var(--primary) 6%,var(--glass));border:1px solid color-mix(in srgb,var(--primary) 16%,var(--border));border-radius:11px;padding:11px 14px;line-height:1.6;}
+.ak-info{margin-top:13px;font-size:12.5px;color:var(--text-muted);background:color-mix(in srgb,var(--primary) 6%,var(--glass));border:1px solid color-mix(in srgb,var(--primary) 16%,var(--border));border-radius:13px;padding:12px 14px;line-height:1.6;}
 .ak-info b{color:var(--text-main);}
+/* Aşamada beklenen aksesuarlar — modern çip şeridi */
+.ak-exp-lbl{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:10px;}
+.ak-exp-lbl i{color:var(--primary);font-size:12px;}
+.ak-exp-row{display:flex;flex-wrap:wrap;gap:8px;}
+.ak-exp{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--text-main);background:var(--bg-card);border:1px solid color-mix(in srgb,var(--primary) 22%,var(--border));border-radius:10px;padding:7px 12px;transition:transform .15s,border-color .15s,box-shadow .15s;}
+.ak-exp:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--primary) 45%,var(--border));box-shadow:0 6px 14px -10px var(--primary-glow,rgba(124,58,237,.5));}
+.ak-exp i{font-size:12px;width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--primary);flex-shrink:0;}
+.ak-exp.opt{border-style:dashed;color:var(--text-muted);border-color:color-mix(in srgb,var(--text-dim) 30%,var(--border));}
+.ak-exp.opt i{background:color-mix(in srgb,var(--text-dim) 14%,transparent);color:var(--text-muted);}
+.ak-exp em{font-style:normal;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);background:color-mix(in srgb,var(--text-dim) 16%,transparent);padding:2px 6px;border-radius:5px;margin-left:1px;}
 /* özet şeridi */
 .ak-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .ak-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:7px 13px;border-radius:24px;background:var(--glass);border:1px solid var(--border);color:var(--text-main);}
