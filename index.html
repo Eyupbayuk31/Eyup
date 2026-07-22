@@ -17904,14 +17904,16 @@ AK._updateBulkBtn = function(){ var n=Object.keys(AK._recSel).length;
 AK.printSelected = function(){
   var ids=Object.keys(AK._recSel); if(!ids.length) return;
   if(typeof toast==='function') toast(AK._asamaAd()+' föyleri hazırlanıyor…','info');
+  // Yazdırma tetiklendikten sonra seçimi temizle → sonraki seçimde eskiler karışmasın
+  var clear=function(){ AK._recSel={}; try{ AK._renderRecList(); }catch(_){}} ;
   Promise.all(ids.map(function(id){ var r=AK._recById(id); return r?AK._recBlob(r):Promise.resolve(null); })).then(function(blobs){
     var have=blobs.filter(Boolean); var missing=blobs.length-have.length;
     if(missing && typeof toast==='function') toast(missing+' föy üretilemedi (arşivi bu cihazda yok), atlandı','error');
-    if(!have.length) return;
-    if(have.length===1){ AK._printBlob(have[0]); return; }
-    AK._mergeBlobs(have).then(function(merged){ AK._printBlob(merged); })
-      .catch(function(){ if(typeof toast==='function') toast('Birleştirilemedi — ayrı sekmelerde açılıyor','error'); have.forEach(function(b){ AK._openBlob(b); }); });
-  }).catch(function(e){ alert('Toplu yazdırma hatası: '+(e&&e.message||e)); });
+    if(!have.length){ clear(); return; }
+    if(have.length===1){ AK._printBlob(have[0]); clear(); return; }
+    AK._mergeBlobs(have).then(function(merged){ AK._printBlob(merged); clear(); })
+      .catch(function(){ if(typeof toast==='function') toast('Birleştirilemedi — ayrı sekmelerde açılıyor','error'); have.forEach(function(b){ AK._openBlob(b); }); clear(); });
+  }).catch(function(e){ clear(); alert('Toplu yazdırma hatası: '+(e&&e.message||e)); });
 };
 AK.renderRecords = function(){
   var host=document.getElementById('akRecords'); if(!host) return;
