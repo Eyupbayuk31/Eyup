@@ -17303,10 +17303,13 @@ AK.touch = function(){ AK.state.model = (document.getElementById('akModel')||{})
 AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords(); };
 
 AK.setAsama = function(a){ AK.state.asama=a;
-  document.getElementById('akSegDikim').classList.toggle('active', a==='dikim');
-  document.getElementById('akSegUtu').classList.toggle('active', a==='utupaket');
+  var sd=document.getElementById('akSegDikim'), su=document.getElementById('akSegUtu');
+  if(sd) sd.classList.toggle('active', a==='dikim');
+  if(su) su.classList.toggle('active', a==='utupaket');
+  var rsel=document.querySelector('.ak-recsel'); if(rsel && rsel.value!==a) rsel.value=a; // kayıt çubuğu seçicisiyle senkron
   AK.renderAsamaInfo(); AK.renderColors();
 };
+AK._asamaAd = function(){ return AK.state.asama==='dikim'?'Dikim':'Ütü Paket'; };
 AK._TYPE_ICON = {dokuma:'fa-tag',icbarkod:'fa-barcode',yikama:'fa-shirt',lisansEtiketi:'fa-certificate',fiyat:'fa-ticket',susKarti:'fa-gift',kartArka:'fa-address-card',lisansKarti:'fa-id-badge'};
 AK.renderAsamaInfo = function(){
   var el=document.getElementById('akAsamaInfo'); if(!el) return;
@@ -17796,7 +17799,10 @@ AK._recBlob = function(r){
         if(r.renk) c.renk=r.renk;
         if(r.po) c.po=r.po;
         var st={model:AK.state.model, asama:AK.state.asama, atolye:AK.state.atolye};
-        AK.state.model=r.model||st.model; AK.state.asama=r.asama||st.asama; AK.state.atolye=r.atolye||'';
+        // Aşama: üstte SEÇİLİ olan aşama öncelikli (kullanıcı Ütü Paket seçtiyse
+        // kayıttan Ütü Paket föyü çıksın); yoksa kaydın son aşaması.
+        var useAsama = st.asama || r.asama || 'dikim';
+        AK.state.model=r.model||st.model; AK.state.asama=useAsama; AK.state.atolye=r.atolye||'';
         try{ var pdf=AK.buildPdf(c); return pdf.output('blob'); }
         finally{ AK.state.model=st.model; AK.state.asama=st.asama; AK.state.atolye=st.atolye; }
       });
@@ -17807,11 +17813,11 @@ AK._recBlob = function(r){
   return Promise.resolve(null);
 };
 AK.recOpen = function(id){ var r=AK._recById(id); if(!r) return;
-  if(typeof toast==='function') toast('Föy hazırlanıyor…','info');
+  if(typeof toast==='function') toast(AK._asamaAd()+' föyü hazırlanıyor…','info');
   AK._recBlob(r).then(function(b){ if(!b){ if(typeof toast==='function') toast('Arşiv bulunamadı — bu föyün arşivi buluta yüklenmemiş olabilir (GitHub ayarlı değilse). Bu renk için ZIP/RAR\'ı yükleyip yeniden oluşturun.','error'); return; } AK._openBlob(b, r.fname||'foy.pdf'); })
   .catch(function(e){ alert('Föy üretilemedi: '+(e&&e.message||e)); }); };
 AK.recPrint = function(id){ var r=AK._recById(id); if(!r) return;
-  if(typeof toast==='function') toast('Föy hazırlanıyor…','info');
+  if(typeof toast==='function') toast(AK._asamaAd()+' föyü yazdırılıyor…','info');
   AK._recBlob(r).then(function(b){ if(!b){ if(typeof toast==='function') toast('Arşiv bulunamadı — bu föyün arşivi buluta yüklenmemiş olabilir (GitHub ayarlı değilse). Bu renk için ZIP/RAR\'ı yükleyip yeniden oluşturun.','error'); return; } AK._printBlob(b); })
   .catch(function(e){ alert('Föy üretilemedi: '+(e&&e.message||e)); }); };
 AK.buildPdf = function(c){ var pdf=AK._newPdf(); AK._renderColorPage(pdf,c); return pdf; };
@@ -17828,9 +17834,10 @@ AK.generateAll = function(mode){
   if(typeof toast==='function') toast(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓','success');
 };
 
-// Kayıt tekilleştirme: aynı model+PO+renk+aşama tek kayıt olsun (2. arşiv/yıkama
-// eklenip tekrar üretilince yeni satır açma, mevcudu güncelle).
-AK._recKey = function(r){ return ((r.model||'')+'|'+(r.po||'')+'|'+(r.renk||'')+'|'+(r.asama||'')).toLowerCase().trim(); };
+// Kayıt tekilleştirme: aynı model+PO+renk TEK kayıt olsun. Aşama (Dikim/Ütü Paket)
+// kaydın kimliği değil, YAZDIRMA anında seçilen filtredir → dikim ve ütü paket
+// ayrı satır oluşturmaz; kayıttan yazdırırken üstteki aşama seçimi uygulanır.
+AK._recKey = function(r){ return ((r.model||'')+'|'+(r.po||'')+'|'+(r.renk||'')).toLowerCase().trim(); };
 AK._upsertRec = function(recs, rec){
   var key=AK._recKey(rec);
   var out=recs.filter(function(r){
@@ -17896,7 +17903,7 @@ AK._updateBulkBtn = function(){ var n=Object.keys(AK._recSel).length;
   var c=document.getElementById('akRecSelClear'); if(c) c.style.display=n?'':'none'; };
 AK.printSelected = function(){
   var ids=Object.keys(AK._recSel); if(!ids.length) return;
-  if(typeof toast==='function') toast('Föyler hazırlanıyor…','info');
+  if(typeof toast==='function') toast(AK._asamaAd()+' föyleri hazırlanıyor…','info');
   Promise.all(ids.map(function(id){ var r=AK._recById(id); return r?AK._recBlob(r):Promise.resolve(null); })).then(function(blobs){
     var have=blobs.filter(Boolean); var missing=blobs.length-have.length;
     if(missing && typeof toast==='function') toast(missing+' föy üretilemedi (arşivi bu cihazda yok), atlandı','error');
@@ -17914,10 +17921,9 @@ AK.renderRecords = function(){
   host.innerHTML =
     '<div class="ak-recbar">'+
       '<div class="ak-recsearch"><i class="fas fa-magnifying-glass"></i><input id="akRecQ" class="form-input" placeholder="Model · PO · renk · atölye ara…" value="'+AK._esc(f.q)+'" oninput="AK._recFilter.q=this.value; AK._recFilter.page=1; AK._renderRecList();"></div>'+
-      '<select class="form-input ak-recsel" onchange="AK._recFilter.asama=this.value; AK._recFilter.page=1; AK._renderRecList();">'+
-        '<option value="all"'+(f.asama==='all'?' selected':'')+'>Tüm aşamalar</option>'+
-        '<option value="dikim"'+(f.asama==='dikim'?' selected':'')+'>🧵 Dikim</option>'+
-        '<option value="utupaket"'+(f.asama==='utupaket'?' selected':'')+'>📦 Ütü Paket</option>'+
+      '<select class="form-input ak-recsel" title="Kayıttan yazdırınca hangi aşama föyü çıksın" onchange="AK.setAsama(this.value);">'+
+        '<option value="dikim"'+(AK.state.asama==='dikim'?' selected':'')+'>🧵 Dikim föyü</option>'+
+        '<option value="utupaket"'+(AK.state.asama==='utupaket'?' selected':'')+'>📦 Ütü Paket föyü</option>'+
       '</select>'+
       '<button class="btn btn-xs btn-primary" id="akRecBulkBtn" style="display:none;" onclick="AK.printSelected()"><i class="fas fa-print"></i> Yazdır</button>'+
       '<button class="btn btn-xs btn-secondary" id="akRecSelClear" style="display:none;" onclick="AK.clearRecSel()" title="Seçimi temizle"><i class="fas fa-xmark"></i></button>'+
@@ -17942,7 +17948,6 @@ AK._renderRecList = function(){
   var el=document.getElementById('akRecList'); if(!el) return;
   var f=AK._recFilter||{q:'',asama:'all',page:1}; var q=(f.q||'').toLowerCase().trim();
   var recs=AK.recs().filter(function(r){
-    if(f.asama!=='all' && r.asama!==f.asama) return false;
     if(q){ var hay=((r.model||'')+' '+(r.po||'')+' '+(r.renk||'')+' '+(r.atolye||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
     return true;
   });
@@ -17959,12 +17964,11 @@ AK._renderRecList = function(){
     var chk = hasSrc
       ? '<label class="ak-rec-chk" title="Toplu yazdırmak için seç"><input type="checkbox"'+(AK._recSel[ridStr]?' checked':'')+' onchange="AK.toggleRecSel(\''+AK._esc(ridStr)+'\',this.checked)"><span></span></label>'
       : '<span class="ak-rec-chk ph"></span>';
-    return '<div class="ak-rec">'+chk+'<div class="ak-rec-ic '+r.asama+'">'+(r.asama==='dikim'?'🧵':'📦')+'</div>'+
+    return '<div class="ak-rec">'+chk+'<div class="ak-rec-ic ak-rec-ic-n"><i class="fas fa-clipboard-check"></i></div>'+
       '<div class="ak-rec-body">'+
         '<div class="ak-rec-t">'+AK._esc(r.model||'—')+' <span class="ak-rec-renk">· '+AK._esc(r.renk||'—')+'</span></div>'+
         '<div class="ak-rec-s"><span class="ak-rec-tag"><i class="fas fa-hashtag"></i>'+AK._esc(r.po||'—')+'</span>'+
           (r.atolye?'<span class="ak-rec-tag"><i class="fas fa-industry"></i>'+AK._esc(r.atolye)+'</span>':'')+
-          '<span class="ak-rec-tag">'+(AK.STAGE_LABEL[r.asama]||r.asama)+'</span>'+
           '<span class="ak-rec-tag"><i class="fas fa-layer-group"></i>'+tot.toLocaleString('tr')+'</span>'+
           '<span class="ak-rec-tag"><i class="fas fa-calendar"></i>'+AK._esc(r.tarih||'')+'</span>'+
         '</div>'+

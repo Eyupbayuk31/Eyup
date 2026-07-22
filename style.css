@@ -13993,6 +13993,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-rec .ak-rec-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
 .ak-rec .ak-rec-ic.dikim{background:color-mix(in srgb,#3b82f6 15%,transparent);color:#3b82f6;}
 .ak-rec .ak-rec-ic.utupaket{background:color-mix(in srgb,#f59e0b 15%,transparent);color:#f59e0b;}
+.ak-rec .ak-rec-ic.ak-rec-ic-n{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);}
 .ak-rec .ak-rec-body{flex:1;min-width:0;}
 .ak-rec .ak-rec-t{font-size:13.5px;font-weight:700;}
 .ak-rec .ak-rec-s{font-size:11px;color:var(--text-muted);margin-top:5px;display:flex;flex-wrap:wrap;align-items:center;}
