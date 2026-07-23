@@ -17994,16 +17994,36 @@ AK._renderRecList = function(){
   }).join('')+AK._pagerHtml(f.page,pages);
   AK._updateBulkBtn();
 };
+// Kaydı KALICI sil: yerel + bulut TOMBSTONE ile. Böylece başka cihaz açılışta
+// silinen kaydı buluta geri itip diriltemez (fermuar silmeyle aynı mantık).
+AK._delRecsSynced = function(remaining, delIds){
+  try{ localStorage.setItem(AK.LS_REC, JSON.stringify(remaining)); }catch(e){}
+  var ids=(delIds||[]).map(String).filter(Boolean);
+  if(ids.length && typeof window.syncDeleteWithTombstone==='function'){
+    window.syncDeleteWithTombstone(AK.LS_REC, ids, ids).catch(function(e){
+      console.warn('[AK] silme senkron hatası',e);
+      if(typeof toast==='function') toast('⚠️ Silme buluta yazılamadı — Yenile ile tekrar deneyin','error');
+    });
+  } else {
+    AK.saveRecs(remaining); // tombstone yoksa normal senkron (en azından bu cihazda silinsin)
+  }
+};
 AK.delRecord = function(id){
   var all=AK.recs(); var dead=all.filter(function(r){ return !(r.id!=null? r.id!==id : r.ts!==id); });
   var recs=all.filter(function(r){ return (r.id!=null? r.id!==id : r.ts!==id); });
   delete AK._recSel[String(id)];
-  AK.saveRecs(recs); AK.renderRecords();
+  var delIds=dead.map(function(r){ return r.id!=null?String(r.id):null; }).filter(Boolean);
+  AK._delRecsSynced(recs, delIds); AK.renderRecords();
   // Silinen kaydın PDF'i (eski) başka kayıtta yoksa depodan da sil; arşivler prune ile temizlenir
   dead.forEach(function(r){ if(r.pdfKey && !recs.some(function(x){ return x.pdfKey===r.pdfKey; })) AK.delPdfBlob(r.pdfKey); });
   AK._pruneBlobs();
 };
-AK.clearRecords = function(){ if(!confirm('Tüm aksesuar kontrol kayıtları silinsin mi?')) return; AK.saveRecs([]); AK.renderRecords(); AK._openDb().then(function(db){ db.transaction('pdfs','readwrite').objectStore('pdfs').clear(); db.transaction('zips','readwrite').objectStore('zips').clear(); }).catch(function(){}); };
+AK.clearRecords = function(){ if(!confirm('Tüm aksesuar kontrol kayıtları silinsin mi?')) return;
+  var all=AK.recs(); var ids=all.map(function(r){ return r.id!=null?String(r.id):null; }).filter(Boolean);
+  AK._recSel={};
+  AK._delRecsSynced([], ids); AK.renderRecords();
+  AK._openDb().then(function(db){ db.transaction('pdfs','readwrite').objectStore('pdfs').clear(); db.transaction('zips','readwrite').objectStore('zips').clear(); }).catch(function(){});
+};
 
 // ---- Kod tablosu modalı ----
 AK.openCodeTable = function(){ AK.renderCodeTable(); document.getElementById('akCodeModal').classList.add('show'); };
