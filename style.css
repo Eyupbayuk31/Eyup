@@ -13750,6 +13750,42 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   .f-stock-mode .btn{ align-self:flex-start; }
 }
 
+/* ============================================================
+   TELA KONTROL — model → cm/top tela (fermuar tasarım diliyle)
+   ============================================================ */
+.tk-badge{ background:linear-gradient(135deg,#0ea5e9,#0369a1) !important; box-shadow:0 8px 20px -8px rgba(14,165,233,.55) !important; }
+/* Tela kartı: cyan aksan → fermuardan görsel olarak ayrışsın */
+.tk-card::before{ background:linear-gradient(#0ea5e9,#0369a1) !important; }
+.tk-card:hover{ border-color:color-mix(in srgb, #0ea5e9 32%, var(--border)) !important; box-shadow:0 12px 30px -12px rgba(14,165,233,.4) !important; }
+.tk-top-badge{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; white-space:nowrap; flex-shrink:0; padding:5px 11px; border-radius:999px; color:#0ea5e9; background:color-mix(in srgb,#0ea5e9 14%,transparent); border:1px solid color-mix(in srgb,#0ea5e9 30%,var(--border)); font-variant-numeric:tabular-nums; }
+.tk-top-badge i{ font-size:10px; }
+/* cm kırılım çipleri (kartta) */
+.tk-cm-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; padding-top:12px; border-top:1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+.tk-cm-chip{ flex:1; min-width:96px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; font-weight:700; color:var(--text-muted); background:color-mix(in srgb,var(--text-dim) 6%,transparent); border:1px solid var(--border); border-radius:10px; padding:8px 11px; text-transform:uppercase; letter-spacing:.02em; }
+.tk-cm-chip b{ font-size:15px; font-weight:900; color:var(--text-main); font-variant-numeric:tabular-nums; }
+.tk-cm-chip.zero{ opacity:.55; }
+.tk-cm-chip:not(.zero){ border-color:color-mix(in srgb,#0ea5e9 28%,var(--border)); background:color-mix(in srgb,#0ea5e9 7%,transparent); color:#0ea5e9; }
+.tk-cm-chip:not(.zero) b{ color:#0ea5e9; }
+/* detay: top tela ekleme formu (cm seç + top + ekle) */
+.tk-addrow-grid{ display:grid; grid-template-columns:150px 1fr auto; gap:8px; align-items:center; }
+.tk-addrow-grid .form-input{ margin:0; }
+.tk-addrow-grid .btn{ white-space:nowrap; }
+/* detay: top tela satır listesi */
+.tk-rowhead{ display:grid; grid-template-columns:120px 1fr 120px 60px; gap:8px; padding:8px 10px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:1; }
+.tk-row{ display:grid; grid-template-columns:120px 1fr 120px 60px; gap:8px; align-items:center; padding:11px 10px; font-size:13px; border-bottom:1px solid var(--border); transition:background .15s; }
+.tk-row:last-child{ border-bottom:none; }
+.tk-row:hover{ background:color-mix(in srgb,#0ea5e9 4%,transparent); }
+.tk-row-cm{ font-weight:900; color:#0ea5e9; font-variant-numeric:tabular-nums; }
+.tk-row-top{ font-weight:800; color:var(--text-main); font-variant-numeric:tabular-nums; }
+.tk-row-date{ color:var(--text-muted); font-size:12px; }
+@media(max-width:760px){
+  .tk-addrow-grid{ grid-template-columns:1fr 1fr; }
+  .tk-addrow-grid .btn{ grid-column:1/-1; }
+  .tk-rowhead{ display:none; }
+  .tk-row{ grid-template-columns:1fr 1fr; grid-auto-rows:auto; row-gap:4px; }
+  .tk-row button{ grid-column:2; justify-self:end; }
+}
+
 /* Fermuar İrsaliyesi: Takip'ten model seçme + stok mod çipi */
 .f-ac-wrap{ position:relative; }
 .f-ac{ position:absolute; top:100%; left:0; right:0; z-index:30; max-height:280px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); margin-top:4px; display:none; }
