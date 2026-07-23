@@ -13774,8 +13774,8 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .tk-mt-btn:hover{ border-color:var(--border); color:var(--text-main); }
 #tkMoveGiris.active{ border-color:var(--success); background:color-mix(in srgb,var(--success) 14%,transparent); color:var(--success); }
 #tkMoveCikis.active{ border-color:var(--danger); background:color-mix(in srgb,var(--danger) 14%,transparent); color:var(--danger); }
-/* detay: hareket ekleme formu */
-.tk-addrow-grid{ display:grid; grid-template-columns:140px 1fr 1fr auto; gap:8px; align-items:center; }
+/* detay: tela verme formu (en + renk + top + atölye + ver) */
+.tk-addrow-grid{ display:grid; grid-template-columns:130px 1fr 1fr 1fr auto; gap:8px; align-items:center; }
 .tk-addrow-grid .form-input{ margin:0; }
 .tk-addrow-grid .btn{ white-space:nowrap; }
 /* stok özeti (en bazlı) */
@@ -13791,19 +13791,14 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .tk-sc-kalan{ margin-left:auto; font-size:12.5px; font-weight:800; color:var(--text-main); }
 .tk-sc-kalan b{ font-size:16px; font-variant-numeric:tabular-nums; }
 .tk-stok-cm.neg .tk-sc-kalan b{ color:var(--danger); }
-/* detay: hareket satır listesi */
-.tk-rowhead{ display:grid; grid-template-columns:90px 70px 110px 1fr 56px; gap:8px; padding:8px 10px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:1; }
-.tk-row{ display:grid; grid-template-columns:90px 70px 110px 1fr 56px; gap:8px; align-items:center; padding:11px 10px; font-size:13px; border-bottom:1px solid var(--border); transition:background .15s; }
+/* detay: tela verme satır listesi (en · renk · top · atölye/tarih) */
+.tk-rowhead{ display:grid; grid-template-columns:80px 1fr 110px 1.4fr 52px; gap:8px; padding:8px 10px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:1; }
+.tk-row{ display:grid; grid-template-columns:80px 1fr 110px 1.4fr 52px; gap:8px; align-items:center; padding:11px 10px; font-size:13px; border-bottom:1px solid var(--border); transition:background .15s; border-left:3px solid #0ea5e9; }
 .tk-row:last-child{ border-bottom:none; }
-.tk-row.r-giris{ border-left:3px solid var(--success); }
-.tk-row.r-cikis{ border-left:3px solid var(--danger); }
 .tk-row:hover{ background:color-mix(in srgb,#0ea5e9 4%,transparent); }
-.tk-move-tag{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; white-space:nowrap; }
-.tk-move-tag.in{ color:var(--success); background:color-mix(in srgb,var(--success) 14%,transparent); }
-.tk-move-tag.out{ color:var(--danger); background:color-mix(in srgb,var(--danger) 14%,transparent); }
 .tk-row-cm{ font-weight:900; color:#0ea5e9; font-variant-numeric:tabular-nums; }
-.tk-row-top{ font-weight:800; font-variant-numeric:tabular-nums; }
-.tk-row-top.pos{ color:var(--success); } .tk-row-top.neg{ color:var(--danger); }
+.tk-row-renk{ font-weight:600; color:var(--text-main); }
+.tk-row-top{ font-weight:800; font-variant-numeric:tabular-nums; color:var(--text-main); }
 .tk-row-date{ color:var(--text-muted); font-size:12px; }
 .tk-row-date .tk-atolye{ color:var(--text-main); font-weight:800; }
 .tk-cm-chip.neg{ border-color:color-mix(in srgb,var(--danger) 30%,var(--border)) !important; background:color-mix(in srgb,var(--danger) 8%,transparent) !important; color:var(--danger) !important; }
