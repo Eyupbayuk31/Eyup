@@ -17368,7 +17368,7 @@ AK.renderColors = function(){
     return '<div class="ak-color" data-cid="'+c.id+'"'+rail+'>'+
       '<div class="ak-color-head">'+
         '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+swatch+
-        '<input class="form-input ak-inp-renk" placeholder="Renk (ör. Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)" onchange="AK.renderColors()">'+
+        '<input class="form-input ak-inp-renk" placeholder="Renk (ör. Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)" onchange="AK.onRenkChange('+c.id+')">'+
         '<input class="form-input" placeholder="PO no" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)" style="max-width:130px;">'+
         status+
         '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
@@ -17392,6 +17392,9 @@ AK.renderColors = function(){
   }).join('');
 };
 AK.setField = function(id,f,v){ var c=AK._c(id); if(c){ c[f]=v; } };
+// Renk elle değişince dokuma etiket seçimi (açık→beyaz, koyu→siyah) yeniden
+// hesaplansın; arşiv yüklüyse merged'den yeniden kur, değilse sadece çiz.
+AK.onRenkChange = function(id){ if(AK._merged) AK.rebuildColors(); else AK.renderColors(); };
 AK.setAdet = function(id,k,v){ var c=AK._c(id); if(c){ c.adet[k]=v; var el=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-tot'); if(el){ var tot=AK._adetTotal(c.adet); el.textContent='Σ '+tot.toLocaleString('tr'); } } };
 
 AK.matchesHtml = function(c){
