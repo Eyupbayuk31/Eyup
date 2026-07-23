@@ -17359,13 +17359,14 @@ function renderTelaKontrol(){
   var q=((document.getElementById('tkSearch')||{}).value||'').trim().toLocaleLowerCase('tr');
   var list=q ? all.filter(function(m){return ((m.modelKodu||'')+' '+(m.renk||'')+' '+_tkCikisAtolyeler(m).join(' ')).toLocaleLowerCase('tr').indexOf(q)>=0;}) : all.slice();
   list.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
-  // KPI (verilen top)
-  var tVer=0, perCm={}; TK_CM_OPTIONS.forEach(function(cm){perCm[cm]=0;});
-  all.forEach(function(m){ tVer+=_tkVerilen(m); TK_CM_OPTIONS.forEach(function(cm){perCm[cm]+=_tkVerilen(m,cm);}); });
+  // KPI: Genel Stok'taki toplam tela stoğu (ölçü ölçü). Ne kadar verildiği
+  // model kartında görünür.
   var kpi=document.getElementById('tkKpis');
   if(kpi){
-    var cards=[['fa-layer-group', all.length.toLocaleString('tr'), 'Toplam Model','p'],['fa-arrow-up-from-bracket', tVer.toLocaleString('tr'), 'Toplam Verilen Top','a']]
-      .concat(TK_CM_OPTIONS.map(function(cm){return ['fa-ruler-horizontal', perCm[cm].toLocaleString('tr'), cm+"'lik Verilen",'s'];}));
+    var allTela=(getData('stoklar')||[]).filter(function(s){return s.kategori==='Tela';});
+    var totalStok=allTela.reduce(function(t,s){return t+(+s.miktar||0);},0);
+    var cards=[['fa-layer-group', all.length.toLocaleString('tr'), 'Toplam Model','p'],['fa-warehouse', totalStok.toLocaleString('tr'), 'Toplam Tela Stok','g']]
+      .concat(TK_CM_OPTIONS.map(function(cm){ var q=_telaGenelStok(cm,null); return ['fa-ruler-horizontal', (q==null?0:q).toLocaleString('tr'), cm+"'lik Stok",'s']; }));
     kpi.innerHTML=cards.map(function(x){return '<div class="ft-kpi ft-kpi-'+x[3]+'"><div class="ft-kpi-ic"><i class="fas '+x[0]+'"></i></div><div class="ft-kpi-body"><div class="ft-kpi-val">'+x[1]+'</div><div class="ft-kpi-lbl">'+x[2]+'</div></div></div>';}).join('');
   }
   var countEl=document.getElementById('tkCount'); if(countEl){ countEl.textContent=list.length.toLocaleString('tr')+' model'; countEl.classList.toggle('on',!!q); }
