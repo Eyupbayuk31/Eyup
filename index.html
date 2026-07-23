@@ -17138,7 +17138,7 @@ AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,sc
 // Barkod metnindeki "Solid" gibi desen kelimeleri güvenilmez; kod ön eki nettir.
 AK._CODE_RENK = { BK:'Siyah', BL:'Mavi', NV:'Lacivert', WH:'Beyaz', EC:'Ekru', EK:'Ekru',
   CR:'Krem', GR:'Gri', GY:'Gri', AN:'Antrasit', RD:'Kırmızı', RE:'Kırmızı', BG:'Bej',
-  GN:'Yeşil', KH:'Haki', YL:'Sarı', MU:'Hardal', OR:'Turuncu', PK:'Pembe', PW:'Pudra',
+  GN:'Yeşil', KH:'Haki', YL:'Sarı', MU:'Hardal', OR:'Turuncu', PK:'Pembe', PN:'Pembe', PW:'Pudra',
   PR:'Mor', PU:'Mor', BR:'Kahverengi', BN:'Kahverengi', BE:'Bej', TN:'Taba', LI:'Lila',
   TR:'Turkuaz', MN:'Mint', PT:'Petrol', SL:'Somon', IN:'İndigo', ST:'Taş' };
 AK._codeRenk = function(code){ if(!code) return null; var p=(''+code).toUpperCase().match(/^([A-Z]{2})/); return p?(AK._CODE_RENK[p[1]]||null):null; };
