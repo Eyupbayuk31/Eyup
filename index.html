@@ -3538,11 +3538,8 @@
           <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="tkModel" placeholder="Örn: M10173" autocomplete="off"></div>
           <div class="form-group"><label>Renk</label><input class="form-input" id="tkRenk" placeholder="Örn: Siyah" autocomplete="off"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
-          <div class="form-group"><label>Adet</label><input class="form-input" type="number" id="tkAdet" placeholder="Üretim adedi" min="0" autocomplete="off"></div>
-          <div class="form-group"><label>Çıkış Atölyesi</label><input class="form-input" id="tkAtolye" placeholder="Örn: Yıldız" autocomplete="off"></div>
-        </div>
-        <div class="ft-hint"><i class="fas fa-circle-info"></i> Modeli açın; verdiğiniz top telaları (150'lik / 180'lik) sonraki ekranda gireceksiniz.</div>
+        <div class="form-group"><label>Adet</label><input class="form-input" type="number" id="tkAdet" placeholder="Üretim adedi" min="0" autocomplete="off"></div>
+        <div class="ft-hint"><i class="fas fa-circle-info"></i> Modeli açın; gelen telaları <b>stoka giriş</b> olarak, atölyeye verdiklerinizi <b>çıkış</b> olarak (atölyesiyle) sonraki ekranda gireceksiniz.</div>
         <div style="display:flex;gap:10px;margin-top:16px;">
           <button class="btn btn-primary" style="flex:1;" onclick="tkSaveModel()"><i class="fas fa-save"></i> Kaydet ve Devam Et</button>
           <button class="btn btn-secondary" onclick="tkCloseModelModal()">İptal</button>
@@ -3567,14 +3564,20 @@
         <div class="ft-detail-kpis" id="tkDetailKpis"></div>
 
         <div class="ft-addrow">
-          <div class="ft-addrow-title"><i class="fas fa-ruler-horizontal"></i> Top Tela Ekle</div>
+          <div class="ft-addrow-title"><i class="fas fa-right-left"></i> Hareket Ekle</div>
+          <div class="tk-move-toggle">
+            <button type="button" id="tkMoveGiris" class="tk-mt-btn active" onclick="tkSetMoveType('giris')"><i class="fas fa-arrow-down"></i> Tela Girişi <span>(stok +)</span></button>
+            <button type="button" id="tkMoveCikis" class="tk-mt-btn" onclick="tkSetMoveType('cikis')"><i class="fas fa-arrow-up"></i> Çıkış <span>(atölyeye −)</span></button>
+          </div>
           <div class="tk-addrow-grid">
             <select class="form-input" id="tkRowCm"></select>
-            <input class="form-input" type="number" id="tkRowTop" placeholder="Kaç top *" min="0" step="1" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddRow();}">
-            <button class="btn btn-primary" onclick="tkAddRow()"><i class="fas fa-plus"></i> Ekle</button>
+            <input class="form-input" type="number" id="tkRowTop" placeholder="Kaç top geldi *" min="0" step="1" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
+            <input class="form-input" id="tkRowAtolye" placeholder="Çıkış atölyesi *" autocomplete="off" style="display:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
+            <button class="btn btn-primary" onclick="tkAddMove()"><i class="fas fa-plus"></i> Ekle</button>
           </div>
         </div>
 
+        <div class="tk-stok-summary" id="tkStokSummary"></div>
         <div class="ft-rows" id="tkDetailRows"></div>
       </div>
     </div>
@@ -17109,15 +17112,21 @@ var TK_CM_OPTIONS = [150, 180]; // seçilebilir tela enleri (cm) — şimdilik 2
 function _tkAll(){ return getData('telaKontrol') || []; }
 function _tkNormModel(m){ return (m||'').toString().normalize('NFC').trim().replace(/\s+/g,' ').toLocaleUpperCase('tr').replace(/İ/g,'I'); }
 function _tkStamp(m){ try{ m._updatedAt=Date.now(); var u=localStorage.getItem('irsaliye_last_user'); if(u) m._updatedBy=u; }catch(_){} return m; }
-function _tkModelTop(m){ return (m.telalar||[]).reduce(function(s,t){return s+(+t.top||0);},0); }
-function _tkTopByCm(m,cm){ return (m.telalar||[]).filter(function(t){return +t.cm===+cm;}).reduce(function(s,t){return s+(+t.top||0);},0); }
+// Hareketler: {id,tip:'giris'|'cikis',cm,top,atolye?,tarih}. Eski 'telalar'
+// (sadece giriş) formatı okunurken giriş hareketine dönüştürülür.
+function _tkMoves(m){ if(m.hareketler) return m.hareketler; return (m.telalar||[]).map(function(t){return {id:t.id,tip:'giris',cm:+t.cm,top:+t.top||0,tarih:t.tarih,atolye:''};}); }
+function _tkEnsureMoves(m){ if(!m.hareketler){ m.hareketler=(m.telalar||[]).map(function(t){return {id:t.id||(Date.now()+Math.floor(Math.random()*1000)),tip:'giris',cm:+t.cm,top:+t.top||0,tarih:t.tarih};}); delete m.telalar; } return m.hareketler; }
+function _tkGiren(m,cm){ return _tkMoves(m).filter(function(h){return h.tip==='giris'&&(cm==null||+h.cm===+cm);}).reduce(function(s,h){return s+(+h.top||0);},0); }
+function _tkCikan(m,cm){ return _tkMoves(m).filter(function(h){return h.tip==='cikis'&&(cm==null||+h.cm===+cm);}).reduce(function(s,h){return s+(+h.top||0);},0); }
+function _tkStok(m,cm){ return _tkGiren(m,cm)-_tkCikan(m,cm); }
+function _tkCikisAtolyeler(m){ var s={}; _tkMoves(m).forEach(function(h){ if(h.tip==='cikis'&&h.atolye) s[h.atolye]=1; }); return Object.keys(s); }
 function _tkFmtDate(iso){ try{ return new Date(iso).toLocaleDateString('tr-TR'); }catch(e){ return iso||''; } }
-var _tkEditId=null, _tkCurrentDetailId=null;
+var _tkEditId=null, _tkCurrentDetailId=null, _tkMoveType='giris';
 
 function tkOpenModelModal(){
   _tkEditId=null;
   document.getElementById('tkModelTitle').innerHTML='<i class="fas fa-layer-group" style="color:var(--primary);margin-right:7px;"></i>Yeni Tela Modeli';
-  ['tkModel','tkRenk','tkAdet','tkAtolye'].forEach(function(id){document.getElementById(id).value='';});
+  ['tkModel','tkRenk','tkAdet'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('tkModelModal').classList.add('show');
   setTimeout(function(){document.getElementById('tkModel').focus();},80);
 }
@@ -17128,7 +17137,6 @@ function tkEditModelMeta(id){
   document.getElementById('tkModel').value=m.modelKodu||'';
   document.getElementById('tkRenk').value=m.renk||'';
   document.getElementById('tkAdet').value=m.adet||'';
-  document.getElementById('tkAtolye').value=m.atolye||'';
   document.getElementById('tkModelModal').classList.add('show');
 }
 function tkCloseModelModal(){ document.getElementById('tkModelModal').classList.remove('show'); }
@@ -17136,20 +17144,19 @@ function tkSaveModel(){
   var model=document.getElementById('tkModel').value.trim();
   var renk=document.getElementById('tkRenk').value.trim();
   var adet=+document.getElementById('tkAdet').value||0;
-  var atolye=document.getElementById('tkAtolye').value.trim();
   if(!model){ toast('Model kodu gerekli','error'); return; }
   var list=_tkAll();
   var sameKey=function(x){ return _tkNormModel(x.modelKodu)===_tkNormModel(model) && (x.renk||'').toLocaleLowerCase('tr')===renk.toLocaleLowerCase('tr'); };
   if(_tkEditId){
     var idx=list.findIndex(function(x){return x.id===_tkEditId;}); if(idx<0) return;
     if(list.find(function(x){return x.id!==_tkEditId && sameKey(x);})){ toast('Bu model + renk zaten var','error'); return; }
-    list[idx]=_tkStamp(Object.assign({}, list[idx], {modelKodu:model, renk:renk, adet:adet, atolye:atolye}));
+    list[idx]=_tkStamp(Object.assign({}, list[idx], {modelKodu:model, renk:renk, adet:adet}));
     setData('telaKontrol',list); tkCloseModelModal(); toast('Model bilgileri güncellendi','success');
     if(_tkCurrentDetailId===_tkEditId) tkRenderDetail(); else renderTelaKontrol();
   } else {
     if(list.find(sameKey)){ toast('Bu model + renk zaten var — üstüne tıklayıp devam edin','error'); return; }
     var newId=Date.now();
-    list.unshift(_tkStamp({id:newId, modelKodu:model, renk:renk, adet:adet, atolye:atolye, telalar:[], createdAt:new Date().toISOString()}));
+    list.unshift(_tkStamp({id:newId, modelKodu:model, renk:renk, adet:adet, hareketler:[], createdAt:new Date().toISOString()}));
     setData('telaKontrol',list); tkCloseModelModal(); renderTelaKontrol();
     tkOpenDetailModal(newId);
   }
@@ -17168,52 +17175,82 @@ function tkDeleteModel(id){
   renderTelaKontrol();
 }
 function tkOpenDetailModal(id){
-  _tkCurrentDetailId=id; tkRenderDetail();
+  _tkCurrentDetailId=id;
+  var at=document.getElementById('tkRowAtolye'); if(at) at.value='';
+  tkSetMoveType('giris'); // her açılışta girişte başla
+  tkRenderDetail();
   document.getElementById('tkDetailModal').classList.add('show');
   setTimeout(function(){ var el=document.getElementById('tkRowTop'); if(el) el.focus(); },100);
 }
 function tkCloseDetailModal(){ document.getElementById('tkDetailModal').classList.remove('show'); _tkCurrentDetailId=null; renderTelaKontrol(); }
+function tkSetMoveType(t){
+  _tkMoveType=t;
+  var g=document.getElementById('tkMoveGiris'), c=document.getElementById('tkMoveCikis');
+  if(g) g.classList.toggle('active',t==='giris'); if(c) c.classList.toggle('active',t==='cikis');
+  var at=document.getElementById('tkRowAtolye'); if(at) at.style.display=(t==='cikis')?'':'none';
+  var top=document.getElementById('tkRowTop'); if(top) top.placeholder=(t==='cikis')?'Kaç top çıkıyor *':'Kaç top geldi *';
+}
 function tkRenderDetail(){
   var m=_tkAll().find(function(x){return x.id===_tkCurrentDetailId;}); if(!m){ tkCloseDetailModal(); return; }
   document.getElementById('tkDetailModel').textContent=(m.modelKodu||'—')+(m.renk?(' · '+m.renk):'');
+  var stok=_tkStok(m);
   document.getElementById('tkDetailMeta').innerHTML =
-    (m.atolye?'<span><i class="fas fa-industry"></i> '+esc(m.atolye)+'</span>':'<span><i class="fas fa-industry" style="opacity:.4"></i> Atölye girilmedi</span>')+
-    (m.adet?'<span><i class="fas fa-shirt"></i> '+(+m.adet).toLocaleString('tr')+' adet</span>':'');
-  var sel=document.getElementById('tkRowCm'); if(sel) sel.innerHTML=TK_CM_OPTIONS.map(function(cm){return '<option value="'+cm+'">'+cm+"'lik</option>";}).join('');
-  var kpis=[['fa-boxes-stacked', _tkModelTop(m).toLocaleString('tr'), 'Toplam Top']].concat(TK_CM_OPTIONS.map(function(cm){return ['fa-ruler-horizontal', _tkTopByCm(m,cm).toLocaleString('tr'), cm+"'lik Top"];}));
+    (m.adet?'<span><i class="fas fa-shirt"></i> '+(+m.adet).toLocaleString('tr')+' adet</span>':'')+
+    '<span class="'+(stok<0?'ft-termin-late':'')+'"><i class="fas fa-boxes-stacked"></i> Kalan stok: '+stok.toLocaleString('tr')+' top</span>';
+  var sel=document.getElementById('tkRowCm'); if(sel && !sel.options.length) sel.innerHTML=TK_CM_OPTIONS.map(function(cm){return '<option value="'+cm+'">'+cm+"'lik</option>";}).join('');
+  var kpis=[['fa-arrow-down', _tkGiren(m).toLocaleString('tr'), 'Giren Top'],['fa-arrow-up', _tkCikan(m).toLocaleString('tr'), 'Çıkan Top'],['fa-boxes-stacked', stok.toLocaleString('tr'), 'Kalan Stok']];
   document.getElementById('tkDetailKpis').innerHTML=kpis.map(function(x){return '<div class="ft-dkpi"><i class="fas '+x[0]+'"></i><div><b>'+x[1]+'</b><span>'+x[2]+'</span></div></div>';}).join('');
-  var rows=(m.telalar||[]).slice().sort(function(a,b){return (+a.cm)-(+b.cm) || (a.tarih||'').localeCompare(b.tarih||'');});
+  // Stok özeti (en bazlı)
+  var sumHtml=TK_CM_OPTIONS.map(function(cm){ var g=_tkGiren(m,cm),c=_tkCikan(m,cm),s=g-c;
+    return '<div class="tk-stok-cm'+(s<0?' neg':'')+'">'+
+      '<span class="tk-sc-en">'+cm+'\'lik</span>'+
+      '<span class="tk-sc-stat in">Giren <b>'+g.toLocaleString('tr')+'</b></span>'+
+      '<span class="tk-sc-stat out">Çıkan <b>'+c.toLocaleString('tr')+'</b></span>'+
+      '<span class="tk-sc-kalan">Kalan <b>'+s.toLocaleString('tr')+'</b></span>'+
+    '</div>'; }).join('');
+  document.getElementById('tkStokSummary').innerHTML='<div class="tk-stok-title"><i class="fas fa-warehouse"></i> Stok Özeti (en bazlı)</div>'+sumHtml;
+  // Hareket listesi (yeni → eski)
+  var moves=_tkMoves(m).slice().sort(function(a,b){return (b.tarih||'').localeCompare(a.tarih||'');});
   var host=document.getElementById('tkDetailRows');
-  if(!rows.length){ host.innerHTML='<div class="empty-state"><i class="fas fa-layer-group"></i><p>Henüz top tela girilmedi. Yukarıdaki formla ekleyin — <b>en (cm) seçip top adedini</b> yazın.</p></div>'; return; }
-  host.innerHTML='<div class="tk-rowhead"><span>EN (CM)</span><span>TOP</span><span>TARİH</span><span></span></div>'+rows.map(function(t){
-    return '<div class="tk-row">'+
-      '<span class="tk-row-cm">'+esc(t.cm)+"'lik</span>"+
-      '<span class="tk-row-top">'+(+t.top||0).toLocaleString('tr')+' top</span>'+
-      '<span class="tk-row-date">'+(t.tarih?_tkFmtDate(t.tarih):'—')+'</span>'+
-      '<button class="btn btn-xs btn-danger" onclick="tkDeleteRow('+t.id+')" title="Sil"><i class="fas fa-trash"></i></button>'+
+  if(!moves.length){ host.innerHTML='<div class="empty-state"><i class="fas fa-right-left"></i><p>Henüz hareket yok. <b>Tela Girişi</b> ile stok ekleyin, <b>Çıkış</b> ile atölyeye verdiğinizi (atölyesiyle) düşün.</p></div>'; return; }
+  host.innerHTML='<div class="tk-rowhead"><span>TÜR</span><span>EN</span><span>TOP</span><span>ATÖLYE · TARİH</span><span></span></div>'+moves.map(function(h){
+    var isC=h.tip==='cikis';
+    return '<div class="tk-row '+(isC?'r-cikis':'r-giris')+'">'+
+      '<span class="tk-move-tag '+(isC?'out':'in')+'"><i class="fas fa-arrow-'+(isC?'up':'down')+'"></i> '+(isC?'Çıkış':'Giriş')+'</span>'+
+      '<span class="tk-row-cm">'+esc(h.cm)+"'lik</span>"+
+      '<span class="tk-row-top '+(isC?'neg':'pos')+'">'+(isC?'−':'+')+(+h.top||0).toLocaleString('tr')+' top</span>'+
+      '<span class="tk-row-date">'+(isC&&h.atolye?('<b class="tk-atolye">'+esc(h.atolye)+'</b> · '):'')+(h.tarih?_tkFmtDate(h.tarih):'—')+'</span>'+
+      '<button class="btn btn-xs btn-danger" onclick="tkDeleteRow('+h.id+')" title="Sil"><i class="fas fa-trash"></i></button>'+
     '</div>';
   }).join('');
 }
-function tkAddRow(){
+function tkAddMove(){
   var m=_tkAll().find(function(x){return x.id===_tkCurrentDetailId;}); if(!m) return;
   var cm=+document.getElementById('tkRowCm').value;
   var top=+document.getElementById('tkRowTop').value||0;
+  var atolye=document.getElementById('tkRowAtolye').value.trim();
   if(!cm){ toast('En (cm) seçin','error'); return; }
   if(top<=0){ toast('Top adeti gerekli','error'); return; }
+  if(_tkMoveType==='cikis'){
+    if(!atolye){ toast('Çıkış atölyesi gerekli','error'); return; }
+    var kalan=_tkStok(m,cm);
+    if(top>kalan){ if(!confirm(cm+"'lik stokta "+kalan.toLocaleString('tr')+" top var. "+top.toLocaleString('tr')+" top çıkarmak istiyor musunuz? (stok eksiye düşecek)")) return; }
+  }
   var list=_tkAll(); var idx=list.findIndex(function(x){return x.id===m.id;}); if(idx<0) return;
-  list[idx].telalar=list[idx].telalar||[];
-  var ex=list[idx].telalar.find(function(t){return +t.cm===cm;});
-  if(ex){ ex.top=(+ex.top||0)+top; ex.tarih=new Date().toISOString(); }
-  else { list[idx].telalar.push({id:Date.now()+Math.floor(Math.random()*1000), cm:cm, top:top, tarih:new Date().toISOString()}); }
+  _tkEnsureMoves(list[idx]);
+  var mv={id:Date.now()+Math.floor(Math.random()*1000), tip:_tkMoveType, cm:cm, top:top, tarih:new Date().toISOString()};
+  if(_tkMoveType==='cikis') mv.atolye=atolye;
+  list[idx].hareketler.unshift(mv);
   _tkStamp(list[idx]); setData('telaKontrol',list);
-  document.getElementById('tkRowTop').value='';
+  document.getElementById('tkRowTop').value=''; document.getElementById('tkRowAtolye').value='';
   tkRenderDetail();
-  toast(top+' top '+cm+"'lik tela eklendi",'success');
+  toast((_tkMoveType==='giris'?'Giriş':'Çıkış')+': '+top+' top '+cm+"'lik"+(_tkMoveType==='cikis'?(' → '+atolye):''),'success');
 }
 function tkDeleteRow(rowId){
   var m=_tkAll().find(function(x){return x.id===_tkCurrentDetailId;}); if(!m) return;
   var list=_tkAll(); var idx=list.findIndex(function(x){return x.id===m.id;}); if(idx<0) return;
-  list[idx].telalar=(list[idx].telalar||[]).filter(function(t){return t.id!==rowId;});
+  _tkEnsureMoves(list[idx]);
+  list[idx].hareketler=list[idx].hareketler.filter(function(h){return h.id!==rowId;});
   _tkStamp(list[idx]); setData('telaKontrol',list); tkRenderDetail();
 }
 function tkManualRefresh(){
@@ -17224,15 +17261,19 @@ function tkManualRefresh(){
 function renderTelaKontrol(){
   var all=_tkAll();
   var q=((document.getElementById('tkSearch')||{}).value||'').trim().toLocaleLowerCase('tr');
-  var list=q ? all.filter(function(m){return ((m.modelKodu||'')+' '+(m.renk||'')+' '+(m.atolye||'')).toLocaleLowerCase('tr').indexOf(q)>=0;}) : all.slice();
+  var list=q ? all.filter(function(m){return ((m.modelKodu||'')+' '+(m.renk||'')+' '+_tkCikisAtolyeler(m).join(' ')).toLocaleLowerCase('tr').indexOf(q)>=0;}) : all.slice();
   list.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
-  // KPI
-  var tTop=0, perCm={}; TK_CM_OPTIONS.forEach(function(cm){perCm[cm]=0;});
-  all.forEach(function(m){ tTop+=_tkModelTop(m); TK_CM_OPTIONS.forEach(function(cm){perCm[cm]+=_tkTopByCm(m,cm);}); });
+  // KPI (giren/çıkan/kalan)
+  var tGiren=0,tCikan=0; all.forEach(function(m){ tGiren+=_tkGiren(m); tCikan+=_tkCikan(m); });
+  var tStok=tGiren-tCikan;
   var kpi=document.getElementById('tkKpis');
   if(kpi){
-    var cards=[['fa-layer-group', all.length.toLocaleString('tr'), 'Toplam Model','p'],['fa-boxes-stacked', tTop.toLocaleString('tr'), 'Toplam Top','g']]
-      .concat(TK_CM_OPTIONS.map(function(cm){return ['fa-ruler-horizontal', perCm[cm].toLocaleString('tr'), cm+"'lik Top",'s'];}));
+    var cards=[
+      ['fa-layer-group', all.length.toLocaleString('tr'), 'Toplam Model','p'],
+      ['fa-arrow-down', tGiren.toLocaleString('tr'), 'Giren Top','g'],
+      ['fa-arrow-up', tCikan.toLocaleString('tr'), 'Çıkan Top','a'],
+      ['fa-warehouse', tStok.toLocaleString('tr'), 'Kalan Stok','s']
+    ];
     kpi.innerHTML=cards.map(function(x){return '<div class="ft-kpi ft-kpi-'+x[3]+'"><div class="ft-kpi-ic"><i class="fas '+x[0]+'"></i></div><div class="ft-kpi-body"><div class="ft-kpi-val">'+x[1]+'</div><div class="ft-kpi-lbl">'+x[2]+'</div></div></div>';}).join('');
   }
   var countEl=document.getElementById('tkCount'); if(countEl){ countEl.textContent=list.length.toLocaleString('tr')+' model'; countEl.classList.toggle('on',!!q); }
@@ -17240,23 +17281,25 @@ function renderTelaKontrol(){
   if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-layer-group"></i><p>Henüz tela modeli yok. “Yeni Model” ile ekleyin.</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
   grid.innerHTML=list.map(function(m){
-    var top=_tkModelTop(m); var hex=(typeof _ftRenkHex==='function')?_ftRenkHex(m.renk):'#9aa0a6';
-    var cmChips=TK_CM_OPTIONS.map(function(cm){ var t=_tkTopByCm(m,cm); return '<span class="tk-cm-chip'+(t?'':' zero')+'">'+cm+"'lik <b>"+t.toLocaleString('tr')+'</b></span>'; }).join('');
+    var stok=_tkStok(m), giren=_tkGiren(m), cikan=_tkCikan(m);
+    var hex=(typeof _ftRenkHex==='function')?_ftRenkHex(m.renk):'#9aa0a6';
+    var ats=_tkCikisAtolyeler(m);
+    var cmChips=TK_CM_OPTIONS.map(function(cm){ var s=_tkStok(m,cm); return '<span class="tk-cm-chip'+(s?'':' zero')+(s<0?' neg':'')+'">'+cm+"'lik <b>"+s.toLocaleString('tr')+'</b></span>'; }).join('');
     return '<div class="ft-card tk-card" onclick="tkOpenDetailModal('+m.id+')">'+
       '<div class="ft-card-head">'+
         '<div class="ft-card-id">'+
           '<span class="ft-model">'+(esc(m.modelKodu)||'—')+'</span>'+
-          '<span class="ft-sub">'+(m.atolye?('<i class="fas fa-industry"></i> '+esc(m.atolye)):'<i class="fas fa-industry" style="opacity:.35"></i> Atölye yok')+'</span>'+
+          '<span class="ft-sub">'+(ats.length?('<i class="fas fa-industry"></i> '+esc(ats.join(', '))):'<i class="fas fa-industry" style="opacity:.35"></i> Çıkış yok')+'</span>'+
         '</div>'+
-        '<span class="tk-top-badge"><i class="fas fa-boxes-stacked"></i> '+top.toLocaleString('tr')+' top</span>'+
+        '<span class="tk-top-badge'+(stok<0?' neg':'')+'"><i class="fas fa-warehouse"></i> '+stok.toLocaleString('tr')+' top</span>'+
       '</div>'+
       '<div class="ft-card-meta">'+
         (m.renk?'<div class="ft-card-renk"><span class="ft-renk-dot" style="background:'+hex+'"></span>'+esc(m.renk)+'</div>':'')+
-        (m.adet?'<div class="ft-card-termin"><i class="fas fa-shirt"></i> '+(+m.adet).toLocaleString('tr')+' adet</div>':'')+
+        '<div class="ft-card-termin"><i class="fas fa-arrow-down" style="color:var(--success)"></i> '+giren.toLocaleString('tr')+'  ·  <i class="fas fa-arrow-up" style="color:var(--danger)"></i> '+cikan.toLocaleString('tr')+(m.adet?('  ·  '+(+m.adet).toLocaleString('tr')+' adet'):'')+'</div>'+
       '</div>'+
       '<div class="tk-cm-row">'+cmChips+'</div>'+
       '<div class="ft-actions" onclick="event.stopPropagation()">'+
-        '<button class="btn btn-sm btn-primary" onclick="tkOpenDetailModal('+m.id+')"><i class="fas fa-layer-group"></i> Detay / Top Gir</button>'+
+        '<button class="btn btn-sm btn-primary" onclick="tkOpenDetailModal('+m.id+')"><i class="fas fa-right-left"></i> Detay / Giriş-Çıkış</button>'+
         '<button class="btn btn-sm btn-secondary" onclick="tkEditModelMeta('+m.id+')" title="Bilgileri düzenle"><i class="fas fa-pen"></i></button>'+
         '<button class="btn btn-sm btn-danger" onclick="tkDeleteModel('+m.id+')" title="Sil"><i class="fas fa-trash"></i></button>'+
       '</div>'+
