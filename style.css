@@ -13568,10 +13568,14 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-kpi-s::after{ background:var(--primary); }
 .ft-kpi-a::after{ background:var(--warning); }
 .ft-kpi-p::after{ background:var(--primary); }
+.ft-kpi-d::after{ background:var(--danger); }
 .ft-kpi-ic{ width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:15px; background:color-mix(in srgb, var(--primary) 14%, transparent); color:var(--primary); flex-shrink:0; }
 .ft-kpi-g .ft-kpi-ic{ background:color-mix(in srgb, var(--success) 16%, transparent); color:var(--success); }
 .ft-kpi-s .ft-kpi-ic{ background:color-mix(in srgb, var(--primary) 16%, transparent); color:var(--primary); }
 .ft-kpi-a .ft-kpi-ic{ background:color-mix(in srgb, var(--warning) 18%, transparent); color:var(--warning); }
+.ft-kpi-d .ft-kpi-ic{ background:color-mix(in srgb, var(--danger) 16%, transparent); color:var(--danger); }
+/* Genel Stok başlık rozeti (kırmızı — uyarı teması) */
+.stok-badge{ background:linear-gradient(135deg,#ef4444,#b91c1c) !important; box-shadow:0 8px 20px -8px rgba(239,68,68,.5) !important; }
 .ft-kpi-val{ font-size:22px; font-weight:800; color:var(--text-main); font-variant-numeric:tabular-nums; line-height:1.1; letter-spacing:-.02em; }
 .ft-kpi-lbl{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-top:2px; }
 

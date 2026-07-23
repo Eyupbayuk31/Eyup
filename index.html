@@ -2227,21 +2227,31 @@
     <!-- ========== STOK TAKİBİ ========== -->
     <!-- ========== GENEL STOK (uyarı merkezi) ========== -->
     <div class="page" id="page-stok">
-      <div class="section-header">
-        <div><h2><i class="fas fa-triangle-exclamation" style="color:#ef4444;margin-right:8px;"></i>Genel Stok</h2><p>Düşük ve kritik stok uyarıları</p></div>
-        <button class="btn btn-primary" onclick="openStokModal()"><i class="fas fa-plus"></i> Yeni Stok Ekle</button>
+      <div class="section-header ft-page-header">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span class="ft-page-badge stok-badge"><i class="fas fa-warehouse"></i></span>
+          <div>
+            <h2>Genel Stok</h2>
+            <p>Malzeme stok takibi · düşük &amp; kritik seviye uyarıları</p>
+          </div>
+        </div>
+        <div class="ft-toolbar">
+          <div class="ft-search-box"><i class="fas fa-search"></i>
+            <input class="form-input" type="text" id="stokSearch" placeholder="Stok adı veya kategori ara..." autocomplete="off" oninput="renderStokList()">
+          </div>
+          <button class="btn btn-primary" onclick="openStokModal()"><i class="fas fa-plus"></i> Yeni Stok</button>
+        </div>
       </div>
-      <!-- Özet kartları -->
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
-        <div class="stat-card"><div class="stat-icon" style="background:color-mix(in srgb, var(--primary) 12%, transparent);color:var(--primary);"><i class="fas fa-boxes-stacked"></i></div><div class="stat-value" id="stokTotal">0</div><div class="stat-label">Toplam Kalem</div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;"><i class="fas fa-exclamation-circle"></i></div><div class="stat-value" id="stokYaklasan">0</div><div class="stat-label">Sınıra Yakın</div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-value" id="stokDusuk">0</div><div class="stat-label">Düşük / Tükendi</div></div>
-      </div>
+
+      <!-- Özet KPI'ları -->
+      <div class="ft-kpis" id="stokKpis"></div>
+
       <!-- Uyarı paneli -->
       <div id="stokUyariPanel" style="margin-bottom:16px;"></div>
-      <!-- Tüm stoklar (aciliyete göre sıralı) -->
-      <div class="search-bar" style="margin-bottom:12px;"><i class="fas fa-search"></i><input type="text" id="stokSearch" placeholder="Stok adı veya kategori ara..." oninput="renderStokList()"></div>
+
+      <!-- Kategori filtresi -->
       <div class="type-filter-bar" style="margin-bottom:16px;" id="stokTypeFilter"></div>
+
       <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>Güncelleme</th><th>İşlem</th></tr></thead><tbody id="stokTable"></tbody></table></div><div class="empty-state" id="stokEmpty" style="display:none;"><i class="fas fa-warehouse"></i><p>Henüz stok kaydı yok.</p></div></div>
       <div class="table-mobile" id="stokMobile" style="display:none;"></div>
     </div>
@@ -4157,8 +4167,16 @@ function saveStok(){
 function deleteStok(id){
   if(!confirm('Bu stok kaydını silmek istediğinize emin misiniz?')) return;
   let list = getData('stoklar');
-  list = list.filter(s => s.id !== id);
-  setData('stoklar', list);
+  const next = list.filter(s => s.id !== id);
+  // Kalıcı sil: yerel + bulut TOMBSTONE (başka cihaz açılışta geri diriltemez)
+  try { localStorage.setItem('stoklar', JSON.stringify(next)); } catch(e){}
+  if(typeof window.syncDeleteWithTombstone === 'function'){
+    window.syncDeleteWithTombstone('stoklar', [id], [id])
+      .then(()=>{ if(typeof window._updateCloudBadge==='function') window._updateCloudBadge('ok'); })
+      .catch(err=>{ console.warn('[stok] silme err:', err); try{ toast('⚠️ Buluta yazılamadı, Yenile ile tekrar deneyin','error'); }catch(_){} });
+  } else {
+    setData('stoklar', next);
+  }
   renderStokList();
   toast('Stok silindi','info');
 }
@@ -4302,12 +4320,19 @@ function renderStokList(){
   const allList = getData('stoklar').concat(_telaStokVirtualRows());
   renderStokTypeFilter();
 
-  // Update stats using new HTML IDs
-  document.getElementById('stokTotal').textContent = allList.length;
+  // KPI kartları (modern)
   const yaklasan = allList.filter(s => { const st = getStockStatus(s.miktar, s.minStok); return st.urgent === 1; }).length;
-  const dusuk = allList.filter(s => { const st = getStockStatus(s.miktar, s.minStok); return st.urgent >= 2; }).length;
-  document.getElementById('stokYaklasan').textContent = yaklasan;
-  document.getElementById('stokDusuk').textContent = dusuk;
+  const dusuk = allList.filter(s => { const st = getStockStatus(s.miktar, s.minStok); return st.urgent === 2; }).length;
+  const tukendi = allList.filter(s => { const st = getStockStatus(s.miktar, s.minStok); return st.urgent === 3; }).length;
+  const kpiEl = document.getElementById('stokKpis');
+  if(kpiEl){
+    kpiEl.innerHTML = [
+      ['fa-boxes-stacked', allList.length.toLocaleString('tr'), 'Toplam Kalem', 'p'],
+      ['fa-circle-exclamation', yaklasan.toLocaleString('tr'), 'Sınıra Yakın', 'a'],
+      ['fa-triangle-exclamation', dusuk.toLocaleString('tr'), 'Düşük Stok', 's'],
+      ['fa-ban', tukendi.toLocaleString('tr'), 'Tükendi', 'd']
+    ].map(x=>`<div class="ft-kpi ft-kpi-${x[3]}"><div class="ft-kpi-ic"><i class="fas ${x[0]}"></i></div><div class="ft-kpi-body"><div class="ft-kpi-val">${x[1]}</div><div class="ft-kpi-lbl">${x[2]}</div></div></div>`).join('');
+  }
 
   // Uyarı paneli — tüm kategoriler
   const uyariPanel = document.getElementById('stokUyariPanel');
