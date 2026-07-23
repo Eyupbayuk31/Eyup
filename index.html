@@ -17468,7 +17468,24 @@ AK._activeSizes = function(){
   // Dosya yoksa (elle giriş) tüm yaygın bedenleri göster ki hiçbiri eksik kalmasın.
   return act.length ? act : [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL']];
 };
-AK._adetTotal = function(adet){ if(!adet) return 0; return AK._activeSizes().reduce(function(s,b){ return s+(parseInt(adet[b[0]],10)||0); },0); };
+// Formda beden girişi: tespit edilen (fiyat kartı ya da İç Barkod) + adet
+// girilen bedenler. Bir bedeni elle eklemek için "+ Beden" ile açılır.
+AK._inputSizes = function(c){
+  var present={};
+  if(AK._merged && AK._merged.sizes) AK._merged.sizes.forEach(function(s){ present[s]=true; });
+  var cols = c ? [c] : (AK.state.colors||[]);
+  cols.forEach(function(cc){ if(cc && cc.adet) Object.keys(cc.adet).forEach(function(k){ if(cc.adet[k]!=='' && cc.adet[k]!=null) present[k]=true; }); });
+  // Elle açılan ekstra bedenler (c._xsizes)
+  if(c && c._xsizes) c._xsizes.forEach(function(k){ present[k]=true; });
+  var act=AK.SIZES.filter(function(b){ return present[b[0]]; });
+  // Hiç yoksa (dosyasız/boş) yaygın aralığı göster
+  return act.length ? act : [['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']];
+};
+// Toplam: girilen tüm bedenler (hangi beden olursa olsun)
+AK._adetTotal = function(adet){ if(!adet) return 0; return Object.keys(adet).reduce(function(s,k){ return s+(parseInt(adet[k],10)||0); },0); };
+// Formda henüz görünmeyen bedenlerden birini elle ekle (ör. 3XL)
+AK._addSizeOpts = function(c){ var shown={}; AK._inputSizes(c).forEach(function(b){ shown[b[0]]=true; }); return AK.SIZES.filter(function(b){ return !shown[b[0]]; }); };
+AK.addSizeToColor = function(id,key){ var c=AK._c(id); if(!c||!key) return; c._xsizes=c._xsizes||[]; if(c._xsizes.indexOf(key)<0) c._xsizes.push(key); if(!c.adet) c.adet={}; if(c.adet[key]==null) c.adet[key]=''; AK.renderColors(); };
 // Föy'de basılacak bedenler: SADECE adedi olanlar (model XXS/3XL içermiyorsa
 // arşivde barkod sayfası olsa bile föye yazılmasın). Hepsi boşsa yine de göster.
 AK._foySizes = function(c){ var all=AK._activeSizes(); var ad=(c&&c.adet)||{}; var f=all.filter(function(b){ return (parseInt(ad[b[0]],10)||0) > 0; }); return f.length ? f : all; };
@@ -17581,7 +17598,7 @@ AK._renkFromText = function(nm){ if(!nm) return null; if(AK._NOT_RENK.test(nm)) 
 AK._pageInfo = function(t){
   t=t.replace(/\s+/g,' ');
   var cm=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{2}\d{2,4})/);        // MODEL/COLORCODE
-  var sz=t.match(/SIZE\s*:\s*([A-Za-z]+)/i);
+  var sz=t.match(/SIZE\s*:\s*([0-9]?[A-Za-z]{1,3})/i);  // 3XL/4XL/2XL gibi rakamla başlayanlar da yakalansın
   var nm=t.match(/\b([A-Z][a-z]{2,12})\s+SIZE\s*:/);                          // renk adı (SIZE'dan önce)
   var code=cm?cm[2]:null;
   // Önce barkod METNİNDEKİ gerçek renk adı (Beige→Bej); desen kelimesiyse
@@ -17777,9 +17794,11 @@ AK.renderColors = function(){
     '</div>';
   host.innerHTML = summary + AK.state.colors.map(function(c,idx){
     var tot=AK._adetTotal(c.adet);
-    var beds=AK._activeSizes().map(function(b){
+    var beds=AK._inputSizes(c).map(function(b){
       return '<div class="ak-bd"><span>'+b[1]+'</span><input class="form-input" type="number" min="0" value="'+(c.adet[b[0]]||'')+'" oninput="AK.setAdet('+c.id+',\''+b[0]+'\',this.value)"></div>';
     }).join('');
+    var addOpts=AK._addSizeOpts(c);
+    if(addOpts.length){ beds += '<div class="ak-bd ak-addbd"><span>&nbsp;</span><select class="form-input" onchange="if(this.value){AK.addSizeToColor('+c.id+',this.value);}"><option value="">+ Beden</option>'+addOpts.map(function(b){return '<option value="'+b[0]+'">'+b[1]+'</option>';}).join('')+'</select></div>'; }
     var matchHtml = AK.matchesHtml(c);
     var hex=AK._colorHex(c.renk);
     var swatch = hex ? '<span class="ak-swatch" style="background:'+hex+'"></span>' : '';

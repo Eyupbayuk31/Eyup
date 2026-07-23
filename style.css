@@ -14026,6 +14026,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-adet .ak-bd span{font-size:9.5px;font-weight:800;color:var(--text-muted);letter-spacing:.5px;}
 .ak-adet .ak-bd input{width:72px;box-sizing:border-box;text-align:center;padding:7px 4px !important;font-variant-numeric:tabular-nums;font-weight:700;border-radius:9px !important;}
 .ak-adet .ak-bd input:focus{border-color:var(--primary) !important;}
+.ak-adet .ak-addbd select{width:82px;padding:7px 4px !important;font-size:11px;font-weight:700;border-radius:9px !important;border-style:dashed !important;color:var(--primary);cursor:pointer;}
 .ak-adet .ak-tot{margin-left:auto;font-weight:800;font-size:13px;color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,transparent);padding:6px 12px;border-radius:9px;align-self:flex-end;}
 .ak-drop{border:2px dashed color-mix(in srgb,var(--primary) 24%,var(--border));border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .18s;color:var(--text-muted);font-size:13px;position:relative;background:color-mix(in srgb,var(--primary) 3%,transparent);}
 .ak-drop:hover,.ak-drop.drag{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,transparent);color:var(--primary);}
