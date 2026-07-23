@@ -17179,6 +17179,30 @@ function _telaGenelStok(cm, renk){
   if(!matched.length) return null;
   return matched.reduce(function(t,s){ return t+(+s.miktar||0); },0);
 }
+// Genel Stok'taki tela kalemini düş (deductTop>0) veya geri ekle (deductTop<0).
+// cm+renk eşleşen kalem(ler)den sırayla; eşleşen yoksa false döner.
+function _telaStokAdjust(cm, renk, deductTop){
+  var list = getData('stoklar')||[];
+  var matched = list.filter(function(s){
+    if(s.kategori!=='Tela' || +s.cm!==+cm) return false;
+    if(renk) return (s.telaRenk||'').toLocaleLowerCase('tr')===(''+renk).toLocaleLowerCase('tr');
+    return true;
+  });
+  if(!matched.length) return false;
+  if(deductTop>=0){
+    var remaining=deductTop;
+    for(var i=0;i<matched.length && remaining>0;i++){
+      var take=Math.min(+matched[i].miktar||0, remaining);
+      matched[i].miktar=(+matched[i].miktar||0)-take; remaining-=take;
+      matched[i].updatedAt=new Date().toISOString();
+    }
+  } else {
+    matched[0].miktar=(+matched[0].miktar||0)+(-deductTop);
+    matched[0].updatedAt=new Date().toISOString();
+  }
+  setData('stoklar', list);
+  return true;
+}
 function tkUpdateStokHint(){
   var el=document.getElementById('tkStokHint'); if(!el) return;
   var cm=+((document.getElementById('tkRowCm')||{}).value)||0;
@@ -17287,20 +17311,34 @@ function tkAddMove(){
   if(!cm){ toast('En (cm) seçin','error'); return; }
   if(top<=0){ toast('Top adeti gerekli','error'); return; }
   if(!atolye){ toast('Çıkış atölyesi gerekli','error'); return; }
+  // Genel Stok kontrolü: yeterli mi / kayıtlı mı?
+  var lbl=cm+"'lik"+(renk?(' '+renk):'');
+  var avail=_telaGenelStok(cm, renk||null);
+  if(avail==null){
+    if(!confirm(lbl+" tela Genel Stok'ta kayıtlı değil. Yine de verme kaydı oluşturulsun mu? (stoktan düşülmez)")) return;
+  } else if(top>avail){
+    if(!confirm("Genel Stok'ta "+lbl+" tela "+avail.toLocaleString('tr')+" top var.\n"+top.toLocaleString('tr')+" top vermek istiyor musunuz? (stok tükenir)")) return;
+  }
   var list=_tkAll(); var idx=list.findIndex(function(x){return x.id===m.id;}); if(idx<0) return;
   _tkEnsureVermeler(list[idx]);
   list[idx].vermeler.unshift({id:Date.now()+Math.floor(Math.random()*1000), cm:cm, renk:renk, top:top, atolye:atolye, tarih:new Date().toISOString()});
   _tkStamp(list[idx]); setData('telaKontrol',list);
+  // Genel Stok'tan düş
+  var dusdu=_telaStokAdjust(cm, renk||null, top);
   document.getElementById('tkRowRenk').value=''; document.getElementById('tkRowTop').value=''; document.getElementById('tkRowAtolye').value='';
   tkRenderDetail();
-  toast(top+' top '+cm+"'lik"+(renk?(' '+renk):'')+' tela → '+atolye,'success');
+  toast(top+' top '+lbl+' tela → '+atolye+(dusdu?' (stoktan düşüldü)':''),'success');
 }
 function tkDeleteRow(rowId){
   var m=_tkAll().find(function(x){return x.id===_tkCurrentDetailId;}); if(!m) return;
   var list=_tkAll(); var idx=list.findIndex(function(x){return x.id===m.id;}); if(idx<0) return;
   _tkEnsureVermeler(list[idx]);
-  list[idx].vermeler=list[idx].vermeler.filter(function(v){return v.id!==rowId;});
-  _tkStamp(list[idx]); setData('telaKontrol',list); tkRenderDetail();
+  var v=list[idx].vermeler.filter(function(x){return x.id===rowId;})[0];
+  list[idx].vermeler=list[idx].vermeler.filter(function(x){return x.id!==rowId;});
+  _tkStamp(list[idx]); setData('telaKontrol',list);
+  // Silinen verme stoktan düşülmüştü → Genel Stok'a geri ekle
+  if(v && +v.top>0) _telaStokAdjust(+v.cm, v.renk||null, -(+v.top));
+  tkRenderDetail();
 }
 function tkManualRefresh(){
   renderTelaKontrol();
