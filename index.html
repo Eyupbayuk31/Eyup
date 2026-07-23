@@ -3576,7 +3576,10 @@
           <div class="ft-addrow-title"><i class="fas fa-arrow-up-from-bracket"></i> Tela Ver (Atölyeye Çıkış)</div>
           <div class="tk-addrow-grid">
             <select class="form-input" id="tkRowCm" title="Tela eni" onchange="tkUpdateStokHint()"></select>
-            <input class="form-input" id="tkRowRenk" placeholder="Tela rengi (ör. Beyaz)" autocomplete="off" oninput="tkUpdateStokHint()" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
+            <select class="form-input" id="tkRowRenk" title="Tela rengi" onchange="tkUpdateStokHint()">
+              <option value="Beyaz">Beyaz</option>
+              <option value="Siyah">Siyah</option>
+            </select>
             <input class="form-input" type="number" id="tkRowTop" placeholder="Kaç top *" min="0" step="1" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
             <input class="form-input" id="tkRowAtolye" placeholder="Çıkış atölyesi *" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
             <button class="btn btn-primary" onclick="tkAddMove()"><i class="fas fa-plus"></i> Ver</button>
@@ -17164,6 +17167,9 @@ function _tkVermeler(m){
 }
 function _tkEnsureVermeler(m){ if(!Array.isArray(m.vermeler)){ m.vermeler=_tkVermeler(m); delete m.hareketler; delete m.telalar; } return m.vermeler; }
 function _tkVerilen(m,cm){ return _tkVermeler(m).filter(function(v){return cm==null||+v.cm===+cm;}).reduce(function(s,v){return s+(+v.top||0);},0); }
+// {Siyah:2, Beyaz:3} — cm verilirse o ene ait, verilmezse tüm renk toplamı
+function _tkVerilenByRenk(m,cm){ var map={}; _tkVermeler(m).forEach(function(v){ if(cm!=null && +v.cm!==+cm) return; var r=(v.renk||'—'); map[r]=(map[r]||0)+(+v.top||0); }); return map; }
+function _tkRenkOzet(map){ return Object.keys(map).filter(function(k){return map[k]>0;}).map(function(k){return map[k].toLocaleString('tr')+' '+k;}).join(' · '); }
 function _tkCikisAtolyeler(m){ var s={}; _tkVermeler(m).forEach(function(v){ if(v.atolye) s[v.atolye]=1; }); return Object.keys(s); }
 function _tkFmtDate(iso){ try{ return new Date(iso).toLocaleDateString('tr-TR'); }catch(e){ return iso||''; } }
 // Genel Stok'taki tela adedi (Top). cm zorunlu; renk verilirse cm+renk eşleşir,
@@ -17173,7 +17179,7 @@ function _telaGenelStok(cm, renk){
   var matched = items.filter(function(s){
     if(s.kategori!=='Tela') return false;
     if(cm!=null && +s.cm!==+cm) return false;
-    if(renk){ return (s.telaRenk||'').toLocaleLowerCase('tr')===(''+renk).toLocaleLowerCase('tr'); }
+    if(renk){ var tr=(s.telaRenk||'').toLocaleLowerCase('tr'); return tr==='' || tr===(''+renk).toLocaleLowerCase('tr'); } // renksiz kalem her renge uyar
     return true;
   });
   if(!matched.length) return null;
@@ -17185,9 +17191,11 @@ function _telaStokAdjust(cm, renk, deductTop){
   var list = getData('stoklar')||[];
   var matched = list.filter(function(s){
     if(s.kategori!=='Tela' || +s.cm!==+cm) return false;
-    if(renk) return (s.telaRenk||'').toLocaleLowerCase('tr')===(''+renk).toLocaleLowerCase('tr');
+    if(renk){ var tr=(s.telaRenk||'').toLocaleLowerCase('tr'); return tr==='' || tr===(''+renk).toLocaleLowerCase('tr'); }
     return true;
   });
+  // Düşerken: renkli kalemi renksize tercih et (doğru renkten düşsün)
+  if(renk && deductTop>=0 && matched.length>1){ matched.sort(function(a,b){ return (b.telaRenk?1:0)-(a.telaRenk?1:0); }); }
   if(!matched.length) return false;
   if(deductTop>=0){
     var remaining=deductTop;
@@ -17268,7 +17276,8 @@ function tkDeleteModel(id){
 }
 function tkOpenDetailModal(id){
   _tkCurrentDetailId=id;
-  ['tkRowRenk','tkRowTop','tkRowAtolye'].forEach(function(f){ var el=document.getElementById(f); if(el) el.value=''; });
+  ['tkRowTop','tkRowAtolye'].forEach(function(f){ var el=document.getElementById(f); if(el) el.value=''; });
+  var rr=document.getElementById('tkRowRenk'); if(rr) rr.value='Beyaz';
   tkRenderDetail();
   document.getElementById('tkDetailModal').classList.add('show');
   setTimeout(function(){ var el=document.getElementById('tkRowCm'); if(el) el.focus(); },100);
@@ -17325,7 +17334,7 @@ function tkAddMove(){
   _tkStamp(list[idx]); setData('telaKontrol',list);
   // Genel Stok'tan düş
   var dusdu=_telaStokAdjust(cm, renk||null, top);
-  document.getElementById('tkRowRenk').value=''; document.getElementById('tkRowTop').value=''; document.getElementById('tkRowAtolye').value='';
+  document.getElementById('tkRowTop').value=''; document.getElementById('tkRowAtolye').value=''; // en+renk kalsın (tekrar için)
   tkRenderDetail();
   toast(top+' top '+lbl+' tela → '+atolye+(dusdu?' (stoktan düşüldü)':''),'success');
 }
@@ -17367,7 +17376,8 @@ function renderTelaKontrol(){
     var ver=_tkVerilen(m);
     var hex=(typeof _ftRenkHex==='function')?_ftRenkHex(m.renk):'#9aa0a6';
     var ats=_tkCikisAtolyeler(m);
-    var cmChips=TK_CM_OPTIONS.map(function(cm){ var v=_tkVerilen(m,cm); return '<span class="tk-cm-chip'+(v?'':' zero')+'">'+cm+"'lik <b>"+v.toLocaleString('tr')+'</b></span>'; }).join('');
+    var cmChips=TK_CM_OPTIONS.map(function(cm){ var v=_tkVerilen(m,cm); var ozet=_tkRenkOzet(_tkVerilenByRenk(m,cm));
+      return '<span class="tk-cm-chip'+(v?'':' zero')+'"><span class="tk-cc-en">'+cm+"'lik</span><span class=\"tk-cc-bd\">"+(v?esc(ozet):'—')+'</span></span>'; }).join('');
     return '<div class="ft-card tk-card" onclick="tkOpenDetailModal('+m.id+')">'+
       '<div class="ft-card-head">'+
         '<div class="ft-card-id">'+
