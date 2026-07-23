@@ -3575,12 +3575,13 @@
         <div class="ft-addrow">
           <div class="ft-addrow-title"><i class="fas fa-arrow-up-from-bracket"></i> Tela Ver (Atölyeye Çıkış)</div>
           <div class="tk-addrow-grid">
-            <select class="form-input" id="tkRowCm" title="Tela eni"></select>
-            <input class="form-input" id="tkRowRenk" placeholder="Tela rengi (ör. Beyaz)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
+            <select class="form-input" id="tkRowCm" title="Tela eni" onchange="tkUpdateStokHint()"></select>
+            <input class="form-input" id="tkRowRenk" placeholder="Tela rengi (ör. Beyaz)" autocomplete="off" oninput="tkUpdateStokHint()" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
             <input class="form-input" type="number" id="tkRowTop" placeholder="Kaç top *" min="0" step="1" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
             <input class="form-input" id="tkRowAtolye" placeholder="Çıkış atölyesi *" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();tkAddMove();}">
             <button class="btn btn-primary" onclick="tkAddMove()"><i class="fas fa-plus"></i> Ver</button>
           </div>
+          <div class="tk-stok-hint" id="tkStokHint"></div>
         </div>
 
         <div class="tk-stok-summary" id="tkStokSummary"></div>
@@ -17165,6 +17166,29 @@ function _tkEnsureVermeler(m){ if(!Array.isArray(m.vermeler)){ m.vermeler=_tkVer
 function _tkVerilen(m,cm){ return _tkVermeler(m).filter(function(v){return cm==null||+v.cm===+cm;}).reduce(function(s,v){return s+(+v.top||0);},0); }
 function _tkCikisAtolyeler(m){ var s={}; _tkVermeler(m).forEach(function(v){ if(v.atolye) s[v.atolye]=1; }); return Object.keys(s); }
 function _tkFmtDate(iso){ try{ return new Date(iso).toLocaleDateString('tr-TR'); }catch(e){ return iso||''; } }
+// Genel Stok'taki tela adedi (Top). cm zorunlu; renk verilirse cm+renk eşleşir,
+// verilmezse o en'in tüm renkleri toplanır. Eşleşen kalem yoksa null → "yok".
+function _telaGenelStok(cm, renk){
+  var items = (typeof getData==='function') ? (getData('stoklar')||[]) : [];
+  var matched = items.filter(function(s){
+    if(s.kategori!=='Tela') return false;
+    if(cm!=null && +s.cm!==+cm) return false;
+    if(renk){ return (s.telaRenk||'').toLocaleLowerCase('tr')===(''+renk).toLocaleLowerCase('tr'); }
+    return true;
+  });
+  if(!matched.length) return null;
+  return matched.reduce(function(t,s){ return t+(+s.miktar||0); },0);
+}
+function tkUpdateStokHint(){
+  var el=document.getElementById('tkStokHint'); if(!el) return;
+  var cm=+((document.getElementById('tkRowCm')||{}).value)||0;
+  var renk=((document.getElementById('tkRowRenk')||{}).value||'').trim();
+  if(!cm){ el.innerHTML=''; return; }
+  var q=_telaGenelStok(cm, renk||null);
+  var lbl=cm+"'lik"+(renk?(' '+esc(renk)):'');
+  if(q==null){ el.className='tk-stok-hint yok'; el.innerHTML='<i class="fas fa-triangle-exclamation"></i> Elimizde '+lbl+' tela <b>YOK</b> (Genel Stok\'ta kayıtlı değil)'; }
+  else { el.className='tk-stok-hint'+(q<=0?' yok':''); el.innerHTML='<i class="fas fa-warehouse"></i> Elimizde: <b>'+q.toLocaleString('tr')+' top</b> '+lbl+' (Genel Stok)'; }
+}
 var _tkEditId=null, _tkCurrentDetailId=null;
 
 function tkOpenModelModal(){
@@ -17235,7 +17259,11 @@ function tkRenderDetail(){
   var sel=document.getElementById('tkRowCm'); if(sel && !sel.options.length) sel.innerHTML=TK_CM_OPTIONS.map(function(cm){return '<option value="'+cm+'">'+cm+"'lik</option>";}).join('');
   var kpis=[['fa-boxes-stacked', _tkVerilen(m).toLocaleString('tr'), 'Toplam Verilen']].concat(TK_CM_OPTIONS.map(function(cm){return ['fa-ruler-horizontal', _tkVerilen(m,cm).toLocaleString('tr'), cm+"'lik Verilen"];}));
   document.getElementById('tkDetailKpis').innerHTML=kpis.map(function(x){return '<div class="ft-dkpi"><i class="fas '+x[0]+'"></i><div><b>'+x[1]+'</b><span>'+x[2]+'</span></div></div>';}).join('');
-  document.getElementById('tkStokSummary').innerHTML='';
+  // Genel Stok'ta elimizdeki tela (en bazlı)
+  var stokHtml=TK_CM_OPTIONS.map(function(cm){ var q=_telaGenelStok(cm,null);
+    return '<div class="tk-stok-cm'+(q==null||q<=0?' neg':'')+'"><span class="tk-sc-en">'+cm+"'lik</span><span class=\"tk-sc-kalan\">Elde <b>"+(q==null?'yok':q.toLocaleString('tr')+' top')+'</b></span></div>'; }).join('');
+  document.getElementById('tkStokSummary').innerHTML='<div class="tk-stok-title"><i class="fas fa-warehouse"></i> Genel Stok\'ta elimizdeki tela</div>'+stokHtml;
+  tkUpdateStokHint();
   // Verme listesi (yeni → eski)
   var rows=_tkVermeler(m).slice().sort(function(a,b){return (b.tarih||'').localeCompare(a.tarih||'');});
   var host=document.getElementById('tkDetailRows');
