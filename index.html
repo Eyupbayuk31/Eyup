@@ -2254,9 +2254,16 @@
           <button onclick="closeStokModal()" style="background:var(--glass);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
         </div>
         <div class="form-group"><label>Malzeme Adı *</label><input class="form-input" id="stokAdi" placeholder="Örn: 30×40 Poşet"></div>
+        <!-- Tela'ya özel: en (cm) + renk -->
+        <div id="stokTelaFields" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div class="form-group" style="margin:0;"><label>En (cm) *</label>
+            <select class="form-input" id="stokTelaEn"><option value="150">150'lik</option><option value="180">180'lik</option></select>
+          </div>
+          <div class="form-group" style="margin:0;"><label>Tela Rengi</label><input class="form-input" id="stokTelaRenk" placeholder="Örn: Beyaz"></div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
           <div class="form-group"><label>Kategori *</label>
-            <select class="form-input" id="stokKategori">
+            <select class="form-input" id="stokKategori" onchange="_stokKatChange()">
               <optgroup label="Ütü &amp; Paket">
                 <option value="Poşet">📦 Poşet</option>
                 <option value="Bant Geniş">🎀 Bant Geniş</option>
@@ -4061,9 +4068,22 @@ function refreshAtolyeList(){
 let stokEditId = null;
 let stokCatFilter = 'all';
 
+// Kategori değişince Tela'ya özel alanları (en + renk) göster; birimi Top yap.
+function _stokKatChange(){
+  const isTela = document.getElementById('stokKategori').value === 'Tela';
+  const tf = document.getElementById('stokTelaFields');
+  if(tf) tf.style.display = isTela ? 'grid' : 'none';
+  const adEl = document.getElementById('stokAdi');
+  if(isTela){
+    const bEl = document.getElementById('stokBirim'); if(bEl) bEl.value = 'Top';
+    if(adEl) adEl.placeholder = 'Boş bırak — otomatik "Tela 150/180 + renk" olur';
+  } else if(adEl){ adEl.placeholder = 'Örn: 30×40 Poşet'; }
+}
 function openStokModal(id, defaultKategori){
   stokEditId = id || null;
   document.getElementById('stokModalTitle').textContent = id ? 'Stok Düzenle' : 'Yeni Stok Ekle';
+  document.getElementById('stokTelaEn').value = '150';
+  document.getElementById('stokTelaRenk').value = '';
   if(id){
     const list = getData('stoklar');
     const item = list.find(s => s.id === id);
@@ -4074,11 +4094,14 @@ function openStokModal(id, defaultKategori){
       document.getElementById('stokMiktar').value = item.miktar;
       document.getElementById('stokMin').value = item.minStok || 0;
       document.getElementById('stokNot').value = item.not || '';
+      if(item.cm) document.getElementById('stokTelaEn').value = item.cm;
+      if(item.telaRenk) document.getElementById('stokTelaRenk').value = item.telaRenk;
     }
   } else {
     ['stokAdi','stokMiktar','stokMin','stokNot'].forEach(i => document.getElementById(i).value = '');
     if(defaultKategori) document.getElementById('stokKategori').value = defaultKategori;
   }
+  _stokKatChange();
   document.getElementById('stokModal').classList.add('show');
 }
 
@@ -4088,12 +4111,20 @@ function closeStokModal(){
 }
 
 function saveStok(){
-  const ad = document.getElementById('stokAdi').value.trim();
+  let ad = document.getElementById('stokAdi').value.trim();
   const kategori = document.getElementById('stokKategori').value;
-  const birim = document.getElementById('stokBirim').value;
+  let birim = document.getElementById('stokBirim').value;
   const miktar = +(document.getElementById('stokMiktar').value || 0);
   const minStok = +(document.getElementById('stokMin').value || 0);
   const not = document.getElementById('stokNot').value.trim();
+  // Tela: en (cm) + renk zorunlu değil; ad otomatik oluşur
+  let cm = null, telaRenk = '';
+  if(kategori === 'Tela'){
+    cm = +document.getElementById('stokTelaEn').value || 150;
+    telaRenk = document.getElementById('stokTelaRenk').value.trim();
+    ad = "Tela " + cm + "'lik" + (telaRenk ? (' ' + telaRenk) : '');
+    birim = 'Top';
+  }
   if(!ad || miktar < 0) return toast('Malzeme adı ve miktar gerekli','error');
 
   let list = getData('stoklar');
@@ -4102,12 +4133,13 @@ function saveStok(){
     if(item){
       item.ad = ad; item.kategori = kategori; item.birim = birim;
       item.miktar = miktar; item.minStok = minStok; item.not = not;
+      item.cm = cm; item.telaRenk = telaRenk;
       item.updatedAt = new Date().toISOString();
     }
     toast('Stok güncellendi');
   } else {
     list.unshift({
-      id: Date.now(), ad, kategori, birim, miktar, minStok, not,
+      id: Date.now(), ad, kategori, birim, miktar, minStok, not, cm, telaRenk,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
