@@ -3444,6 +3444,7 @@
         <div class="ak-hbtns">
           <button class="btn btn-primary btn-sm" onclick="AK.generateAll()"><i class="fas fa-file-pdf"></i> Toplu PDF</button>
           <button class="btn btn-secondary btn-sm" onclick="AK.generateAll('print')"><i class="fas fa-print"></i> Toplu Yazdır</button>
+          <button class="btn btn-secondary btn-sm" onclick="AK.generateAll('save')"><i class="fas fa-floppy-disk"></i> Toplu Kaydet</button>
           <button class="btn btn-secondary btn-sm" onclick="AK.openCodeTable()"><i class="fas fa-table-list"></i> Kod Tablosu</button>
         </div>
       </div>
@@ -17384,6 +17385,7 @@ AK.renderColors = function(){
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
         '<button class="btn btn-secondary" onclick="AK.generate('+c.id+',\'print\')"><i class="fas fa-print"></i> Yazdır</button>'+
+        '<button class="btn btn-secondary" onclick="AK.generate('+c.id+',\'save\')"><i class="fas fa-floppy-disk"></i> Kaydet</button>'+
       '</div>'+
       '</div>'+
     '</div>';
@@ -17825,13 +17827,17 @@ AK.buildAllPdf = function(){ var pdf=AK._newPdf(); var cols=AK.state.colors.filt
 // Tüm renkleri tek PDF olarak aç/yazdır (mode:'print' → gizli iframe ile yazdır)
 AK.generateAll = function(mode){
   if(!AK.state.model){ alert('Önce Model Kodu girin (veya dosya yükleyin).'); return; }
-  var pdf; try{ pdf=AK.buildAllPdf(); }catch(e){ alert('PDF üretilemedi: '+(e&&e.message||e)); return; }
-  var fname=((AK.state.model||'foy')+'_TUM_RENKLER').replace(/[^\w.\-]+/g,'_')+'.pdf';
-  var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
-  if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
-  // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk+aşama varsa güncellenir
-  AK.state.colors.filter(function(c){return c.files&&c.files.length;}).forEach(function(c){ AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }, 300); });
-  if(typeof toast==='function') toast(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓','success');
+  var withFiles=AK.state.colors.filter(function(c){return c.files&&c.files.length;});
+  if(!withFiles.length){ alert('Kaydedilecek/oluşturulacak renk yok — arşiv yükleyin.'); return; }
+  if(mode!=='save'){
+    var pdf; try{ pdf=AK.buildAllPdf(); }catch(e){ alert('PDF üretilemedi: '+(e&&e.message||e)); return; }
+    var fname=((AK.state.model||'foy')+'_TUM_RENKLER').replace(/[^\w.\-]+/g,'_')+'.pdf';
+    var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
+    if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
+  }
+  // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk varsa güncellenir
+  withFiles.forEach(function(c){ AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }, 300); });
+  if(typeof toast==='function') toast(mode==='save'?(withFiles.length+' renk kaydedildi ✓'):(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓'),'success');
 };
 
 // Kayıt tekilleştirme: aynı model+PO+renk TEK kayıt olsun. Aşama (Dikim/Ütü Paket)
@@ -17855,14 +17861,17 @@ AK.generate = function(id, mode){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
   if(!have.length){ alert('Bu aşamaya ait aksesuar bulunamadı. Bilinmeyen dosyaları etiketleyin.'); return; }
-  var pdf;
-  try{ pdf=AK.buildPdf(c); }catch(e){ alert('PDF üretilemedi: '+(e&&e.message||e)); return; }
   var fname=((AK.state.model||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf';
-  var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
-  if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
+  // 'save' modunda PDF açılmaz/yazdırılmaz — sadece kayıt oluşturulur (arşiv buluta gider).
+  if(mode!=='save'){
+    var pdf;
+    try{ pdf=AK.buildPdf(c); }catch(e){ alert('PDF üretilemedi: '+(e&&e.message||e)); return; }
+    var blob; try{ blob=pdf.output('blob'); }catch(e){ alert('PDF açılamadı.'); return; }
+    if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
+  }
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
   AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:AK.state.model, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) }, 200);
-  if(typeof toast==='function') toast(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓','success');
+  if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi ✓ (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓'),'success');
 };
 
 AK._esc = function(s){ return (''+(s==null?'':s)).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];}); };
