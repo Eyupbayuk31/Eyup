@@ -4242,9 +4242,9 @@ function _stokMobileCards(list){
 }
 
 function renderStokTypeFilter(){
-  const list = getData('stoklar');
-  const cats = ['all','Poşet','Fermuar','Lastik','Düğme','Bant','Kılçık','Diğer'];
-  const icons = {all:'fas fa-layer-group',Poşet:'fas fa-box',Fermuar:'fas fa-link',Lastik:'fas fa-ruler',Düğme:'fas fa-circle-dot',Bant:'fas fa-tape',Kılçık:'fas fa-thumbtack',Diğer:'fas fa-ellipsis'};
+  const list = getData('stoklar').concat(_telaStokVirtualRows());
+  const cats = ['all','Poşet','Fermuar','Lastik','Düğme','Bant','Kılçık','Tela','Diğer'];
+  const icons = {all:'fas fa-layer-group',Poşet:'fas fa-box',Fermuar:'fas fa-link',Lastik:'fas fa-ruler',Düğme:'fas fa-circle-dot',Bant:'fas fa-tape',Kılçık:'fas fa-thumbtack',Tela:'fas fa-scroll',Diğer:'fas fa-ellipsis'};
   const counts = {all: list.length};
   list.forEach(s => { counts[s.kategori] = (counts[s.kategori]||0) + 1; });
 
@@ -4260,8 +4260,27 @@ function setStokCatFilter(cat){
   renderStokList();
 }
 
+// Tela Kontrol'deki kalan stoğu Genel Stok'ta salt-okunur satır olarak göster.
+// En (150'lik/180'lik) bazında tüm modellerin kalan toplamı — Tela Kontrol'de
+// giriş/çıkış yaptıkça otomatik güncellenir; buradan düzenlenmez.
+function _telaStokVirtualRows(){
+  var models = (typeof _tkAll==='function') ? _tkAll() : [];
+  if(!models.length) return [];
+  var cms = (typeof TK_CM_OPTIONS!=='undefined') ? TK_CM_OPTIONS : [150,180];
+  var rows=[];
+  cms.forEach(function(cm){
+    var total=0, cnt=0, lastUpd=0;
+    models.forEach(function(m){
+      var moves = (typeof _tkMoves==='function') ? _tkMoves(m) : (m.hareketler||m.telalar||[]);
+      var hasCm = moves.some(function(h){ return +h.cm===+cm; });
+      if(hasCm){ total += (typeof _tkStok==='function')?_tkStok(m,cm):0; cnt++; if((m._updatedAt||0)>lastUpd) lastUpd=m._updatedAt||0; }
+    });
+    if(cnt>0) rows.push({ _virtual:true, id:'tela-'+cm, ad:"Tela "+cm+"'lik", kategori:'Tela', birim:'Top', miktar:total, minStok:0, not:cnt+' model', updatedAt: lastUpd?new Date(lastUpd).toISOString():null });
+  });
+  return rows;
+}
 function renderStokList(){
-  const allList = getData('stoklar');
+  const allList = getData('stoklar').concat(_telaStokVirtualRows());
   renderStokTypeFilter();
 
   // Update stats using new HTML IDs
@@ -4303,22 +4322,25 @@ function renderStokList(){
     const status = getStockStatus(s.miktar, s.minStok);
     const pct = s.minStok > 0 ? Math.min(100, Math.max(0, (s.miktar / (s.minStok * 2)) * 100)) : 100;
     const dateStr = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('tr-TR') : '-';
-    return `<tr>
-      <td style="font-weight:600;">${s.ad}</td>
-      <td><span class="type-badge ${s.kategori === 'Poşet' ? 'standart' : s.kategori === 'Fermuar' ? 'fermuar' : s.kategori === 'Lastik' ? 'lastik' : s.kategori === 'Düğme' ? 'dugme' : 'toptan'}">${s.kategori}</span></td>
-      <td><span style="font-weight:700;font-size:15px;">${s.miktar}</span> <span style="color:var(--text-dim);font-size:11px;">${s.birim}</span>
-        <div class="stock-level" style="margin-top:4px;"><div class="fill ${status.barClass}" style="width:${pct}%;"></div></div>
-      </td>
-      <td>${s.birim}</td>
-      <td>${s.minStok || '-'}</td>
-      <td><span class="chip ${status.class}">${status.label}</span></td>
-      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${dateStr}</td>
-      <td><div style="display:flex;gap:3px;">
+    const actions = s._virtual
+      ? `<td><button class="btn btn-xs btn-secondary" onclick="showPage('tela-kontrol')" title="Tela Kontrol'de yönet"><i class="fas fa-up-right-from-square"></i> Tela Kontrol</button></td>`
+      : `<td><div style="display:flex;gap:3px;">
         <button class="btn btn-xs btn-success" onclick="stokHareket(${s.id},'giris')" title="Stok Giriş"><i class="fas fa-plus"></i></button>
         <button class="btn btn-xs btn-danger" onclick="stokHareket(${s.id},'cikis')" title="Stok Çıkış"><i class="fas fa-minus"></i></button>
         <button class="btn btn-xs btn-secondary" onclick="openStokModal(${s.id})" title="Düzenle"><i class="fas fa-edit"></i></button>
         <button class="btn btn-xs btn-danger" onclick="deleteStok(${s.id})" title="Sil"><i class="fas fa-trash"></i></button>
-      </div></td>
+      </div></td>`;
+    return `<tr${s._virtual?' style="background:color-mix(in srgb,#0ea5e9 5%,transparent);"':''}>
+      <td style="font-weight:600;">${s.ad}${s._virtual?' <span class="chip" style="font-size:9px;background:color-mix(in srgb,#0ea5e9 16%,transparent);color:#0ea5e9;">otomatik</span>':''}${s._virtual&&s.not?'<div style="font-size:10px;color:var(--text-muted);">'+s.not+'</div>':''}</td>
+      <td><span class="type-badge ${s.kategori === 'Poşet' ? 'standart' : s.kategori === 'Fermuar' ? 'fermuar' : s.kategori === 'Lastik' ? 'lastik' : s.kategori === 'Düğme' ? 'dugme' : s.kategori === 'Tela' ? 'tela' : 'toptan'}">${s.kategori}</span></td>
+      <td><span style="font-weight:700;font-size:15px;">${s.miktar}</span> <span style="color:var(--text-dim);font-size:11px;">${s.birim}</span>
+        ${s._virtual?'':'<div class="stock-level" style="margin-top:4px;"><div class="fill '+status.barClass+'" style="width:'+pct+'%;"></div></div>'}
+      </td>
+      <td>${s.birim}</td>
+      <td>${s.minStok || '-'}</td>
+      <td>${s._virtual?'<span class="chip" style="background:color-mix(in srgb,#0ea5e9 14%,transparent);color:#0ea5e9;">Tela Kontrol</span>':'<span class="chip '+status.class+'">'+status.label+'</span>'}</td>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${dateStr}</td>
+      ${actions}
     </tr>`;
   }).join('');
 
@@ -4327,27 +4349,30 @@ function renderStokList(){
     const status = getStockStatus(s.miktar, s.minStok);
     const pct = s.minStok > 0 ? Math.min(100, Math.max(0, (s.miktar / (s.minStok * 2)) * 100)) : 100;
     const dateStr = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('tr-TR') : '-';
-    return `<div class="stok-card ${s.minStok > 0 && s.miktar <= s.minStok ? 'low-stock' : 'ok-stock'}">
-      <div class="mc-header">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="mc-title">${s.ad}</span>
-          <span class="type-badge ${s.kategori === 'Poşet' ? 'standart' : s.kategori === 'Fermuar' ? 'fermuar' : s.kategori === 'Lastik' ? 'lastik' : s.kategori === 'Düğme' ? 'dugme' : 'toptan'}" style="font-size:9px;">${s.kategori}</span>
-        </div>
-        <span class="chip ${status.class}" style="font-size:10px;">${status.label}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
-        <span style="font-size:22px;font-weight:800;color:var(--primary);">${s.miktar}</span>
-        <span style="color:var(--text-muted);font-size:12px;">${s.birim}</span>
-        <div class="stock-level" style="flex:1;"><div class="fill ${status.barClass}" style="width:${pct}%;"></div></div>
-      </div>
-      ${s.minStok > 0 ? '<div style="font-size:11px;color:var(--text-dim);">Min. stok: '+s.minStok+' '+s.birim+'</div>' : ''}
-      <div style="font-size:11px;color:var(--text-dim);">Son güncelleme: ${dateStr}</div>
-      <div class="mc-actions">
+    const mcActions = s._virtual
+      ? `<div class="mc-actions"><button class="btn btn-xs btn-secondary" onclick="showPage('tela-kontrol')" style="flex:1;"><i class="fas fa-up-right-from-square"></i> Tela Kontrol'de yönet</button></div>`
+      : `<div class="mc-actions">
         <button class="btn btn-xs btn-success" onclick="stokHareket(${s.id},'giris')" style="flex:1;"><i class="fas fa-plus"></i> Giriş</button>
         <button class="btn btn-xs btn-danger" onclick="stokHareket(${s.id},'cikis')" style="flex:1;"><i class="fas fa-minus"></i> Çıkış</button>
         <button class="btn btn-xs btn-secondary" onclick="openStokModal(${s.id})"><i class="fas fa-edit"></i></button>
         <button class="btn btn-xs btn-danger" onclick="deleteStok(${s.id})"><i class="fas fa-trash"></i></button>
+      </div>`;
+    return `<div class="stok-card ${s._virtual ? 'ok-stock' : (s.minStok > 0 && s.miktar <= s.minStok ? 'low-stock' : 'ok-stock')}"${s._virtual?' style="border-left:3px solid #0ea5e9;"':''}>
+      <div class="mc-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="mc-title">${s.ad}</span>
+          <span class="type-badge ${s.kategori === 'Poşet' ? 'standart' : s.kategori === 'Fermuar' ? 'fermuar' : s.kategori === 'Lastik' ? 'lastik' : s.kategori === 'Düğme' ? 'dugme' : s.kategori === 'Tela' ? 'tela' : 'toptan'}" style="font-size:9px;">${s.kategori}</span>
+        </div>
+        ${s._virtual?'<span class="chip" style="font-size:10px;background:color-mix(in srgb,#0ea5e9 14%,transparent);color:#0ea5e9;">Tela Kontrol</span>':'<span class="chip '+status.class+'" style="font-size:10px;">'+status.label+'</span>'}
       </div>
+      <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
+        <span style="font-size:22px;font-weight:800;color:${s._virtual?'#0ea5e9':'var(--primary)'};">${s.miktar}</span>
+        <span style="color:var(--text-muted);font-size:12px;">${s.birim}</span>
+        ${s._virtual?'':'<div class="stock-level" style="flex:1;"><div class="fill '+status.barClass+'" style="width:'+pct+'%;"></div></div>'}
+      </div>
+      ${s._virtual ? '<div style="font-size:11px;color:var(--text-dim);">'+(s.not||'')+' · Tela Kontrol\'den otomatik</div>' : (s.minStok > 0 ? '<div style="font-size:11px;color:var(--text-dim);">Min. stok: '+s.minStok+' '+s.birim+'</div>' : '')}
+      <div style="font-size:11px;color:var(--text-dim);">Son güncelleme: ${dateStr}</div>
+      ${mcActions}
     </div>`;
   }).join('');
 }
@@ -17313,6 +17338,9 @@ window._markTkRefresh = function(){
     var dOpen=(document.getElementById('tkDetailModal')||{}).classList; dOpen=dOpen&&dOpen.contains('show');
     var mOpen=(document.getElementById('tkModelModal')||{}).classList; mOpen=mOpen&&mOpen.contains('show');
     if(tkEl && tkEl.classList.contains('active') && !dOpen && !mOpen) renderTelaKontrol();
+    // Genel Stok açıksa tela satırları da tazelensin
+    var stEl=document.getElementById('page-stok');
+    if(stEl && stEl.classList.contains('active') && typeof renderStokList==='function') renderStokList();
   }catch(_){}
 };
 </script>
