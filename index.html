@@ -2619,6 +2619,11 @@
           </div>
         </div>
         <div class="aks-header-right">
+          <button class="aks-btn aks-btn-secondary" onclick="document.getElementById('aksImportFile').click()">
+            <i class="fas fa-file-import"></i>
+            <span>Excel Yükle</span>
+          </button>
+          <input type="file" id="aksImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importAksesuarFromExcel(this.files); this.value='';">
           <button class="aks-btn aks-btn-secondary" onclick="exportAksesuarToExcel()">
             <i class="fas fa-file-excel"></i>
             <span>Excel İndir</span>
@@ -4550,6 +4555,98 @@ function recordStockMovement(irsaliye) {
 
 // ==================== AKSESUAR TAKİP ====================
 
+// Excel/CSV başlığını Aksesuar Takip alanına eşle (fuzzy)
+function _aksMapHeader(h){
+  h = (h||'').toString().toLocaleLowerCase('tr').replace(/\s+/g,' ').trim();
+  if(!h) return null;
+  if(/(model\s*ade|adet)/.test(h)) return 'adet';
+  if(/ütüpaket|utupaket/.test(h)) return 'cikisUtupaket';
+  if(/model/.test(h)) return 'modelKodu';
+  if(/termin/.test(h)) return 'termin';
+  if(/koli/.test(h)) return 'koliNo';
+  if(/(çıkış|cikis|tarih)/.test(h)) return 'cikisDikim';
+  if(/(m\.?\s*e|marka)/.test(h)) return 'markaEtiketi';
+  if(/(i\.?\s*b|iç\s*barkod|ic\s*barkod)/.test(h)) return 'icBarkod';
+  if(/(y\.?\s*t|yıkama\s*tal|yikama\s*tal|^y\.?t)/.test(h)) return 'yikamaTalimati';
+  if(/fiyat/.test(h)) return 'yikamaToptan';
+  if(/ecom/.test(h)) return 'ecom';
+  if(/(st\.?ckr|sticker|ist)/.test(h)) return 'istanbulSticker';
+  if(/(süs|sus)\s*etik/.test(h)) return 'susEtiketi';
+  if(/(süs|sus)\s*kar/.test(h)) return 'susKarti';
+  if(/lisans/.test(h)) return 'lisansKarti';
+  if(/raf/.test(h)) return 'raf';
+  return null;
+}
+// Excel hücresini sayaç değerine çevir (✓, ✓✓, 1, x, boş → 0/1/2...)
+function _aksParseCheck(v){
+  if(v==null) return 0;
+  if(typeof v==='number') return v;
+  var s=(''+v).trim(); if(!s) return 0;
+  var marks=(s.match(/[✓✔√xX]/g)||[]).length;
+  if(marks) return marks;
+  if(/^\d+$/.test(s)) return +s;
+  if(/(var|evet|ok|tamam|yes|true)/i.test(s)) return 1;
+  return 1; // dolu herhangi bir işaret → 1
+}
+function _aksCellStr(v){
+  if(v==null) return '';
+  if(v instanceof Date){ try{ return v.toLocaleDateString('tr-TR'); }catch(e){ return ''+v; } }
+  return (''+v).trim();
+}
+function importAksesuarFromExcel(files){
+  const file = files && files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Excel kütüphanesi yüklenemedi (internet gerekli)','error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+      if(!rows.length){ toast('Dosya boş görünüyor','error'); return; }
+      // Başlık satırı: 'model' içeren ilk satır
+      let hi = rows.findIndex(r => Array.isArray(r) && r.some(c => /model/i.test(''+c)));
+      if(hi < 0) hi = 0;
+      const headers = (rows[hi]||[]).map(_aksMapHeader);
+      if(!headers.some(x => x === 'modelKodu')){ toast('MODEL sütunu bulunamadı — başlık satırını kontrol edin','error'); return; }
+      let list = getData('aksesuarlar');
+      let added=0, updated=0;
+      for(let ri=hi+1; ri<rows.length; ri++){
+        const row = rows[ri]; if(!Array.isArray(row)) continue;
+        const rec = {};
+        headers.forEach((f,ci)=>{ if(f) rec[f]=row[ci]; });
+        const model = _aksCellStr(rec.modelKodu);
+        if(!model) continue;
+        const koli = _aksCellStr(rec.koliNo);
+        const item = {
+          modelKodu: model,
+          cikisDikim: _aksCellStr(rec.cikisDikim),
+          koliNo: koli,
+          termin: _aksCellStr(rec.termin),
+          adet: parseInt(_aksCellStr(rec.adet).replace(/[^\d]/g,''),10)||0,
+          markaEtiketi: _aksParseCheck(rec.markaEtiketi),
+          icBarkod: _aksParseCheck(rec.icBarkod),
+          yikamaTalimati: _aksParseCheck(rec.yikamaTalimati),
+          yikamaToptan: _aksParseCheck(rec.yikamaToptan),
+          ecom: _aksParseCheck(rec.ecom),
+          istanbulSticker: _aksParseCheck(rec.istanbulSticker),
+          susEtiketi: _aksParseCheck(rec.susEtiketi),
+          susKarti: _aksParseCheck(rec.susKarti),
+          lisansKarti: _aksParseCheck(rec.lisansKarti),
+          raf: _aksCellStr(rec.raf),
+          cikisUtupaket: _aksCellStr(rec.cikisUtupaket)
+        };
+        // Aynı model+koli varsa güncelle, yoksa ekle
+        const idx = list.findIndex(a => (a.modelKodu||'').toLocaleLowerCase('tr')===model.toLocaleLowerCase('tr') && (a.koliNo||'')===koli);
+        if(idx>=0){ Object.assign(list[idx], item, {updatedAt:new Date().toISOString()}); updated++; }
+        else { list.unshift(Object.assign({id:Date.now()+Math.floor(Math.random()*100000), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}, item)); added++; }
+      }
+      setData('aksesuarlar', list);
+      renderAksesuarTable();
+      toast(added+' model eklendi'+(updated?(', '+updated+' güncellendi'):'')+' ✓','success');
+    }catch(err){ console.error('[aks import]', err); toast('Excel okunamadı: '+((err&&err.message)||err),'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
 function addNewAksesuarRow(){
   const item = {
     id: Date.now(),
