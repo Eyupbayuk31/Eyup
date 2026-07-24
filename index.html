@@ -17550,6 +17550,9 @@ AK.loadLibs = function(){
 AK.categorize = function(fn){
   var map=AK.map(); var low=fn.toLowerCase().split('/').pop();
   if(low.indexOf('lotsticker')>=0) return null; // Lot sticker kontrol edilmiyor → yok say
+  // Fall in Love serisi: yıkama + iç barkod TEK PDF'te birleşik
+  // (AccessoryWashingInstructionAndStampSticker) → hem barkod hem yıkama üret
+  if(low.slice(-4)==='.pdf' && low.indexOf('washinginstruction')>=0 && low.indexOf('stampsticker')>=0) return {type:'icbarkod_yikama'};
   if(low.slice(-4)==='.pdf'){ for(var i=0;i<map.pdf.length;i++){ if(map.pdf[i].type!=='lot' && low.indexOf(map.pdf[i].m)>=0) return {type:map.pdf[i].type}; } return {type:'unknown'}; }
   if(/\.(png|jpe?g)$/.test(low)){
     var mm=fn.match(/AUL[A-Z]{2}\d+/i);
@@ -17614,10 +17617,14 @@ AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:b
       var info=AK._pageInfo(tc.items.map(function(x){return x.str;}).join(' ')); info.page=pageNum; infos.push(info); i++; return scan(); }); }
   return scan().then(function(){
     var byCode={};
-    infos.forEach(function(p){ var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, first:p.page}; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
+    // Yalnızca BARKOD sayfaları (SIZE'lı) grubu belirler; birleşik dosyada
+    // yıkama/boş sayfa barkod olarak render edilmesin.
+    infos.forEach(function(p){ var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, firstSized:null}; if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
     var keys=Object.keys(byCode); var out=[];
     var szSet={}; infos.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; }); out.sizes=Object.keys(szSet);
-    return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; return AK._pageCanvas(pdf, info.mPage||info.first, 3.5).then(function(o){ out.push({code:info.code, renk:info.renk, model:info.model, url:AK._trim(o.c,o.ctx).url}); }); }); }, Promise.resolve()).then(function(){ return out; });
+    return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; var pg=info.mPage||info.firstSized; if(!pg) return; // barkod sayfası yok → atla
+      return AK._pageCanvas(pdf, pg, 3.6).then(function(o){ var t=AK._trim(o.c,o.ctx); if((t.ink||0)<200) return; // neredeyse boş → atla
+        out.push({code:info.code, renk:info.renk, model:info.model, url:t.url}); }); }); }, Promise.resolve()).then(function(){ return out; });
   });
 }); };
 // Fiyat kartındaki "Baskı Adet / Printing Quantity" değerlerini bedenlere eşle.
@@ -17643,16 +17650,23 @@ AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
 }); };
 // Yıkama: dolu sayfaları renk koduna göre → [{code,renk,url}] (boş sayfalar atlanır).
 // Renk kodu: footer'da MODEL-(RENKKODU veya MODEL/RENKKODU.
-AK._yikamaColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
+// onlyWash: birleşik (Fall in Love) PDF'te sadece yıkama sayfalarını al,
+// barkod sayfalarını (SIZE:/SP.N) atla.
+AK._WASH_RE = /(y[ıi]kay|wash|bleach|a[ğg]art|tumble|iron|[ıi]t[üu]|kurut|dry\s*clean|kuru\s*temizle|maximum\s*\d|\d0\s*°|derece)/i;
+AK._yikamaColors = function(bytes, onlyWash){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
   var out=[]; var i=1;
   function scan(){ if(i>pdf.numPages) return Promise.resolve(out); var pageNum=i;
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
       var full=tc.items.map(function(x){return x.str;}).join(' ');
       if(full.replace(/\s/g,'').length<120){ i++; return scan(); } // boş şablon sayfası
+      if(onlyWash){ // birleşik dosyada barkod sayfasını atla, sadece yıkama içeriği
+        var isBarkod=/SIZE\s*:/i.test(full)||/SP\.?\s*N/i.test(full);
+        if(isBarkod || !AK._WASH_RE.test(full)){ i++; return scan(); }
+      }
       var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{2,4})/);
       var nm=full.replace(/\s+/g,' ').match(/\b([A-Z][a-z]{2,12})\)/);
       var code=cm?cm[2]:null; var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
-      return AK._textCrop(pdf,pageNum,3.4).then(function(r){ out.push({code:code, renk:renk, url:r.url}); i++; return scan(); }); }); }
+      return AK._textCrop(pdf,pageNum,3.4).then(function(r){ if((r.ink||0)>=150) out.push({code:code, renk:renk, url:r.url}); i++; return scan(); }); }); }
   return scan();
 }); };
 AK.renderSmart = function(bytes,type){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
@@ -17723,6 +17737,20 @@ AK.processEntries = function(entries){
         if(/\.(png|jpe?g)$/i.test(name)){ shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
+        // Fall in Love birleşik: aynı PDF'ten HEM iç barkod HEM yıkama üret (kopyalarla, detach olmasın)
+        if(cat.type==='icbarkod_yikama'){
+          return AK._icbarkodColors(bytes.slice(0)).then(function(list){
+            list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; });
+            if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; });
+          }).then(function(){
+            return AK._yikamaColors(bytes.slice(0), true).then(function(list){
+              var coded=list.filter(function(x){return x.code;});
+              if(coded.length){ coded.forEach(function(x){ var col=ensureColor(x.code,x.renk); col.yikama=[x.url]; col._combo=true; }); }
+              var nocode=list.filter(function(x){return !x.code;}).map(function(x){return x.url;});
+              if(nocode.length) shared.push({name:name,type:'yikama',code:null,renk:null,images:nocode,combo:true});
+            });
+          });
+        }
         if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code); col.fiyat=x.url?[x.url]:[]; if(x.adet && Object.keys(x.adet).length){ col.adet=x.adet; Object.keys(x.adet).forEach(function(sz){ sizeSet[sz]=true; }); } }); }); }
         if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
           var coded=list.filter(function(x){return x.code;});
@@ -17882,10 +17910,11 @@ AK._colorsFromMerged = function(m, prev){
     var key=col.code||col.renk||'_'; var p=prev[key]||{};
     // Etkin renk: kullanıcı elle düzelttiyse ONUN yazdığı kalır, yoksa tespit edilen.
     var effRenk = (p.renk&&p.renk!==col.renk ? p.renk : (col.renk||p.renk||'')) || null;
-    if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:effRenk,code:col.code||null,name:'icbarkod:'+k});
+    var comboNote = col._combo ? 'Fall in Love: yıkama + iç barkod TEK etikette birleşik geliyor.' : null;
+    if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:effRenk,code:col.code||null,name:'icbarkod:'+k, note:comboNote});
     if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:effRenk,code:col.code||null,name:'fiyat:'+k});
     // Yıkama: renk koduna göre eşlenmiş (renk-özel)
-    if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:effRenk,name:'yikama:'+k});
+    if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:effRenk,name:'yikama:'+k, note:comboNote});
     // Ortak dosyalar. Dokuma etiketi MAL RENGİNE göre seçilir (açık→beyaz,
     // koyu→siyah); uygun olmayan etiket gizlenir + açıklama eklenir.
     var labelPref = AK._labelForGarment(effRenk);
@@ -17929,7 +17958,7 @@ AK._processFilesInto = function(files, M){
       return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
         if(!M.sizes) M.sizes=[];
         (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
-        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[],yikama:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; });
+        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[],yikama:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src._combo) dst._combo=true; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
@@ -18003,7 +18032,7 @@ AK.buildFoyHtml = function(c){
 // karşılığına çevir (ç/ö/ü Latin-1'de var, korunur).
 AK._tr = function(s){ return (''+(s==null?'':s)).replace(/[İıŞşĞğ]/g, function(ch){ return {'İ':'I','ı':'i','Ş':'S','ş':'s','Ğ':'G','ğ':'g'}[ch]; }); };
 // Aksesuar başına makul görsel yüksekliği (mm) — derli toplu, sayfaya sığsın.
-AK._CAP = { dokuma:20, icbarkod:58, yikama:62, fiyat:70, susKarti:64, kartArka:64, lisansKarti:64, lisansEtiketi:26 };
+AK._CAP = { dokuma:20, icbarkod:66, yikama:62, fiyat:70, susKarti:64, kartArka:64, lisansKarti:64, lisansEtiketi:26 };
 AK._renderColorPage = function(pdf, c){
   var order=AK.STAGE_ORDER[AK.state.asama];
   var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
