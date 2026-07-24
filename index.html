@@ -2641,6 +2641,10 @@
           <input type="text" id="aksesuarSearch" placeholder="Model kodu, koli no veya raf ara..." oninput="renderAksesuarTable()">
           <div class="aks-search-badge" id="aksesuarSearchCount">0 kayıt</div>
         </div>
+        <label class="aks-toggle-done" title="Çıkış Dikim ve Ütü Paket çıkışı dolu (tamamlanmış) modelleri göster">
+          <input type="checkbox" id="aksesuarShowDone" onchange="renderAksesuarTable()">
+          <span>Tamamlananları göster</span>
+        </label>
         <div class="aks-quick-stats">
           <div class="aks-stat-mini">
             <i class="fas fa-box"></i>
@@ -4746,9 +4750,13 @@ function renderAksesuarTable(){
   let list = getData('aksesuarlar');
   const search = document.getElementById('aksesuarSearch')?.value.toLowerCase() || '';
 
-  let filteredList = list;
+  // Tamamlanmış = HEM Çıkış Dikim HEM Ütü Paket çıkışı dolu (nokta/boşluk değil).
+  const _hasCikis = (v) => /[a-z0-9]/i.test((v||''));
+  const _isDone = (a) => _hasCikis(a.cikisDikim) && _hasCikis(a.cikisUtupaket);
+  const showDone = document.getElementById('aksesuarShowDone')?.checked;
+  let filteredList = showDone ? list : list.filter(a => !_isDone(a));
   if(search){
-    filteredList = list.filter(a =>
+    filteredList = filteredList.filter(a =>
       (a.modelKodu || '').toLowerCase().includes(search) ||
       (a.koliNo || '').toLowerCase().includes(search) ||
       (a.raf || '').toLowerCase().includes(search)
@@ -4766,8 +4774,8 @@ function renderAksesuarTable(){
   if(searchCount) searchCount.textContent = `${filteredList.length} kayıt`;
   if(totalCount) totalCount.textContent = list.length;
 
-  // Calculate complete/pending based on filled fields
-  const complete = list.filter(a => a.modelKodu && a.koliNo && a.adet > 0).length;
+  // Tamamlanan = tam sevk (her iki çıkış dolu); bekleyen = kalan
+  const complete = list.filter(_isDone).length;
   const pending = list.length - complete;
   if(completeCount) completeCount.textContent = complete;
   if(pendingCount) pendingCount.textContent = pending;
