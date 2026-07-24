@@ -17624,9 +17624,21 @@ function tkDeleteRow(rowId){
   tkRenderDetail();
 }
 function tkManualRefresh(){
-  renderTelaKontrol();
-  try{ if(_tkCurrentDetailId!=null && document.getElementById('tkDetailModal').classList.contains('show')) tkRenderDetail(); }catch(_){}
-  if(typeof toast==='function') toast('Tela Kontrol güncellendi','success');
+  var btn=document.getElementById('tkRefreshBtn'); var ic=btn?btn.querySelector('i'):null;
+  if(ic) ic.classList.add('fa-spin'); if(btn) btn.disabled=true;
+  var redraw=function(){
+    renderTelaKontrol();
+    try{ if(_tkCurrentDetailId!=null && document.getElementById('tkDetailModal').classList.contains('show')) tkRenderDetail(); }catch(_){}
+  };
+  var done=function(msg,typ){ if(ic) ic.classList.remove('fa-spin'); if(btn) btn.disabled=false; redraw();
+    if(typeof toast==='function') toast(msg||'Tela Kontrol güncellendi','success'); };
+  // Buluttan zorla çek (diğer cihazın kayıtları geç geldiyse) → bitince çiz
+  try{
+    if(typeof window._resyncFromCloud==='function'){
+      Promise.resolve(window._resyncFromCloud()).then(function(){ done(); })
+        .catch(function(){ done('Yerelden yenilendi (bulut erişilemedi)','info'); });
+    } else { done('Yerelden yenilendi','info'); }
+  }catch(_){ done('Yerelden yenilendi','info'); }
 }
 function renderTelaKontrol(){
   var all=_tkAll();
