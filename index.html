@@ -2628,7 +2628,7 @@
             <i class="fas fa-file-excel"></i>
             <span>Excel İndir</span>
           </button>
-          <button class="aks-btn aks-btn-secondary" onclick="aksTerminPdf()" title="Bu ay ±2 ay termin aralığındaki modelleri, fiyat kartı/yıkama durumuyla PDF verir">
+          <button class="aks-btn aks-btn-secondary" onclick="aksTerminPdf()" title="1 ay geri – 2 ay ileri termin aralığındaki, fiyat kartı/yıkaması eksik modelleri PDF verir">
             <i class="fas fa-file-pdf"></i>
             <span>Termin PDF</span>
           </button>
@@ -4708,14 +4708,17 @@ function aksTerminPdf(){
     if(!list.length){ toast('Kayıt yok','info'); return; }
     var now=new Date();
     var nowIdx = now.getFullYear()*12 + now.getMonth();
-    var lo=nowIdx-2, hi=nowIdx+2;
+    var lo=nowIdx-1, hi=nowIdx+2;                                 // 1 ay geri → 2 ay ileri
     var sel=[];
     list.forEach(function(a){
       var ym=_aksTerminYM(a.termin); if(!ym) return;
       var idx=ym.y*12+(ym.m-1);
-      if(idx>=lo && idx<=hi){ sel.push({a:a, idx:idx}); }
+      if(idx<lo || idx>hi) return;
+      var fOk=(+a.yikamaToptan>0), yOk=(+a.yikamaTalimati>0);
+      if(fOk && yOk) return;                                      // fiyat kartı ve yıkama ikisi de geldiyse listeleme
+      sel.push({a:a, idx:idx});
     });
-    if(!sel.length){ toast('Bu ay ±2 ay termin aralığında kayıt bulunamadı','info'); return; }
+    if(!sel.length){ toast('Termin aralığında (1 ay geri – 2 ay ileri) eksiği olan model yok','info'); return; }
     sel.sort(function(p,q){ return (p.idx-q.idx) || ((p.a.modelKodu||'').localeCompare(q.a.modelKodu||'','tr')); });
 
     var pad=function(n){ return (n<10?'0':'')+n; };
