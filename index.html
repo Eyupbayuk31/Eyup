@@ -17677,15 +17677,19 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
       var full=tc.items.map(function(x){return x.str;}).join(' ');
       var info=AK._pageInfo(full);
-      pages.push({page:pageNum, code:info.code, renk:info.renk, model:info.model, size:info.size, len:full.replace(/\s/g,'').length});
+      pages.push({page:pageNum, code:info.code, renk:info.renk, model:info.model, size:info.size, origSize:info.size||null, len:full.replace(/\s/g,'').length});
       i++; return scan(); }); }
   return scan().then(function(){
     var szSet={}; pages.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; });
-    // Kodsuz sayfalar en son görülen renge ait sayılır (etiket sıralı gelir)
-    var lastCode=null,lastRenk=null,lastModel=null;
-    pages.forEach(function(p){ if(p.code){ lastCode=p.code; if(p.renk) lastRenk=p.renk; if(p.model) lastModel=p.model; } else { p.code=lastCode; if(!p.renk) p.renk=lastRenk; } });
+    // Kod ve BEDEN kodsuz sayfalara en son görülenden aktarılır (etiket sıralı: barkod+yıkama bloğu)
+    var lastCode=null,lastRenk=null,lastModel=null,lastSize=null;
+    pages.forEach(function(p){ if(p.code){ lastCode=p.code; if(p.renk) lastRenk=p.renk; if(p.model) lastModel=p.model; } else { p.code=lastCode; if(!p.renk) p.renk=lastRenk; } if(p.size){ lastSize=p.size; } else { p.size=lastSize; } });
+    // SADECE M beden bloğunu al (yoksa mevcut ilk beden). Diğer bedenlerin
+    // barkod+yıkama sayfaları alınmaz.
+    var sp={}; pages.forEach(function(p){ if(p.origSize) sp[p.origSize.toUpperCase()]=true; });
+    var target = sp['M'] ? 'M' : (['L','S','XL','XXL','XS','XXS','2XL','3XL','4XL'].filter(function(s){return sp[s];})[0] || null);
     var byCode={};
-    pages.forEach(function(p){ if(p.len<40 && !p.size) return; var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,pages:[]}; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
+    pages.forEach(function(p){ if(p.len<40 && !p.origSize) return; if(target && p.size && p.size.toUpperCase()!==target) return; var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,pages:[]}; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
     var keys=Object.keys(byCode); var out=[];
     return keys.reduce(function(ch,k){ return ch.then(function(){ var g=byCode[k];
       return g.pages.reduce(function(ch2,pn){ return ch2.then(function(imgs){ return AK._textCrop(pdf,pn,3.4).then(function(r){ if((r.ink||0)>=150) imgs.push(r.url); return imgs; }); }); }, Promise.resolve([])).then(function(imgs){ if(imgs.length) out.push({code:g.code, renk:AK._renkFromText(g.renk)||g.renk||AK._codeRenk(g.code), model:g.model, images:imgs}); });
