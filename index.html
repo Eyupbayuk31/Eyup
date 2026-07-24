@@ -2632,6 +2632,10 @@
             <i class="fas fa-plus"></i>
             <span>Yeni Kayıt</span>
           </button>
+          <button class="aks-btn aks-btn-danger" onclick="deleteAllAksesuar()">
+            <i class="fas fa-trash"></i>
+            <span>Hepsini Sil</span>
+          </button>
         </div>
       </div>
 
@@ -4715,6 +4719,21 @@ function deleteAksesuar(id){
   setData('aksesuarlar', list);
   renderAksesuarTable();
   toast('Kayıt silindi','info');
+}
+
+function deleteAllAksesuar(){
+  const list = getData('aksesuarlar');
+  if(!list.length){ toast('Silinecek kayıt yok','info'); return; }
+  if(!confirm('TÜM aksesuar takip kayıtları ('+list.length+' adet) silinecek. Bu işlem tüm cihazlarda geçerli olur ve geri alınamaz. Emin misiniz?')) return;
+  const ids = list.map((a,i)=> String(a.id != null ? a.id : ('idx_'+i)));
+  setData('aksesuarlar', []);
+  renderAksesuarTable();
+  if(typeof window.syncDeleteWithTombstone === 'function'){
+    window.syncDeleteWithTombstone('aksesuarlar', ids, ids)
+      .then(function(){ if(typeof window._updateCloudBadge==='function') window._updateCloudBadge('ok'); })
+      .catch(function(e){ console.warn('aksesuarlar toplu silme sync hatasi', e); });
+  }
+  toast(list.length+' kayıt silindi','success');
 }
 
 function incrementAksesuar(id, field){
