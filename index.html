@@ -2628,6 +2628,10 @@
             <i class="fas fa-file-excel"></i>
             <span>Excel İndir</span>
           </button>
+          <button class="aks-btn aks-btn-secondary" onclick="aksTerminPdf()" title="Bu ay ±2 ay termin aralığındaki modelleri, fiyat kartı/yıkama durumuyla PDF verir">
+            <i class="fas fa-file-pdf"></i>
+            <span>Termin PDF</span>
+          </button>
           <button class="aks-btn aks-btn-primary" onclick="addNewAksesuarRow()">
             <i class="fas fa-plus"></i>
             <span>Yeni Kayıt</span>
@@ -4678,6 +4682,101 @@ function importAksesuarFromExcel(files){
   };
   reader.readAsArrayBuffer(file);
 }
+// ── Termin (delivery date) parsing → {y, m} ──
+function _aksTerminYM(termin){
+  var s=(termin==null?'':(''+termin)).trim(); if(!s) return null;
+  var m;
+  m=s.match(/^(\d{4})[.\/\-](\d{1,2})[.\/\-](\d{1,2})/);        // yyyy-mm-dd
+  if(m){ return {y:+m[1], m:+m[2]}; }
+  m=s.match(/^(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{2,4})/);      // dd.mm.yyyy
+  if(m){ var y=+m[3]; if(y<100) y+=2000; return {y:y, m:+m[2]}; }
+  if(/^\d+(\.\d+)?$/.test(s)){                                   // Excel serial number
+    var n=parseFloat(s);
+    if(n>20000 && n<80000){
+      var d=new Date(Date.UTC(1899,11,30)+Math.round(n)*86400000);
+      return {y:d.getUTCFullYear(), m:d.getUTCMonth()+1};
+    }
+  }
+  return null;
+}
+
+// ── Termin raporu: bu ay ±2 ay aralığındaki modelleri, fiyat kartı/yıkama durumuyla PDF ver ──
+function aksTerminPdf(){
+  try{
+    if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF motoru yüklenemedi (internet gerekli)','error'); return; }
+    var list = getData('aksesuarlar')||[];
+    if(!list.length){ toast('Kayıt yok','info'); return; }
+    var now=new Date();
+    var nowIdx = now.getFullYear()*12 + now.getMonth();
+    var lo=nowIdx-2, hi=nowIdx+2;
+    var sel=[];
+    list.forEach(function(a){
+      var ym=_aksTerminYM(a.termin); if(!ym) return;
+      var idx=ym.y*12+(ym.m-1);
+      if(idx>=lo && idx<=hi){ sel.push({a:a, idx:idx}); }
+    });
+    if(!sel.length){ toast('Bu ay ±2 ay termin aralığında kayıt bulunamadı','info'); return; }
+    sel.sort(function(p,q){ return (p.idx-q.idx) || ((p.a.modelKodu||'').localeCompare(q.a.modelKodu||'','tr')); });
+
+    var pad=function(n){ return (n<10?'0':'')+n; };
+    var loM=(lo%12)+1, hiM=(hi%12)+1;
+    var pdf=AK._newPdf();
+    var W=210, PH=297, mL=10, mR=10;
+    var T=function(s,x,y,o){ pdf.text(AK._tr(s==null?'':(''+s)),x,y,o); };
+    var cols=[
+      {t:'Model Kodu',  x:mL,     w:54, a:'left'},
+      {t:'Termin',      x:mL+54,  w:30, a:'left'},
+      {t:'Adet',        x:mL+84,  w:22, a:'right'},
+      {t:'Fiyat Karti', x:mL+106, w:42, a:'center'},
+      {t:'Yikama',      x:mL+148, w:42, a:'center'}
+    ];
+    var tx=function(c){ return c.a==='right'? c.x+c.w-2 : c.a==='center'? c.x+c.w/2 : c.x+2; };
+    var opt=function(c){ return c.a==='left'? undefined : {align:c.a}; };
+
+    function drawHeader(y){
+      pdf.setFillColor(30,41,59); pdf.rect(mL,y,W-mL-mR,8,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(9);
+      cols.forEach(function(c){ T(c.t, tx(c), y+5.4, opt(c)); });
+      return y+8;
+    }
+
+    // Başlık
+    pdf.setTextColor(15,23,42); pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+    T('Termin Raporu', mL, 16);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(100,116,139);
+    T('Termin araligi: '+pad(loM)+'. – '+pad(hiM)+'. ay  ·  '+sel.length+' model  ·  '+now.toLocaleDateString('tr-TR'), mL, 22);
+    var eksikF=0, eksikY=0;
+    sel.forEach(function(s){ if(!(+s.a.yikamaToptan>0)) eksikF++; if(!(+s.a.yikamaTalimati>0)) eksikY++; });
+    pdf.setTextColor(190,18,60);
+    T('Fiyat karti gelmeyen: '+eksikF+'   ·   Yikama gelmeyen: '+eksikY, mL, 27.5);
+
+    var y=drawHeader(32);
+    var rowH=7;
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5);
+    sel.forEach(function(s, i){
+      if(y+rowH > PH-12){ pdf.addPage(); y=drawHeader(16); pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5); }
+      if(i%2===1){ pdf.setFillColor(241,245,249); pdf.rect(mL,y,W-mL-mR,rowH,'F'); }
+      var a=s.a;
+      pdf.setTextColor(15,23,42);
+      T(a.modelKodu||'—', tx(cols[0]), y+4.8, opt(cols[0]));
+      T(a.termin||'—',    tx(cols[1]), y+4.8, opt(cols[1]));
+      T(String(a.adet||0),tx(cols[2]), y+4.8, opt(cols[2]));
+      var fOk=(+a.yikamaToptan>0), yOk=(+a.yikamaTalimati>0);
+      pdf.setFont('helvetica','bold');
+      if(fOk){ pdf.setTextColor(22,163,74); T('Geldi', tx(cols[3]), y+4.8, opt(cols[3])); }
+      else { pdf.setTextColor(220,38,38); T('GELMEDI', tx(cols[3]), y+4.8, opt(cols[3])); }
+      if(yOk){ pdf.setTextColor(22,163,74); T('Geldi', tx(cols[4]), y+4.8, opt(cols[4])); }
+      else { pdf.setTextColor(220,38,38); T('GELMEDI', tx(cols[4]), y+4.8, opt(cols[4])); }
+      pdf.setFont('helvetica','normal');
+      pdf.setDrawColor(226,232,240); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
+      y+=rowH;
+    });
+
+    pdf.save('termin-raporu.pdf');
+    toast(sel.length+' model PDF olarak indirildi ✓','success');
+  }catch(err){ console.error('[termin pdf]', err); toast('PDF oluşturulamadı: '+((err&&err.message)||err),'error'); }
+}
+
 function addNewAksesuarRow(){
   const item = {
     id: Date.now(),
