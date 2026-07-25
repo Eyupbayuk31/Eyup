@@ -1262,6 +1262,17 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Chart.js CDN'e ulaşılamazsa (çevrimdışı atölye / engelli ağ) uygulama
+// çökmemeli. Eskiden showPage('home') ve showPage('reports') "Chart is not
+// defined" ile patlıyor, grafikten SONRAKİ tüm içerik hiç çizilmiyordu.
+// Sessiz bir yedek kurulur: grafikler çizilmez ama sayfaların geri kalanı
+// normal çalışır.
+if(typeof Chart==='undefined'){
+  window.Chart=function(){ return {destroy:function(){},update:function(){},resize:function(){},data:{},options:{}}; };
+  window.Chart.register=function(){}; window.Chart.defaults={};
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
