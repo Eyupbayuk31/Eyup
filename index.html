@@ -18318,6 +18318,16 @@ AK._processFilesInto = function(files, M){
   return files.reduce(function(chain,f){
     return chain.then(function(){
       return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
+        // FARKLI MODEL → birikimi sıfırla. AK._merged yüklemeler arasında
+        // bilerek korunur (aynı modelin birden çok arşivi/rengi birleşsin diye)
+        // ama model değişince temizlenmiyordu: önceki modelin ortak etiketleri
+        // (Kart Arkası + İp, Dokuma) yeni modelin föyüne karışıyordu.
+        var nm=(res.detected.model||'').toUpperCase().trim();
+        var cm2=(M.detected.model||'').toUpperCase().trim();
+        if(nm && cm2 && nm!==cm2){
+          M.byColor={}; M.shared=[]; M.sizes=[]; M.detected={po:'',model:''};
+          M._modelChanged=true;
+        }
         if(!M.sizes) M.sizes=[];
         (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
         Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src._combo) dst._combo=true; });
@@ -18334,6 +18344,13 @@ AK.onZip = function(id, fileList){
   var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
   if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''},sizes:[]};
   AK._processFilesInto(files, AK._merged).then(function(){
+    if(AK._merged._modelChanged){
+      AK._merged._modelChanged=false;
+      // Eski modelin arşivleri, renk kartları ve model kodu da düşsün
+      AK._zipNames=[]; AK._zipKeys=[]; AK.state.colors=[]; AK.state.model='';
+      var mi0=document.getElementById('akModel'); if(mi0) mi0.value='';
+      if(typeof toast==='function') toast('Farklı model algılandı — önceki arşiv ve renkler temizlendi','info');
+    }
     files.forEach(function(f){
       if(AK._zipNames.indexOf(f.name)<0) AK._zipNames.push(f.name);
       // Kaynak arşivi sakla → kayıtlardan föy YENİDEN üretilebilsin (PDF saklanmaz)
