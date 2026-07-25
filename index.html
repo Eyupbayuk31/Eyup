@@ -17940,6 +17940,11 @@ AK._pageInfo = function(t){
   if(!renk) renk=AK._codeRenk(code);
   return { code: code, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: renk };
 };
+// Renk kovası anahtarı: MODEL + RENK KODU. Sadece renk koduyla anahtarlamak,
+// bir arşivde iki farklı modelin aynı renk kodunu (ör. BK81 = siyah, her
+// modelde bulunur) taşıması durumunda ikisini TEK kovada birleştiriyordu:
+// ikinci modelin barkodu/fiyat kartı kayboluyor, föye yanlış model basılıyordu.
+AK._ckey = function(code, model){ return (model||'')+'|'+(code||'_'); };
 // İç Barkod: renge göre grupla, her renk için M sayfasını üret → [{code,renk,model,url}]
 AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
   var infos=[]; var i=1;
@@ -17950,7 +17955,7 @@ AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:b
     var byCode={};
     // Yalnızca BARKOD sayfaları (SIZE'lı) grubu belirler; birleşik dosyada
     // yıkama/boş sayfa barkod olarak render edilmesin.
-    infos.forEach(function(p){ var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, firstSized:null}; if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
+    infos.forEach(function(p){ var key=AK._ckey(p.code,p.model); if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, firstSized:null}; if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
     var keys=Object.keys(byCode); var out=[];
     var szSet={}; infos.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; }); out.sizes=Object.keys(szSet);
     return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; var pg=info.mPage||info.firstSized; if(!pg) return; // barkod sayfası yok → atla
@@ -17982,8 +17987,8 @@ AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
       var joined=tc.items.map(function(x){return x.str;}).join(' ');
       var info=AK._pageInfo(joined); var adet=AK._parseAdet(joined);
-      var key=info.code||'_';
-      if(!byCode[key]){ byCode[key]={code:info.code, adet:{}, mPage:0, firstPage:pageNum}; order.push(key); }
+      var key=AK._ckey(info.code,info.model);
+      if(!byCode[key]){ byCode[key]={code:info.code, model:info.model, adet:{}, mPage:0, firstPage:pageNum}; order.push(key); }
       var e=byCode[key];
       Object.keys(adet).forEach(function(sz){ e.adet[sz]=(e.adet[sz]||0)+adet[sz]; });
       if(!e.mPage && AK._bigSizeItems(tc).some(function(it){ return it.s==='M'; })) e.mPage=pageNum;
@@ -17994,7 +17999,7 @@ AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     return order.reduce(function(ch,key){ return ch.then(function(){
       var e=byCode[key];
       return AK._cropBig(pdf, e.mPage?'M':null, 3.6, e.mPage||e.firstPage).then(function(r){
-        out.push({code:e.code, url:r.url, adet:e.adet});
+        out.push({code:e.code, model:e.model, url:r.url, adet:e.adet});
       });
     }); }, Promise.resolve()).then(function(){ return out; });
   });
@@ -18040,7 +18045,7 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     var sp={}; pages.forEach(function(p){ if(p.origSize) sp[p.origSize.toUpperCase()]=true; });
     var target = sp['M'] ? 'M' : (['L','S','XL','XXL','XS','XXS','2XL','3XL','4XL'].filter(function(s){return sp[s];})[0] || null);
     var byCode={};
-    pages.forEach(function(p){ if(p.len<40 && !p.origSize) return; if(target && p.size && p.size.toUpperCase()!==target) return; var key=p.code||'_'; if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,pages:[]}; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
+    pages.forEach(function(p){ if(p.len<40 && !p.origSize) return; if(target && p.size && p.size.toUpperCase()!==target) return; var key=AK._ckey(p.code,p.model||lastModel); if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,pages:[]}; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
     var keys=Object.keys(byCode); var out=[];
     return keys.reduce(function(ch,k){ return ch.then(function(){ var g=byCode[k];
       return g.pages.reduce(function(ch2,pn){ return ch2.then(function(imgs){ return AK._textCrop(pdf,pn,3.4).then(function(r){ if((r.ink||0)>=150) imgs.push(r.url); return imgs; }); }); }, Promise.resolve([])).then(function(imgs){ if(imgs.length) out.push({code:g.code, renk:AK._renkFromText(g.renk)||g.renk||AK._codeRenk(g.code), model:g.model, images:imgs}); });
@@ -18113,7 +18118,28 @@ AK.processEntries = function(entries){
     // Model RENK BAZINDA da saklanır: bir arşivde birden çok modelin etiketi
     // olabiliyor ve tek global det.model (ilk gören kazanır) yüzünden her rengin
     // föyüne yanlış model kodu basılıyordu (barkodda H4237AX iken başlıkta H8415AX).
-    function ensureColor(code,renk,model){ code=code||'_'; if(!byColor[code]) byColor[code]={code:(code==='_'?null:code), renk:renk||null, model:null, icbarkod:[], fiyat:[], yikama:[], combo:[], adet:null}; if(renk&&!byColor[code].renk) byColor[code].renk=renk; if(model&&!byColor[code].model) byColor[code].model=model; if(model&&!det.model) det.model=model; return byColor[code]; }
+    // Kova anahtarı MODEL+RENK KODU. Model okunamayan dosyalar (ör. bazı ortak
+    // sayfalar) aynı renk kodundan TEK kova varsa ona bağlanır; sonradan model
+    // tespit edilirse modelsiz kova o modele taşınır — böylece bir rengin
+    // parçaları (barkod / fiyat / yıkama) bölünmez.
+    function ensureColor(code,renk,model){
+      code=code||'_';
+      var key=AK._ckey(code,model);
+      if(!byColor[key]){
+        if(model){
+          var orphan='|'+code;
+          if(byColor[orphan]){ byColor[key]=byColor[orphan]; delete byColor[orphan]; byColor[key].model=model; }
+        } else {
+          var same=Object.keys(byColor).filter(function(k){ return byColor[k].code===(code==='_'?null:code); });
+          if(same.length===1) key=same[0];
+        }
+      }
+      if(!byColor[key]) byColor[key]={code:(code==='_'?null:code), renk:renk||null, model:model||null, icbarkod:[], fiyat:[], yikama:[], combo:[], adet:null};
+      if(renk&&!byColor[key].renk) byColor[key].renk=renk;
+      if(model&&!byColor[key].model) byColor[key].model=model;
+      if(model&&!det.model) det.model=model;
+      return byColor[key];
+    }
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
@@ -18129,7 +18155,7 @@ AK.processEntries = function(entries){
             if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; });
           });
         }
-        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code); if(x.url) col.fiyat=[x.url];
+        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,null,x.model); if(x.url) col.fiyat=[x.url];
           // Birden fazla fiyat dosyası gelirse de adetler birikir (ezilmez)
           if(x.adet && Object.keys(x.adet).length){ if(!col.adet) col.adet={}; Object.keys(x.adet).forEach(function(sz){ col.adet[sz]=x.adet[sz]; sizeSet[sz]=true; }); } }); }); }
         if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
@@ -18288,7 +18314,7 @@ AK._colorsFromMerged = function(m, prev){
   var colorCount=codes.length;
   return codes.map(function(k,ci){
     var col=m.byColor[k]; var files=[];
-    var key=col.code||col.renk||'_'; var p=prev[key]||{};
+    var key=AK._ckey(col.code||col.renk, col.model); var p=prev[key]||{};
     // Etkin renk: kullanıcı elle düzelttiyse ONUN yazdığı kalır, yoksa tespit edilen.
     var effRenk = (p.renk&&p.renk!==col.renk ? p.renk : (col.renk||p.renk||'')) || null;
     var comboNote = 'Fall in Love: yıkama + iç barkod TEK etikette birleşik geliyor.';
@@ -18326,7 +18352,7 @@ AK._colorsFromMerged = function(m, prev){
 };
 AK.rebuildColors = function(){
   var m=AK._merged; if(!m){ if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); return; }
-  var prev={}; AK.state.colors.forEach(function(c){ prev[c.code||c.renk||'_']=c; });
+  var prev={}; AK.state.colors.forEach(function(c){ prev[AK._ckey(c.code||c.renk, c.model)]=c; });
   var newColors = AK._colorsFromMerged(m, prev);
   AK.state.colors = newColors.length ? newColors : AK.state.colors;
   if(!AK.state.colors.length) AK.addColor();
@@ -18352,7 +18378,7 @@ AK._processFilesInto = function(files, M){
         }
         if(!M.sizes) M.sizes=[];
         (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
-        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,model:null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src._combo) dst._combo=true; });
+        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,model:src.model||null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src._combo) dst._combo=true; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
@@ -18673,7 +18699,9 @@ AK._recBlob = function(r){
       return AK._processFilesInto(files, M).then(function(){
         var cols=AK._colorsFromMerged(M, {});
         if(!cols.length) return null;
-        var c = (r.code && cols.filter(function(x){ return x.code===r.code; })[0])
+        // Aynı renk kodu iki modelde birden olabilir → önce model+kod eşleşmesi
+        var c = (r.code && r.model && cols.filter(function(x){ return x.code===r.code && x.model===r.model; })[0])
+             || (r.code && cols.filter(function(x){ return x.code===r.code; })[0])
              || (r.renk && cols.filter(function(x){ return (x.renk||'').toLowerCase()===(r.renk||'').toLowerCase(); })[0])
              || cols[0];
         // Kayıttaki ayarlar uygulanır (adet/renk/po föy o günkü haliyle çıksın)
