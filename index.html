@@ -17827,7 +17827,58 @@ AK.categorize = function(fn){
 AK._pageCanvas = function(pdf,n,scale){ return pdf.getPage(n).then(function(page){ var vp=page.getViewport({scale:scale}); var c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height); var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); return page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){ return {c:c,ctx:ctx,page:page,vp:vp}; }); }); };
 AK._trim = function(c,ctx){ var d=ctx.getImageData(0,0,c.width,c.height).data; var minx=c.width,miny=c.height,maxx=0,maxy=0,ink=0; for(var y=0;y<c.height;y++)for(var x=0;x<c.width;x++){ var i=(y*c.width+x)*4; if(d[i]<245||d[i+1]<245||d[i+2]<245){ ink++; if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y; } } if(!ink) return {url:c.toDataURL('image/png'),ink:0}; var pad=8; minx=Math.max(0,minx-pad);miny=Math.max(0,miny-pad);maxx=Math.min(c.width,maxx+pad);maxy=Math.min(c.height,maxy+pad); var w=maxx-minx,h=maxy-miny; var o=document.createElement('canvas');o.width=w;o.height=h; var octx=o.getContext('2d');octx.fillStyle='#fff';octx.fillRect(0,0,w,h);octx.drawImage(c,minx,miny,w,h,0,0,w,h); return {url:o.toDataURL('image/png'),ink:ink}; };
 AK._findSizePage = function(pdf,size){ var i=1; function next(){ if(i>pdf.numPages) return Promise.resolve(1); return pdf.getPage(i).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ var t=tc.items.map(function(x){return x.str;}).join(' ').replace(/\s*:\s*/g,':').replace(/\s+/g,' '); if(new RegExp('SIZE:'+size+'(?![A-Za-z])','i').test(t)) return i; i++; return next(); }); } return next(); };
-AK._cropBig = function(pdf,letter,scale,pageNum){ return AK._pageCanvas(pdf,pageNum||1,scale).then(function(o){ return o.page.getTextContent().then(function(tc){ var best=null; tc.items.forEach(function(it){ if(it.str.trim()===letter){ var h=Math.hypot(it.transform[2],it.transform[3]); if(!best||h>best.h) best={h:h,x:it.transform[4],y:it.transform[5]}; } }); if(!best) return AK._trim(o.c,o.ctx); var vpt=o.vp.convertToViewportPoint(best.x,best.y); function mm(v){return v*scale*72/25.4;} var x0=Math.max(0,vpt[0]-mm(6)),y0=Math.max(0,vpt[1]-mm(6)),w=Math.min(o.c.width-x0,mm(45)),h=Math.min(o.c.height-y0,mm(72)); var cc=document.createElement('canvas');cc.width=w;cc.height=h; var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,x0,y0,w,h,0,0,w,h); return AK._trim(cc,cx); }); }); };
+AK._SIZE_TOK = /^(XXS|XS|S|M|L|XL|XXL|3XL|4XL)$/;
+// Fiyat kartı sayfasındaki "büyük beden harfi"ni bul. Kartın üstündeki minik
+// beden cetveli (S M L XL XXL — ~4pt) ASLA çapa olmamalı: ona tutunulursa kart
+// sağa/aşağı kayık kırpılır (kullanıcı: "kartı yanlış kırpmış"). Bu yüzden en
+// büyük beden yazısının yarısından küçük olanlar elenir.
+AK._bigSizeItems = function(tc){
+  var items=[];
+  tc.items.forEach(function(it){
+    var s=it.str.trim(); if(!AK._SIZE_TOK.test(s)) return;
+    items.push({s:s, h:Math.hypot(it.transform[2],it.transform[3]), x:it.transform[4], y:it.transform[5]});
+  });
+  if(!items.length) return [];
+  var maxH=items.reduce(function(m,it){ return Math.max(m,it.h); },0);
+  return items.filter(function(it){ return it.h >= maxH*0.5; });
+};
+// letter verilirse o bedenin büyük harfine, verilmezse sayfadaki ilk büyük
+// beden harfine tutunup kartı kırpar. Çapa bulunamazsa tüm sayfayı kırpar.
+AK._cropBig = function(pdf,letter,scale,pageNum){ return AK._pageCanvas(pdf,pageNum||1,scale).then(function(o){ return o.page.getTextContent().then(function(tc){
+  var bigs=AK._bigSizeItems(tc);
+  var best=null;
+  if(letter){ bigs.forEach(function(it){ if(it.s===letter && (!best||it.h>best.h)) best=it; }); }
+  if(!best && bigs.length){ // istenen beden yoksa: sayfadaki en büyük/en üstteki karta tutun
+    best=bigs.slice().sort(function(a,b){ return (b.h-a.h) || (b.y-a.y) || (a.x-b.x); })[0];
+  }
+  if(!best) return AK._trim(o.c,o.ctx);
+  var vpt=o.vp.convertToViewportPoint(best.x,best.y); function mm(v){return v*scale*72/25.4;}
+  // Kutu cömert tutulur: beden harfi kartın SOL kenarında durur ama altındaki
+  // "Baskı Adet / Printing Quantity" satırı ondan ~13mm daha sola taşar; dar
+  // kutu bunu ve fiyatı kesiyordu ("Baskı"→"skı", "999,99"→"9,99").
+  // Üstte kartın kendi başlığı/karekodu (beden harfinden ~20mm yukarıda) da
+  // girsin; sayfanın en üstündeki "FİYAT ETİKET RAPORU" başlığı girmesin.
+  var x0=Math.max(0,vpt[0]-mm(16)),y0=Math.max(0,vpt[1]-mm(22));
+  // Komşu kartı içeri almamak için: aynı satırdaki soldaki / aynı sütundaki
+  // üstteki beden harfiyle aramızın %75'inden öteye geçme (sık dizilmiş
+  // sayfalarda korur; bu sayfada zaten devreye girmez).
+  var xLim=0, yLim=0;
+  bigs.forEach(function(it){
+    if(it===best) return;
+    var v=o.vp.convertToViewportPoint(it.x,it.y);
+    if(Math.abs(v[1]-vpt[1])<=mm(20) && v[0]<vpt[0]){          // solumuzdaki kart
+      var lx=v[0]+(vpt[0]-v[0])*0.75; if(lx>xLim) xLim=lx;
+    }
+    if(Math.abs(v[0]-vpt[0])<=mm(20) && v[1]<vpt[1]){          // üstümüzdeki kart
+      var ly=v[1]+(vpt[1]-v[1])*0.75; if(ly>yLim) yLim=ly;
+    }
+  });
+  if(xLim && x0<xLim) x0=xLim;
+  if(yLim && y0<yLim) y0=yLim;
+  var w=Math.min(o.c.width-x0,mm(56)),h=Math.min(o.c.height-y0,mm(88));
+  var cc=document.createElement('canvas');cc.width=w;cc.height=h; var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,x0,y0,w,h,0,0,w,h);
+  return AK._trim(cc,cx);
+}); }); };
 // Sayfayı metin içeriğinin sınırına kırp (boş şablon kutularını atar → içerik büyür/okunur).
 AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,scale).then(function(o){ return o.page.getTextContent().then(function(tc){
   var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9,any=false;
@@ -17899,15 +17950,35 @@ AK._parseAdet = function(t){
   });
   return adet;
 };
-// Fiyat: renk başına sayfa; her sayfada M etiketini kırp + adetleri çıkar → [{code,url,adet}]
+// Fiyat: bir renk kodu BİRDEN FAZLA sayfaya yayılabilir (A4'e 6 kart sığar,
+// artan bedenler sonraki sayfaya taşar). Bu yüzden sayfa sayfa değil, RENK
+// KODU bazında toplanır:
+//  · adetler tüm sayfalardan TOPLANIR (eskiden son sayfa öncekini eziyordu →
+//    6 bedenlik 1. sayfa silinip sadece 2. sayfadaki 3XL kalıyordu),
+//  · kırpma için M kartının olduğu sayfa seçilir (yoksa ilk sayfa).
+// → [{code,url,adet}]
 AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
-  var out=[]; var i=1;
-  function scan(){ if(i>pdf.numPages) return Promise.resolve(out); var pageNum=i;
+  var byCode={}, order=[], i=1;
+  function scan(){ if(i>pdf.numPages) return Promise.resolve(); var pageNum=i;
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
       var joined=tc.items.map(function(x){return x.str;}).join(' ');
       var info=AK._pageInfo(joined); var adet=AK._parseAdet(joined);
-      return AK._cropBig(pdf,'M',3.6,pageNum).then(function(r){ out.push({code:info.code, url:r.url, adet:adet}); i++; return scan(); }); }); }
-  return scan();
+      var key=info.code||'_';
+      if(!byCode[key]){ byCode[key]={code:info.code, adet:{}, mPage:0, firstPage:pageNum}; order.push(key); }
+      var e=byCode[key];
+      Object.keys(adet).forEach(function(sz){ e.adet[sz]=(e.adet[sz]||0)+adet[sz]; });
+      if(!e.mPage && AK._bigSizeItems(tc).some(function(it){ return it.s==='M'; })) e.mPage=pageNum;
+      i++; return scan();
+    }); }
+  return scan().then(function(){
+    var out=[];
+    return order.reduce(function(ch,key){ return ch.then(function(){
+      var e=byCode[key];
+      return AK._cropBig(pdf, e.mPage?'M':null, 3.6, e.mPage||e.firstPage).then(function(r){
+        out.push({code:e.code, url:r.url, adet:e.adet});
+      });
+    }); }, Promise.resolve()).then(function(){ return out; });
+  });
 }); };
 // Yıkama: dolu sayfaları renk koduna göre → [{code,renk,url}] (boş sayfalar atlanır).
 // Renk kodu: footer'da MODEL-(RENKKODU veya MODEL/RENKKODU.
@@ -18036,7 +18107,9 @@ AK.processEntries = function(entries){
             if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; });
           });
         }
-        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code); col.fiyat=x.url?[x.url]:[]; if(x.adet && Object.keys(x.adet).length){ col.adet=x.adet; Object.keys(x.adet).forEach(function(sz){ sizeSet[sz]=true; }); } }); }); }
+        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code); if(x.url) col.fiyat=[x.url];
+          // Birden fazla fiyat dosyası gelirse de adetler birikir (ezilmez)
+          if(x.adet && Object.keys(x.adet).length){ if(!col.adet) col.adet={}; Object.keys(x.adet).forEach(function(sz){ col.adet[sz]=x.adet[sz]; sizeSet[sz]=true; }); } }); }); }
         if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
           var coded=list.filter(function(x){return x.code;});
           if(coded.length){ coded.forEach(function(x){ ensureColor(x.code,x.renk).yikama=[x.url]; }); }
