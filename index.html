@@ -17895,7 +17895,7 @@ AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,sc
 AK._CODE_RENK = { BK:'Siyah', BL:'Mavi', NV:'Lacivert', WH:'Beyaz', EC:'Ekru', EK:'Ekru',
   CR:'Krem', GR:'Gri', GY:'Gri', AN:'Antrasit', RD:'Kırmızı', RE:'Kırmızı', BG:'Bej',
   GN:'Yeşil', KH:'Haki', YL:'Sarı', MU:'Hardal', OR:'Turuncu', PK:'Pembe', PN:'Pembe', PW:'Pudra',
-  PR:'Mor', PU:'Mor', BR:'Kahverengi', BN:'Kahverengi', BE:'Bej', TN:'Taba', LI:'Lila',
+  PR:'Mor', PU:'Mor', BR:'Kahverengi', BN:'Kahverengi', BE:'Mavi', TN:'Taba', LI:'Lila',
   TR:'Turkuaz', MN:'Mint', PT:'Petrol', SL:'Somon', IN:'İndigo', ST:'Taş' };
 AK._codeRenk = function(code){ if(!code) return null; var p=(''+code).toUpperCase().match(/^([A-Z]{2})/); return p?(AK._CODE_RENK[p[1]]||null):null; };
 // Desen/doku kelimeleri renk adı DEĞİLDİR — bunlar gelirse kod ön ekine düşülür.
@@ -17918,7 +17918,15 @@ AK._pageInfo = function(t){
   var code=cm?cm[2]:null;
   // Önce barkod METNİNDEKİ gerçek renk adı (Beige→Bej); desen kelimesiyse
   // ("Solid" vb.) kod ön ekinden tahmine düşülür.
-  var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
+  var renk=AK._renkFromText(nm?nm[1]:null);
+  // Barkodda ad BÜYÜK HARF yazılmışsa ("BLUE SIZE : M") üstteki kalıp tutmuyor
+  // ve yanlış kod-ön-eki tahminine düşülüyordu. Sadece BİLİNEN renk adlarını
+  // kabul et — "TABLE" gibi kelimeler renk sanılmasın.
+  if(!renk){
+    var nu=t.match(/\b([A-Z]{3,12})\s+SIZE\s*:/);
+    if(nu && AK._EN_TR[nu[1].toLowerCase()]) renk=AK._EN_TR[nu[1].toLowerCase()];
+  }
+  if(!renk) renk=AK._codeRenk(code);
   return { code: code, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: renk };
 };
 // İç Barkod: renge göre grupla, her renk için M sayfasını üret → [{code,renk,model,url}]
