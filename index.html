@@ -523,6 +523,30 @@
     // bulut dokumani sadece GitHub URL'sini + meta veriyi saklar. Upload
     // tamamlanip url gelince base64 yerelde de otomatik temizlenir.
     function _isDataUrl(s){ return typeof s === 'string' && s.lastIndexOf('data:', 0) === 0; }
+    // Firestore `undefined` kabul etmez ve TUM koleksiyonun yazimini reddeder
+    // ("Unsupported field value: undefined"). Bellekte uretilen kayitlar
+    // (ör. kod tablosu) undefined alan tasiyabildigi icin yazmadan once temizle.
+    function stripUndefined(v){
+      if(Array.isArray(v)){
+        var arr=null;
+        for(var i=0;i<v.length;i++){
+          var nv=(v[i]===undefined)?null:stripUndefined(v[i]);
+          if(nv!==v[i]){ if(!arr) arr=v.slice(); arr[i]=nv; }
+        }
+        return arr||v;
+      }
+      if(v && typeof v==='object' && !(v instanceof Date)){
+        var clone=null;
+        for(var k in v){
+          if(!Object.prototype.hasOwnProperty.call(v,k)) continue;
+          if(v[k]===undefined){ if(!clone) clone=Object.assign({},v); delete clone[k]; continue; }
+          var nv2=stripUndefined(v[k]);
+          if(nv2!==v[k]){ if(!clone) clone=Object.assign({},v); clone[k]=nv2; }
+        }
+        return clone||v;
+      }
+      return v;
+    }
     function stripPhotoBlobs(item){
       if(!item || typeof item !== 'object') return item;
       let clone = null;
@@ -608,7 +632,7 @@
             markWrite(key, id);
             const { doc } = window._fs;
             const docRef = doc(db, 'appdata', key, 'items', id);
-            batch.set(docRef, stripPhotoBlobs(item));
+            batch.set(docRef, stripUndefined(stripPhotoBlobs(item)));
           }
           batches.push(batch.commit());
         }
@@ -18460,13 +18484,54 @@ AK.onZip = function(id, fileList){
 };
 // Yüklenen arşivleri/renkleri temizle
 AK.clearZips = function(id){ AK._merged=null; AK._zipNames=[]; AK._zipKeys=[]; AK.state.colors=[]; AK.addColor(); AK.renderColors(); };
+// Dokuma etiketi gorselinden bandin KENDI rengini anla: siyah bant genis koyu
+// alan birakir, beyaz etikette koyu pikseller sadece yazi/cizgilerdir.
+// Belirsizse null doner (kod tablosuna renk yazilmaz → etiket filtrelenmez).
+AK._labelTone = function(url){
+  return new Promise(function(res,rej){
+    var img=new Image();
+    img.onload=function(){
+      try{
+        var w=Math.min(img.width||1,220), h=Math.min(img.height||1,220);
+        if(!w||!h) return res(null);
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h);
+        x.drawImage(img,0,0,w,h);
+        var d=x.getImageData(0,0,w,h).data, dark=0, tot=w*h;
+        for(var i=0;i<d.length;i+=4){
+          if(d[i+3]<40){ tot--; continue; }                       // saydam
+          if((d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114) < 70) dark++;  // koyu piksel
+        }
+        if(tot<=0) return res(null);
+        var r=dark/tot;
+        if(r>0.30) return res('Siyah');   // genis koyu alan → siyah bant
+        if(r<0.12) return res('Beyaz');   // sadece yazi koyu → beyaz etiket
+        res(null);                        // kararsiz → renk yazma
+      }catch(e){ res(null); }
+    };
+    img.onerror=function(){ res(null); };
+    img.src=url;
+  });
+};
 AK.tag = function(id,name,type){
   var c=AK._c(id); if(!c||!c.files) return;
   var f=c.files.filter(function(x){return x.name===name;})[0]; if(!f) return;
   if(type==='__ignore'){ f.type='ignored'; AK.renderColors(); return; }
   if(!type) return;
   // kodu tabloya kaydet (bir daha sorma)
-  if(f.code){ var m=AK.map(); m.png[f.code]={type:type, renk:c.renk||undefined}; AK.saveMap(m); }
+  // Kod tablosuna kaydet (bir daha sorma). ONEMLI: buradaki 'renk' ETIKETIN
+  // KENDI rengidir (dokuma bandi siyah mi beyaz mi) — malin rengi DEGIL.
+  // Eskiden c.renk (malin rengi, ör. "Ekru") yaziliyordu: hem kalici yanlis
+  // kayit birakiyor hem de Firestore'a undefined gonderip senkronu kiriyordu.
+  if(f.code){
+    var saveCode=function(renk){
+      var m=AK.map(); var e={type:type}; if(renk) e.renk=renk;
+      m.png[f.code]=e; AK.saveMap(m);
+    };
+    if(type==='dokuma' && f.images && f.images[0]){
+      AK._labelTone(f.images[0]).then(saveCode).catch(function(){ saveCode(null); });
+    } else saveCode(null);
+  }
   // PDF ise şimdi render et
   if(f.pdfBytes && !f.images.length){ AK.renderSmart(f.pdfBytes,type).then(function(imgs){ f.images=imgs; f.type=type; AK.renderColors(); }); }
   else { f.type=type; AK.renderColors(); }
