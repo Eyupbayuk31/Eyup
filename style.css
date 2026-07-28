@@ -14126,3 +14126,65 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   .ak-color-head{padding:11px 12px;}
   .ak-color-body{padding:12px;}
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Easter egg — login başlığına 8 kez tıkla
+   ══════════════════════════════════════════════════════════════ */
+#loginTitle{ user-select:none; -webkit-user-select:none; }
+
+@keyframes eggShake{
+  0%,100%{ transform:translateX(0) rotate(0); }
+  20%{ transform:translateX(-3px) rotate(-1deg); }
+  40%{ transform:translateX(3px) rotate(1deg); }
+  60%{ transform:translateX(-2px) rotate(-.6deg); }
+  80%{ transform:translateX(2px) rotate(.6deg); }
+}
+.egg-shake{ animation:eggShake .38s ease; }
+
+#eggBox{
+  position:fixed; inset:0; z-index:99999; pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; overflow:hidden;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,.55), rgba(0,0,0,.8));
+  animation:eggIn .35s cubic-bezier(.2,.9,.3,1.4);
+}
+#eggBox.out{ animation:eggOut .55s ease forwards; }
+@keyframes eggIn{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes eggOut{ to{ opacity:0; } }
+
+.egg-crown{
+  font-size:64px; line-height:1;
+  animation:eggPop .6s cubic-bezier(.2,.9,.3,1.6);
+  filter:drop-shadow(0 6px 18px rgba(245,158,11,.6));
+}
+@keyframes eggPop{ 0%{ transform:scale(0) rotate(-40deg); } 70%{ transform:scale(1.25) rotate(8deg); } 100%{ transform:scale(1) rotate(0); } }
+
+.egg-text{
+  font-size:clamp(30px,7vw,58px); font-weight:900; letter-spacing:-1px;
+  background:linear-gradient(95deg,#fbbf24,#f59e0b 35%,#fde68a 55%,#f59e0b 75%,#fbbf24);
+  background-size:220% auto;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+  animation:eggShine 2.4s linear infinite, eggPop .55s cubic-bezier(.2,.9,.3,1.5);
+  text-align:center; padding:0 16px;
+}
+@keyframes eggShine{ to{ background-position:220% center; } }
+
+.egg-sub{
+  font-size:12px; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+  color:rgba(255,255,255,.6); margin-top:2px;
+}
+
+.egg-conf{
+  position:absolute; top:-14px; width:9px; height:14px; border-radius:2px;
+  opacity:.95; animation:eggFall linear forwards;
+}
+@keyframes eggFall{
+  0%{ transform:translateY(-10vh) rotate(0); opacity:1; }
+  100%{ transform:translateY(110vh) rotate(720deg); opacity:.15; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .egg-shake, .egg-crown, .egg-text, .egg-conf, #eggBox{ animation:none !important; }
+  .egg-text{ -webkit-text-fill-color:#f59e0b; color:#f59e0b; }
+}
