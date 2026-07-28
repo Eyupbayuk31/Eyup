@@ -18027,13 +18027,24 @@ AK._resolveColorKey = function(map, code, model){
   code = code || '_';
   var key = AK._ckey(code, model);
   if(map[key]) return key;
+  var ks = Object.keys(map);
   if(model){
     var orphan = '|' + code;
     if(map[orphan]){ map[key]=map[orphan]; delete map[orphan]; if(!map[key].model) map[key].model=model; return key; }
+    // Renk kodu OKUNAMAYAN tek kova varsa (ör. önce yüklenen birleşik Fall in
+    // Love etiketi) onu bu renge taşı — aynı renk ikiye bölünmesin.
+    if(ks.length===1 && map[ks[0]].code==null){
+      map[key]=map[ks[0]]; delete map[ks[0]];
+      map[key].code=(code==='_'?null:code); if(!map[key].model) map[key].model=model;
+      return key;
+    }
   } else {
     var want = (code==='_') ? null : code;
-    var same = Object.keys(map).filter(function(k){ return map[k].code===want; });
+    var same = ks.filter(function(k){ return map[k].code===want; });
     if(same.length===1) return same[0];
+    // Kodsuz dosya, tek renkli arşivde o renge aittir (birden çok renk varsa
+    // hangisine ait olduğu belli olmadığı için ayrı bırakılır).
+    if(want===null && ks.length===1) return ks[0];
   }
   return key;
 };
@@ -18567,7 +18578,7 @@ AK.parseSummary = function(bytes){
           else if(map.po==null && /sipari[sş]\s*numaras|order\s*number/.test(h)) map.po=ci;
           else if(map.termin==null && /termin|delivery\s*date/.test(h)) map.termin=ci;
           else if(map.renk==null && /renk\s*kodu|colou?r/.test(h)) map.renk=ci;
-          else if(map.shipTo==null && /ship\s*to/.test(h)) map.shipTo=ci;
+          else if(map.shipTo==null && /(ship\s*to|teslimat\s*[uü]lke|delivery\s*country)/.test(h)) map.shipTo=ci;
           else if(map.lots==null && /(sipari[sş]\s*ge[cç]ilen\s*lot|ordered\s*lot|number\s*of\s*lots)/.test(h)) map.lots=ci;
         });
         if(map.model==null) map=null;
@@ -18602,7 +18613,10 @@ AK.parseSummary = function(bytes){
         code: cm?cm[1].toUpperCase():null,
         renk: rk,
         shipTo: (map.shipTo!=null?(r[map.shipTo]||''):'').toString().trim(),
-        sizes: sizes, toplam: tot, direct: direct
+        sizes: sizes, toplam: tot, direct: direct,
+        // "TOPTAN-5 / TOPTAN-7" gibi sevk yerleri toptan siparişidir; bunlar
+        // ayrı dikildiği için föyde ayrıca gösterilir.
+        toptan: /toptan/i.test((map.shipTo!=null?(r[map.shipTo]||''):'')+'')
       };
       if(prev){ rows[prev.i]=rec; seen[key]={direct:direct, i:prev.i}; }
       else { seen[key]={direct:direct, i:rows.length}; rows.push(rec); }
@@ -18691,9 +18705,13 @@ AK.applySummary = function(){
     var pick=AK._pickSummaryRows(rows, model, c.po, c.code);
     if(!pick.rows.length) return;
     // Aynı termindeki birden çok PO → beden beden topla
-    var sum={};
-    pick.rows.forEach(function(r){ Object.keys(r.sizes).forEach(function(k){ sum[k]=(sum[k]||0)+r.sizes[k]; }); });
+    var sum={}, top={};
+    pick.rows.forEach(function(r){ Object.keys(r.sizes).forEach(function(k){
+      sum[k]=(sum[k]||0)+r.sizes[k];
+      if(r.toptan) top[k]=(top[k]||0)+r.sizes[k];
+    }); });
     if(!Object.keys(sum).length) return;
+    c.toptan = Object.keys(top).length ? top : null;
     c.adet=c.adet||{};
     AK.SIZES.forEach(function(b){ c.adet[b[0]] = sum[b[0]]!=null ? sum[b[0]] : ''; });
     // Tabloda olan ama formda görünmeyen bedenler eklensin (ör. 3XL)
@@ -18701,7 +18719,9 @@ AK.applySummary = function(){
     Object.keys(sum).forEach(function(k){ if(c._xsizes.indexOf(k)<0) c._xsizes.push(k); });
     if(!c.po && pick.rows.length===1 && pick.rows[0].po) c.po=pick.rows[0].po;
     var tot=Object.keys(sum).reduce(function(t,k){return t+sum[k];},0);
-    out.ok.push((c.renk||c.code||model)+': '+tot+' adet ('+pick.reason+(pick.rows.length>1?(', '+pick.rows.length+' PO toplandı'):'')+')');
+    var tTop=Object.keys(top).reduce(function(t,k){return t+top[k];},0);
+    out.ok.push((c.renk||c.code||model)+': '+tot+' adet ('+pick.reason+(pick.rows.length>1?(', '+pick.rows.length+' PO toplandı'):'')+')'+
+      (tTop?(' · toptan '+tTop):''));
   });
   if(out.ok.length) AK.renderColors();
   return out;
@@ -18766,6 +18786,17 @@ AK.buildFoyHtml = function(c){
   var bedCells=foyBeds.map(function(b){
     return '<div class="qc'+(b[0]==='m'?' hi':'')+'"><span>'+b[1]+'</span><b>'+((parseInt(c.adet[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
   }).join('')+'<div class="qc total"><span>TOPLAM</span><b>'+tot.toLocaleString('tr')+'</b></div>';
+  var tpH='';
+  if(c.toptan && Object.keys(c.toptan).length){
+    var tpT=foyBeds.reduce(function(a,b){ return a+(parseInt(c.toptan[b[0]],10)||0); },0);
+    if(tpT>0){
+      tpH='<div class="qty" style="border-color:#f0c896;margin-top:-6px;">'+
+        '<div class="qh" style="background:#fff7ed;color:#b45309;">Toptan (TOPTAN-5 / TOPTAN-7) — ayrı dikilecek</div>'+
+        '<div class="qcells">'+foyBeds.map(function(b){
+          return '<div class="qc"><span>'+b[1]+'</span><b>'+((parseInt(c.toptan[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
+        }).join('')+'<div class="qc total"><span>TOPTAN</span><b>'+tpT.toLocaleString('tr')+'</b></div></div></div>';
+    }
+  }
   var acc = files.map(function(f,i){
     var imgs=f.images.map(function(u){ return '<div class="fimg"><img src="'+u+'"></div>'; }).join('');
     return '<div class="fsec"><div class="fsh"><span class="fn">'+(i+1)+'</span> '+(f.label||AK.TYPES[f.type].label)+(f.renk?' <em>· '+f.renk+'</em>':'')+(f.images.length>1?' <span class="pg">'+f.images.length+' sayfa</span>':'')+'</div>'+imgs+'<div class="fchk"><span></span> Kontrol edildi</div></div>';
@@ -18778,7 +18809,7 @@ AK.buildFoyHtml = function(c){
     '<div class="wrap" id="sheet"><div class="mast"><div><div class="mb">İrsaliye Pro</div><div class="ms">Aksesuar Kontrol</div></div><div class="mr">Model: <b>'+esc(mdlH||'—')+'</b><br>PO: <b>'+esc(c.po||'—')+'</b><br>Tarih: <b>'+today+'</b></div></div>'+
     '<h1>Aksesuar Kontrol Föyü</h1><div class="mdl">'+esc(mdlH||'')+' · '+esc(c.renk||'')+'</div>'+
     '<div class="chips"><span class="chip st">'+AK.STAGE_LABEL[AK.state.asama]+'</span><span class="chip">Renk: '+esc(c.renk||'—')+'</span><span class="chip">PO: '+esc(c.po||'—')+'</span></div>'+
-    '<div class="qty"><div class="qh">Adet Dökümü — beden beden</div><div class="qcells">'+bedCells+'</div></div>'+
+    '<div class="qty"><div class="qh">Adet Dökümü — beden beden</div><div class="qcells">'+bedCells+'</div></div>'+tpH+
     acc+
     '<div class="sign"><div><div class="sb">Kontrol Eden</div><div class="sl"></div></div><div><div class="sb">Tarih</div><div class="sl"></div></div><div><div class="sb">Sonuç · İmza</div><div class="sl"></div></div></div>'+
     '</div>';
@@ -18832,7 +18863,29 @@ AK._renderColorPage = function(pdf, c){
   var tx=M+beds.length*colw; pdf.setFillColor.apply(pdf,INK); pdf.rect(tx,y,colw,bh,'F');
   pdf.setTextColor(180,190,205); pdf.setFontSize(7); T('TOPLAM', tx+colw/2, y+4, {align:'center'});
   pdf.setTextColor(255,255,255); pdf.setFontSize(11); T(String(tot), tx+colw/2, y+9.6, {align:'center'});
-  y+=bh+6;
+  y+=bh+2;
+  // ---- toptan (TOPTAN-5 / TOPTAN-7 sevkiyatları) ayrı satır ----
+  var tp=c.toptan;
+  if(tp && Object.keys(tp).length){
+    var tpTot=beds.reduce(function(a,b){ return a+(parseInt(tp[b[0]],10)||0); },0);
+    if(tpTot>0){
+      var th=9;
+      for(var q=0;q<beds.length;q++){ var qx=M+q*colw;
+        pdf.setFillColor(255,247,237); pdf.rect(qx,y,colw,th,'F');
+        pdf.setDrawColor(240,200,150); pdf.setLineWidth(0.3); pdf.rect(qx,y,colw,th);
+        pdf.setTextColor(180,83,9); pdf.setFont('helvetica','bold'); pdf.setFontSize(9);
+        T(String(parseInt(tp[beds[q][0]],10)||0), qx+colw/2, y+6, {align:'center'});
+      }
+      var tqx=M+beds.length*colw;
+      pdf.setFillColor(180,83,9); pdf.rect(tqx,y,colw,th,'F');
+      pdf.setTextColor(255,255,255); pdf.setFontSize(9); T(String(tpTot), tqx+colw/2, y+6, {align:'center'});
+      y+=th+3.2;
+      pdf.setTextColor(180,83,9); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
+      T('» Bunun '+tpTot+' adedi TOPTAN siparişidir (TOPTAN-5 / TOPTAN-7) — AYRI DİKİLECEK.', M, y);
+      pdf.setFont('helvetica','normal'); y+=3.5;
+    }
+  }
+  y+=4;
   // ---- aksesuarlar ----
   // Düzen: SOL = sistemdeki görsel (arşivden), SAĞ = gelen numunenin
   // YAPIŞTIRILACAĞI kesikli kutu → sistemdeki ile gelen yan yana kanıt olur.
@@ -19040,6 +19093,7 @@ AK._recBlob = function(r){
         if(r.renk) c.renk=r.renk;
         if(r.po) c.po=r.po;
         if(r.model) c.model=r.model;   // kayıttaki model korunsun (yeniden basımda aynı çıksın)
+        if(r.toptan) c.toptan=r.toptan;
         var st={model:AK.state.model, asama:AK.state.asama, atolye:AK.state.atolye};
         // Aşama: üstte SEÇİLİ olan aşama öncelikli (kullanıcı Ütü Paket seçtiyse
         // kayıttan Ütü Paket föyü çıksın); yoksa kaydın son aşaması.
@@ -19076,7 +19130,7 @@ AK.generateAll = function(mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk varsa güncellenir
-  withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)) }, 300); });
+  withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null) }, 300); });
   if(typeof toast==='function') toast(mode==='save'?(withFiles.length+' renk kaydedildi ✓'):(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓'),'success');
 };
 
@@ -19111,7 +19165,7 @@ AK.generate = function(id, mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
-  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), types:have.map(function(f){return f.type;}) }, 200);
+  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), types:have.map(function(f){return f.type;}) }, 200);
   if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi ✓ (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓'),'success');
 };
 
