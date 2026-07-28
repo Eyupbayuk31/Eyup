@@ -16217,6 +16217,53 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   const greet   = document.getElementById('loginGreet');
   const clockTxt= document.getElementById('loginClockText');
 
+  // ── Easter egg: marka başlığına 8 kez tıkla ──────────────────────────────
+  (function(){
+    var titleEl = document.getElementById('loginTitle');
+    if(!titleEl) return;
+    var hits = 0, timer = null;
+    titleEl.style.cursor = 'pointer';
+    titleEl.setAttribute('title', '');
+    titleEl.addEventListener('click', function(){
+      hits++;
+      clearTimeout(timer);
+      timer = setTimeout(function(){ hits = 0; }, 1600); // ara verilirse sayaç sıfırlanır
+      // 5. tıklamadan sonra hafif bir titreşim: "bir şey oluyor" hissi
+      if(hits >= 5 && hits < 8){
+        titleEl.classList.remove('egg-shake');
+        void titleEl.offsetWidth;   // animasyonu yeniden tetikle
+        titleEl.classList.add('egg-shake');
+      }
+      if(hits >= 8){
+        hits = 0; clearTimeout(timer);
+        titleEl.classList.remove('egg-shake');
+        showEgg();
+      }
+    });
+    function showEgg(){
+      if(document.getElementById('eggBox')) return;
+      var box = document.createElement('div');
+      box.id = 'eggBox';
+      box.innerHTML = '<span class="egg-crown">👑</span>'
+                    + '<span class="egg-text">Adamsın Fuat Abi</span>'
+                    + '<span class="egg-sub">İrsaliye Pro · gizli oda</span>';
+      document.body.appendChild(box);
+      // konfeti
+      var colors = ['#f59e0b','#10b981','#3b82f6','#ef4444','#a855f7','#ec4899'];
+      for(var i=0;i<28;i++){
+        var c = document.createElement('i');
+        c.className = 'egg-conf';
+        c.style.left = (Math.random()*100) + 'vw';
+        c.style.background = colors[i % colors.length];
+        c.style.animationDelay = (Math.random()*0.5) + 's';
+        c.style.animationDuration = (1.8 + Math.random()*1.4) + 's';
+        box.appendChild(c);
+      }
+      setTimeout(function(){ box.classList.add('out'); }, 2600);
+      setTimeout(function(){ try{ box.remove(); }catch(e){} }, 3300);
+    }
+  })();
+
   function showLogin(){
     overlay.style.display = 'flex';
     document.body.classList.add('logged-out');
