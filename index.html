@@ -18420,11 +18420,25 @@ AK._colorsFromMerged = function(m, prev){
         var isWhite=/beyaz|white|ekru|ecru|krem|bej/.test(lr), isBlack=/siyah|black/.test(lr);
         if(isWhite||isBlack){
           var match=(labelPref==='white'&&isWhite)||(labelPref==='black'&&isBlack);
-          if(!match) return; // uygun olmayan etiket rengini atla
-          files.push(Object.assign({}, s, {note: AK._labelNote(effRenk, labelPref)})); return;
+          // Etiket ASLA elenmez. Açık malda bile müşteri isteğiyle siyah dokuma
+          // takılabiliyor; eskiden uygun olmayan renk tamamen atılıyordu ve
+          // etiket föyde hiç görünmüyordu. Artık ikisi de listelenir, uygun
+          // olan "önerilen" diye işaretlenir — kararı kullanıcı verir.
+          files.push(Object.assign({}, s, {
+            note: match ? AK._labelNote(effRenk, labelPref)
+                        : ('Mal rengi '+(effRenk||'—')+' için normalde '+(labelPref==='white'?'BEYAZ/EKRU':'SİYAH')+
+                           ' dokuma kullanılır. Bu '+(isBlack?'SİYAH':'BEYAZ')+' etiket yalnızca müşteri isteğiyle takılır.'),
+            _labelPref: match
+          }));
+          return;
         }
       }
       files.push(s);
+    });
+    // Önerilen dokuma etiketi diğerinden önce sıralansın
+    files.sort(function(a,b){
+      if(a.type!=='dokuma'||b.type!=='dokuma') return 0;
+      return (b._labelPref?1:0)-(a._labelPref?1:0);
     });
     // Adet: kullanıcı elle girdiyse koru; yoksa fiyat kartından otomatik.
     var beds=AK.SIZES.map(function(b){return b[0];}); var padet=p.adet||{};
