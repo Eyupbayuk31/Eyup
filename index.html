@@ -18016,6 +18016,27 @@ AK._pageInfo = function(t){
 // modelde bulunur) taşıması durumunda ikisini TEK kovada birleştiriyordu:
 // ikinci modelin barkodu/fiyat kartı kayboluyor, föye yanlış model basılıyordu.
 AK._ckey = function(code, model){ return (model||'')+'|'+(code||'_'); };
+// Bir renk kovasi icin hedef anahtari bul ve gerekirse mevcut kovayi tasi.
+// Yikama gibi bazi dosyalarda model kodu yoktur; bunlar MODELSIZ anahtar
+// uretir. Uzlastirilmazsa ayni renk iki kovaya bolunur — kullanicida "ayni
+// modelde ikinci bir bos renk karti" olarak gorunur (biri barkod+fiyat,
+// digeri sadece yikama). Kural: model biliniyorsa MODEL|KOD; model yoksa
+// ayni koddan TEK kova varsa ona baglan; model sonradan ogrenilirse
+// modelsiz kova o modele tasinir.
+AK._resolveColorKey = function(map, code, model){
+  code = code || '_';
+  var key = AK._ckey(code, model);
+  if(map[key]) return key;
+  if(model){
+    var orphan = '|' + code;
+    if(map[orphan]){ map[key]=map[orphan]; delete map[orphan]; if(!map[key].model) map[key].model=model; return key; }
+  } else {
+    var want = (code==='_') ? null : code;
+    var same = Object.keys(map).filter(function(k){ return map[k].code===want; });
+    if(same.length===1) return same[0];
+  }
+  return key;
+};
 // İç Barkod: renge göre grupla, her renk için M sayfasını üret → [{code,renk,model,url}]
 AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
   var infos=[]; var i=1;
@@ -18195,16 +18216,7 @@ AK.processEntries = function(entries){
     // parçaları (barkod / fiyat / yıkama) bölünmez.
     function ensureColor(code,renk,model){
       code=code||'_';
-      var key=AK._ckey(code,model);
-      if(!byColor[key]){
-        if(model){
-          var orphan='|'+code;
-          if(byColor[orphan]){ byColor[key]=byColor[orphan]; delete byColor[orphan]; byColor[key].model=model; }
-        } else {
-          var same=Object.keys(byColor).filter(function(k){ return byColor[k].code===(code==='_'?null:code); });
-          if(same.length===1) key=same[0];
-        }
-      }
+      var key=AK._resolveColorKey(byColor, code, model);
       if(!byColor[key]) byColor[key]={code:(code==='_'?null:code), renk:renk||null, model:model||null, icbarkod:[], fiyat:[], yikama:[], combo:[], adet:null};
       if(renk&&!byColor[key].renk) byColor[key].renk=renk;
       if(model&&!byColor[key].model) byColor[key].model=model;
@@ -18449,7 +18461,7 @@ AK._processFilesInto = function(files, M){
         }
         if(!M.sizes) M.sizes=[];
         (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
-        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var dst=M.byColor[k]||(M.byColor[k]={code:src.code,renk:src.renk,model:src.model||null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src._combo) dst._combo=true; });
+        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var mk=AK._resolveColorKey(M.byColor, src.code, src.model); var dst=M.byColor[mk]||(M.byColor[mk]={code:src.code,renk:src.renk,model:src.model||null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src._combo) dst._combo=true; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
