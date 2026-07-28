@@ -18602,36 +18602,38 @@ AK._pickSummaryRows = function(rows, model, po, code){
   var mine=rows.filter(function(r){ return r.model===M; });
   if(!mine.length) return {rows:[], reason:'tabloda model yok'};
   if(code){ var byCode=mine.filter(function(r){ return r.code===(''+code).toUpperCase(); }); if(byCode.length) mine=byCode; }
-  // PO, hangi TERMİN grubunu alacağımızı belirler; adet o grubun TAMAMIdır.
-  // Aksesuar (etiket) siparişi tek sevkiyat için değil, modelin tüm siparişi
-  // için verilir → aynı terminli bütün PO'lar beden beden toplanır.
+  // Gruplama AY bazındadır: aynı ay içindeki PO'lar aynı sevkiyat dönemidir,
+  // gün gün farklı olabilirler (03.08 ve 20.08 aynı gruba girer).
+  var monKey=function(r){ var ym=_aksTerminYM(r.termin); return ym ? (ym.y+'-'+(ym.m<10?'0':'')+ym.m) : (r.termin||'—'); };
+  var groups={};
+  mine.forEach(function(r){ var k=monKey(r); (groups[k]=groups[k]||[]).push(r); });
+  var label=function(k){ var m=k.match(/^(\d{4})-(\d{2})$/); return m ? (m[2]+'.'+m[1]) : k; };
+  // PO, hangi AY grubunu alacağımızı belirler; adet o grubun TAMAMIdır.
+  // Aksesuar (etiket) siparişi tek sevkiyat için değil, modelin o dönemki
+  // tüm siparişi için verilir → gruptaki bütün PO'lar beden beden toplanır.
   var P=(po||'').toString().trim();
   if(P){
     var byPo=mine.filter(function(r){ return r.po===P; });
     if(byPo.length){
-      var t=byPo[0].termin||'—';
-      var grp=mine.filter(function(r){ return (r.termin||'—')===t; });
-      return {rows:grp, reason:'termin '+t+' · PO '+P+' ile eşleşti'};
+      var k0=monKey(byPo[0]);
+      return {rows:groups[k0], reason:label(k0)+' termini (PO '+P+' bu ayda)'};
     }
   }
-  // Termine göre grupla
-  var groups={};
-  mine.forEach(function(r){ var k=r.termin||'—'; (groups[k]=groups[k]||[]).push(r); });
   var keys=Object.keys(groups);
-  if(keys.length===1) return {rows:groups[keys[0]], reason:'termin '+keys[0]};
-  var today=new Date(); today.setHours(0,0,0,0);
+  if(keys.length===1) return {rows:groups[keys[0]], reason:label(keys[0])+' termini'};
+  // PO tabloda yok → bugünden sonraki EN YAKIN ay (geçmiş aylar zaten yüklendi)
+  var now=new Date(); var nowIdx=now.getFullYear()*12+now.getMonth();
   var best=null;
   keys.forEach(function(k){
-    var ym=_aksTerminYM(k); if(!ym) return;
-    var d=new Date(ym.y, ym.m-1, +( (k.match(/^(\d{1,2})[.\/\-]/)||[])[1] || 1));
-    var diff=d-today;
-    var cand={k:k, d:d, future:diff>=0, dist:Math.abs(diff)};
+    var m=k.match(/^(\d{4})-(\d{2})$/); if(!m) return;
+    var idx=(+m[1])*12+(+m[2])-1, diff=idx-nowIdx;
+    var cand={k:k, future:diff>=0, dist:Math.abs(diff)};
     if(!best){ best=cand; return; }
-    if(cand.future && !best.future) best=cand;                         // ileri tarih önceliklidir
+    if(cand.future && !best.future) best=cand;                          // ileri ay önceliklidir
     else if(cand.future===best.future && cand.dist<best.dist) best=cand; // en yakını
   });
-  if(!best) return {rows:groups[keys[0]], reason:'termin '+keys[0]};
-  return {rows:groups[best.k], reason:'termin '+best.k+(best.future?' (en yakın)':' (en yeni)')};
+  if(!best) return {rows:groups[keys[0]], reason:label(keys[0])+' termini'};
+  return {rows:groups[best.k], reason:label(best.k)+' termini'+(best.future?' (en yakın)':' (en yeni)')};
 };
 // Excel'i oku → tüm renk kartlarının adetlerini doldur
 AK.onSummaryXlsx = function(fileList){
