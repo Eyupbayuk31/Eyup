@@ -18296,7 +18296,9 @@ AK.renderAsamaInfo = function(){
     var opt=!AK.TYPES[t].req;
     return '<span class="ak-exp'+(opt?' opt':'')+'"><i class="fas '+(AK._TYPE_ICON[t]||'fa-file')+'"></i>'+AK._esc(AK.TYPES[t].label)+(opt?'<em>opsiyonel</em>':'')+'</span>';
   }).join('');
-  el.innerHTML='<div class="ak-exp-lbl"><i class="fas fa-list-check"></i> '+AK.STAGE_LABEL[AK.state.asama]+' aşamasında beklenen aksesuarlar</div><div class="ak-exp-row">'+chips+'</div>';
+  var ico=AK.state.asama==='dikim'?'fa-scissors':'fa-box-open';
+  el.innerHTML='<div class="ak-exp-lbl"><i class="fas '+ico+'"></i> '+AK._asamaAd()+' aşamasında beklenen aksesuarlar'+
+    '<span class="ak-exp-count">'+order.length+' kalem</span></div><div class="ak-exp-row">'+chips+'</div>';
 };
 
 AK.addColor = function(){ var ad={}; AK.SIZES.forEach(function(b){ ad[b[0]]=''; }); AK.state.colors.push({ id:AK._cid++, renk:'', po:'', adet:ad, files:null, zipName:'' }); AK.renderColors(); };
@@ -18347,14 +18349,21 @@ AK.renderColors = function(){
       : '<span class="ak-status ok"><i class="fas fa-circle-check"></i> Hazır</span>');
     return '<div class="ak-color" data-cid="'+c.id+'"'+rail+'>'+
       '<div class="ak-color-head">'+
-        '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+swatch+
-        '<input class="form-input ak-inp-renk" placeholder="Renk (ör. Siyah)" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)" onchange="AK.onRenkChange('+c.id+')">'+
-        '<input class="form-input" placeholder="PO no" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)" style="max-width:130px;">'+
+        '<span class="ak-color-badge">Renk '+(idx+1)+'</span>'+
+        '<label class="ak-hf ak-hf-renk"><span class="ak-hf-l">Renk</span>'+
+          '<span class="ak-hf-in'+(swatch?' has-sw':'')+'">'+swatch+
+          '<input class="form-input ak-inp-renk" placeholder="ör. Siyah" value="'+(c.renk||'')+'" oninput="AK.setField('+c.id+',\'renk\',this.value)" onchange="AK.onRenkChange('+c.id+')"></span>'+
+        '</label>'+
+        '<label class="ak-hf ak-hf-po"><span class="ak-hf-l">PO No</span>'+
+          '<span class="ak-hf-in"><input class="form-input" placeholder="1959322" value="'+(c.po||'')+'" oninput="AK.setField('+c.id+',\'po\',this.value)"></span>'+
+        '</label>'+
         status+
-        '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Sil">&times;</button>'+
+        '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Rengi sil" aria-label="Rengi sil"><i class="fas fa-xmark"></i></button>'+
       '</div>'+
       '<div class="ak-color-body">'+
-      '<div class="ak-adet"><span class="ak-adet-lbl">Adet</span>'+beds+'<span class="ak-tot">Σ '+tot.toLocaleString('tr')+'</span></div>'+
+      '<div class="ak-adet"><div class="ak-adet-col"><span class="ak-adet-lbl">Adet · beden beden</span>'+
+      '<div class="ak-bdgroup">'+beds+'</div></div>'+
+      '<span class="ak-tot"><em>Σ</em> '+tot.toLocaleString('tr')+'</span></div>'+
       '<div class="ak-drop'+((c.zipNames&&c.zipNames.length)?' loaded':'')+'" onclick="this.querySelector(\'input\').click()"><i class="fas '+((c.zipNames&&c.zipNames.length)?'fa-circle-check':'fa-file-zipper')+'"></i>'+
         ((c.zipNames&&c.zipNames.length)
           ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
