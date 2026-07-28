@@ -18802,12 +18802,13 @@ AK.buildFoyHtml = function(c){
     return '<div class="fsec"><div class="fsh"><span class="fn">'+(i+1)+'</span> '+(f.label||AK.TYPES[f.type].label)+(f.renk?' <em>· '+f.renk+'</em>':'')+(f.images.length>1?' <span class="pg">'+f.images.length+' sayfa</span>':'')+'</div>'+imgs+'<div class="fchk"><span></span> Kontrol edildi</div></div>';
   }).join('');
   var esc=function(s){ return (''+(s||'')).replace(/[&<>"]/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x];}); };
-  var css='body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:#16223b;margin:0;background:#fff;} .wrap{max-width:800px;margin:0 auto;padding:26px;} .mast{display:flex;justify-content:space-between;border-bottom:2.5px solid #16223b;padding-bottom:10px;} .mb{font-family:Georgia,serif;font-weight:700;font-size:16px} .ms{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3f3fb0;font-weight:800} .mr{text-align:right;font-size:11px;line-height:1.6} h1{font-size:22px;margin:14px 0 2px} .mdl{font-family:ui-monospace,monospace;color:#3f3fb0;font-weight:700} .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0} .chip{border:1px solid #dce2ec;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700} .chip.st{background:#ecebfb;border-color:#3f3fb0;color:#3f3fb0} .qty{border:1px solid #dce2ec;border-radius:10px;overflow:hidden;margin:12px 0} .qh{background:#f4f6fa;padding:7px 12px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #dce2ec} .qcells{display:grid;grid-template-columns:repeat(6,1fr)} .qc{padding:8px;text-align:center;border-left:1px solid #eee} .qc span{display:block;font-size:9px;font-weight:800;color:#667;text-transform:uppercase} .qc b{font-size:15px;font-family:ui-monospace,monospace} .qc.hi{background:#ecebfb;color:#3f3fb0} .qc.total{background:#16223b} .qc.total span{color:#aab} .qc.total b{color:#fff} .fsec{border:1px solid #dce2ec;border-radius:11px;overflow:hidden;margin-bottom:12px} .fsh{background:#f4f6fa;padding:8px 12px;font-size:13px;font-weight:800;border-bottom:1px solid #dce2ec} .fsh .fn{display:inline-flex;width:20px;height:20px;background:#16223b;color:#fff;border-radius:6px;align-items:center;justify-content:center;font-size:11px;margin-right:6px} .fsh .pg{background:#ecebfb;color:#3f3fb0;font-size:9px;padding:2px 7px;border-radius:5px;font-weight:800} .fimg{background:#fff;padding:10px;text-align:center;border-top:1px solid #f0f0f0} .fimg img{max-width:100%;max-height:360px} .fchk{padding:7px 12px;font-size:11px;color:#667;border-top:1px solid #eee} .fchk span{display:inline-block;width:13px;height:13px;border:1.5px solid #bbb;border-radius:4px;vertical-align:middle;margin-right:6px} .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px;padding-top:14px;border-top:2px solid #16223b} .sb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667;font-weight:800} .sl{margin-top:26px;border-top:1.3px solid #bbb} .no-print{margin:14px auto;max-width:800px;padding:0 26px;display:flex;gap:8px} .no-print button{padding:10px 18px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px} @media print{.no-print{display:none}}';
+  var css='body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:#16223b;margin:0;background:#fff;} .wrap{max-width:800px;margin:0 auto;padding:26px;} .mast{display:flex;justify-content:space-between;border-bottom:2.5px solid #16223b;padding-bottom:10px;} .mb{font-family:Georgia,serif;font-weight:700;font-size:16px} .ms{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3f3fb0;font-weight:800} .mr{text-align:right;font-size:11px;line-height:1.6} h1{font-size:22px;margin:14px 0 2px} .mdl{font-family:ui-monospace,monospace;color:#16223b;font-weight:800;font-size:34px;letter-spacing:-1px;line-height:1.1;margin:2px 0 4px} .mdl .rk{display:block;font-size:15px;color:#3f3fb0;letter-spacing:0;font-weight:700} .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0} .chip{border:1px solid #dce2ec;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700} .chip.st{background:#ecebfb;border-color:#3f3fb0;color:#3f3fb0} .qty{border:1px solid #dce2ec;border-radius:10px;overflow:hidden;margin:12px 0} .qh{background:#f4f6fa;padding:7px 12px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #dce2ec} .qcells{display:grid;grid-template-columns:repeat(6,1fr)} .qc{padding:8px;text-align:center;border-left:1px solid #eee} .qc span{display:block;font-size:9px;font-weight:800;color:#667;text-transform:uppercase} .qc b{font-size:15px;font-family:ui-monospace,monospace} .qc.hi{background:#ecebfb;color:#3f3fb0} .qc.total{background:#16223b} .qc.total span{color:#aab} .qc.total b{color:#fff} .fsec{border:1px solid #dce2ec;border-radius:11px;overflow:hidden;margin-bottom:12px} .fsh{background:#f4f6fa;padding:8px 12px;font-size:13px;font-weight:800;border-bottom:1px solid #dce2ec} .fsh .fn{display:inline-flex;width:20px;height:20px;background:#16223b;color:#fff;border-radius:6px;align-items:center;justify-content:center;font-size:11px;margin-right:6px} .fsh .pg{background:#ecebfb;color:#3f3fb0;font-size:9px;padding:2px 7px;border-radius:5px;font-weight:800} .fimg{background:#fff;padding:10px;text-align:center;border-top:1px solid #f0f0f0} .fimg img{max-width:100%;max-height:360px} .fchk{padding:7px 12px;font-size:11px;color:#667;border-top:1px solid #eee} .fchk span{display:inline-block;width:13px;height:13px;border:1.5px solid #bbb;border-radius:4px;vertical-align:middle;margin-right:6px} .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px;padding-top:14px;border-top:2px solid #16223b} .sb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667;font-weight:800} .sl{margin-top:26px;border-top:1.3px solid #bbb} .no-print{margin:14px auto;max-width:800px;padding:0 26px;display:flex;gap:8px} .no-print button{padding:10px 18px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px} @media print{.no-print{display:none}}';
   var today=new Date().toLocaleDateString('tr-TR');
   var mdlH = c.model || AK.state.model;   // rengin kendi modeli öncelikli
   var body='<div class="no-print" id="akCtl"><button style="background:#16a34a;color:#fff" onclick="window.opener&&window.opener._downloadElementAsPDF(document.getElementById(\'sheet\'),\''+esc(c.po||'')+'_'+esc(c.renk||'renk')+'.pdf\',document.getElementById(\'akCtl\'))">📥 PDF İndir</button><button style="background:#3f3fb0;color:#fff" onclick="window.print()">🖨️ Yazdır</button></div>'+
     '<div class="wrap" id="sheet"><div class="mast"><div><div class="mb">İrsaliye Pro</div><div class="ms">Aksesuar Kontrol</div></div><div class="mr">Model: <b>'+esc(mdlH||'—')+'</b><br>PO: <b>'+esc(c.po||'—')+'</b><br>Tarih: <b>'+today+'</b></div></div>'+
-    '<h1>Aksesuar Kontrol Föyü</h1><div class="mdl">'+esc(mdlH||'')+' · '+esc(c.renk||'')+'</div>'+
+    '<div class="mdl">'+esc(mdlH||'')+'<span class="rk">'+esc(c.renk||'')+'</span></div>'+
+    '<h1 style="font-size:15px;font-weight:700;color:#667;margin:2px 0 6px;">Aksesuar Kontrol Föyü</h1>'+
     '<div class="chips"><span class="chip st">'+AK.STAGE_LABEL[AK.state.asama]+'</span><span class="chip">Renk: '+esc(c.renk||'—')+'</span><span class="chip">PO: '+esc(c.po||'—')+'</span></div>'+
     '<div class="qty"><div class="qh">Adet Dökümü — beden beden</div><div class="qcells">'+bedCells+'</div></div>'+tpH+
     acc+
@@ -18837,17 +18838,22 @@ AK._renderColorPage = function(pdf, c){
   T('İRSALİYE PRO · AKSESUAR KONTROL', M, y+3);
   pdf.setTextColor.apply(pdf,MUT); pdf.setFontSize(8);
   T('Tarih: '+new Date().toLocaleDateString('tr-TR'), W-M, y+3, {align:'right'});
-  y+=8;
-  pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
-  T('Aksesuar Kontrol Föyü', M, y+3); y+=7;
-  pdf.setTextColor.apply(pdf,ACC); pdf.setFontSize(11);
-  // Model: rengin KENDİ barkodundan tespit edileni öncelikli (arşivde birden
-  // çok model olabilir); yoksa üstte girilen/tespit edilen genel model.
+  y+=9;
+  // MODEL KODU föyün en belirgin öğesidir: kağıt yığınında ararken uzaktan
+  // okunabilsin diye büyük basılır. Rengin KENDİ barkodundan tespit edilen
+  // model önceliklidir (arşivde birden çok model olabilir).
   var mdl = c.model || AK.state.model;
-  T((mdl||'—')+'  ·  '+(c.renk||'—'), M, y+2); y+=6;
-  pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+  pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold'); pdf.setFontSize(30);
+  T((mdl||'—'), M, y+9);
+  pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(13);
+  T('PO: '+(c.po||'—'), W-M, y+9, {align:'right'});
+  y+=14;
+  pdf.setTextColor.apply(pdf,ACC); pdf.setFont('helvetica','bold'); pdf.setFontSize(13);
+  T((c.renk||'—'), M, y+2);
   var asamaLbl = AK.state.asama==='dikim'?'Dikim':'Ütü Paket';
-  T('Model: '+(mdl||'—')+'    PO: '+(c.po||'—')+'    Aşama: '+asamaLbl+(AK.state.atolye?('    Atölye: '+AK.state.atolye):''), M, y+2); y+=5;
+  pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+  T('Aksesuar Kontrol Föyü · '+asamaLbl+(AK.state.atolye?(' · '+AK.state.atolye):''), W-M, y+2, {align:'right'});
+  y+=6;
   line(); y+=5;
   // ---- adet dökümü ----
   var beds=AK._foySizes(c); // sadece adedi olan bedenler (XXS/3XL yoksa yazma)
