@@ -17799,7 +17799,9 @@ AK.TYPES = {
   kartArka:    {label:'Kart Arkası + İp',       stage:'utupaket', req:false},
   lisansKarti: {label:'Lisans Kartı',           stage:'utupaket', req:false}
 };
-AK.STAGE_ORDER = { dikim:['dokuma','icbarkod','yikama','lisansEtiketi'], utupaket:['fiyat','susKarti','kartArka','lisansKarti'] };
+// Föy sırası. Dikimde lisans etiketi dokumanın hemen altında olmalı (ikisi de
+// yaka/marka etiketi), iç barkod bir altında, yıkama en sonda.
+AK.STAGE_ORDER = { dikim:['dokuma','lisansEtiketi','icbarkod','yikama'], utupaket:['fiyat','susKarti','kartArka','lisansKarti'] };
 AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü Paket' };
 // Kanonik beden sırası (XXS→4XL). Aktif bedenler dosyalardan tespit edilir.
 AK.SIZES = [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL'],['4xl','4XL']];
@@ -18812,7 +18814,6 @@ AK.buildFoyHtml = function(c){
     '<div class="chips"><span class="chip st">'+AK.STAGE_LABEL[AK.state.asama]+'</span><span class="chip">Renk: '+esc(c.renk||'—')+'</span><span class="chip">PO: '+esc(c.po||'—')+'</span></div>'+
     '<div class="qty"><div class="qh">Adet Dökümü — beden beden</div><div class="qcells">'+bedCells+'</div></div>'+tpH+
     acc+
-    '<div class="sign"><div><div class="sb">Kontrol Eden</div><div class="sl"></div></div><div><div class="sb">Tarih</div><div class="sl"></div></div><div><div class="sb">Sonuç · İmza</div><div class="sl"></div></div></div>'+
     '</div>';
   return '<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Aksesuar Kontrol — '+esc(mdlH)+' '+esc(c.renk)+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
 };
@@ -18946,14 +18947,9 @@ AK._renderColorPage = function(pdf, c){
     // Yıkama sadece referans PNG'dir — yapıştırılacak numune yok, ekstra kutu koyma.
     y+=2;
   });
-  // ---- imza ----
-  need(22); line(); y+=6;
-  var sw=cw/3;
-  ['Kontrol Eden','Tarih','Sonuç · İmza'].forEach(function(t,i){
-    pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
-    T(t.toUpperCase(), M+i*sw, y);
-    pdf.setDrawColor(190,190,190); pdf.line(M+i*sw, y+11, M+i*sw+sw-8, y+11);
-  });
+  // İmza bloğu kaldırıldı: son bölümden sonra sığmadığında tek başına boş bir
+  // sayfa açıyordu (kağıt israfı). Kontrol işareti zaten her aksesuarın
+  // yanındaki "GELEN NUMUNE" kutusunda.
 };
 AK._newPdf = function(){ var JP=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:null; if(!JP) throw new Error('PDF motoru (jsPDF) yüklenmedi'); return new JP({unit:'mm',format:'a4'}); };
 
