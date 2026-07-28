@@ -18341,7 +18341,11 @@ AK.renderColors = function(){
           ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
           : 'ZIP / RAR dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Yıkama ayrı arşivse ikisini birden seçebilir ya da sırayla ekleyebilirsin</div>')+
         '<input type="file" accept=".zip,.rar,.7z" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
-        ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">'+
+          '<button class="btn btn-xs btn-secondary" onclick="this.nextElementSibling.click()" title="DeFacto özet tablosundan (SummaryTable) beden beden adetleri al"><i class="fas fa-file-excel"></i> Excel\'den adet al</button>'+
+          '<input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="AK.onSummaryXlsx(this.files); this.value=\'\';">'+
+          ((c.zipNames&&c.zipNames.length)?'<button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button>':'<span></span>')+
+        '</div>'+
       matchHtml+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
@@ -18499,6 +18503,181 @@ AK.clearZips = function(id){ AK._merged=null; AK._zipNames=[]; AK._zipKeys=[]; A
 // Dokuma etiketi gorselinden bandin KENDI rengini anla: siyah bant genis koyu
 // alan birakir, beyaz etikette koyu pikseller sadece yazi/cizgilerdir.
 // Belirsizse null doner (kod tablosuna renk yazilmaz → etiket filtrelenmez).
+// ================= DEFACTO ÖZET TABLOSU (Excel) → ADET =================
+// "SummaryTable_..." dosyası iki tablo içerir:
+//   1) Toplam Sipariş  → beden sütunları LOT ORANIdır, "Sipariş Geçilen Lot
+//      Sayısı" ile çarpılır.
+//   2) Beden Bazlı     → beden sütunları GERÇEK adettir (lot sütunu yoktur).
+// Her iki tablo da aynı sonucu verecek şekilde okunur; satırlar model+PO ile
+// tekilleştirilir.
+AK.XL_SIZES = ['XXS','XS','S','M','L','XL','XXL','3XL','4XL'];
+AK._xlNum = function(v){
+  var t=(v==null?'':(''+v)).trim();
+  if(!t || t==='-' || t==='—') return 0;
+  t=t.replace(/\s/g,'');
+  if(/^\d{1,3}([.,]\d{3})+$/.test(t)) return parseInt(t.replace(/[.,]/g,''),10)||0;  // 1.600
+  t=t.replace(',','.');
+  var n=parseFloat(t); return isFinite(n)?Math.round(n):0;
+};
+AK._xlNorm = function(h){ return (h==null?'':(''+h)).toLocaleLowerCase('tr').replace(/\s+/g,' ').trim(); };
+// Özet tablosunu satır listesine çevir → [{model,po,termin,code,renk,shipTo,sizes:{}}]
+AK.parseSummary = function(bytes){
+  if(typeof XLSX==='undefined') throw new Error('Excel kütüphanesi yüklenemedi (internet gerekli)');
+  var wb=XLSX.read(bytes,{type:'array'});
+  var rows=[], seen={};
+  wb.SheetNames.forEach(function(sn){
+    var aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+    var map=null;
+    for(var i=0;i<aoa.length;i++){
+      var r=aoa[i]||[];
+      var norm=r.map(AK._xlNorm);
+      // Başlık satırı mı? (Model Kodu + en az bir beden sütunu)
+      var hasModel=norm.some(function(x){ return /model\s*kodu|style\s*code/.test(x); });
+      var hasSize=norm.some(function(x){ return AK.XL_SIZES.indexOf(x.toUpperCase())>=0; });
+      if(hasModel && hasSize){
+        map={sizes:{}};
+        norm.forEach(function(h,ci){
+          if(!h) return;
+          // "Depo Girişi Olan ..." sütunları sipariş değil GİRİŞ bilgisidir; lot
+          // sütunu olarak alınırsa adet yanlış çarpılır (1600 yerine 1620).
+          if(/depo\s*giri|warehouse\s*entr/.test(h)) return;
+          var U=h.toUpperCase();
+          if(AK.XL_SIZES.indexOf(U)>=0){ if(map.sizes[U.toLowerCase()]==null) map.sizes[U.toLowerCase()]=ci; return; }
+          if(map.model==null && /model\s*kodu|style\s*code/.test(h)) map.model=ci;
+          else if(map.po==null && /sipari[sş]\s*numaras|order\s*number/.test(h)) map.po=ci;
+          else if(map.termin==null && /termin|delivery\s*date/.test(h)) map.termin=ci;
+          else if(map.renk==null && /renk\s*kodu|colou?r/.test(h)) map.renk=ci;
+          else if(map.shipTo==null && /ship\s*to/.test(h)) map.shipTo=ci;
+          else if(map.lots==null && /(sipari[sş]\s*ge[cç]ilen\s*lot|ordered\s*lot|number\s*of\s*lots)/.test(h)) map.lots=ci;
+        });
+        if(map.model==null) map=null;
+        continue;
+      }
+      if(!map) continue;
+      var model=(r[map.model]||'').toString().trim();
+      if(!model || /model/i.test(AK._xlNorm(model))) continue;
+      var po=(map.po!=null?(r[map.po]||''):'').toString().trim();
+      // Beden sütunları lot oranıysa lot sayısıyla çarp
+      var mult=1;
+      if(map.lots!=null){ var lv=AK._xlNum(r[map.lots]); if(lv>0) mult=lv; }
+      var sizes={}, tot=0;
+      Object.keys(map.sizes).forEach(function(k){
+        var q=AK._xlNum(r[map.sizes[k]])*mult;
+        if(q>0){ sizes[k]=q; tot+=q; }
+      });
+      if(!tot) continue;
+      var rk=(map.renk!=null?(r[map.renk]||''):'').toString().trim();  // "BK81 - BLACK"
+      var cm=rk.match(/([A-Z]{2}\d{2,4})/i);
+      var key=model.toUpperCase()+'|'+po+'|'+(cm?cm[1].toUpperCase():'');
+      // Aynı satır iki tabloda da var. "Beden Bazlı Toplam Sipariş" tablosunda
+      // bedenler GERÇEK adettir (lot sütunu yoktur) — asıl istediğimiz odur.
+      // Lot oranı tablosu yalnızca yedek olarak kullanılır.
+      var direct = (map.lots==null);
+      var prev = seen[key];
+      if(prev){ if(prev.direct || !direct) continue; }   // zaten iyisi var
+      var rec = {
+        model: model.toUpperCase(),
+        po: po,
+        termin: (map.termin!=null?(r[map.termin]||''):'').toString().trim(),
+        code: cm?cm[1].toUpperCase():null,
+        renk: rk,
+        shipTo: (map.shipTo!=null?(r[map.shipTo]||''):'').toString().trim(),
+        sizes: sizes, toplam: tot, direct: direct
+      };
+      if(prev){ rows[prev.i]=rec; seen[key]={direct:direct, i:prev.i}; }
+      else { seen[key]={direct:direct, i:rows.length}; rows.push(rec); }
+    }
+  });
+  return rows;
+};
+// Bir renk kartı için eşleşen satırları seç.
+// 1) PO tutuyorsa o satır(lar) — en kesin eşleşme.
+// 2) Yoksa model (+renk kodu) satırları terminlerine göre gruplanır ve
+//    BUGÜNDEN SONRAKİ EN YAKIN termin seçilir (geçmiş terminler zaten
+//    yüklenmiş siparişlerdir). Hiç ileri tarih yoksa en yenisi alınır.
+//    O terminde birden çok PO varsa adetler beden beden TOPLANIR.
+AK._pickSummaryRows = function(rows, model, po, code){
+  var M=(model||'').toUpperCase().trim();
+  if(!M) return {rows:[], reason:'model yok'};
+  var mine=rows.filter(function(r){ return r.model===M; });
+  if(!mine.length) return {rows:[], reason:'tabloda model yok'};
+  if(code){ var byCode=mine.filter(function(r){ return r.code===(''+code).toUpperCase(); }); if(byCode.length) mine=byCode; }
+  // PO, hangi TERMİN grubunu alacağımızı belirler; adet o grubun TAMAMIdır.
+  // Aksesuar (etiket) siparişi tek sevkiyat için değil, modelin tüm siparişi
+  // için verilir → aynı terminli bütün PO'lar beden beden toplanır.
+  var P=(po||'').toString().trim();
+  if(P){
+    var byPo=mine.filter(function(r){ return r.po===P; });
+    if(byPo.length){
+      var t=byPo[0].termin||'—';
+      var grp=mine.filter(function(r){ return (r.termin||'—')===t; });
+      return {rows:grp, reason:'termin '+t+' · PO '+P+' ile eşleşti'};
+    }
+  }
+  // Termine göre grupla
+  var groups={};
+  mine.forEach(function(r){ var k=r.termin||'—'; (groups[k]=groups[k]||[]).push(r); });
+  var keys=Object.keys(groups);
+  if(keys.length===1) return {rows:groups[keys[0]], reason:'termin '+keys[0]};
+  var today=new Date(); today.setHours(0,0,0,0);
+  var best=null;
+  keys.forEach(function(k){
+    var ym=_aksTerminYM(k); if(!ym) return;
+    var d=new Date(ym.y, ym.m-1, +( (k.match(/^(\d{1,2})[.\/\-]/)||[])[1] || 1));
+    var diff=d-today;
+    var cand={k:k, d:d, future:diff>=0, dist:Math.abs(diff)};
+    if(!best){ best=cand; return; }
+    if(cand.future && !best.future) best=cand;                         // ileri tarih önceliklidir
+    else if(cand.future===best.future && cand.dist<best.dist) best=cand; // en yakını
+  });
+  if(!best) return {rows:groups[keys[0]], reason:'termin '+keys[0]};
+  return {rows:groups[best.k], reason:'termin '+best.k+(best.future?' (en yakın)':' (en yeni)')};
+};
+// Excel'i oku → tüm renk kartlarının adetlerini doldur
+AK.onSummaryXlsx = function(fileList){
+  var f=(fileList&&fileList[0]); if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(e){
+    var rows;
+    try{ rows=AK.parseSummary(new Uint8Array(e.target.result)); }
+    catch(err){ alert('Excel okunamadı: '+((err&&err.message)||err)); return; }
+    if(!rows.length){ alert('Tabloda beden adeti olan satır bulunamadı.'); return; }
+    AK._summary=rows;
+    var applied=AK.applySummary();
+    if(!applied.ok.length){
+      alert('Tabloda eşleşen model bulunamadı.\n\nAranan: '+(applied.tried.join(', ')||'—')+
+            '\nTablodaki modeller: '+Array.from(new Set(rows.map(function(r){return r.model;}))).slice(0,12).join(', '));
+      return;
+    }
+    if(typeof toast==='function') toast(applied.ok.join(' · ')+' — tablodan alındı ✓','success');
+  };
+  rd.readAsArrayBuffer(f);
+};
+// Yüklenmiş özet tablosunu mevcut kartlara uygula
+AK.applySummary = function(){
+  var rows=AK._summary; var out={ok:[], tried:[]};
+  if(!rows||!rows.length) return out;
+  AK.state.colors.forEach(function(c){
+    var model=c.model||AK.state.model;
+    out.tried.push((model||'?')+(c.po?('/'+c.po):''));
+    var pick=AK._pickSummaryRows(rows, model, c.po, c.code);
+    if(!pick.rows.length) return;
+    // Aynı termindeki birden çok PO → beden beden topla
+    var sum={};
+    pick.rows.forEach(function(r){ Object.keys(r.sizes).forEach(function(k){ sum[k]=(sum[k]||0)+r.sizes[k]; }); });
+    if(!Object.keys(sum).length) return;
+    c.adet=c.adet||{};
+    AK.SIZES.forEach(function(b){ c.adet[b[0]] = sum[b[0]]!=null ? sum[b[0]] : ''; });
+    // Tabloda olan ama formda görünmeyen bedenler eklensin (ör. 3XL)
+    c._xsizes=c._xsizes||[];
+    Object.keys(sum).forEach(function(k){ if(c._xsizes.indexOf(k)<0) c._xsizes.push(k); });
+    if(!c.po && pick.rows.length===1 && pick.rows[0].po) c.po=pick.rows[0].po;
+    var tot=Object.keys(sum).reduce(function(t,k){return t+sum[k];},0);
+    out.ok.push((c.renk||c.code||model)+': '+tot+' adet ('+pick.reason+(pick.rows.length>1?(', '+pick.rows.length+' PO toplandı'):'')+')');
+  });
+  if(out.ok.length) AK.renderColors();
+  return out;
+};
 AK._labelTone = function(url){
   return new Promise(function(res,rej){
     var img=new Image();
