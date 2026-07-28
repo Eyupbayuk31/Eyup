@@ -18339,13 +18339,9 @@ AK.renderColors = function(){
       '<div class="ak-drop'+((c.zipNames&&c.zipNames.length)?' loaded':'')+'" onclick="this.querySelector(\'input\').click()"><i class="fas '+((c.zipNames&&c.zipNames.length)?'fa-circle-check':'fa-file-zipper')+'"></i>'+
         ((c.zipNames&&c.zipNames.length)
           ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
-          : 'ZIP / RAR dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Yıkama ayrı arşivse ikisini birden seçebilir ya da sırayla ekleyebilirsin</div>')+
-        '<input type="file" accept=".zip,.rar,.7z" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">'+
-          '<button class="btn btn-xs btn-secondary" onclick="this.nextElementSibling.click()" title="DeFacto özet tablosundan (SummaryTable) beden beden adetleri al"><i class="fas fa-file-excel"></i> Excel\'den adet al</button>'+
-          '<input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="AK.onSummaryXlsx(this.files); this.value=\'\';">'+
-          ((c.zipNames&&c.zipNames.length)?'<button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button>':'<span></span>')+
-        '</div>'+
+          : 'ZIP / RAR + Excel dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Hepsini birden bırakabilirsin: ana arşiv, ayrı yıkama arşivi ve adetler için özet tablo (SummaryTable .xlsx)</div>')+
+        '<input type="file" accept=".zip,.rar,.7z,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
+        ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
@@ -18474,8 +18470,16 @@ AK._processFilesInto = function(files, M){
   }, Promise.resolve()).then(function(){ return M; });
 };
 AK.onZip = function(id, fileList){
-  var files = (fileList && fileList.length!==undefined) ? Array.prototype.slice.call(fileList) : (fileList?[fileList]:[]);
-  files = files.filter(Boolean); if(!files.length) return;
+  var all = (fileList && fileList.length!==undefined) ? Array.prototype.slice.call(fileList) : (fileList?[fileList]:[]);
+  all = all.filter(Boolean); if(!all.length) return;
+  // Aynı kutuya arşiv + özet tablo birlikte bırakılabilir; ayıklanır.
+  var isXls=function(f){ return /\.(xlsx|xls|csv)$/i.test(f.name||''); };
+  var xls   = all.filter(isXls);
+  var files = all.filter(function(f){ return !isXls(f); });
+  if(!files.length){   // sadece Excel → mevcut kartlara uygula
+    AK.applySummaryFiles(xls);
+    return;
+  }
   var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
   if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''},sizes:[]};
   AK._processFilesInto(files, AK._merged).then(function(){
@@ -18495,6 +18499,8 @@ AK.onZip = function(id, fileList){
       AK.uploadArchive(f, zk); // arka planda buluta yükle → başka PC'den de erişilir
     });
     AK.rebuildColors();
+    // Arşivler işlendi, model/PO/renk belli → şimdi özet tablodan adetleri al
+    if(xls.length) AK.applySummaryFiles(xls);
   })
   .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
@@ -18636,13 +18642,19 @@ AK._pickSummaryRows = function(rows, model, po, code){
   return {rows:groups[best.k], reason:label(best.k)+' termini'+(best.future?' (en yakın)':' (en yeni)')};
 };
 // Excel'i oku → tüm renk kartlarının adetlerini doldur
-AK.onSummaryXlsx = function(fileList){
-  var f=(fileList&&fileList[0]); if(!f) return;
-  var rd=new FileReader();
-  rd.onload=function(e){
-    var rows;
-    try{ rows=AK.parseSummary(new Uint8Array(e.target.result)); }
-    catch(err){ alert('Excel okunamadı: '+((err&&err.message)||err)); return; }
+AK._readSummaryFile = function(f){
+  return new Promise(function(res,rej){
+    var rd=new FileReader();
+    rd.onload=function(e){ try{ res(AK.parseSummary(new Uint8Array(e.target.result))); }catch(err){ rej(err); } };
+    rd.onerror=function(){ rej(new Error('Dosya okunamadı')); };
+    rd.readAsArrayBuffer(f);
+  });
+};
+// Excel dosyalarını oku ve mevcut renk kartlarına uygula (arşivlerle aynı
+// kutudan gelir; arşivler işlendikten SONRA çağrılır ki model/PO belli olsun).
+AK.applySummaryFiles = function(xlsFiles){
+  if(!xlsFiles || !xlsFiles.length) return Promise.resolve();
+  return AK._readSummaryFile(xlsFiles[0]).then(function(rows){
     if(!rows.length){ alert('Tabloda beden adeti olan satır bulunamadı.'); return; }
     AK._summary=rows;
     var applied=AK.applySummary();
@@ -18652,9 +18664,9 @@ AK.onSummaryXlsx = function(fileList){
       return;
     }
     if(typeof toast==='function') toast(applied.ok.join(' · ')+' — tablodan alındı ✓','success');
-  };
-  rd.readAsArrayBuffer(f);
+  }).catch(function(err){ alert('Excel okunamadı: '+((err&&err.message)||err)); });
 };
+AK.onSummaryXlsx = function(fileList){ AK.applySummaryFiles(Array.prototype.slice.call(fileList||[])); };
 // Yüklenmiş özet tablosunu mevcut kartlara uygula
 AK.applySummary = function(){
   var rows=AK._summary; var out={ok:[], tried:[]};
