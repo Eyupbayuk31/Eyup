@@ -3529,9 +3529,14 @@ if(typeof Chart==='undefined'){
           <div class="ak-field"><label>Model Kodu</label><input id="akModel" class="form-input" placeholder="ör. I6391AX" autocomplete="off" oninput="AK.touch()"></div>
           <div class="ak-field"><label>Atölye (çıkış yeri)</label><input id="akAtolye" class="form-input" placeholder="hangi atölyeye" autocomplete="off" oninput="AK.touch()"></div>
           <div class="ak-field"><label>Aşama</label>
-            <div class="ak-seg">
-              <button type="button" id="akSegDikim" class="ak-seg-btn active" onclick="AK.setAsama('dikim')">🧵 Dikim</button>
-              <button type="button" id="akSegUtu" class="ak-seg-btn" onclick="AK.setAsama('utupaket')">📦 Ütü Paket</button>
+            <div class="ak-seg" id="akSeg" data-active="dikim" role="tablist">
+              <span class="ak-seg-thumb" aria-hidden="true"></span>
+              <button type="button" id="akSegDikim" class="ak-seg-btn active" role="tab" aria-selected="true" onclick="AK.setAsama('dikim')">
+                <i class="fas fa-scissors"></i><span class="ak-seg-t">Dikim</span><span class="ak-seg-s">dokuma · barkod · yıkama</span>
+              </button>
+              <button type="button" id="akSegUtu" class="ak-seg-btn" role="tab" aria-selected="false" onclick="AK.setAsama('utupaket')">
+                <i class="fas fa-box-open"></i><span class="ak-seg-t">Ütü Paket</span><span class="ak-seg-s">fiyat · süs · kart</span>
+              </button>
             </div>
           </div>
         </div>
@@ -18276,8 +18281,9 @@ AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.add
 
 AK.setAsama = function(a){ AK.state.asama=a;
   var sd=document.getElementById('akSegDikim'), su=document.getElementById('akSegUtu');
-  if(sd) sd.classList.toggle('active', a==='dikim');
-  if(su) su.classList.toggle('active', a==='utupaket');
+  if(sd){ sd.classList.toggle('active', a==='dikim'); sd.setAttribute('aria-selected', a==='dikim'); }
+  if(su){ su.classList.toggle('active', a==='utupaket'); su.setAttribute('aria-selected', a==='utupaket'); }
+  var seg=document.getElementById('akSeg'); if(seg) seg.setAttribute('data-active', a);  // kayan gösterge
   var rsel=document.querySelector('.ak-recsel'); if(rsel && rsel.value!==a) rsel.value=a; // kayıt çubuğu seçicisiyle senkron
   AK.renderAsamaInfo(); AK.renderColors();
 };

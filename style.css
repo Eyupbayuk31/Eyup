@@ -13993,10 +13993,44 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .ak-grid3{display:grid;grid-template-columns:1.2fr 1fr 1.2fr;gap:14px;align-items:start;}
 .ak-field label{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:6px;}
-.ak-seg{display:flex;gap:8px;}
-.ak-seg-btn{flex:1;padding:11px 8px;border:1.5px solid var(--border);background:var(--glass);color:var(--text-main);border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;}
-.ak-seg-btn:hover{border-color:color-mix(in srgb,var(--primary) 40%,var(--border));}
-.ak-seg-btn.active{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 30%,transparent);}
+/* Aşama seçici — kayan göstergeli segment kontrolü */
+.ak-seg{
+  position:relative; display:grid; grid-template-columns:1fr 1fr; gap:0;
+  padding:4px; border-radius:15px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg-main) 60%,transparent),var(--glass));
+  border:1px solid var(--border);
+  box-shadow:inset 0 2px 5px -2px rgba(0,0,0,.45), 0 1px 0 color-mix(in srgb,#fff 6%,transparent);
+  isolation:isolate; overflow:hidden;
+}
+.ak-seg-thumb{
+  position:absolute; top:4px; left:4px; z-index:0;
+  width:calc((100% - 8px) / 2); height:calc(100% - 8px); border-radius:12px;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--primary) 92%,#fff),var(--primary) 55%,color-mix(in srgb,var(--primary) 78%,#000));
+  box-shadow:0 6px 16px -8px var(--primary), inset 0 1px 0 color-mix(in srgb,#fff 30%,transparent);
+  transition:transform .34s cubic-bezier(.34,1.28,.44,1);
+}
+.ak-seg[data-active="utupaket"] .ak-seg-thumb{ transform:translateX(100%); }
+.ak-seg-btn{
+  position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; padding:9px 6px; min-height:52px;
+  border:0; background:transparent; color:var(--text-muted);
+  font-size:13.5px; font-weight:800; letter-spacing:.2px; cursor:pointer;
+  transition:color .22s ease, transform .22s ease;
+}
+.ak-seg-btn i{ font-size:14px; margin-bottom:2px; opacity:.75; transition:opacity .22s, transform .28s cubic-bezier(.34,1.4,.44,1); }
+.ak-seg-t{ line-height:1.1; }
+.ak-seg-s{
+  font-size:9.5px; font-weight:700; letter-spacing:.3px; text-transform:uppercase;
+  opacity:.55; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
+.ak-seg-btn:hover:not(.active){ color:var(--text-main); }
+.ak-seg-btn:hover:not(.active) i{ opacity:1; transform:translateY(-1px); }
+.ak-seg-btn.active{ color:var(--on-primary,#fff); }
+.ak-seg-btn.active i{ opacity:1; transform:scale(1.08); }
+.ak-seg-btn.active .ak-seg-s{ opacity:.8; }
+.ak-seg-btn:focus-visible{ outline:2px solid color-mix(in srgb,var(--primary) 70%,#fff); outline-offset:-3px; border-radius:12px; }
+@media (max-width:520px){ .ak-seg-s{ display:none; } .ak-seg-btn{ min-height:44px; } }
+@media (prefers-reduced-motion:reduce){ .ak-seg-thumb,.ak-seg-btn,.ak-seg-btn i{ transition:none; } }
 .ak-info{margin-top:13px;font-size:12.5px;color:var(--text-muted);background:color-mix(in srgb,var(--primary) 6%,var(--glass));border:1px solid color-mix(in srgb,var(--primary) 16%,var(--border));border-radius:13px;padding:12px 14px;line-height:1.6;}
 .ak-info b{color:var(--text-main);}
 /* Aşamada beklenen aksesuarlar — modern çip şeridi */
