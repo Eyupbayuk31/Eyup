@@ -83,6 +83,12 @@
   --bg-card-hover:#231740;
   --bg-sidebar:#160f28;
   --bg-input:#160f28;
+  /* Modal/menü panelleri background:var(--bg-card-solid) kullanıyor ama bu
+     değişken yalnızca 22 temada tanımlıydı; diğerlerinde (ör. Obsidyen)
+     tanımsız kalıp panel TAMAMEN ŞEFFAF oluyordu. Normal modda arkadaki
+     backdrop-filter bulanıklığı bunu gizliyor, kapatılınca arka sayfa
+     modalın içinden okunuyordu. Kendi değeri olan temalar bunu ezer. */
+  --bg-card-solid:var(--bg-card);
 
   --text-main:#f1f0f5;
   --text-muted:#c4b5fd;
@@ -14280,7 +14286,15 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 html[data-perf="lite"] :is(#_pf,*),
 html[data-perf="lite"] :is(#_pf,*)::before,
 html[data-perf="lite"] :is(#_pf,*)::after{
-  animation:none !important;
+  /* animation:none DEĞİL: bazı öğeler (ör. .aks-row, .boot-brand) temelde
+     opacity:0 olup görünürlüğünü animasyonun BİTİŞ karesinden alıyor;
+     animasyon tamamen kapatılınca görünmez kalıyorlardı. Bunun yerine
+     animasyon 1 ms'de bir kez oynatılır: bitiş durumu (fill-mode) korunur,
+     sonsuz döngüler durur, sürekli GPU yükü kalkar. */
+  animation-duration:.001s !important;
+  animation-delay:0s !important;
+  animation-iteration-count:1 !important;
+  animation-play-state:running !important;
   transition:none !important;
   -webkit-backdrop-filter:none !important;
   backdrop-filter:none !important;
@@ -14295,6 +14309,16 @@ html[data-perf="lite"] :is(#_pf,*):is(#_pf,*):is(.card,.ak-card,.s-card,.ft-card
 }
 /* Hover'da yükselme/ölçekleme yeniden boyama tetikliyor — sadece renk değişsin */
 html[data-perf="lite"] :is(#_pf,*):hover{ transform:none !important; }
+/* Bulanıklık kapanınca ARKA PLAN AYRIMI kaybolur: bu katmanların kendi
+   arka plan rengi şeffaf, okunabilirliği tamamen backdrop-filter'a
+   dayanıyordu. Hafif modda modal açınca arkadaki sayfa net görünüp
+   içerikle karışıyordu — o yüzden opak bir perde/yüzey veriliyor. */
+html[data-perf="lite"] :is(#_pf,*):is(.modal-overlay,.sidebar-overlay,.v8-sh-overlay,.gs-overlay){
+  background-color:rgba(0,0,0,.82) !important;
+}
+html[data-perf="lite"] :is(#_pf,*):is(.share-menu,.toast,.dropdown-menu,.ak-code-modal){
+  background-color:var(--bg-card-solid,var(--bg-card)) !important;
+}
 /* Dekoratif hareketli arka plan katmanları */
 html[data-perf="lite"] body::before,
 html[data-perf="lite"] body::after,
