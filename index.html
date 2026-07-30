@@ -3137,6 +3137,17 @@ if(typeof Chart==='undefined'){
             </div>
           </div>
           <div class="s-body">
+            <!-- Kapalıyken sadece seçili tema görünür; 50 önizleme sayfayı
+                 çok uzatıyordu. Tıklayınca açılır. -->
+            <button type="button" class="v9-theme-toggle" id="v9ThemeToggle" onclick="v9ToggleThemePicker()" aria-expanded="false" aria-controls="v9ThemeBody">
+              <span class="v9-tt-sw" id="v9ThemeSw" aria-hidden="true"></span>
+              <span class="v9-tt-txt">
+                <span class="v9-tt-l">Seçili tema</span>
+                <span class="v9-tt-n" id="v9ThemeName">—</span>
+              </span>
+              <span class="v9-tt-act" id="v9ThemeAct">Değiştir <i class="fas fa-chevron-down"></i></span>
+            </button>
+            <div class="v9-theme-body" id="v9ThemeBody" hidden>
             <div class="v9-theme-cats" id="v9ThemeCats">
               <button class="v9-theme-cat active" data-v9cat="all" onclick="v9FilterThemes('all')"><i class="fas fa-palette"></i>Tümü <span class="cnt" id="v9cnt-all">50</span></button>
               <button class="v9-theme-cat" data-v9cat="dark" onclick="v9FilterThemes('dark')"><i class="fas fa-moon"></i>Koyu <span class="cnt" id="v9cnt-dark">23</span></button>
@@ -3145,6 +3156,7 @@ if(typeof Chart==='undefined'){
               <button class="v9-theme-cat" data-v9cat="professional" onclick="v9FilterThemes('professional')"><i class="fas fa-briefcase"></i>Profesyonel <span class="cnt" id="v9cnt-professional">4</span></button>
             </div>
             <div class="v9-theme-grid" id="v9ThemeGrid"></div>
+            </div>
           </div>
         </div>
 
@@ -15388,6 +15400,29 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     });
   };
 
+  // ── Tema seçici: aç/kapa ─────────────────────────────────────────────
+  // 50 tema önizlemesi ayarlar sayfasını çok uzatıyordu; kapalıyken yalnızca
+  // seçili tema özeti görünür.
+  window.v9ToggleThemePicker = function(zorla){
+    var body=document.getElementById('v9ThemeBody');
+    var btn=document.getElementById('v9ThemeToggle');
+    var act=document.getElementById('v9ThemeAct');
+    if(!body||!btn) return;
+    var acik = (typeof zorla==='boolean') ? zorla : body.hasAttribute('hidden');
+    if(acik) body.removeAttribute('hidden'); else body.setAttribute('hidden','');
+    btn.setAttribute('aria-expanded', acik?'true':'false');
+    btn.classList.toggle('open', acik);
+    if(act) act.innerHTML=(acik?'Kapat':'Değiştir')+' <i class="fas fa-chevron-down"></i>';
+  };
+  // Özet satırını seçili temaya göre güncelle
+  window.v9SyncThemeSummary = function(id){
+    id = id || document.documentElement.getAttribute('data-theme') || 'dark';
+    var t=(window.V9_THEMES||[]).find(function(x){return x.id===id;});
+    var n=document.getElementById('v9ThemeName'); if(n) n.textContent=t?t.name:id;
+    var sw=document.getElementById('v9ThemeSw');
+    if(sw && t){ sw.style.background='linear-gradient(135deg,'+(t.c1||'var(--primary)')+','+(t.c2||t.c1||'var(--primary-dark)')+')'; }
+  };
+
   window.v9PickTheme = function(id){
     const t = V9_THEMES.find(x=>x.id===id); if(!t) return;
 
@@ -15423,6 +15458,9 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     }
 
     if(typeof setConfig==='function') setConfig('theme', id);
+    try{ window.v9SyncThemeSummary(id); }catch(_){}
+    // Kullanıcı seçtiyse listeyi kapat — seçim yapıldı, yer kaplamasın
+    if(window._v9Ready){ try{ window.v9ToggleThemePicker(false); }catch(_){} }
     // Sayfa ilk açılışında bildirim gösterme, sadece kullanıcı seçince göster
     if(window._v9Ready && typeof toast==='function') toast('Tema: '+t.name,'success');
   };
@@ -15470,6 +15508,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   function v9Init(){
     v9RenderThemes();
     v9InjectTopbarChip();
+    try{ window.v9SyncThemeSummary(); }catch(_){}   // kapalı satırdaki tema özeti
     // Sync when settings loads or theme is restored elsewhere
     setInterval(v9SyncActive, 2000);
     // İlk yüklemeden sonra tema bildirimlerini aç
