@@ -18016,7 +18016,10 @@ AK._pageInfo = function(t){
     if(nu && AK._EN_TR[nu[1].toLowerCase()]) renk=AK._EN_TR[nu[1].toLowerCase()];
   }
   if(!renk) renk=AK._codeRenk(code);
-  return { code: code, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: renk };
+  // Lisanslı model işareti (barkodda "... > License" geçer). Açık malda SİYAH
+  // dokuma etiketi yalnızca lisanslı modellerde müşteri isteğiyle takılır.
+  return { code: code, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: renk,
+           lisans: /licen[cs]e|lisansl/i.test(t) };
 };
 // Renk kovası anahtarı: MODEL + RENK KODU. Sadece renk koduyla anahtarlamak,
 // bir arşivde iki farklı modelin aynı renk kodunu (ör. BK81 = siyah, her
@@ -18065,12 +18068,12 @@ AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:b
     var byCode={};
     // Yalnızca BARKOD sayfaları (SIZE'lı) grubu belirler; birleşik dosyada
     // yıkama/boş sayfa barkod olarak render edilmesin.
-    infos.forEach(function(p){ var key=AK._ckey(p.code,p.model); if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, mPage:null, firstSized:null}; if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
+    infos.forEach(function(p){ var key=AK._ckey(p.code,p.model); if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, lisans:false, mPage:null, firstSized:null}; if(p.lisans) byCode[key].lisans=true; if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
     var keys=Object.keys(byCode); var out=[];
     var szSet={}; infos.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; }); out.sizes=Object.keys(szSet);
     return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; var pg=info.mPage||info.firstSized; if(!pg) return; // barkod sayfası yok → atla
       return AK._pageCanvas(pdf, pg, 3.6).then(function(o){ var t=AK._trim(o.c,o.ctx); if((t.ink||0)<200) return; // neredeyse boş → atla
-        out.push({code:info.code, renk:info.renk, model:info.model, url:t.url}); }); }); }, Promise.resolve()).then(function(){ return out; });
+        out.push({code:info.code, renk:info.renk, model:info.model, lisans:info.lisans, url:t.url}); }); }); }, Promise.resolve()).then(function(){ return out; });
   });
 }); };
 // Fiyat kartındaki "Baskı Adet / Printing Quantity" değerlerini bedenlere eşle.
@@ -18143,7 +18146,7 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
       var full=tc.items.map(function(x){return x.str;}).join(' ');
       var info=AK._pageInfo(full);
-      pages.push({page:pageNum, code:info.code, renk:info.renk, model:info.model, size:info.size, origSize:info.size||null, len:full.replace(/\s/g,'').length});
+      pages.push({page:pageNum, code:info.code, renk:info.renk, model:info.model, lisans:info.lisans, size:info.size, origSize:info.size||null, len:full.replace(/\s/g,'').length});
       i++; return scan(); }); }
   return scan().then(function(){
     var szSet={}; pages.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; });
@@ -18155,10 +18158,10 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     var sp={}; pages.forEach(function(p){ if(p.origSize) sp[p.origSize.toUpperCase()]=true; });
     var target = sp['M'] ? 'M' : (['L','S','XL','XXL','XS','XXS','2XL','3XL','4XL'].filter(function(s){return sp[s];})[0] || null);
     var byCode={};
-    pages.forEach(function(p){ if(p.len<40 && !p.origSize) return; if(target && p.size && p.size.toUpperCase()!==target) return; var key=AK._ckey(p.code,p.model||lastModel); if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,pages:[]}; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
+    pages.forEach(function(p){ if(p.len<40 && !p.origSize) return; if(target && p.size && p.size.toUpperCase()!==target) return; var key=AK._ckey(p.code,p.model||lastModel); if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,lisans:false,pages:[]}; if(p.lisans) byCode[key].lisans=true; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
     var keys=Object.keys(byCode); var out=[];
     return keys.reduce(function(ch,k){ return ch.then(function(){ var g=byCode[k];
-      return g.pages.reduce(function(ch2,pn){ return ch2.then(function(imgs){ return AK._textCrop(pdf,pn,3.4).then(function(r){ if((r.ink||0)>=150) imgs.push(r.url); return imgs; }); }); }, Promise.resolve([])).then(function(imgs){ if(imgs.length) out.push({code:g.code, renk:AK._renkFromText(g.renk)||g.renk||AK._codeRenk(g.code), model:g.model, images:imgs}); });
+      return g.pages.reduce(function(ch2,pn){ return ch2.then(function(imgs){ return AK._textCrop(pdf,pn,3.4).then(function(r){ if((r.ink||0)>=150) imgs.push(r.url); return imgs; }); }); }, Promise.resolve([])).then(function(imgs){ if(imgs.length) out.push({code:g.code, renk:AK._renkFromText(g.renk)||g.renk||AK._codeRenk(g.code), model:g.model, lisans:g.lisans, images:imgs}); });
     }); }, Promise.resolve()).then(function(){ out.sizes=Object.keys(szSet); return out; });
   });
 }); };
@@ -18248,11 +18251,11 @@ AK.processEntries = function(entries){
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         // Birleşik dosya varsa ayrı barkod/yıkama dosyasını atla (mükerrer olmasın)
         if((cat.type==='icbarkod'||cat.type==='yikama') && hasCombo) return;
-        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ ensureColor(x.code,x.renk,x.model).icbarkod=x.url?[x.url]:[]; }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
+        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.icbarkod=x.url?[x.url]:[]; if(x.lisans) col.lisans=true; }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
         // Fall in Love birleşik: tüm dolu sayfaları TAM (okunur) render et → tek "birleşik" bölüm
         if(cat.type==='icbarkod_yikama'){
           return AK._comboColors(bytes).then(function(list){
-            list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.combo=x.images.slice(); col._combo=true; });
+            list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.combo=x.images.slice(); col._combo=true; if(x.lisans) col.lisans=true; });
             if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; });
           });
         }
@@ -18439,6 +18442,9 @@ AK._colorsFromMerged = function(m, prev){
     // Ortak dosyalar. Dokuma etiketi MAL RENGİNE göre seçilir (açık→beyaz,
     // koyu→siyah); uygun olmayan etiket gizlenir + açıklama eklenir.
     var labelPref = AK._labelForGarment(effRenk);
+    // Lisanslı model: barkodta "License" geçiyorsa ya da arşivde lisans
+    // etiketi/kartı varsa.
+    var isLisans = !!col.lisans || m.shared.some(function(s){ return s.type==='lisansEtiketi'||s.type==='lisansKarti'; });
     m.shared.forEach(function(s){
       if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
         files.push({type:'yikama',images:[s.images[ci]],renk:effRenk,name:'yikamaS:'+k}); return;
@@ -18448,14 +18454,15 @@ AK._colorsFromMerged = function(m, prev){
         var isWhite=/beyaz|white|ekru|ecru|krem|bej/.test(lr), isBlack=/siyah|black/.test(lr);
         if(isWhite||isBlack){
           var match=(labelPref==='white'&&isWhite)||(labelPref==='black'&&isBlack);
-          // Etiket ASLA elenmez. Açık malda bile müşteri isteğiyle siyah dokuma
-          // takılabiliyor; eskiden uygun olmayan renk tamamen atılıyordu ve
-          // etiket föyde hiç görünmüyordu. Artık ikisi de listelenir, uygun
-          // olan "önerilen" diye işaretlenir — kararı kullanıcı verir.
+          // Mal rengine uymayan etiket yalnızca LİSANSLI modellerde listelenir:
+          // açık malda siyah dokuma sadece orada, müşteri isteğiyle takılıyor.
+          // Normal modelde gösterilmesi föyü gereksiz kalabalıklaştırıyordu.
+          if(!match && !isLisans) return;
           files.push(Object.assign({}, s, {
             note: match ? AK._labelNote(effRenk, labelPref)
                         : ('Mal rengi '+(effRenk||'—')+' için normalde '+(labelPref==='white'?'BEYAZ/EKRU':'SİYAH')+
-                           ' dokuma kullanılır. Bu '+(isBlack?'SİYAH':'BEYAZ')+' etiket yalnızca müşteri isteğiyle takılır.'),
+                           ' dokuma kullanılır. Lisanslı model olduğu için bu '+(isBlack?'SİYAH':'BEYAZ')+
+                           ' etiket müşteri isteğiyle takılabilir.'),
             _labelPref: match
           }));
           return;
@@ -18503,7 +18510,7 @@ AK._processFilesInto = function(files, M){
         }
         if(!M.sizes) M.sizes=[];
         (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
-        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var mk=AK._resolveColorKey(M.byColor, src.code, src.model); var dst=M.byColor[mk]||(M.byColor[mk]={code:src.code,renk:src.renk,model:src.model||null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src._combo) dst._combo=true; });
+        Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var mk=AK._resolveColorKey(M.byColor, src.code, src.model); var dst=M.byColor[mk]||(M.byColor[mk]={code:src.code,renk:src.renk,model:src.model||null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src.lisans) dst.lisans=true; if(src._combo) dst._combo=true; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
