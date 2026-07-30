@@ -7582,7 +7582,10 @@ body::after{
 }
 
 /* === BLOCK 2: Global Search Ctrl+K (eski 17795-17815) === */
-  .gs-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:var(--z-modal)9;display:none;align-items:flex-start;justify-content:center;padding-top:10vh;}
+  /* z-index:var(--z-modal)9 GEÇERSİZ bir değerdi (değişkenle 9 arasında işlem
+     yok); tarayıcı satırı yok sayıp z-index:auto bırakıyor, hızlı arama sayfa
+     kartlarının ALTINDA kalıyordu. */
+  .gs-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:calc(var(--z-modal) + 900);display:none;align-items:flex-start;justify-content:center;padding-top:10vh;}
   .gs-overlay.show{display:flex;}
   .gs-box{width:min(680px,92vw);background:var(--bg-card,#fff);color:var(--text,#111);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;border:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;max-height:80vh;}
   .gs-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border,#e5e7eb);}
@@ -8386,7 +8389,7 @@ html.pre-auth, html.pre-auth body { background: var(--bg-main, #0b0713) !importa
   background: var(--card-bg, #fff); color: var(--text,#1a1a2e);
   border:1px solid var(--border,#d1d5db); border-radius:10px;
   box-shadow: 0 12px 30px rgba(0,0,0,.15);
-  z-index:var(--z-modal)9;
+  z-index:calc(var(--z-modal) + 900);   /* aynı geçersiz kalıp buradaydı */
   max-height: 280px; overflow:auto;
   display:none;
 }
