@@ -3773,7 +3773,11 @@ if(typeof Chart==='undefined'){
 // Artik window.getData / window.setData uzerinden Firestore'a ulasiyor.
 var getData = window.getData || function(key){try{return JSON.parse(localStorage.getItem(key))||[];}catch(e){return[];}};
 var setData = window.setData || function(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}};
-function getConfig(key,def){try{return JSON.parse(localStorage.getItem('config_'+key))||def;}catch(e){return def;}}
+// NOT: eskiden "JSON.parse(...)||def" idi; bu kalıp kaydedilen FALSE değerini
+// yutup varsayılana düşüyordu. Sonuç: Ayarlar'daki "Bildirimler", "Silmeden
+// önce sor" ve "Klavye Kısayolları" anahtarları kapatılamıyordu — kapatsan da
+// açık okunuyordu. Artık yalnızca kayıt yoksa varsayılan döner.
+function getConfig(key,def){try{var raw=localStorage.getItem('config_'+key);if(raw===null)return def;var v=JSON.parse(raw);return (v===null||v===undefined)?def:v;}catch(e){return def;}}
 function setConfig(key,val){localStorage.setItem('config_'+key,JSON.stringify(val));}
 
 // Beden key'lerini dogal sirada dondur (XXS -> 3XL).
@@ -15544,6 +15548,13 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
       <div class="v8-sh-row"><span>Lastik</span><span class="v8-sh-kbd">G E</span></div>
       <div class="v8-sh-row"><span>Düğme</span><span class="v8-sh-kbd">G D</span></div>
       <div class="v8-sh-row"><span>Toptan sipariş</span><span class="v8-sh-kbd">G T</span></div>
+      <div class="v8-sh-row"><span>Genel stok</span><span class="v8-sh-kbd">G S</span></div>
+      <div class="v8-sh-row"><span>Aksesuar Kontrol</span><span class="v8-sh-kbd">G C</span></div>
+      <div class="v8-sh-row"><span>Aksesuar Takip</span><span class="v8-sh-kbd">G P</span></div>
+      <div class="v8-sh-row"><span>Fermuar Takip</span><span class="v8-sh-kbd">G V</span></div>
+      <div class="v8-sh-row"><span>Tela Kontrol</span><span class="v8-sh-kbd">G Y</span></div>
+      <div class="v8-sh-row"><span>Atölyeler</span><span class="v8-sh-kbd">G A</span></div>
+      <div class="v8-sh-row"><span>Takvim</span><span class="v8-sh-kbd">G K</span></div>
       <div class="v8-sh-row"><span>Raporlar</span><span class="v8-sh-kbd">G R</span></div>
       <div class="v8-sh-row"><span>Hızlı arama</span><span class="v8-sh-kbd">Ctrl + K</span></div>
       <div class="v8-sh-row"><span>Hızlı ekle menüsü</span><span class="v8-sh-kbd">N</span></div>
@@ -15922,8 +15933,20 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     const tag=(t.tagName||'').toLowerCase();
     return tag==='input'||tag==='textarea'||tag==='select'||t.isContentEditable;
   }
+  // "G" bekleniyor göstergesi — kullanıcı kısayolun çalıştığını görsün
+  function v8LeaderHint(göster){
+    var el=document.getElementById('v8LeaderHint');
+    if(göster){
+      if(!el){ el=document.createElement('div'); el.id='v8LeaderHint'; el.className='v8-leader-hint';
+        el.innerHTML='<b>G</b> <span>sayfa harfini tuşla…</span>'; document.body.appendChild(el); }
+      el.classList.add('show');
+    } else if(el){ el.classList.remove('show'); }
+  }
   document.addEventListener('keydown', function(e){
     if(v8IsEditing(e)) return;
+    // Ayarlardaki "Klavye Kısayolları" anahtarı kapalıysa hiçbiri çalışmasın
+    // (anahtar vardı ama hiç okunmuyordu).
+    if(typeof getConfig==='function' && !getConfig('shortcutsEnabled', true)) return;
     // Ctrl+K / Cmd+K handled by existing globalSearch
     // ? shows shortcuts
     if((e.key==='?' || (e.shiftKey && e.key==='/')) && !e.ctrlKey && !e.metaKey){
@@ -15931,8 +15954,32 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     }
     // Escape closes shortcuts modal
     if(e.key==='Escape'){
+      v8LeaderActive=false; v8LeaderHint(false);
       if($('v8ShOverlay').classList.contains('show')){ v8CloseShortcuts(); }
       const menu=$('v8FabMenu'); if(menu && menu.classList.contains('open')){menu.classList.remove('open'); const f=qs('.fab'); if(f) f.classList.remove('v8-open');}
+      return;
+    }
+    // ÖNCE lider dizisi (G → harf). Eskiden tek harflik N/M kuralları üstteydi
+    // ve "G N" hiç çalışmıyordu: G'den sonra N basınca sayfaya gitmek yerine
+    // hızlı ekle menüsü açılıyordu.
+    if(v8LeaderActive){
+      const map = {h:'home',n:'new',l:'list',f:'fermuar',e:'lastik',d:'dugme',t:'toptan',r:'reports',
+                   s:'stok',a:'atolye',k:'takvim',c:'akskontrol',p:'aksesuar',y:'tela-kontrol',
+                   v:'fermuar-takip',',':'settings'};
+      const k = e.key.toLowerCase();
+      v8LeaderActive=false; clearTimeout(v8LeaderTimer); v8LeaderHint(false);
+      if(map[k]){
+        e.preventDefault();
+        if(typeof showPage==='function') showPage(map[k]);
+        return;
+      }
+      // tanınmayan harf: diziyi bitir, tuşu normal akışına bırak
+    }
+    // Leader: g
+    if((e.key==='g'||e.key==='G') && !e.ctrlKey && !e.metaKey){
+      e.preventDefault(); v8LeaderActive=true; v8LeaderHint(true);
+      clearTimeout(v8LeaderTimer);
+      v8LeaderTimer = setTimeout(()=>{v8LeaderActive=false; v8LeaderHint(false);}, 1400);
       return;
     }
     // N → open quick-add menu
@@ -15942,23 +15989,6 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     // M → toggle sidebar
     if((e.key==='m'||e.key==='M') && !e.ctrlKey && !e.metaKey && !e.altKey){
       e.preventDefault(); if(typeof toggleSidebar==='function') toggleSidebar(); return;
-    }
-    // Leader: g then [letter]
-    if((e.key==='g'||e.key==='G') && !e.ctrlKey && !e.metaKey){
-      e.preventDefault(); v8LeaderActive=true;
-      clearTimeout(v8LeaderTimer);
-      v8LeaderTimer = setTimeout(()=>{v8LeaderActive=false;}, 1400);
-      // little toast hint
-      return;
-    }
-    if(v8LeaderActive){
-      const map = {h:'home',n:'new',l:'list',f:'fermuar',e:'lastik',d:'dugme',t:'toptan',r:'reports',s:'stok',a:'atolye',k:'takvim',',':'settings','?':null};
-      const k = e.key.toLowerCase();
-      if(map[k]!==undefined){
-        e.preventDefault();
-        v8LeaderActive=false; clearTimeout(v8LeaderTimer);
-        if(map[k] && typeof showPage==='function') showPage(map[k]);
-      }
     }
   });
 
