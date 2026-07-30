@@ -14264,3 +14264,45 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   .egg-shake, .egg-crown, .egg-text, .egg-conf, #eggBox{ animation:none !important; }
   .egg-text{ -webkit-text-fill-color:#f59e0b; color:#f59e0b; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   PERFORMANS MODU (data-perf="lite")
+   Zayıf iş bilgisayarlarında arayüz takılıyordu. Asıl yük: 57 sürekli
+   (infinite) animasyon, 77 backdrop-filter (cam bulanıklığı) ve yüzlerce
+   büyük yarıçaplı gölge — boşta bile GPU çalıştırıyorlar.
+   Bu modda efektler kapanır; DÜZEN, RENK VE YAZI TİPİ AYNI KALIR.
+
+   NOT: mevcut kurallar çoğu yerde "#page-settings .s-card { ... !important }"
+   gibi ID'li yazıldığı için düz bir "* { animation:none !important }" onları
+   yenemiyordu. :is(#_pf,*) seçicisi her öğeyi eşler ama özgüllüğü ID
+   seviyesine çıkarır — bu yüzden kullanılıyor.
+   ══════════════════════════════════════════════════════════════ */
+html[data-perf="lite"] :is(#_pf,*),
+html[data-perf="lite"] :is(#_pf,*)::before,
+html[data-perf="lite"] :is(#_pf,*)::after{
+  animation:none !important;
+  transition:none !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  filter:none !important;
+  text-shadow:none !important;
+  box-shadow:none !important;
+  will-change:auto !important;
+}
+/* Gölge kalkınca sınırı olmayan kartlar birbirine karışmasın diye ucuz çizgi */
+html[data-perf="lite"] :is(#_pf,*):is(#_pf,*):is(.card,.ak-card,.s-card,.ft-card,.tk-card,.ak-color,.ak-match,.modal-content,.stat-card){
+  border:1px solid var(--border) !important;
+}
+/* Hover'da yükselme/ölçekleme yeniden boyama tetikliyor — sadece renk değişsin */
+html[data-perf="lite"] :is(#_pf,*):hover{ transform:none !important; }
+/* Dekoratif hareketli arka plan katmanları */
+html[data-perf="lite"] body::before,
+html[data-perf="lite"] body::after,
+html[data-perf="lite"] .page::before{ display:none !important; }
+html[data-perf="lite"]{ scroll-behavior:auto !important; }
+
+/* Ayarlar: performans modu bilgi satırı */
+.s-perf-note{margin-top:12px;font-size:12px;color:var(--text-muted);background:var(--glass);
+  border:1px solid var(--border);border-radius:10px;padding:9px 12px;line-height:1.5;}
+.s-perf-note i{color:var(--primary);margin-right:6px;}
+.s-perf-note b{color:var(--text-main);}

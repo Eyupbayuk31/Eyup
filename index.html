@@ -1281,6 +1281,18 @@
     }
     var fs=JSON.parse(localStorage.getItem('config_fontSize'));
     if(fs){ var _fsv=Math.max(12,Math.min(20,parseInt(fs,10)||14)); document.documentElement.style.zoom=(_fsv/14).toFixed(4); }
+    // Performans modu: zayıf PC'lerde animasyon/bulanıklık/gölge kapanır.
+    // Boyamadan ÖNCE uygulanır ki açılışta ağır efektler hiç çizilmesin.
+    var pm=localStorage.getItem('config_perfMode');
+    try{ pm=JSON.parse(pm); }catch(_){}
+    if(pm!=='off' && pm!=='lite') pm='auto';
+    var lite = (pm==='lite');
+    if(pm==='auto'){
+      var cores=navigator.hardwareConcurrency||8, mem=navigator.deviceMemory||8;
+      var rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      lite = rm || cores<=4 || mem<=4;
+    }
+    if(lite) document.documentElement.setAttribute('data-perf','lite');
   }catch(e){}
 })();
 </script>
@@ -3168,6 +3180,24 @@ if(typeof Chart==='undefined'){
               <button class="s-mode-btn" onclick="setMode('light')" data-mode-btn="light"><i class="fas fa-sun"></i> Aydınlık</button>
               <button class="s-mode-btn active" onclick="setMode('auto')" data-mode-btn="auto"><i class="fas fa-circle-half-stroke"></i> Otomatik</button>
             </div>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#10b981,#047857);"><i class="fas fa-gauge-high"></i></div>
+            <div>
+              <h3>Performans Modu</h3>
+              <p>Zayıf bilgisayarlarda uygulamayı hafifletir — animasyonlar, cam bulanıklığı ve gölgeler kapanır</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div class="s-mode-toggle">
+              <button class="s-mode-btn s-perf-btn" onclick="setPerfMode('off')" data-perf-btn="off"><i class="fas fa-wand-magic-sparkles"></i> Normal</button>
+              <button class="s-mode-btn s-perf-btn" onclick="setPerfMode('lite')" data-perf-btn="lite"><i class="fas fa-feather"></i> Hafif</button>
+              <button class="s-mode-btn s-perf-btn" onclick="setPerfMode('auto')" data-perf-btn="auto"><i class="fas fa-circle-half-stroke"></i> Otomatik</button>
+            </div>
+            <div class="s-perf-note" id="perfNote"></div>
           </div>
         </div>
       </div>
@@ -12013,7 +12043,7 @@ function settingsChangePassword(){
 // ─────────────────────────────────────────────────────────
 
 function setMode(mode){
-  document.querySelectorAll('.s-mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
+  document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
   setConfig('colorMode',mode);
   if(mode==='dark'){document.documentElement.setAttribute('data-theme','dark');}
   else if(mode==='light'){document.documentElement.setAttribute('data-theme','light');}
@@ -12022,6 +12052,36 @@ function setMode(mode){
     document.documentElement.setAttribute('data-theme', prefersDark?'dark':'light');
   }
   toast('Görünüm modu: '+(mode==='dark'?'Karanlık':mode==='light'?'Aydınlık':'Otomatik'),'success');
+}
+
+// ── Performans modu ────────────────────────────────────────────────────────
+// Zayıf iş bilgisayarlarında arayüz takılıyordu: 57 sürekli animasyon,
+// 77 backdrop-filter (cam bulanıklığı) ve yüzlerce büyük gölge sürekli GPU
+// çalıştırıyor. "Hafif" modda bunlar kapanır, tasarım aynı kalır.
+function _perfIsWeak(){
+  var cores=navigator.hardwareConcurrency||8, mem=navigator.deviceMemory||8;
+  var rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return !!(rm || cores<=4 || mem<=4);
+}
+function applyPerfMode(mode, silent){
+  if(mode!=='off' && mode!=='lite') mode='auto';
+  var lite = mode==='lite' || (mode==='auto' && _perfIsWeak());
+  if(lite) document.documentElement.setAttribute('data-perf','lite');
+  else document.documentElement.removeAttribute('data-perf');
+  document.querySelectorAll('.s-perf-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.perfBtn===mode); });
+  var n=document.getElementById('perfNote');
+  if(n){
+    var cores=navigator.hardwareConcurrency||'?', mem=navigator.deviceMemory;
+    n.innerHTML='<i class="fas fa-'+(lite?'feather':'wand-magic-sparkles')+'"></i> Şu an <b>'+(lite?'HAFİF':'NORMAL')+'</b> modda'+
+      (mode==='auto'?' (otomatik: '+cores+' çekirdek'+(mem?(' · '+mem+' GB'):'')+')':'')+
+      ' — '+(lite?'animasyonlar, cam bulanıklığı ve gölgeler kapalı.':'tüm görsel efektler açık.');
+  }
+  return lite;
+}
+function setPerfMode(mode){
+  setConfig('perfMode',mode);
+  var lite=applyPerfMode(mode);
+  toast('Performans modu: '+(mode==='lite'?'Hafif':mode==='off'?'Normal':'Otomatik')+(lite?' (hafif çalışıyor)':''),'success');
 }
 
 // Init settings on load
@@ -12037,7 +12097,9 @@ document.addEventListener('DOMContentLoaded',function(){
     if(fs&&fsVal)fsVal.textContent=fs.value+'px';
     // Mode
     const savedMode=getConfig('colorMode','auto');
-    document.querySelectorAll('.s-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.modeBtn===savedMode));
+    document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(b=>b.classList.toggle('active',b.dataset.modeBtn===savedMode));
+    // Performans modu düğmeleri
+    if(typeof applyPerfMode==='function') applyPerfMode(getConfig('perfMode','auto'), true);
     // Active theme card sync
     const savedTheme=getConfig('theme','default');
     document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.themeBtn===savedTheme));
