@@ -14412,3 +14412,68 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
   text-transform:uppercase; color:var(--text-dim);
 }
 .gs-item.gs-page .gs-badge{ background:color-mix(in srgb,var(--primary) 16%,transparent); color:var(--primary); }
+
+/* ══════════════════════════════════════════════════════════════
+   GELİŞMİŞ ARAMA — sayaç, filtre çipleri, gruplar, vurgulama
+   ══════════════════════════════════════════════════════════════ */
+.gs-count{
+  flex-shrink:0; font-size:11px; font-weight:800; letter-spacing:.3px;
+  color:var(--primary); background:color-mix(in srgb,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--primary) 22%,transparent);
+  padding:4px 9px; border-radius:20px; white-space:nowrap;
+}
+.gs-filters{
+  display:flex; gap:7px; padding:10px 16px; flex-wrap:wrap;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 4%,transparent),transparent);
+}
+.gs-chip{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  font-size:11.5px; font-weight:800; letter-spacing:.2px;
+  padding:6px 12px; border-radius:20px;
+  border:1px solid var(--border); background:var(--glass); color:var(--text-muted);
+  font-family:inherit; transition:color .15s,border-color .15s,background .15s;
+}
+.gs-chip:hover{ color:var(--text-main); border-color:color-mix(in srgb,var(--primary) 35%,var(--border)); }
+.gs-chip.on{
+  color:var(--on-primary,#fff); background:var(--primary);
+  border-color:var(--primary);
+}
+.gs-chip.bos{ opacity:.42; }
+.gs-chip span{
+  font-size:10px; font-weight:800; padding:1px 6px; border-radius:10px;
+  background:color-mix(in srgb,var(--text-dim) 22%,transparent);
+}
+.gs-chip.on span{ background:color-mix(in srgb,#000 22%,transparent); }
+
+.gs-group{
+  position:sticky; top:0; z-index:1;
+  padding:10px 16px 5px; font-size:9.5px; font-weight:800; letter-spacing:1.1px;
+  text-transform:uppercase; color:var(--text-dim);
+  background:var(--bg-card-solid,var(--bg-card));
+}
+/* Eşleşen parça vurgusu */
+.gs-item mark{
+  background:color-mix(in srgb,var(--primary) 30%,transparent);
+  color:inherit; border-radius:3px; padding:0 2px; font-weight:900;
+}
+.gs-item.active mark{ background:color-mix(in srgb,#000 26%,transparent); }
+/* Başlıktaki model kodu rozeti */
+.gs-mdl{
+  margin-left:9px; font-size:11px; font-weight:800; letter-spacing:.4px;
+  font-family:ui-monospace,'JetBrains Mono',monospace;
+  padding:2px 8px; border-radius:6px;
+  background:color-mix(in srgb,var(--primary) 14%,transparent);
+  color:var(--primary); border:1px solid color-mix(in srgb,var(--primary) 22%,transparent);
+}
+.gs-item.active .gs-mdl{ background:color-mix(in srgb,#000 20%,transparent); color:inherit; border-color:transparent; }
+/* Boş durum */
+.gs-empty{ padding:34px 20px; text-align:center; color:var(--text-muted); }
+.gs-empty > i{ font-size:30px; opacity:.35; }
+.gs-empty-t{ margin-top:12px; font-size:14px; font-weight:800; color:var(--text-main); }
+.gs-empty-s{ margin-top:7px; font-size:12px; line-height:1.9; }
+.gs-empty-s b{
+  font-family:ui-monospace,'JetBrains Mono',monospace; font-size:11px;
+  padding:2px 7px; border-radius:6px; background:var(--glass);
+  border:1px solid var(--border); color:var(--primary); font-weight:800;
+}

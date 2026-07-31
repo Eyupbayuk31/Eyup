@@ -15001,10 +15001,12 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="gs-box">
     <div class="gs-head">
       <i class="fas fa-search"></i>
-      <input type="text" id="gsInput" class="gs-input" placeholder="İrsaliye no, atölye, model, beden, not... ara" autocomplete="off">
+      <input type="text" id="gsInput" class="gs-input" placeholder="Model kodu, irsaliye no, atölye, menü… ara" autocomplete="off">
+      <span class="gs-count" id="gsCount"></span>
       <span class="gs-kbd gs-kbd-esc">Esc</span>
       <button type="button" class="gs-close" onclick="closeGlobalSearch()" aria-label="Kapat"><i class="fas fa-times"></i></button>
     </div>
+    <div class="gs-filters" id="gsFilters"></div>
     <div class="gs-list" id="gsList"></div>
     <div class="gs-foot">
       <span><span class="gs-kbd">↑↓</span> gez</span>
@@ -15018,32 +15020,63 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script>
 (function(){
+  // ═══════ GELİŞMİŞ ARAMA ═══════
+  // Üç kaynak: SAYFALAR (menü), İRSALİYELER (kayıtlar), TAKİP & STOK (modüller).
+  // Hepsinde model kodu aranır; alan adları modülden modüle değişiyor.
   const TYPE_META = {
     standart:{lbl:'Poşet', ic:'fa-shopping-bag', color:'#2563eb', key:'irsaliyeler'},
     fermuar: {lbl:'Fermuar', ic:'fa-grip-lines', color:'#7c3aed', key:'fermuarlar'},
     lastik:  {lbl:'Lastik', ic:'fa-circle-notch', color:'#059669', key:'lastikler'},
     dugme:   {lbl:'Düğme', ic:'fa-circle-dot', color:'#dc2626', key:'dugmeler'},
-    toptan:  {lbl:'Toptan', ic:'fa-boxes-stacked', color:'#ea580c', key:'toptanlar'}
+    toptan:  {lbl:'Toptan', ic:'fa-boxes-stacked', color:'#ea580c', key:'toptanlar'},
+    satenaskilik:{lbl:'Saten Askılık', ic:'fa-layer-group', color:'#0891b2', key:'satenaskilikler'},
+    kordon:  {lbl:'Kordon', ic:'fa-bezier-curve', color:'#c026d3', key:'kordonlar'},
+    dantel:  {lbl:'Dantel', ic:'fa-border-all', color:'#db2777', key:'danteller'}
   };
-  let gsResults = [];
-  let gsPages = [];   // menü/sayfa sonuçları (kayıtlardan ayrı, üstte listelenir)
+  // Kayıt olmayan modüller: sonuca tıklayınca ilgili sayfaya gidilir
+  const MOD_META = [
+    {id:'aksesuar',  key:'aksesuarlar',  sayfa:'aksesuar',      lbl:'Aksesuar Takip', ic:'fa-tags',           color:'#f59e0b',
+     model:'modelKodu', alt:it=>[it.koliNo?('Koli '+it.koliNo):'', it.termin?('Termin '+it.termin):'', it.adet?(it.adet+' adet'):''].filter(Boolean).join(' • ')},
+    {id:'akskontrol',key:'ak_records_v2',sayfa:'akskontrol',    lbl:'Aksesuar Kontrol', ic:'fa-clipboard-check', color:'#8b5cf6',
+     model:'model',     alt:it=>[it.renk, it.po?('PO '+it.po):'', it.tarih].filter(Boolean).join(' • ')},
+    {id:'ftakip',    key:'fermuarTakip', sayfa:'fermuar-takip', lbl:'Fermuar Takip', ic:'fa-link',            color:'#6366f1',
+     model:'modelKodu', alt:it=>[it.tedarikci, it.termin?('Termin '+it.termin):''].filter(Boolean).join(' • ')},
+    {id:'tela',      key:'telaKontrol',  sayfa:'tela-kontrol',  lbl:'Tela Kontrol', ic:'fa-layer-group',      color:'#14b8a6',
+     model:'modelKodu', alt:it=>[it.renk, it.adet?(it.adet+' adet'):''].filter(Boolean).join(' • ')},
+    {id:'stok',      key:'stoklar',      sayfa:'stok',          lbl:'Genel Stok', ic:'fa-warehouse',          color:'#64748b',
+     model:'ad',        alt:it=>[it.kategori, (it.miktar!=null?it.miktar+' '+(it.birim||''):'')].filter(Boolean).join(' • ')}
+  ];
+  const GS_PAGES = [
+    {p:'home',ad:'Ana Sayfa',ek:'anasayfa dashboard özet'},
+    {p:'new',ad:'Yeni İrsaliye',ek:'ekle oluştur poşet fermuar lastik düğme toptan saten kordon dantel'},
+    {p:'list',ad:'İrsaliyeler',ek:'liste kayıtlar'},
+    {p:'stok',ad:'Genel Stok',ek:'depo envanter'},
+    {p:'aksesuar',ad:'Aksesuar Takip',ek:'excel tablo'},
+    {p:'akskontrol',ad:'Aksesuar Kontrol',ek:'föy defacto arşiv barkod yıkama dokuma'},
+    {p:'fermuar-takip',ad:'Fermuar Takip',ek:'cm satın alma'},
+    {p:'tela-kontrol',ad:'Tela Kontrol',ek:'top 150 180'},
+    {p:'atolye',ad:'Atölyeler',ek:''},
+    {p:'takvim',ad:'Takvim',ek:'termin sevk'},
+    {p:'reports',ad:'Raporlar',ek:'analiz grafik'},
+    {p:'geridonusum',ad:'Geri Dönüşüm Kutusu',ek:'silinen çöp'},
+    {p:'settings',ad:'Ayarlar',ek:'tema performans kısayol yedek'}
+  ];
+
+  let gsRows = [];      // tüm sonuçlar tek düz dizi (klavye gezinme için)
   let gsIdx = 0;
-
-  function collectAll(){
-    const all = [];
-    Object.keys(TYPE_META).forEach(type=>{
-      try{
-        const list = getData(TYPE_META[type].key) || [];
-        list.forEach(it => all.push({item:it, type}));
-      }catch(e){}
-    });
-    return all;
+  let gsFiltre = 'all'; // all | page | irs | mod
+  const _tl = v => (v==null?'':(''+v)).toLocaleLowerCase('tr');
+  const _esc = v => (''+(v==null?'':v)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // Eşleşen parçayı vurgula
+  function _vur(metin,q){
+    const m=_esc(metin); if(!q) return m;
+    const i=_tl(metin).indexOf(q); if(i<0) return m;
+    return _esc(metin.slice(0,i))+'<mark>'+_esc(metin.slice(i,i+q.length))+'</mark>'+_esc(metin.slice(i+q.length));
   }
-
   function buildSearchBlob(it, type){
     const parts = [it.no, it.model, it.urun, it.atolye, it.firma, it.musteri,
                    it.aciklama, it.not, it.teslimEden, it.teslimAlan,
-                   it.cap, it.cm, it.metre, it.adet, it.durum, it.termin, it.tarih];
+                   it.cap, it.cm, it.metre, it.adet, it.durum, it.termin, it.tarih, it.renk];
     if(it.sizes){
       const sn={s30:'30x40 30×40',s35:'35x45 35×45',s40:'40x60 40×60',s50:'50x70 50×70',s60:'60x90 60×90',s100:'100x100 100×100'};
       Object.keys(it.sizes).forEach(k=>{ if(it.sizes[k]>0) parts.push((sn[k]||k)+' '+it.sizes[k]); });
@@ -15054,122 +15087,126 @@ document.addEventListener('DOMContentLoaded', function(){
         if(v) parts.push(k+' '+v);
       });
     }
+    if(it.olcular) try{ Object.keys(it.olcular).forEach(k=>parts.push(k+' '+it.olcular[k])); }catch(e){}
     parts.push(TYPE_META[type].lbl);
-    return parts.filter(Boolean).join(' ').toLowerCase();
-  }
-
-  // Menü/sayfa sonuçları — "tela", "aksesuar" gibi yazınca sayfaya atlasın
-  const GS_PAGES = [
-    {p:'home',          ad:'Ana Sayfa',            ek:'anasayfa dashboard özet'},
-    {p:'new',           ad:'Yeni İrsaliye',        ek:'ekle oluştur'},
-    {p:'list',          ad:'İrsaliyeler',          ek:'liste kayıtlar'},
-    {p:'fermuar',       ad:'Fermuar İrsaliyesi',   ek:''},
-    {p:'lastik',        ad:'Lastik İrsaliyesi',    ek:''},
-    {p:'dugme',         ad:'Düğme İrsaliyesi',     ek:''},
-    {p:'toptan',        ad:'Toptan Sipariş',       ek:''},
-    {p:'satenaskilik',  ad:'Saten Askılık',        ek:''},
-    {p:'kordon',        ad:'Kordon İrsaliyesi',    ek:''},
-    {p:'dantel',        ad:'Dantel İrsaliyesi',    ek:''},
-    {p:'stok',          ad:'Genel Stok',           ek:'depo envanter'},
-    {p:'aksesuar',      ad:'Aksesuar Takip',       ek:'excel tablo'},
-    {p:'akskontrol',    ad:'Aksesuar Kontrol',     ek:'föy defacto arşiv barkod yıkama dokuma'},
-    {p:'fermuar-takip', ad:'Fermuar Takip',        ek:'cm satın alma'},
-    {p:'tela-kontrol',  ad:'Tela Kontrol',         ek:'top 150 180'},
-    {p:'atolye',        ad:'Atölyeler',            ek:''},
-    {p:'takvim',        ad:'Takvim',               ek:'termin sevk'},
-    {p:'reports',       ad:'Raporlar',             ek:'analiz grafik'},
-    {p:'geridonusum',   ad:'Geri Dönüşüm Kutusu',  ek:'silinen çöp'},
-    {p:'settings',      ad:'Ayarlar',              ek:'tema performans kısayol yedek'}
-  ];
-  function gsPageResults(q){
-    if(!q) return [];
-    const out=[];
-    GS_PAGES.forEach(pg=>{
-      const blob=(pg.ad+' '+pg.ek).toLocaleLowerCase('tr');
-      const i=blob.indexOf(q);
-      if(i>=0) out.push({sayfa:pg, score: 1000 - i*5 - (blob.length/50)});
-    });
-    return out.sort((a,b)=>b.score-a.score).slice(0,5);
+    return _tl(parts.filter(Boolean).join(' '));
   }
 
   function doSearch(q){
-    q = (q||'').trim().toLowerCase();
-    const all = collectAll();
-    gsPages = gsPageResults(q);
-    if(!q){
-      gsResults = all.slice(0, 20).map(r=>({...r, score:0}));
-    } else {
-      const tokens = q.split(/\s+/).filter(Boolean);
-      gsResults = [];
-      all.forEach(r=>{
-        const blob = buildSearchBlob(r.item, r.type);
-        let ok = true, score = 0;
-        for(const t of tokens){
-          const idx = blob.indexOf(t);
-          if(idx < 0){ ok = false; break; }
-          score += (idx === 0 ? 10 : idx < 20 ? 5 : 1);
-          if((r.item.no||'').toLowerCase().includes(t)) score += 20;
-        }
-        if(ok) gsResults.push({...r, score});
+    q = _tl((q||'').trim());
+    const rows = [];
+    // ── SAYFALAR
+    if(q){
+      GS_PAGES.forEach(pg=>{
+        const i=_tl(pg.ad+' '+pg.ek).indexOf(q);
+        if(i>=0) rows.push({grup:'page', skor: 900-i*4, ad:pg.ad, sayfa:pg.p});
       });
-      gsResults.sort((a,b)=>b.score-a.score);
-      gsResults = gsResults.slice(0, 50);
     }
+    // ── İRSALİYE KAYITLARI
+    Object.keys(TYPE_META).forEach(type=>{
+      let list=[]; try{ list=getData(TYPE_META[type].key)||[]; }catch(e){}
+      list.forEach(it=>{
+        if(!q){ rows.push({grup:'irs', skor:0, item:it, type}); return; }
+        const blob=buildSearchBlob(it,type);
+        if(blob.indexOf(q)<0) return;
+        let skor=100;
+        if(_tl(it.model).indexOf(q)===0) skor+=400;        // model kodu başlangıcı en güçlü
+        else if(_tl(it.model).indexOf(q)>=0) skor+=250;
+        if(_tl(it.no).indexOf(q)>=0) skor+=300;
+        rows.push({grup:'irs', skor, item:it, type});
+      });
+    });
+    // ── TAKİP & STOK MODÜLLERİ
+    MOD_META.forEach(m=>{
+      if(!q) return;
+      let list=[]; try{ list=getData(m.key)||[]; }catch(e){}
+      list.forEach(it=>{
+        const ad=it[m.model]||'';
+        const blob=_tl([ad,it.renk,it.po,it.tedarikci,it.koliNo,it.kategori,it.termin,m.lbl].filter(Boolean).join(' '));
+        if(blob.indexOf(q)<0) return;
+        let skor=120;
+        if(_tl(ad).indexOf(q)===0) skor+=420; else if(_tl(ad).indexOf(q)>=0) skor+=260;
+        rows.push({grup:'mod', skor, item:it, mod:m, ad});
+      });
+    });
+    rows.sort((a,b)=>b.skor-a.skor);
+    gsRows = rows.slice(0, 120);
     gsIdx = 0;
-    renderResults();
+    renderResults(q);
   }
 
-  function renderResults(){
-    const host = document.getElementById('gsList');
-    // Sayfa/menü sonuçları en üstte ayrı bir grup olarak
-    let sayfaHtml='';
-    if(gsPages.length){
-      sayfaHtml = '<div class="gs-group">Sayfalar</div>' + gsPages.map((g,i)=>
-        '<div class="gs-item gs-page" onclick="window._gsGo(\''+g.sayfa.p+'\')">'+
-          '<div class="gs-ic" style="background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary);"><i class="fas fa-diagram-project"></i></div>'+
-          '<div class="gs-body"><div class="gs-title">'+g.sayfa.ad+'</div>'+
-          '<div class="gs-meta">Sayfayı aç</div></div>'+
-          '<span class="gs-badge">Menü</span>'+
-        '</div>').join('');
-    }
-    if(!gsResults.length){
-      host.innerHTML = sayfaHtml + (sayfaHtml?'':'<div class="gs-empty"><i class="fas fa-inbox" style="font-size:28px;opacity:.4;"></i><div style="margin-top:8px;">Sonuç bulunamadı</div></div>');
+  function renderResults(q){
+    const host=document.getElementById('gsList');
+    const say=document.getElementById('gsCount');
+    const sayilar={page:0,irs:0,mod:0};
+    gsRows.forEach(r=>sayilar[r.grup]++);
+    // filtre çipleri
+    const fil=document.getElementById('gsFilters');
+    const cips=[['all','Tümü',gsRows.length],['page','Sayfalar',sayilar.page],['irs','İrsaliyeler',sayilar.irs],['mod','Takip & Stok',sayilar.mod]];
+    fil.innerHTML=cips.map(([id,ad,n])=>
+      '<button type="button" class="gs-chip'+(gsFiltre===id?' on':'')+(n?'':' bos')+'" onclick="window._gsFilt(\''+id+'\')">'+ad+
+      (n?'<span>'+n+'</span>':'')+'</button>').join('');
+
+    const gorunen=gsRows.filter(r=>gsFiltre==='all'||r.grup===gsFiltre);
+    if(say) say.textContent = gorunen.length ? (gorunen.length+' sonuç') : '';
+    if(!gorunen.length){
+      host.innerHTML='<div class="gs-empty"><i class="fas fa-magnifying-glass"></i>'+
+        '<div class="gs-empty-t">'+(q?'Sonuç bulunamadı':'Aramaya başla')+'</div>'+
+        '<div class="gs-empty-s">Model kodu, irsaliye no, atölye ya da menü adı yazabilirsin<br>'+
+        '<b>M10173</b> · <b>IRS-053</b> · <b>tela</b> · <b>ayarlar</b></div></div>';
       return;
     }
-    host.innerHTML = sayfaHtml + (sayfaHtml?'<div class="gs-group">Kayıtlar</div>':'') + gsResults.map((r,i)=>{
-      const it = r.item, meta = TYPE_META[r.type];
-      const title = it.no || '(no yok)';
-      const sub = [it.model||it.urun, it.atolye||it.firma||it.musteri, it.termin?'Termin:'+it.termin:''].filter(Boolean).join(' • ');
-      let detail = '';
-      if(r.type==='standart' && it.sizes){
-        const sn={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
-        const sz = Object.keys(it.sizes).filter(k=>it.sizes[k]>0).map(k=>`${sn[k]||k}:${it.sizes[k]}`).join(' ');
-        if(sz) detail = ' 📏 '+sz;
-      } else if(r.type==='lastik'){
-        detail = ` 📏 ${it.cm||0}cm × ${it.metre||0}m`;
-      } else if(r.type==='dugme'){
-        detail = ` 🔘 ${it.adet||0} adet`;
+    let html='', sonGrup='';
+    const grupAd={page:'Sayfalar',irs:'İrsaliyeler',mod:'Takip & Stok'};
+    gorunen.forEach((r,i)=>{
+      if(r.grup!==sonGrup){ html+='<div class="gs-group">'+grupAd[r.grup]+'</div>'; sonGrup=r.grup; }
+      const aktif=(i===gsIdx)?' active':'';
+      if(r.grup==='page'){
+        html+='<div class="gs-item gs-page'+aktif+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+
+          '<div class="gs-ic" style="background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary);"><i class="fas fa-diagram-project"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+_vur(r.ad,q)+'</div><div class="gs-meta">Sayfayı aç</div></div>'+
+          '<span class="gs-badge">Menü</span></div>';
+      } else if(r.grup==='irs'){
+        const it=r.item, meta=TYPE_META[r.type];
+        const alt=[it.model, it.atolye||it.firma||it.musteri, it.termin?('Termin '+it.termin):''].filter(Boolean).join(' • ');
+        html+='<div class="gs-item'+aktif+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+
+          '<div class="gs-ic" style="background:'+meta.color+'22;color:'+meta.color+';"><i class="fas '+meta.ic+'"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+_vur(it.no||'(no yok)',q)+
+            (it.model?'<span class="gs-mdl">'+_vur(it.model,q)+'</span>':'')+'</div>'+
+          '<div class="gs-meta">'+_esc(alt)+'</div></div>'+
+          '<span class="gs-badge">'+meta.lbl+'</span></div>';
+      } else {
+        const m=r.mod;
+        html+='<div class="gs-item'+aktif+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+
+          '<div class="gs-ic" style="background:'+m.color+'22;color:'+m.color+';"><i class="fas '+m.ic+'"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+_vur(r.ad||'(adsız)',q)+'</div>'+
+          '<div class="gs-meta">'+_esc(m.alt(r.item)||'')+'</div></div>'+
+          '<span class="gs-badge">'+m.lbl+'</span></div>';
       }
-      return `<div class="gs-item ${i===gsIdx?'active':''}" data-i="${i}" onclick="window._gsOpen(${i})" onmouseenter="window._gsHover(${i})">
-        <div class="gs-ic" style="background:${meta.color}22;color:${meta.color};"><i class="fas ${meta.ic}"></i></div>
-        <div class="gs-body">
-          <div class="gs-title">${title} ${sub?'<span style="opacity:.7;font-weight:500;"> — '+sub+'</span>':''}</div>
-          <div class="gs-meta">${detail||'&nbsp;'}</div>
-        </div>
-        <span class="gs-badge">${meta.lbl}</span>
-      </div>`;
-    }).join('');
+    });
+    host.innerHTML=html;
   }
 
-  window._gsGo = (p)=>{ closeGlobalSearch(); if(typeof showPage==='function') showPage(p); };
-  window._gsHover = (i)=>{ gsIdx = i; document.querySelectorAll('.gs-item').forEach((el,k)=>el.classList.toggle('active', k===i)); };
+  window._gsFilt = (f)=>{ gsFiltre=f; gsIdx=0; renderResults(_tl(document.getElementById('gsInput').value.trim())); };
+  window._gsHover = (i)=>{ gsIdx=i; document.querySelectorAll('.gs-item').forEach((el,k)=>el.classList.toggle('active',k===i)); };
   window._gsOpen = (i)=>{
-    const r = gsResults[i]; if(!r) return;
+    const gorunen=gsRows.filter(r=>gsFiltre==='all'||r.grup===gsFiltre);
+    const r=gorunen[i]; if(!r) return;
     closeGlobalSearch();
     try{
+      if(r.grup==='page'){ if(typeof showPage==='function') showPage(r.sayfa); return; }
+      if(r.grup==='mod'){
+        if(typeof showPage==='function') showPage(r.mod.sayfa);
+        // Varsa o sayfanın arama kutusuna model kodunu yaz
+        setTimeout(()=>{
+          const kutu={aksesuar:'aksesuarSearch',stok:'stokSearch','fermuar-takip':'ftSearch','tela-kontrol':'tkSearch'}[r.mod.sayfa];
+          if(kutu){ const el=document.getElementById(kutu);
+            if(el){ el.value=r.ad||''; el.dispatchEvent(new Event('input',{bubbles:true})); } }
+        },220);
+        return;
+      }
       if(typeof openDetailModal==='function') openDetailModal(r.item.id, r.type);
       else if(typeof showDetailModal==='function') showDetailModal(r.item.id, r.type);
-      else if(typeof openModal==='function') openModal(r.item.id, r.type);
       else toast && toast('Kayıt: '+(r.item.no||'-'),'info');
     }catch(e){ console.warn(e); }
   };
@@ -15179,6 +15216,7 @@ document.addEventListener('DOMContentLoaded', function(){
     ov.classList.add('show');
     const inp = document.getElementById('gsInput');
     inp.value = '';
+    gsFiltre='all';
     doSearch('');
     setTimeout(()=>inp.focus(), 50);
   };
@@ -15186,12 +15224,21 @@ document.addEventListener('DOMContentLoaded', function(){
     document.getElementById('gsOverlay').classList.remove('show');
   };
 
+  const _gsVis = ()=>gsRows.filter(r=>gsFiltre==='all'||r.grup===gsFiltre);
+  const _gsScroll = ()=>{ const el=document.querySelectorAll('.gs-item')[gsIdx]; el&&el.scrollIntoView({block:'nearest'}); };
   document.getElementById('gsInput').addEventListener('input', e=>doSearch(e.target.value));
   document.getElementById('gsInput').addEventListener('keydown', e=>{
-    if(e.key==='ArrowDown'){ e.preventDefault(); if(gsIdx<gsResults.length-1){gsIdx++; renderResults(); const el=document.querySelectorAll('.gs-item')[gsIdx]; el&&el.scrollIntoView({block:'nearest'});} }
-    else if(e.key==='ArrowUp'){ e.preventDefault(); if(gsIdx>0){gsIdx--; renderResults(); const el=document.querySelectorAll('.gs-item')[gsIdx]; el&&el.scrollIntoView({block:'nearest'});} }
+    const q=_tl(e.target.value.trim());
+    if(e.key==='ArrowDown'){ e.preventDefault(); if(gsIdx<_gsVis().length-1){gsIdx++; renderResults(q); _gsScroll();} }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); if(gsIdx>0){gsIdx--; renderResults(q); _gsScroll();} }
     else if(e.key==='Enter'){ e.preventDefault(); window._gsOpen(gsIdx); }
     else if(e.key==='Escape'){ closeGlobalSearch(); }
+    else if(e.key==='Tab'){ // Tab: gruplar arası filtre gezinme
+      e.preventDefault();
+      const sira=['all','page','irs','mod'];
+      gsFiltre=sira[(sira.indexOf(gsFiltre)+ (e.shiftKey?sira.length-1:1)) % sira.length];
+      gsIdx=0; renderResults(q);
+    }
   });
 
   document.addEventListener('keydown', e=>{
