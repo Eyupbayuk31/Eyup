@@ -1356,6 +1356,7 @@ if(typeof Chart==='undefined'){
     <a href="javascript:void(0)" class="active" onclick="showPage('home')"><i class="fas fa-home"></i><span>Anasayfa</span></a>
     <a href="javascript:void(0)" onclick="showPage('new')"><i class="fas fa-plus-circle"></i><span>Yeni İrsaliye</span></a>
     <a href="javascript:void(0)" onclick="showPage('list')"><i class="fas fa-list"></i><span>İrsaliyeler</span></a>
+    <a href="javascript:void(0)" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
 
     <div class="nav-section">Sevkiyat</div>
     <a href="javascript:void(0)" onclick="showPage('fermuar')"><i class="fas fa-link"></i><span>Fermuar İrsaliyesi</span></a>
@@ -1369,7 +1370,6 @@ if(typeof Chart==='undefined'){
     <div class="nav-section">Stok Takibi</div>
     <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
     <a href="javascript:void(0)" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
-    <a href="javascript:void(0)" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
     <a href="javascript:void(0)" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
     <a href="javascript:void(0)" onclick="showPage('tela-kontrol')"><i class="fas fa-layer-group"></i><span>Tela Kontrol</span></a>
 
@@ -1403,7 +1403,11 @@ if(typeof Chart==='undefined'){
       <span class="page-title" id="pageTitle">Anasayfa</span>
     </div>
     <div class="topbar-right">
-      <span class="topbar-badge" id="nextBadge">Sıradaki: IRS-001</span>
+      <button type="button" class="tb-search" onclick="openGlobalSearch()" title="Model, irsaliye veya menü ara (Ctrl+K)">
+        <i class="fas fa-search"></i>
+        <span class="tb-search-ph">Model, irsaliye veya menü ara…</span>
+        <span class="tb-search-kbd">Ctrl K</span>
+      </button>
       <div style="position:relative;">
         <div class="notif-bell" onclick="toggleNotifPanel()">
           <i class="fas fa-bell"></i>
@@ -5923,7 +5927,8 @@ function ftToggleStockMode(){
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
 function incNextNo(){setConfig('nextIrsaliyeNo',getNextNo()+1);updateBadge();}
-function updateBadge(){document.getElementById('nextBadge').textContent='Sıradaki: IRS-'+String(getNextNo()).padStart(3,'0');}
+// nextBadge üst çubuktan kaldırıldı (yerine arama kutusu geldi); öğe yoksa sessiz geç.
+function updateBadge(){var el=document.getElementById('nextBadge'); if(el) el.textContent='Sıradaki: IRS-'+String(getNextNo()).padStart(3,'0');}
 
 function saveIrsaliye(){
   const model=document.getElementById('iModel').value.trim();
@@ -15021,6 +15026,7 @@ document.addEventListener('DOMContentLoaded', function(){
     toptan:  {lbl:'Toptan', ic:'fa-boxes-stacked', color:'#ea580c', key:'toptanlar'}
   };
   let gsResults = [];
+  let gsPages = [];   // menü/sayfa sonuçları (kayıtlardan ayrı, üstte listelenir)
   let gsIdx = 0;
 
   function collectAll(){
@@ -15052,9 +15058,44 @@ document.addEventListener('DOMContentLoaded', function(){
     return parts.filter(Boolean).join(' ').toLowerCase();
   }
 
+  // Menü/sayfa sonuçları — "tela", "aksesuar" gibi yazınca sayfaya atlasın
+  const GS_PAGES = [
+    {p:'home',          ad:'Ana Sayfa',            ek:'anasayfa dashboard özet'},
+    {p:'new',           ad:'Yeni İrsaliye',        ek:'ekle oluştur'},
+    {p:'list',          ad:'İrsaliyeler',          ek:'liste kayıtlar'},
+    {p:'fermuar',       ad:'Fermuar İrsaliyesi',   ek:''},
+    {p:'lastik',        ad:'Lastik İrsaliyesi',    ek:''},
+    {p:'dugme',         ad:'Düğme İrsaliyesi',     ek:''},
+    {p:'toptan',        ad:'Toptan Sipariş',       ek:''},
+    {p:'satenaskilik',  ad:'Saten Askılık',        ek:''},
+    {p:'kordon',        ad:'Kordon İrsaliyesi',    ek:''},
+    {p:'dantel',        ad:'Dantel İrsaliyesi',    ek:''},
+    {p:'stok',          ad:'Genel Stok',           ek:'depo envanter'},
+    {p:'aksesuar',      ad:'Aksesuar Takip',       ek:'excel tablo'},
+    {p:'akskontrol',    ad:'Aksesuar Kontrol',     ek:'föy defacto arşiv barkod yıkama dokuma'},
+    {p:'fermuar-takip', ad:'Fermuar Takip',        ek:'cm satın alma'},
+    {p:'tela-kontrol',  ad:'Tela Kontrol',         ek:'top 150 180'},
+    {p:'atolye',        ad:'Atölyeler',            ek:''},
+    {p:'takvim',        ad:'Takvim',               ek:'termin sevk'},
+    {p:'reports',       ad:'Raporlar',             ek:'analiz grafik'},
+    {p:'geridonusum',   ad:'Geri Dönüşüm Kutusu',  ek:'silinen çöp'},
+    {p:'settings',      ad:'Ayarlar',              ek:'tema performans kısayol yedek'}
+  ];
+  function gsPageResults(q){
+    if(!q) return [];
+    const out=[];
+    GS_PAGES.forEach(pg=>{
+      const blob=(pg.ad+' '+pg.ek).toLocaleLowerCase('tr');
+      const i=blob.indexOf(q);
+      if(i>=0) out.push({sayfa:pg, score: 1000 - i*5 - (blob.length/50)});
+    });
+    return out.sort((a,b)=>b.score-a.score).slice(0,5);
+  }
+
   function doSearch(q){
     q = (q||'').trim().toLowerCase();
     const all = collectAll();
+    gsPages = gsPageResults(q);
     if(!q){
       gsResults = all.slice(0, 20).map(r=>({...r, score:0}));
     } else {
@@ -15080,11 +15121,22 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function renderResults(){
     const host = document.getElementById('gsList');
+    // Sayfa/menü sonuçları en üstte ayrı bir grup olarak
+    let sayfaHtml='';
+    if(gsPages.length){
+      sayfaHtml = '<div class="gs-group">Sayfalar</div>' + gsPages.map((g,i)=>
+        '<div class="gs-item gs-page" onclick="window._gsGo(\''+g.sayfa.p+'\')">'+
+          '<div class="gs-ic" style="background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary);"><i class="fas fa-diagram-project"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+g.sayfa.ad+'</div>'+
+          '<div class="gs-meta">Sayfayı aç</div></div>'+
+          '<span class="gs-badge">Menü</span>'+
+        '</div>').join('');
+    }
     if(!gsResults.length){
-      host.innerHTML = '<div class="gs-empty"><i class="fas fa-inbox" style="font-size:28px;opacity:.4;"></i><div style="margin-top:8px;">Sonuç bulunamadı</div></div>';
+      host.innerHTML = sayfaHtml + (sayfaHtml?'':'<div class="gs-empty"><i class="fas fa-inbox" style="font-size:28px;opacity:.4;"></i><div style="margin-top:8px;">Sonuç bulunamadı</div></div>');
       return;
     }
-    host.innerHTML = gsResults.map((r,i)=>{
+    host.innerHTML = sayfaHtml + (sayfaHtml?'<div class="gs-group">Kayıtlar</div>':'') + gsResults.map((r,i)=>{
       const it = r.item, meta = TYPE_META[r.type];
       const title = it.no || '(no yok)';
       const sub = [it.model||it.urun, it.atolye||it.firma||it.musteri, it.termin?'Termin:'+it.termin:''].filter(Boolean).join(' • ');
@@ -15109,6 +15161,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }).join('');
   }
 
+  window._gsGo = (p)=>{ closeGlobalSearch(); if(typeof showPage==='function') showPage(p); };
   window._gsHover = (i)=>{ gsIdx = i; document.querySelectorAll('.gs-item').forEach((el,k)=>el.classList.toggle('active', k===i)); };
   window._gsOpen = (i)=>{
     const r = gsResults[i]; if(!r) return;
@@ -15481,6 +15534,9 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 
   // Topbar chip — shows current theme & opens settings on click
   function v9InjectTopbarChip(){
+    // Üst çubukta artık arama kutusu var; tema çipi yer kaplamasın.
+    // Tema Ayarlar › Görünüm'den değiştiriliyor.
+    return;
     const tr = document.querySelector('.topbar-right');
     if(!tr || document.getElementById('v9TopbarChip')) return;
     const chip = document.createElement('div');

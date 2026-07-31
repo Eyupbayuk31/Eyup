@@ -7587,7 +7587,7 @@ body::after{
      kartlarının ALTINDA kalıyordu. */
   .gs-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:calc(var(--z-modal) + 900);display:none;align-items:flex-start;justify-content:center;padding-top:10vh;}
   .gs-overlay.show{display:flex;}
-  .gs-box{width:min(680px,92vw);background:var(--bg-card,#fff);color:var(--text,#111);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;border:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;max-height:80vh;}
+  .gs-box{width:min(680px,92vw);background:var(--bg-card,#fff);color:var(--text-main);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;border:1px solid var(--border,#e5e7eb);display:flex;flex-direction:column;max-height:80vh;}
   .gs-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border,#e5e7eb);}
   .gs-head i{color:var(--primary,#2563eb);font-size:18px;}
   .gs-input{flex:1;border:none;outline:none;background:transparent;font-size:16px;color:inherit;font-family:inherit;}
@@ -8374,7 +8374,7 @@ html.pre-auth, html.pre-auth body { background: var(--bg-main, #0b0713) !importa
   border:1px solid var(--border, #d1d5db);
   border-radius:8px;
   background: var(--input-bg, #fff);
-  color: var(--text, #1a1a2e);
+  color: var(--text-main);
   font-family:inherit; font-size:14px;
   cursor:pointer;
   box-sizing:border-box;
@@ -8386,7 +8386,7 @@ html.pre-auth, html.pre-auth body { background: var(--bg-main, #0b0713) !importa
 }
 .ss-dropdown{
   position:absolute; left:0; right:0; top:calc(100% + 4px);
-  background: var(--card-bg, #fff); color: var(--text,#1a1a2e);
+  background: var(--bg-card-solid,var(--bg-card)); color: var(--text-main);
   border:1px solid var(--border,#d1d5db); border-radius:10px;
   box-shadow: 0 12px 30px rgba(0,0,0,.15);
   z-index:calc(var(--z-modal) + 900);   /* aynı geçersiz kalıp buradaydı */
@@ -14381,3 +14381,34 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
   border-radius:7px; background:var(--primary); color:var(--on-primary,#fff);
   font-size:12px; font-weight:800;
 }
+
+/* ── Üst çubuk arama kutusu (tema çipi + "Sıradaki" rozetinin yerine) ── */
+.tb-search{
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+  min-width:260px; max-width:380px; padding:9px 12px;
+  border-radius:11px; border:1px solid var(--border);
+  background:var(--glass); color:var(--text-muted);
+  font-size:13px; font-family:inherit; text-align:left;
+  transition:border-color .16s, background .16s, color .16s;
+}
+.tb-search:hover{
+  border-color:color-mix(in srgb,var(--primary) 42%,var(--border));
+  background:var(--bg-card-hover); color:var(--text-main);
+}
+.tb-search i{ font-size:13px; color:var(--primary); flex-shrink:0; }
+.tb-search-ph{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tb-search-kbd{
+  flex-shrink:0; font-size:10px; font-weight:800; letter-spacing:.5px;
+  padding:3px 7px; border-radius:6px; border:1px solid var(--border);
+  background:var(--bg-main); color:var(--text-dim);
+}
+@media (max-width:900px){
+  .tb-search{ min-width:0; width:42px; padding:9px; justify-content:center; }
+  .tb-search-ph,.tb-search-kbd{ display:none; }
+}
+/* Arama sonuçlarında grup başlığı */
+.gs-group{
+  padding:9px 16px 5px; font-size:9.5px; font-weight:800; letter-spacing:1px;
+  text-transform:uppercase; color:var(--text-dim);
+}
+.gs-item.gs-page .gs-badge{ background:color-mix(in srgb,var(--primary) 16%,transparent); color:var(--primary); }
