@@ -14539,3 +14539,7 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
   .irs-bar-l{ border-right:0; border-bottom:1px solid var(--border); padding:0 0 9px; flex-direction:row; align-items:center; gap:8px; }
   .irs-t-tx em{ display:none; }
 }
+
+/* Paylaş menüsü — "Görsel Gönder" seçeneği */
+.share-opt.img i{ color:#0ea5e9; }
+.share-opt.img:hover{ border-color:#0ea5e9; background:color-mix(in srgb,#0ea5e9 12%,transparent); }
