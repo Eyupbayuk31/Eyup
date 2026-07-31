@@ -15197,9 +15197,12 @@ document.addEventListener('DOMContentLoaded', function(){
         },220);
         return;
       }
-      if(typeof openDetailModal==='function') openDetailModal(r.item.id, r.type);
-      else if(typeof showDetailModal==='function') showDetailModal(r.item.id, r.type);
-      else toast && toast('Kayıt: '+(r.item.no||'-'),'info');
+      // Listedekiyle AYNI detay modalı: showDetailUni(id, tür).
+      // (Eskiden olmayan openDetailModal/showDetailModal çağrılıyor, sessizce
+      // düşüyor ve kayıt açılmıyordu.)
+      if(typeof showDetailUni==='function') showDetailUni(r.item.id, r.type);
+      else if(typeof showDetail==='function' && r.type==='standart') showDetail(r.item.id);
+      else toast && toast('Kayıt açılamadı: '+(r.item.no||'-'),'error');
     }catch(e){ console.warn(e); }
   };
 
