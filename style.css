@@ -14412,3 +14412,130 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
   text-transform:uppercase; color:var(--text-dim);
 }
 .gs-item.gs-page .gs-badge{ background:color-mix(in srgb,var(--primary) 16%,transparent); color:var(--primary); }
+
+/* ══════════════════════════════════════════════════════════════
+   GELİŞMİŞ ARAMA — sayaç, filtre çipleri, gruplar, vurgulama
+   ══════════════════════════════════════════════════════════════ */
+.gs-count{
+  flex-shrink:0; font-size:11px; font-weight:800; letter-spacing:.3px;
+  color:var(--primary); background:color-mix(in srgb,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--primary) 22%,transparent);
+  padding:4px 9px; border-radius:20px; white-space:nowrap;
+}
+.gs-filters{
+  display:flex; gap:7px; padding:10px 16px; flex-wrap:wrap;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 4%,transparent),transparent);
+}
+.gs-chip{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  font-size:11.5px; font-weight:800; letter-spacing:.2px;
+  padding:6px 12px; border-radius:20px;
+  border:1px solid var(--border); background:var(--glass); color:var(--text-muted);
+  font-family:inherit; transition:color .15s,border-color .15s,background .15s;
+}
+.gs-chip:hover{ color:var(--text-main); border-color:color-mix(in srgb,var(--primary) 35%,var(--border)); }
+.gs-chip.on{
+  color:var(--on-primary,#fff); background:var(--primary);
+  border-color:var(--primary);
+}
+.gs-chip.bos{ opacity:.42; }
+.gs-chip span{
+  font-size:10px; font-weight:800; padding:1px 6px; border-radius:10px;
+  background:color-mix(in srgb,var(--text-dim) 22%,transparent);
+}
+.gs-chip.on span{ background:color-mix(in srgb,#000 22%,transparent); }
+
+.gs-group{
+  position:sticky; top:0; z-index:1;
+  padding:10px 16px 5px; font-size:9.5px; font-weight:800; letter-spacing:1.1px;
+  text-transform:uppercase; color:var(--text-dim);
+  background:var(--bg-card-solid,var(--bg-card));
+}
+/* Eşleşen parça vurgusu */
+.gs-item mark{
+  background:color-mix(in srgb,var(--primary) 30%,transparent);
+  color:inherit; border-radius:3px; padding:0 2px; font-weight:900;
+}
+.gs-item.active mark{ background:color-mix(in srgb,#000 26%,transparent); }
+/* Başlıktaki model kodu rozeti */
+.gs-mdl{
+  margin-left:9px; font-size:11px; font-weight:800; letter-spacing:.4px;
+  font-family:ui-monospace,'JetBrains Mono',monospace;
+  padding:2px 8px; border-radius:6px;
+  background:color-mix(in srgb,var(--primary) 14%,transparent);
+  color:var(--primary); border:1px solid color-mix(in srgb,var(--primary) 22%,transparent);
+}
+.gs-item.active .gs-mdl{ background:color-mix(in srgb,#000 20%,transparent); color:inherit; border-color:transparent; }
+/* Boş durum */
+.gs-empty{ padding:34px 20px; text-align:center; color:var(--text-muted); }
+.gs-empty > i{ font-size:30px; opacity:.35; }
+.gs-empty-t{ margin-top:12px; font-size:14px; font-weight:800; color:var(--text-main); }
+.gs-empty-s{ margin-top:7px; font-size:12px; line-height:1.9; }
+.gs-empty-s b{
+  font-family:ui-monospace,'JetBrains Mono',monospace; font-size:11px;
+  padding:2px 7px; border-radius:6px; background:var(--glass);
+  border:1px solid var(--border); color:var(--primary); font-weight:800;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SEVKİYAT TÜRÜ ŞERİDİ — 8 irsaliye türü tek yerden
+   ══════════════════════════════════════════════════════════════ */
+.irs-bar{
+  display:flex; align-items:center; gap:14px; margin:0 0 18px;
+  padding:12px 14px; border-radius:16px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 6%,var(--bg-card)),var(--bg-card));
+  border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent);
+}
+.irs-bar-l{
+  display:flex; flex-direction:column; gap:2px; flex-shrink:0; padding-right:14px;
+  border-right:1px solid var(--border);
+}
+.irs-bar-l i{ font-size:13px; color:var(--primary); }
+.irs-bar-l span{
+  font-size:9px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text-muted); white-space:nowrap;
+}
+.irs-bar-rail{
+  display:flex; gap:8px; overflow-x:auto; padding:2px; flex:1;
+  scrollbar-width:thin;
+}
+.irs-bar-rail::-webkit-scrollbar{ height:5px; }
+.irs-bar-rail::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+.irs-t{
+  display:flex; align-items:center; gap:9px; flex-shrink:0; cursor:pointer;
+  padding:8px 13px 8px 9px; border-radius:12px;
+  border:1px solid var(--border); background:var(--glass); color:var(--text-muted);
+  font-family:inherit; text-align:left;
+  transition:color .16s, border-color .16s, background .16s, transform .16s;
+}
+.irs-t:hover{
+  color:var(--text-main); transform:translateY(-1px);
+  border-color:color-mix(in srgb,var(--primary) 40%,var(--border));
+  background:var(--bg-card-hover);
+}
+.irs-t-ic{
+  width:30px; height:30px; border-radius:9px; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center; font-size:13px;
+  background:color-mix(in srgb,var(--primary) 12%,transparent); color:var(--primary);
+  transition:background .16s,color .16s;
+}
+.irs-t-tx{ display:flex; flex-direction:column; line-height:1.15; }
+.irs-t-tx b{ font-size:13px; font-weight:800; letter-spacing:-.1px; white-space:nowrap; }
+.irs-t-tx em{
+  font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:.4px;
+  text-transform:uppercase; opacity:.6; white-space:nowrap;
+}
+.irs-t.on{
+  color:var(--on-primary,#fff); border-color:transparent;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--primary) 92%,#fff),var(--primary) 55%,var(--primary-dark));
+  box-shadow:0 6px 16px -8px var(--primary);
+}
+.irs-t.on .irs-t-ic{ background:color-mix(in srgb,#000 18%,transparent); color:inherit; }
+.irs-t.on .irs-t-tx em{ opacity:.75; }
+@media (max-width:760px){
+  .irs-bar{ flex-direction:column; align-items:stretch; gap:10px; }
+  .irs-bar-l{ border-right:0; border-bottom:1px solid var(--border); padding:0 0 9px; flex-direction:row; align-items:center; gap:8px; }
+  .irs-t-tx em{ display:none; }
+}
