@@ -1358,15 +1358,6 @@ if(typeof Chart==='undefined'){
     <a href="javascript:void(0)" onclick="showPage('list')"><i class="fas fa-list"></i><span>İrsaliyeler</span></a>
     <a href="javascript:void(0)" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
 
-    <div class="nav-section">Sevkiyat</div>
-    <a href="javascript:void(0)" onclick="showPage('fermuar')"><i class="fas fa-link"></i><span>Fermuar İrsaliyesi</span></a>
-    <a href="javascript:void(0)" onclick="showPage('lastik')"><i class="fas fa-ruler"></i><span>Lastik İrsaliyesi</span></a>
-    <a href="javascript:void(0)" onclick="showPage('dugme')"><i class="fas fa-circle-dot"></i><span>Düğme İrsaliyesi</span></a>
-    <a href="javascript:void(0)" onclick="showPage('toptan')"><i class="fas fa-boxes-stacked"></i><span>Toptan Sipariş</span></a>
-    <a href="javascript:void(0)" onclick="showPage('satenaskilik')"><i class="fas fa-layer-group"></i><span>Saten Askılık</span></a>
-    <a href="javascript:void(0)" onclick="showPage('kordon')"><i class="fas fa-bezier-curve"></i><span>Kordon İrsaliyesi</span></a>
-    <a href="javascript:void(0)" onclick="showPage('dantel')"><i class="fas fa-border-all"></i><span>Dantel İrsaliyesi</span></a>
-
     <div class="nav-section">Stok Takibi</div>
     <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
     <a href="javascript:void(0)" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
@@ -3842,6 +3833,7 @@ function showPage(page){
   try{ _closeOpenModalsForNav(); }catch(_){}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
+  try{ _syncIrsBar(page); }catch(_){}
   
   // Sidebar active
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
@@ -15247,6 +15239,59 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   });
 })();
+
+// ═══════════════════════════════════════════════════════════════════
+// SEVKİYAT TÜRÜ SEÇİCİ
+// 7 ayrı sevkiyat sayfası sol menüde yer kaplıyordu. Artık hepsi
+// "Yeni İrsaliye" altında toplandı: sayfaların üstüne ortak bir tür
+// şeridi eklenir, hangi türde irsaliye kesileceği oradan seçilir.
+// Sayfa/form mantığına dokunulmaz — yalnızca gezinme birleştirildi.
+// ═══════════════════════════════════════════════════════════════════
+const IRS_TYPES = [
+  {p:'new',          ad:'Poşet',         ic:'fa-shopping-bag',   d:'beden beden'},
+  {p:'fermuar',      ad:'Fermuar',       ic:'fa-grip-lines',     d:'cm · adet'},
+  {p:'lastik',       ad:'Lastik',        ic:'fa-ruler',          d:'cm · metre'},
+  {p:'dugme',        ad:'Düğme',         ic:'fa-circle-dot',     d:'çap · adet'},
+  {p:'toptan',       ad:'Toptan',        ic:'fa-boxes-stacked',  d:'toplu sipariş'},
+  {p:'satenaskilik', ad:'Saten Askılık', ic:'fa-layer-group',    d:'metre'},
+  {p:'kordon',       ad:'Kordon',        ic:'fa-bezier-curve',   d:'ölçü · adet'},
+  {p:'dantel',       ad:'Dantel',        ic:'fa-border-all',     d:'metre'}
+];
+function _irsBarHtml(aktif){
+  return '<div class="irs-bar" role="tablist" aria-label="İrsaliye türü">'+
+    '<div class="irs-bar-l"><i class="fas fa-layer-group"></i><span>İrsaliye türü</span></div>'+
+    '<div class="irs-bar-rail">'+
+      IRS_TYPES.map(function(t){
+        var on = (t.p===aktif);
+        return '<button type="button" role="tab" aria-selected="'+on+'" class="irs-t'+(on?' on':'')+'" '+
+          'onclick="showPage(\''+t.p+'\')" title="'+t.ad+' irsaliyesi">'+
+          '<span class="irs-t-ic"><i class="fas '+t.ic+'"></i></span>'+
+          '<span class="irs-t-tx"><b>'+t.ad+'</b><em>'+t.d+'</em></span>'+
+        '</button>';
+      }).join('')+
+    '</div></div>';
+}
+function _injectIrsBar(){
+  IRS_TYPES.forEach(function(t){
+    var pg=document.getElementById('page-'+t.p); if(!pg) return;
+    if(pg.querySelector(':scope > .irs-bar')) return;
+    var head=pg.querySelector(':scope > .section-header'); if(!head) return;
+    var wrap=document.createElement('div');
+    wrap.innerHTML=_irsBarHtml(t.p);
+    head.insertAdjacentElement('afterend', wrap.firstElementChild);
+  });
+}
+function _syncIrsBar(page){
+  IRS_TYPES.forEach(function(t){
+    var pg=document.getElementById('page-'+t.p); if(!pg) return;
+    var bar=pg.querySelector(':scope > .irs-bar'); if(!bar) return;
+    bar.querySelectorAll('.irs-t').forEach(function(b,i){
+      var on=(IRS_TYPES[i].p===page);
+      b.classList.toggle('on',on); b.setAttribute('aria-selected',on);
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(_injectIrsBar, 60); });
 
 // ============ PDF YAZDIRMA (Liste) ============
 function printListPDF(){
