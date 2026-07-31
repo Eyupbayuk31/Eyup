@@ -7161,20 +7161,63 @@ function generatePDF(id, type, mode) {
     return;
   }
 
-  // mode === 'download': hiçbir diyalog açmadan gerçek PDF dosyasını indir
+  // mode === 'download' → PDF dosyası, mode === 'image' → aynı belgenin PNG'si
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:1131px;border:0;';
   document.body.appendChild(iframe);
-  iframe.addEventListener('load', function onLoad() {
+  // Belge hazır olunca üret. NOT: iframe içindeki font/QR istekleri CDN'e
+  // gidiyor; ağ yavaş ya da engelliyse 'load' hiç tetiklenmiyor ve ne PDF ne
+  // görsel çıkıyordu (sessizce takılıyordu). Bu yüzden zaman aşımı var:
+  // hangisi önce olursa belge üretilir, tek sefer çalışır.
+  let uretildi = false;
+  const uret = function(){
+    if (uretildi) return; uretildi = true;
+    const govde = iframe.contentDocument && iframe.contentDocument.body;
+    if (!govde) { try{ document.body.removeChild(iframe); }catch(_){}; toast('Belge hazırlanamadı','error'); return; }
+    const isle = (mode==='image')
+      ? _shareElementAsImage(govde, filename.replace(/\.pdf$/i,'') + '.png')
+      : _downloadElementAsPDF(govde, filename);
+    isle.finally(() => { try{ document.body.removeChild(iframe); }catch(_){} });
+  };
+  iframe.addEventListener('load', function onLoad(){
     iframe.removeEventListener('load', onLoad);
-    // QR kod ve fontların render olması için kısa bekleme
-    setTimeout(() => {
-      _downloadElementAsPDF(iframe.contentDocument.body, filename).finally(() => {
-        document.body.removeChild(iframe);
-      });
-    }, 250);
+    setTimeout(uret, 250);          // QR ve fontların çizilmesi için kısa bekleme
   });
+  setTimeout(uret, 2500);           // ağ takılırsa yine de üret
   iframe.srcdoc = html;
+}
+
+// PDF ile AYNI belgeyi (QR dahil) görsel olarak paylaş.
+// PDF zaten html2canvas ile rasterleştirilip jsPDF'e sarılıyor; burada
+// jsPDF adımı atlanır, aynı görüntü PNG olarak paylaşılır. Böylece
+// atölyeye WhatsApp'tan dosya eki yerine okunabilir bir fotoğraf gider.
+async function _shareElementAsImage(element, filename) {
+  if (typeof html2canvas === 'undefined') {
+    toast('Görsel kütüphanesi yüklenemedi — internet bağlantınızı kontrol edin','error');
+    return;
+  }
+  toast('Görsel hazırlanıyor…','info');
+  try {
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) { toast('Görsel oluşturulamadı','error'); return; }
+    const dosya = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [dosya] })) {
+      try {
+        await navigator.share({ files: [dosya], title: filename.replace(/\.png$/i,'') });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') { toast('Paylaşım iptal edildi','info'); return; }
+      }
+    }
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = u; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(u), 4000);
+    toast('Görsel indirildi — WhatsApp\'a sürükleyip bırakabilirsin','success');
+  } catch (err) {
+    console.error('Görsel hatası:', err);
+    toast('Görsel oluşturulamadı','error');
+  }
 }
 
 // Keep old function name for compatibility
@@ -10670,155 +10713,12 @@ function buildShareText(item, type) {
   return text;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// GÖRSEL PAYLAŞ — irsaliyeyi PNG belge olarak üret
-// WhatsApp'ta PDF dosya eki olarak gidiyor ve önizlemede görünmüyordu;
-// görsel olarak gönderilince sohbette doğrudan okunuyor.
-// Canvas ile çizilir: CDN/kütüphane gerekmez, çevrimdışı da çalışır.
-// ═══════════════════════════════════════════════════════════════════
-function _shareRows(item, type){
-  const TL={standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon',dantel:'Dantel'};
-  const bilgi=[], kalem=[];
-  if(item.tarih) bilgi.push(['Tarih', item.tarih]);
-  if(item.termin) bilgi.push(['Termin', item.termin]);
-  if(item.atolye||item.firma) bilgi.push(['Atölye / Firma', item.atolye||item.firma]);
-  if(item.renk) bilgi.push(['Renk', item.renk]);
-  if(item.teslimEden) bilgi.push(['Teslim Eden', item.teslimEden]);
-  if(item.teslimAlan) bilgi.push(['Teslim Alan', item.teslimAlan]);
-  let toplam=0;
-  if(type==='standart' && item.sizes){
-    const sn={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
-    Object.keys(item.sizes).forEach(k=>{ const v=+item.sizes[k]||0; if(v>0){ kalem.push([sn[k]||k, v+' adet']); toplam+=v; } });
-  }
-  if((type==='fermuar'||type==='toptan') && item.beden){
-    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-    (typeof sortBedenKeys==='function'?sortBedenKeys(item.beden):Object.keys(item.beden)).forEach(k=>{
-      const v=type==='fermuar'?(item.beden[k]&&item.beden[k].adet||0):(+item.beden[k]||0);
-      if(v>0){ kalem.push([bl[k]||k, v+' adet']); toplam+=v; }
-    });
-  }
-  if(type==='kordon' && item.olcular) (item.olcular||[]).forEach(o=>{ if(o.adet>0){ kalem.push([o.cm+' cm', o.adet+' adet']); toplam+=+o.adet||0; } });
-  if(type==='lastik'){ kalem.push([(item.cm||0)+' cm', (item.metre||0)+' metre']); }
-  if(type==='dugme'){ kalem.push(['Adet', (item.adet||0)+' adet']); toplam=+item.adet||0; }
-  if(type==='satenaskilik'){ kalem.push(['Metre', (item.metre||0)+' m']); }
-  if(type==='dantel'){ kalem.push(['Metre', (item.metre||0)+' m']); }
-  if(!toplam) toplam=+item.totalAdet||+item.total||0;
-  return {tur:TL[type]||'İrsaliye', bilgi, kalem, toplam, not:item.aciklama||item.not||''};
-}
-function buildShareImage(item, type){
-  const d=_shareRows(item,type);
-  const W=1080, P=56, S=2;                       // S: netlik için ölçek
-  // yükseklik hesabı
-  let H = 220 + 40;
-  H += Math.ceil(d.bilgi.length/2)*88 + 20;
-  if(d.kalem.length) H += 66 + Math.ceil(d.kalem.length/2)*62 + 18;
-  if(d.toplam) H += 96;
-  if(d.not) H += 118;
-  H += 76;
-  const c=document.createElement('canvas'); c.width=W*S; c.height=H*S;
-  const x=c.getContext('2d'); x.scale(S,S);
-  const F=(w,sz)=>w+' '+sz+'px system-ui,"Segoe UI",Roboto,Arial,sans-serif';
-  const AMBER='#f59e0b', KOYU='#111827', GRI='#6b7280', CIZGI='#e5e7eb';
-  // zemin
-  x.fillStyle='#ffffff'; x.fillRect(0,0,W,H);
-  // üst bant
-  x.fillStyle=KOYU; x.fillRect(0,0,W,148);
-  x.fillStyle=AMBER; x.fillRect(0,144,W,4);
-  x.fillStyle=AMBER; x.font=F('800',20); x.fillText('İRSALİYE PRO', P, 46);
-  x.fillStyle='#ffffff'; x.font=F('800',44);
-  x.fillText(String(item.model||item.urun||'—').slice(0,26), P, 100);
-  // sağ üst: no + tür
-  x.textAlign='right';
-  x.fillStyle='#ffffff'; x.font=F('800',30); x.fillText(item.no||'', W-P, 60);
-  x.fillStyle=AMBER; x.font=F('700',19); x.fillText(d.tur, W-P, 92);
-  x.textAlign='left';
-  let y=148+44;
-  // durum rozeti
-  const teslim=(item.durum==='teslim');
-  const rozetYazi = teslim?'✓  TESLİM EDİLDİ':'•  BEKLİYOR';
-  x.font=F('800',18);
-  const rw = x.measureText(rozetYazi).width + 40, rh = 42;   // yazıyı ölçüp kutuyu ona göre kur
-  x.fillStyle=teslim?'#065f46':'#92400e';
-  if(x.roundRect){ x.beginPath(); x.roundRect(P,y-30,rw,rh,21); x.fill(); }
-  else x.fillRect(P,y-30,rw,rh);
-  x.fillStyle='#ffffff';
-  x.fillText(rozetYazi, P+20, y-2);
-  y+=42;
-  // bilgi ızgarası (2 sütun)
-  const kw=(W-P*2-24)/2;
-  d.bilgi.forEach((r,i)=>{
-    const col=i%2, row=Math.floor(i/2);
-    const bx=P+col*(kw+24), by=y+row*88;
-    x.fillStyle='#f9fafb'; if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,kw,72,14); x.fill(); } else x.fillRect(bx,by,kw,72);
-    x.strokeStyle=CIZGI; x.lineWidth=1;
-    if(x.roundRect){ x.beginPath(); x.roundRect(bx+.5,by+.5,kw-1,71,14); x.stroke(); }
-    x.fillStyle=GRI; x.font=F('800',13); x.fillText(String(r[0]).toUpperCase(), bx+18, by+28);
-    x.fillStyle=KOYU; x.font=F('700',23); x.fillText(String(r[1]).slice(0,24), bx+18, by+57);
-  });
-  y += Math.ceil(d.bilgi.length/2)*88 + 8;
-  // kalemler
-  if(d.kalem.length){
-    x.fillStyle=KOYU; x.font=F('800',17); x.fillText('DÖKÜM', P, y+30);
-    x.strokeStyle=AMBER; x.lineWidth=3; x.beginPath(); x.moveTo(P,y+42); x.lineTo(P+52,y+42); x.stroke();
-    y+=66;
-    d.kalem.forEach((r,i)=>{
-      const col=i%2, row=Math.floor(i/2);
-      const bx=P+col*(kw+24), by=y+row*62;
-      x.fillStyle='#fffbeb'; if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,kw,50,12); x.fill(); } else x.fillRect(bx,by,kw,50);
-      x.fillStyle=GRI; x.font=F('700',18); x.fillText(String(r[0]), bx+16, by+32);
-      x.textAlign='right'; x.fillStyle=KOYU; x.font=F('800',20); x.fillText(String(r[1]), bx+kw-16, by+32); x.textAlign='left';
-    });
-    y += Math.ceil(d.kalem.length/2)*62 + 18;
-  }
-  // toplam
-  if(d.toplam){
-    x.fillStyle=KOYU; if(x.roundRect){ x.beginPath(); x.roundRect(P,y,W-P*2,72,16); x.fill(); } else x.fillRect(P,y,W-P*2,72);
-    x.fillStyle=AMBER; x.font=F('800',16); x.fillText('TOPLAM', P+24, y+30);
-    x.textAlign='right'; x.fillStyle='#ffffff'; x.font=F('800',36);
-    x.fillText(d.toplam.toLocaleString('tr')+' adet', W-P-24, y+50); x.textAlign='left';
-    y+=96;
-  }
-  // not
-  if(d.not){
-    x.fillStyle='#fffbeb'; if(x.roundRect){ x.beginPath(); x.roundRect(P,y,W-P*2,100,14); x.fill(); } else x.fillRect(P,y,W-P*2,100);
-    x.fillStyle=AMBER; x.fillRect(P,y,5,100);
-    x.fillStyle=GRI; x.font=F('800',13); x.fillText('NOT', P+22, y+28);
-    x.fillStyle=KOYU; x.font=F('600',20);
-    const kelime=String(d.not).split(/\s+/); let satir='', sy=y+58;
-    kelime.forEach(k=>{ const dene=satir?satir+' '+k:k;
-      if(x.measureText(dene).width > W-P*2-46){ x.fillText(satir, P+22, sy); satir=k; sy+=28; } else satir=dene; });
-    if(satir && sy<y+96) x.fillText(satir, P+22, sy);
-    y+=118;
-  }
-  // alt bilgi
-  x.strokeStyle=CIZGI; x.lineWidth=1; x.beginPath(); x.moveTo(P,H-64); x.lineTo(W-P,H-64); x.stroke();
-  x.fillStyle=GRI; x.font=F('600',16);
-  x.fillText('İrsaliye Pro · '+new Date().toLocaleDateString('tr-TR'), P, H-32);
-  return c;
-}
-async function shareImageNative(){
+// Görsel Paylaş: PDF ile AYNI belgeyi PNG olarak gönderir (QR dahil).
+// Sıfırdan çizim yapılmıyor — atölyeye giden kağıdın birebir görüntüsü.
+function shareImageNative(){
   if(!currentShareItem) return;
-  let canvas;
-  try{ canvas=buildShareImage(currentShareItem, currentShareType); }
-  catch(e){ console.warn(e); return toast('Görsel oluşturulamadı','error'); }
-  const ad=((currentShareItem.no||'irsaliye')+'').replace(/[^\w.-]+/g,'_')+'.png';
-  const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
-  if(!blob) return toast('Görsel oluşturulamadı','error');
-  const dosya=new File([blob], ad, {type:'image/png'});
-  // Cihaz paylaşımı dosyayı destekliyorsa doğrudan WhatsApp'a görsel gider
-  if(navigator.canShare && navigator.canShare({files:[dosya]})){
-    try{
-      await navigator.share({files:[dosya], title:currentShareItem.no||'İrsaliye'});
-      closeShareMenu();
-      return;
-    }catch(e){ if(e && e.name==='AbortError'){ closeShareMenu(); return toast('Paylaşım iptal edildi','info'); } }
-  }
-  // Desteklemiyorsa (masaüstü) indir
-  const u=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=u; a.download=ad; a.click();
-  setTimeout(()=>URL.revokeObjectURL(u), 4000);
+  generatePDF(currentShareItem.id, currentShareType, 'image');
   closeShareMenu();
-  toast('Görsel indirildi — WhatsApp\'a sürükleyip bırakabilirsin','success');
 }
 
 function shareWhatsApp() {
