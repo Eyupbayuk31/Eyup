@@ -7855,7 +7855,9 @@ function runBootSequence(username){
   var bar = document.getElementById('bootBarFill');
   var hint = document.getElementById('bootHint');
   var hints = ['Kullanıcılar yükleniyor…','İrsaliyeler yükleniyor…','Atölyeler ve stok yükleniyor…','Panel hazırlanıyor…'];
-  steps.forEach(function(s){ s.classList.remove('active','done'); });
+  steps.forEach(function(s){ s.classList.remove('active','done');
+    var st=s.querySelector('.bs-st'); if(st) st.textContent='bekliyor'; });
+  var pct0=document.getElementById('bootPct'); if(pct0) pct0.textContent='0%';
   if(bar) bar.style.width='0%';
   splash.classList.remove('hide');
   splash.style.display='flex';
@@ -7869,8 +7871,12 @@ function runBootSequence(username){
     setTimeout(function(){
       if(idx>0){ steps[idx-1].classList.remove('active'); steps[idx-1].classList.add('done'); }
       step.classList.add('active');
+      var st=step.querySelector('.bs-st'); if(st) st.textContent='yükleniyor';
+      if(idx>0){ var ps=steps[idx-1].querySelector('.bs-st'); if(ps) ps.textContent='tamam'; }
       if(hint) hint.textContent = hints[idx]||'';
-      if(bar) bar.style.width = Math.round(((idx+1)/steps.length)*100)+'%';
+      var yuzde = Math.round(((idx+1)/steps.length)*100);
+      if(bar) bar.style.width = yuzde+'%';
+      var pct=document.getElementById('bootPct'); if(pct) pct.textContent=yuzde+'%';
       if(idx===steps.length-1){ try{ refreshHome(); }catch(_){} }
     }, idx*stepMs);
   });
@@ -7878,8 +7884,10 @@ function runBootSequence(username){
   var totalMs = steps.length*stepMs; // 4*520 = 2080ms
   setTimeout(function(){
     var last=steps[steps.length-1];
-    if(last){ last.classList.remove('active'); last.classList.add('done'); }
-    if(hint) hint.textContent='Hazır ✓';
+    if(last){ last.classList.remove('active'); last.classList.add('done');
+      var ls=last.querySelector('.bs-st'); if(ls) ls.textContent='tamam'; }
+    if(hint) hint.textContent='Hazır';
+    var pct=document.getElementById('bootPct'); if(pct) pct.textContent='100%';
   }, totalMs);
   setTimeout(function(){
     splash.classList.add('hide');
@@ -16231,16 +16239,22 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   <div class="boot-inner">
     <div class="boot-brand">
       <span class="boot-logo">İ</span>
-      <span class="boot-word"><span class="bw1">İrsaliye</span><span class="bw2"><em>Pro</em></span></span>
+      <span class="boot-word">İrsaliye <em>Pro</em></span>
     </div>
-    <div class="boot-steps" id="bootSteps">
-      <div class="boot-step" data-i="0"><span class="bs-ic"><i class="fas fa-users"></i></span><span class="bs-tx">Kullanıcılar yükleniyor</span><i class="fas fa-check bs-ok"></i></div>
-      <div class="boot-step" data-i="1"><span class="bs-ic"><i class="fas fa-file-invoice"></i></span><span class="bs-tx">İrsaliyeler yükleniyor</span><i class="fas fa-check bs-ok"></i></div>
-      <div class="boot-step" data-i="2"><span class="bs-ic"><i class="fas fa-industry"></i></span><span class="bs-tx">Atölyeler ve stok yükleniyor</span><i class="fas fa-check bs-ok"></i></div>
-      <div class="boot-step" data-i="3"><span class="bs-ic"><i class="fas fa-gauge-high"></i></span><span class="bs-tx">Panel hazırlanıyor</span><i class="fas fa-check bs-ok"></i></div>
+
+    <div class="boot-panel">
+      <div class="boot-steps" id="bootSteps">
+        <div class="boot-step" data-i="0"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">Kullanıcılar</span><span class="bs-st">bekliyor</span></div>
+        <div class="boot-step" data-i="1"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">İrsaliyeler</span><span class="bs-st">bekliyor</span></div>
+        <div class="boot-step" data-i="2"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">Atölyeler ve stok</span><span class="bs-st">bekliyor</span></div>
+        <div class="boot-step" data-i="3"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">Panel</span><span class="bs-st">bekliyor</span></div>
+      </div>
+      <div class="boot-foot">
+        <span class="boot-hint" id="bootHint">Bağlanılıyor…</span>
+        <span class="boot-pct" id="bootPct">0%</span>
+      </div>
+      <div class="boot-bar"><div class="boot-bar-fill" id="bootBarFill"></div></div>
     </div>
-    <div class="boot-bar"><div class="boot-bar-fill" id="bootBarFill"></div></div>
-    <div class="boot-hint" id="bootHint">Bağlanılıyor…</div>
   </div>
 </div>
 
