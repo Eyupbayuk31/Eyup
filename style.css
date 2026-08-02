@@ -7788,27 +7788,17 @@ body::after{
 }
 #loginCard h1 {
   font-family: var(--font-serif, 'Instrument Serif', Georgia, serif);
-  font-size: 56px;
-  line-height: 0.92;
+  font-size: 42px;
+  line-height: 1.05;
   font-weight: 400;
-  margin: 0 0 8px;
-  letter-spacing: -2px;
+  margin: 0 0 6px;
+  letter-spacing: -1.2px;
   color: var(--text-main, #f1f0f5);
 }
-#loginCard h1 .b-line1 {
-  display: block;
-  font-weight: 400;
-}
-#loginCard h1 .b-line2 {
-  display: block;
-  margin-top: -4px;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 45%, var(--primary-dark) 85%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-#loginCard h1 .b-line2 em {
-  font-style: italic;
-  font-weight: 400;
+#loginCard h1 .b-line1 { font-weight: 400; }
+#loginCard h1 em {
+  font-style: italic; font-weight: 400;
+  color: var(--primary);
 }
 #loginCard .subtitle {
   font-family: var(--font-body, 'Plus Jakarta Sans', sans-serif);
@@ -7908,23 +7898,13 @@ body::after{
 /* ──────────────── FORM ALANLARI ──────────────── */
 #loginCard .field { margin-bottom: 18px; }
 #loginCard label {
-  display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 10px; font-weight: 700;
+  display: block;
+  font-family: inherit;
+  font-size: 11.5px; font-weight: 700;
   color: var(--text-muted, #c4b5fd);
-  margin-bottom: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-#loginCard label .lbl-no {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 22px; height: 22px;
-  padding: 0 6px;
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary-light, #a78bfa);
-  border-radius: 6px;
-  font-size: 10px; font-weight: 800;
-  letter-spacing: 0;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 #loginCard .input-wrap { position: relative; }
@@ -8078,8 +8058,11 @@ body::after{
 #loginCard .forgot {
   background: none; border: none;
   font-family: var(--font-body, sans-serif);
-  font-size: 13px; font-weight: 600;
-  color: var(--primary-light, #a78bfa);
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 45%, transparent);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
@@ -14543,3 +14526,21 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
 /* Paylaş menüsü — "Görsel Gönder" seçeneği */
 .share-opt.img i{ color:#0ea5e9; }
 .share-opt.img:hover{ border-color:#0ea5e9; background:color-mix(in srgb,#0ea5e9 12%,transparent); }
+
+/* ── Giriş ekranı sadeleştirme ─────────────────────────────────────── */
+/* Tarayıcı otomatik doldurunca alan BEYAZ kalıyordu (kullanıcı adı koyu,
+   şifre beyaz — bozuk görünüyordu). İç gölge hilesiyle koyu zemin korunur. */
+#loginCard input:-webkit-autofill,
+#loginCard input:-webkit-autofill:hover,
+#loginCard input:-webkit-autofill:focus,
+#loginCard input:-webkit-autofill:active{
+  -webkit-text-fill-color: var(--text-main) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input, var(--bg-card)) inset !important;
+  box-shadow: 0 0 0 1000px var(--bg-input, var(--bg-card)) inset !important;
+  caret-color: var(--text-main);
+  transition: background-color 9999s ease-in-out 0s;
+}
+/* Kaldırılan rozet/chip'lerin kalıntı stilleri devre dışı */
+.lg-badge{ display:none !important; }
+/* Alt çubuk: daha sakin */
+#loginCard .footer-note{ letter-spacing:.04em; opacity:.75; }
