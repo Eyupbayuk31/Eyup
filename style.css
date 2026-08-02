@@ -1275,15 +1275,38 @@ body::after{
 }
 
 /* Section Headers */
+/* Bölüm başlığı artık bir düğme: tıklayınca grup katlanır */
 .nav-section{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  width:100%; cursor:pointer; text-align:left;
+  font-family:inherit;
   font-size:11px;
   text-transform:uppercase;
   letter-spacing:1.5px;
   color:var(--text-dim);
   padding:var(--space-5) var(--space-3) var(--space-2);
   font-weight:700;
+  background:none; border:0;
+  transition:color .16s ease;
 }
-.nav-section:first-child{padding-top:var(--space-2);}
+.nav-section:hover{ color:var(--text-muted); }
+.nav-group:first-child .nav-section{padding-top:var(--space-2);}
+.nav-caret{
+  font-size:9px; opacity:.55; flex-shrink:0;
+  transition:transform .26s cubic-bezier(.4,0,.2,1), opacity .16s;
+}
+.nav-section:hover .nav-caret{ opacity:.9; }
+.nav-group.kapali .nav-caret{ transform:rotate(-90deg); }
+/* Katlanan gövde. NOT: grid-template-rows 0fr hilesi TEK çocuk ister;
+   burada birden çok bağlantı var, o yüzden max-height kullanılıyor. */
+.nav-items{
+  overflow:hidden; max-height:640px; opacity:1;
+  transition:max-height .3s cubic-bezier(.4,0,.2,1), opacity .2s ease;
+}
+.nav-group.kapali .nav-items{ max-height:0; opacity:0; }
+/* Kapalı bölümde başlığın altında ince bir iz kalsın */
+.nav-group.kapali .nav-section{ color:var(--text-dim); }
+@media (prefers-reduced-motion:reduce){ .nav-items,.nav-caret{ transition:none; } }
 
 /* Navigation Links - Touch Optimized */
 .sidebar nav a{

@@ -1352,26 +1352,44 @@ if(typeof Chart==='undefined'){
     </div>
   </div>
   <nav>
-    <div class="nav-section">Ana Menü</div>
-    <a href="javascript:void(0)" class="active" onclick="showPage('home')"><i class="fas fa-home"></i><span>Anasayfa</span></a>
-    <a href="javascript:void(0)" onclick="showPage('new')"><i class="fas fa-plus-circle"></i><span>Yeni İrsaliye</span></a>
-    <a href="javascript:void(0)" onclick="showPage('list')"><i class="fas fa-list"></i><span>İrsaliyeler</span></a>
-    <a href="javascript:void(0)" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
+    <div class="nav-group" data-g="ana">
+      <button type="button" class="nav-section" onclick="toggleNavGroup('ana')" aria-expanded="true">
+        <span>Ana Menü</span><i class="fas fa-chevron-down nav-caret"></i>
+      </button>
+      <div class="nav-items">
+        <a href="javascript:void(0)" class="active" data-page="home" onclick="showPage('home')"><i class="fas fa-home"></i><span>Anasayfa</span></a>
+        <a href="javascript:void(0)" data-page="new" onclick="showPage('new')"><i class="fas fa-plus-circle"></i><span>Yeni İrsaliye</span></a>
+        <a href="javascript:void(0)" data-page="list" onclick="showPage('list')"><i class="fas fa-list"></i><span>İrsaliyeler</span></a>
+        <a href="javascript:void(0)" data-page="akskontrol" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
+      </div>
+    </div>
 
-    <div class="nav-section">Stok Takibi</div>
-    <a href="javascript:void(0)" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
-    <a href="javascript:void(0)" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
-    <a href="javascript:void(0)" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
-    <a href="javascript:void(0)" onclick="showPage('tela-kontrol')"><i class="fas fa-layer-group"></i><span>Tela Kontrol</span></a>
+    <div class="nav-group" data-g="stok">
+      <button type="button" class="nav-section" onclick="toggleNavGroup('stok')" aria-expanded="true">
+        <span>Stok Takibi</span><i class="fas fa-chevron-down nav-caret"></i>
+      </button>
+      <div class="nav-items">
+        <a href="javascript:void(0)" data-page="stok" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
+        <a href="javascript:void(0)" data-page="aksesuar" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
+        <a href="javascript:void(0)" data-page="fermuar-takip" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
+        <a href="javascript:void(0)" data-page="tela-kontrol" onclick="showPage('tela-kontrol')"><i class="fas fa-layer-group"></i><span>Tela Kontrol</span></a>
+      </div>
+    </div>
 
-    <div class="nav-section">Yönetim</div>
-    <a href="javascript:void(0)" onclick="showPage('atolye')"><i class="fas fa-industry"></i><span>Atölyeler</span></a>
-    <a href="javascript:void(0)" onclick="showPage('takvim')"><i class="fas fa-calendar-alt"></i><span>Takvim</span></a>
-    <a href="javascript:void(0)" onclick="showPage('reports')"><i class="fas fa-chart-bar"></i><span>Raporlar</span></a>
-    <a href="javascript:void(0)" onclick="showPage('signature')"><i class="fas fa-camera"></i><span>Fotoğraf</span></a>
-    <a href="javascript:void(0)" onclick="showPage('templates')"><i class="fas fa-clone"></i><span>Şablonlar</span></a>
-    <a href="javascript:void(0)" onclick="showPage('geridonusum')"><i class="fas fa-trash-restore"></i><span>Geri Dönüşüm</span></a>
-    <a href="javascript:void(0)" onclick="showPage('settings')"><i class="fas fa-cog"></i><span>Ayarlar</span></a>
+    <div class="nav-group" data-g="yonetim">
+      <button type="button" class="nav-section" onclick="toggleNavGroup('yonetim')" aria-expanded="true">
+        <span>Yönetim</span><i class="fas fa-chevron-down nav-caret"></i>
+      </button>
+      <div class="nav-items">
+        <a href="javascript:void(0)" data-page="atolye" onclick="showPage('atolye')"><i class="fas fa-industry"></i><span>Atölyeler</span></a>
+        <a href="javascript:void(0)" data-page="takvim" onclick="showPage('takvim')"><i class="fas fa-calendar-alt"></i><span>Takvim</span></a>
+        <a href="javascript:void(0)" data-page="reports" onclick="showPage('reports')"><i class="fas fa-chart-bar"></i><span>Raporlar</span></a>
+        <a href="javascript:void(0)" data-page="signature" onclick="showPage('signature')"><i class="fas fa-camera"></i><span>Fotoğraf</span></a>
+        <a href="javascript:void(0)" data-page="templates" onclick="showPage('templates')"><i class="fas fa-clone"></i><span>Şablonlar</span></a>
+        <a href="javascript:void(0)" data-page="geridonusum" onclick="showPage('geridonusum')"><i class="fas fa-trash-restore"></i><span>Geri Dönüşüm</span></a>
+        <a href="javascript:void(0)" data-page="settings" onclick="showPage('settings')"><i class="fas fa-cog"></i><span>Ayarlar</span></a>
+      </div>
+    </div>
   </nav>
   <div class="sidebar-footer">
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
@@ -3835,12 +3853,17 @@ function showPage(page){
   document.getElementById('page-'+page).classList.add('active');
   try{ _syncIrsBar(page); }catch(_){}
   
-  // Sidebar active
+  // Sidebar active — data-page ile eşleştirilir. ESKİDEN sabit bir dizideki
+  // SIRA numarasıyla bulunuyordu; sevkiyat bağlantıları menüden kalkınca
+  // sıra kaydı ve yanlış menü vurgulanıyordu (Genel Stok'ta "Raporlar" gibi).
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
-  const links=document.querySelectorAll('.sidebar nav a');
-  const pages=['home','new','list','fermuar','lastik','dugme','toptan','satenaskilik','kordon','dantel','stok','aksesuar','akskontrol','fermuar-takip','tela-kontrol','atolye','takvim','reports','signature','templates','geridonusum','settings'];
-  const idx=pages.indexOf(page);
-  if(idx>=0&&links[idx])links[idx].classList.add('active');
+  const aktifLink=document.querySelector('.sidebar nav a[data-page="'+page+'"]');
+  if(aktifLink){
+    aktifLink.classList.add('active');
+    // Kapalı bölümdeyse aç ki nerede olduğun görünsün
+    const grup=aktifLink.closest('.nav-group');
+    if(grup && grup.classList.contains('kapali')) toggleNavGroup(grup.dataset.g, true);
+  }
   
   // Bottom nav active
   document.querySelectorAll('.bottom-nav a').forEach(a=>a.classList.remove('active'));
@@ -15301,6 +15324,34 @@ document.addEventListener('DOMContentLoaded', function(){
       e.preventDefault(); openGlobalSearch();
     }
   });
+})();
+
+// ── Sol menü bölümleri: aç/kapa ──────────────────────────────────────
+// Uzun menü göz yoruyordu; bölümler katlanabilir ve seçim hatırlanır.
+function toggleNavGroup(g, zorlaAc){
+  var el = document.querySelector('.nav-group[data-g="'+g+'"]');
+  if(!el) return;
+  var ac = (zorlaAc===true) ? true : el.classList.contains('kapali');
+  el.classList.toggle('kapali', !ac);
+  var btn = el.querySelector('.nav-section');
+  if(btn) btn.setAttribute('aria-expanded', ac ? 'true' : 'false');
+  try{
+    var kapali = Array.prototype.map.call(document.querySelectorAll('.nav-group.kapali'), function(n){ return n.dataset.g; });
+    localStorage.setItem('nav_kapali', JSON.stringify(kapali));
+  }catch(_){}
+}
+(function restoreNavGroups(){
+  function uygula(){
+    var kapali=[];
+    try{ kapali = JSON.parse(localStorage.getItem('nav_kapali')) || []; }catch(_){}
+    kapali.forEach(function(g){
+      var el=document.querySelector('.nav-group[data-g="'+g+'"]');
+      if(el){ el.classList.add('kapali');
+        var b=el.querySelector('.nav-section'); if(b) b.setAttribute('aria-expanded','false'); }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', uygula);
+  else uygula();
 })();
 
 // ═══════════════════════════════════════════════════════════════════
