@@ -1267,6 +1267,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>İrsaliye Pro</title>
+
+<!-- ── PWA ────────────────────────────────────────────────────────────
+     Manifest artık gerçek bir dosya. Eskiden blob: adresiyle veriliyordu;
+     tarayıcılar blob/data manifest'i YOK SAYAR — uygulama adı, ikonu ve
+     tam ekran modu hiçbir platformda geçerli değildi. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="application-name" content="İrsaliye Pro">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+
+<!-- iOS: manifest'i okumaz, bu etiketleri kullanır. Bunlar olmadan ana
+     ekrandan açınca Safari çubuğuyla açılıyor ve ikon yerine sayfanın
+     ekran görüntüsü kullanılıyordu. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="İrsaliye">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <!-- Tema flaşını önle: render başlamadan sync çalışır -->
 <script>
 (function(){
@@ -11797,38 +11817,72 @@ function installPWA() {
 }
 
 function dismissPWA() {
-  document.getElementById('pwaBanner').classList.remove('show');
+  var b=document.getElementById('pwaBanner'); if(b) b.classList.remove('show');
+  var i=document.getElementById('iosInstallHint'); if(i) i.remove();
   localStorage.setItem('pwaBannerDismissed', '1');
 }
 
-// Register inline service worker via Blob (works offline for cached assets)
-function registerInlineSW() {
-  if (!('serviceWorker' in navigator)) return;
-  // Use data URL for manifest
-  const manifest = {
-    name: 'İrsaliye Pro',
-    short_name: 'İrsaliye',
-    start_url: '.',
-    display: 'standalone',
-    background_color: '#0a0a1a',
-    theme_color: '#7c3aed',
-    icons: [{
-      src: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#7c3aed"/><text x="96" y="120" font-family="Arial" font-size="110" font-weight="900" fill="#fff" text-anchor="middle">İ</text></svg>'),
-      sizes: '192x192',
-      type: 'image/svg+xml'
-    }]
-  };
-  const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-  const manifestURL = URL.createObjectURL(manifestBlob);
-  let link = document.querySelector('link[rel="manifest"]');
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'manifest';
-    document.head.appendChild(link);
+// iOS'ta beforeinstallprompt HİÇ tetiklenmez; yükleme bandı iPhone'da hiç
+// çıkmıyordu. Bu yüzden Safari'ye özel, tek seferlik bir yönlendirme gösterilir.
+(function iosKurulumIpucu(){
+  function calistir(){
+    try{
+      var ua = navigator.userAgent || '';
+      var iOS = /iPad|iPhone|iPod/.test(ua) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
+      if(!iOS) return;
+      var safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+      var kurulu = window.navigator.standalone === true ||
+                   (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      if(kurulu) return;                                     // zaten ana ekranda
+      if(localStorage.getItem('pwaBannerDismissed')) return;  // kullanıcı kapatmış
+      var el = document.createElement('div');
+      el.id = 'iosInstallHint';
+      el.innerHTML =
+        '<div class="ios-ip-ic"><i class="fas fa-mobile-screen"></i></div>'+
+        '<div class="ios-ip-tx"><b>Ana ekrana ekle</b>'+
+        (safari
+          ? '<span>Alttaki <i class="fas fa-arrow-up-from-bracket"></i> <b>Paylaş</b> düğmesine bas, sonra <b>“Ana Ekrana Ekle”</b> seç.</span>'
+          : '<span>Bu sayfayı <b>Safari</b>’de aç, ardından <b>Paylaş → “Ana Ekrana Ekle”</b> ile yükleyebilirsin.</span>')+
+        '</div>'+
+        '<button type="button" class="ios-ip-x" aria-label="Kapat">&times;</button>';
+      el.querySelector('.ios-ip-x').onclick = function(){ dismissPWA(); };
+      document.body.appendChild(el);
+      setTimeout(function(){ el.classList.add('show'); }, 60);
+      setTimeout(function(){ if(el.isConnected) el.classList.remove('show'); }, 14000);
+    }catch(_){}
   }
-  link.href = manifestURL;
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(calistir, 3500); });
+  else setTimeout(calistir, 3500);
+})();
+
+// Service worker kaydı. ÖNEMLİ: eskiden "registerInlineSW" diye bir fonksiyon
+// vardı ama içinde register çağrısı YOKTU — yalnızca blob manifest üretiyordu.
+// Yani çevrimdışı çalışma hiçbir platformda yoktu.
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') return; // file:// ve http'de kayıt olmaz
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      // Yeni sürüm bulunduğunda beklemesin, hemen devreye girsin
+      reg.addEventListener('updatefound', function(){
+        var y = reg.installing;
+        if(!y) return;
+        y.addEventListener('statechange', function(){
+          if(y.state === 'installed' && navigator.serviceWorker.controller){
+            try{ reg.waiting && reg.waiting.postMessage('skipWaiting'); }catch(_){}
+          }
+        });
+      });
+    }).catch(function(e){ console.warn('[sw] kayıt olmadı:', e && e.message); });
+  });
+  // Denetleyici değişince bir kez yenile → kullanıcı eski sürümde kalmasın
+  var yenilendi = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(yenilendi) return; yenilendi = true; location.reload();
+  });
 }
-registerInlineSW();
+registerSW();
 
 // --- Online/Offline detection ---
 function updateOnlineStatus() {
