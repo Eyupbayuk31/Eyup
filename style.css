@@ -13958,6 +13958,46 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .dt-mal.bad    { border-left-color:var(--danger);  } .dt-mal.bad .dt-mal-h{ color:var(--danger); }
 .dt-mal.serbest{ border-left-color:var(--primary); } .dt-mal.serbest .dt-mal-h{ color:var(--primary); }
 
+.mal-orani-alt{ display:block; margin-top:3px; font-size:10.5px; font-weight:600; opacity:.85; }
+
+/* Rapor sayfası genel filtreleri (dönem şeridinin sağı) */
+.rep-filt{ display:flex; align-items:center; gap:8px; margin-left:auto; flex-wrap:wrap; }
+.rep-filt-g{ display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border-radius:20px;
+  border:1px solid var(--glass-border, rgba(255,255,255,.1)); background:transparent; color:var(--text-muted);
+  font-size:11.5px; font-weight:600; cursor:pointer; transition:all .18s ease; max-width:210px; }
+.rep-filt-g:hover{ border-color:color-mix(in oklab, var(--primary) 35%, transparent); color:var(--primary); }
+.rep-filt-g i{ font-size:11px; flex-shrink:0; }
+.rep-filt-g select{ appearance:none; -webkit-appearance:none; background:transparent; border:0; outline:0;
+  color:inherit; font:inherit; cursor:pointer; max-width:150px; padding-right:12px; text-overflow:ellipsis;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-size:4px 4px,4px 4px; background-position:right 2px center,right 6px center; background-repeat:no-repeat; }
+.rep-filt-g select option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
+.rep-filt-clear{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; cursor:pointer;
+  border:1px solid color-mix(in oklab, var(--danger) 32%, var(--border)); background:color-mix(in oklab, var(--danger) 10%, transparent);
+  color:var(--danger); font-size:11px; font-weight:700; }
+
+/* Mal / Poşet sekmesi araç çubuğu */
+.mp-bar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.mp-bar-l{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1; min-width:0; }
+.mp-bar-r{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.mp-bar-g,.mp-fire{ display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:20px;
+  border:1px solid var(--border); background:var(--glass); color:var(--text-muted); font-size:11.5px; font-weight:700; cursor:pointer; }
+.mp-bar-g select,.mp-fire select{ appearance:none; -webkit-appearance:none; background:transparent; border:0; outline:0;
+  color:var(--text); font:inherit; font-weight:700; cursor:pointer; padding-right:12px;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-size:4px 4px,4px 4px; background-position:right 2px center,right 6px center; background-repeat:no-repeat; }
+.mp-bar-g select option,.mp-fire select option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
+.mp-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+.mp-chip{ display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:20px; cursor:pointer;
+  border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:11.5px; font-weight:600;
+  transition:all .18s ease; }
+.mp-chip b{ color:var(--text); font-size:11px; }
+.mp-chip:hover{ border-color:color-mix(in oklab, var(--primary) 35%, transparent); color:var(--primary); }
+.mp-chip.on{ background:color-mix(in oklab, var(--primary) 16%, var(--bg-card)); color:var(--primary); border-color:var(--primary); }
+.mp-chip.on b{ color:var(--primary); }
+.mp-row.sec{ background:color-mix(in oklab, var(--primary) 10%, transparent); }
+.mp-fic{ font-size:10px; color:var(--primary); margin-left:5px; }
+
 /* Rapor sekmesi */
 .mp-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px; }
 .mp-head-note{ font-size:11px; font-weight:600; color:var(--text-muted); }
@@ -13992,6 +14032,9 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 @media (max-width:768px){
   .mp-drow{ grid-template-columns:1fr 1fr; gap:4px 8px; }
   .mp-head-note{ display:none; }
+  .rep-filt{ margin-left:0; width:100%; }
+  .rep-filt-g{ flex:1; max-width:none; }
+  .mp-bar-r{ width:100%; justify-content:space-between; }
 }
 
 /* ═══════════════════════════════════════════════════════════════

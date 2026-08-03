@@ -2464,6 +2464,27 @@ if(typeof Chart==='undefined'){
           <button class="rep-range-btn"         data-range="365" onclick="setReportRange(365,this)">1Y</button>
           <button class="rep-range-btn"         data-range="all" onclick="setReportRange('all',this)">Tümü</button>
         </div>
+        <div class="rep-filt">
+          <label class="rep-filt-g">
+            <i class="fas fa-industry"></i>
+            <select id="repAtolyeFilter" onchange="setReportAtolye(this.value)"><option value="all">Tüm Atölyeler</option></select>
+          </label>
+          <label class="rep-filt-g">
+            <i class="fas fa-shapes"></i>
+            <select id="repTurFilter" onchange="setReportTur(this.value)">
+              <option value="all">Tüm Türler</option>
+              <option value="standart">Poşet</option>
+              <option value="fermuar">Fermuar</option>
+              <option value="lastik">Lastik</option>
+              <option value="dugme">Düğme</option>
+              <option value="toptan">Toptan</option>
+              <option value="satenaskilik">Saten Askılık</option>
+              <option value="kordon">Kordon</option>
+              <option value="dantel">Dantel</option>
+            </select>
+          </label>
+          <button class="rep-filt-clear" id="repFiltClear" onclick="clearReportFilters()" style="display:none;"><i class="fas fa-xmark"></i> Filtreyi temizle</button>
+        </div>
       </div>
 
       <!-- KPI Cards -->
@@ -2695,11 +2716,26 @@ if(typeof Chart==='undefined'){
 
       <!-- Mal / Poşet Dengesi — atölye kaç adet mal dikti, kaç poşet aldı? -->
       <div class="rep-tab" id="rep-malposet" style="display:none;">
+        <div class="mp-bar">
+          <div class="mp-bar-l">
+            <label class="mp-bar-g"><i class="fas fa-calendar-days"></i>
+              <select id="mpAyFilter" onchange="mpSetAy(this.value)"><option value="all">Tüm Aylar</option></select>
+            </label>
+            <div class="mp-chips" id="mpDurumChips"></div>
+          </div>
+          <div class="mp-bar-r">
+            <label class="mp-fire" title="Atölyede yırtılan/bozulan poşet payı — normali %5 ile %7 arasıdır">
+              <i class="fas fa-percent"></i> Fire payı
+              <select id="mpFireSel" onchange="mpSetFire(this.value)"></select>
+            </label>
+            <button class="btn btn-sm btn-primary" onclick="mpPrint()"><i class="fas fa-print"></i> Yazdır</button>
+          </div>
+        </div>
         <div class="mp-kpis" id="mpKpis"></div>
         <div class="rep-card" style="margin-bottom:16px;">
           <div class="rep-card-head" style="justify-content:space-between;">
             <span><i class="fas fa-scale-unbalanced"></i> Atölye Bazlı Mal / Poşet Dengesi</span>
-            <span class="mp-head-note">%110'a kadar fire payı normal sayılır</span>
+            <span class="mp-head-note" id="mpFireNote"></span>
           </div>
           <div id="mpAtolye"></div>
         </div>
@@ -6007,15 +6043,22 @@ function _posetToplamForm(){
   return POSET_KEYS.reduce((s,k)=>{const el=document.getElementById(k);return s+(+((el&&el.value)||0)||0);},0);
 }
 function _n(v){ return (+v||0).toLocaleString('tr-TR'); }
-// Poşet/mal oranını sınıflandırır — tek yerden, form ve rapor aynı eşiği kullansın
+// Fire payı — atölyede yırtılan/bozulan poşet. Normali %5-7; ayarlanabilir.
+function _fireOrani(){ const v=+getConfig('fireOrani',7); return (v>=0&&v<=50)?v:7; }
+function _setFireOrani(v){ setConfig('fireOrani', +v||7); }
+// Poşet/mal oranını sınıflandırır — tek yerden, form ve rapor aynı eşiği kullansın.
+// fire payı içindeki fazlalık normaldir; asıl sorulacak rakam "aşım" (fire üstü).
 function _malDurum(poset, mal){
-  if(!mal) return {k:'yok', lbl:'Mal adeti girilmemiş', ic:'fa-circle-question'};
+  if(!mal) return {k:'yok', lbl:'Mal adeti girilmemiş', ic:'fa-circle-question', oran:0, fark:0, asim:0, limit:0, fire:_fireOrani()};
+  const fire=_fireOrani();
   const oran=Math.round(poset/mal*100);
   const fark=poset-mal;
-  if(fark<=0)      return {k:'ok',   oran, fark, lbl:'Normal', ic:'fa-circle-check'};
-  if(oran<=110)    return {k:'ok',   oran, fark, lbl:'Normal (fire payı)', ic:'fa-circle-check'};
-  if(oran<=130)    return {k:'warn', oran, fark, lbl:'Fazla poşet', ic:'fa-triangle-exclamation'};
-  return              {k:'bad',  oran, fark, lbl:'Çok fazla poşet', ic:'fa-circle-exclamation'};
+  const limit=Math.round(mal*(1+fire/100));   // fire payıyla birlikte verilebilecek üst sınır
+  const asim=poset-limit;                     // bunun üstü hesabı sorulacak fazlalık
+  if(asim<=0) return {k:'ok', oran, fark, asim:0, limit, fire,
+                      lbl:(fark<=0?'Normal':'Normal (fire payı içinde)'), ic:'fa-circle-check'};
+  if(asim<=mal*0.10) return {k:'warn', oran, fark, asim, limit, fire, lbl:'Fazla poşet', ic:'fa-triangle-exclamation'};
+  return {k:'bad', oran, fark, asim, limit, fire, lbl:'Çok fazla poşet', ic:'fa-circle-exclamation'};
 }
 function _malOraniGoster(){
   const box=document.getElementById('malOrani'); if(!box) return;
@@ -6030,7 +6073,8 @@ function _malOraniGoster(){
   const d=_malDurum(poset, mal);
   box.className='mal-orani '+d.k;
   box.innerHTML='<i class="fas '+d.ic+'"></i> <b>'+_n(poset)+'</b> poşet / <b>'+_n(mal)+'</b> mal · <b>%'+d.oran+'</b>'+
-    (d.fark>0?' — <b>'+_n(d.fark)+'</b> fazla poşet':' — fazlalık yok');
+    '<span class="mal-orani-alt">fire payı %'+d.fire+' ile üst sınır <b>'+_n(d.limit)+'</b>'+
+    (d.asim>0?' — <b>'+_n(d.asim)+'</b> aşım':' — sınır içinde')+'</span>';
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -6683,7 +6727,8 @@ function showDetailUni(id,type){
     } else if(item.malAdedi>0){
       const d=_malDurum(_pt, +item.malAdedi);
       html+=`<div class="dt-mal ${d.k}"><div class="dt-mal-h"><i class="fas ${d.ic}"></i> Mal / Poşet Dengesi — ${d.lbl}</div>
-        <div class="dt-mal-b"><b>${(+item.malAdedi).toLocaleString('tr-TR')}</b> adet mal için <b>${_pt.toLocaleString('tr-TR')}</b> poşet · <b>%${d.oran}</b>${d.fark>0?` — <b>${d.fark.toLocaleString('tr-TR')}</b> fazla poşet`:''}</div>
+        <div class="dt-mal-b"><b>${(+item.malAdedi).toLocaleString('tr-TR')}</b> adet mal için <b>${_pt.toLocaleString('tr-TR')}</b> poşet · <b>%${d.oran}</b></div>
+        <div class="dt-mal-n"><i class="fas fa-percent"></i> Fire payı %${d.fire} ile üst sınır <b>${d.limit.toLocaleString('tr-TR')}</b>${d.asim>0?` — <b>${d.asim.toLocaleString('tr-TR')}</b> aşım`:' — sınır içinde'}</div>
       </div>`;
     }
     if(item.bant && Object.values(item.bant).some(v=>+v>0)){
@@ -7138,7 +7183,8 @@ function generatePDF(id, type, mode) {
                     : _d.k==='warn'? {bg:'#fffbeb',bd:'#fde68a',ln:'#f59e0b',tx:'#92400e'}
                     :                {bg:'#f0fdf4',bd:'#bbf7d0',ln:'#10b981',tx:'#065f46'};
         html += `<div style="margin-top:8px;padding:8px 10px;background:${_renk.bg};border:1px solid ${_renk.bd};border-left:4px solid ${_renk.ln};border-radius:6px;font-size:10px;color:${_renk.tx};">
-          <b>MAL ADETİ:</b> ${(+item.malAdedi).toLocaleString('tr-TR')} adet · <b>POŞET:</b> ${totalS.toLocaleString('tr-TR')} · <b>ORAN: %${_d.oran}</b>${_d.fark>0?` · <b>${_d.fark.toLocaleString('tr-TR')} fazla poşet</b>`:''}
+          <b>MAL ADETİ:</b> ${(+item.malAdedi).toLocaleString('tr-TR')} adet · <b>POŞET:</b> ${totalS.toLocaleString('tr-TR')} · <b>ORAN: %${_d.oran}</b><br>
+          Fire payı %${_d.fire} ile üst sınır: <b>${_d.limit.toLocaleString('tr-TR')}</b>${_d.asim>0?` · <b>${_d.asim.toLocaleString('tr-TR')} AŞIM</b>`:' · sınır içinde'}
         </div>`;
       }
     }
@@ -8105,16 +8151,45 @@ function setReportRange(days, btn){
   renderAllReports();
 }
 
+// Rapor sayfası genel filtreleri — tüm sekmelere birden uygulanır
+let reportAtolye = 'all';
+let reportTur    = 'all';
+function _repApplyFilters(list){
+  if(reportAtolye!=='all') list=list.filter(i=>(i.atolye||i.firma||'')===reportAtolye);
+  if(reportTur!=='all')    list=list.filter(i=>i._type===reportTur);
+  return list;
+}
+function setReportAtolye(v){ reportAtolye=v||'all'; renderAllReports(); }
+function setReportTur(v){ reportTur=v||'all'; renderAllReports(); }
+function clearReportFilters(){
+  reportAtolye='all'; reportTur='all';
+  const a=document.getElementById('repAtolyeFilter'); if(a) a.value='all';
+  const t=document.getElementById('repTurFilter');    if(t) t.value='all';
+  renderAllReports();
+}
+// Atölye listesini mevcut kayıtlardan doldur (seçim korunur)
+function _repFillAtolyeFilter(){
+  const sel=document.getElementById('repAtolyeFilter'); if(!sel) return;
+  const all=(typeof getUnifiedList==='function')?getUnifiedList():(getData('irsaliyeler')||[]);
+  const adlar=[...new Set(all.map(i=>(i.atolye||i.firma||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+  if(reportAtolye!=='all' && adlar.indexOf(reportAtolye)===-1) adlar.push(reportAtolye);
+  const yeni='<option value="all">Tüm Atölyeler</option>'+adlar.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  if(sel.innerHTML!==yeni) sel.innerHTML=yeni;
+  sel.value=reportAtolye;
+  const t=document.getElementById('repTurFilter'); if(t) t.value=reportTur;
+  const c=document.getElementById('repFiltClear'); if(c) c.style.display=(reportAtolye!=='all'||reportTur!=='all')?'':'none';
+}
+
 function getReportData(){
   const all = (typeof getUnifiedList==='function') ? getUnifiedList() : (getData('irsaliyeler')||[]);
-  if(reportRange==='all') return all;
+  if(reportRange==='all') return _repApplyFilters(all);
   const cutoff = new Date();
   cutoff.setHours(0,0,0,0);
   cutoff.setDate(cutoff.getDate() - reportRange + 1);
-  return all.filter(i=>{
+  return _repApplyFilters(all.filter(i=>{
     const d = new Date(i.tarih || i.createdAt || 0);
     return d >= cutoff;
-  });
+  }));
 }
 
 function showReportTab(tab, btn){
@@ -8127,6 +8202,7 @@ function showReportTab(tab, btn){
 }
 
 function renderAllReports(){
+  _repFillAtolyeFilter();
   renderRepKpis();
   const active = document.querySelector('.rep-tab:not([style*="none"])');
   if(active){
@@ -8135,7 +8211,9 @@ function renderAllReports(){
   } else {
     renderReportTab('trend');
   }
-  document.getElementById('repRangeInfo').textContent = `${getReportData().length} irsaliye analiz ediliyor`;
+  const _flt=[]; if(reportAtolye!=='all') _flt.push(reportAtolye); if(reportTur!=='all') _flt.push(getTypeLabel(reportTur).replace(/^\S+\s/,''));
+  document.getElementById('repRangeInfo').textContent =
+    `${getReportData().length} irsaliye analiz ediliyor` + (_flt.length?' · '+_flt.join(' · '):'');
 }
 
 function renderReportTab(tab){
@@ -8170,7 +8248,7 @@ function getReportDataPrev(){
   const now = new Date(); now.setHours(0,0,0,0);
   const start = new Date(now); start.setDate(start.getDate() - (reportRange*2 - 1));
   const end   = new Date(now); end.setDate(end.getDate() - (reportRange - 1));
-  return all.filter(i=>{ const d=new Date(i.tarih||i.createdAt||0); return d>=start && d<end; });
+  return _repApplyFilters(all.filter(i=>{ const d=new Date(i.tarih||i.createdAt||0); return d>=start && d<end; }));
 }
 
 function _repDeltaBadge(cur, prev){
@@ -8848,9 +8926,23 @@ function _mpKpi(ic,renk,val,lbl,mini){
     <div class="rep-kpi-body"><div class="rep-kpi-val">${val}</div><div class="rep-kpi-lbl">${lbl}</div>${mini?`<div class="rep-kpi-mini">${mini}</div>`:''}</div></div>`;
 }
 function renderMalPoset(){
-  const data    = getReportData().filter(i=>i._type==='standart');
+  const tumu    = getReportData().filter(i=>i._type==='standart');
+  // Ay filtresi bu sekmeye özel — genel dönem seçicisiyle birlikte çalışır
+  const data    = (mpAy==='all') ? tumu : tumu.filter(i=>_mpAyKey(i)===mpAy);
   const serbest = data.filter(i=>i.serbest);
   const uretim  = data.filter(i=>!i.serbest);
+  const fire    = _fireOrani();
+
+  // Ay ve fire seçicilerini tazele
+  _mpFillAy(tumu);
+  const fs=document.getElementById('mpFireSel');
+  if(fs){
+    const h=[3,4,5,6,7,8,10,12,15].map(v=>`<option value="${v}"${v===fire?' selected':''}>%${v}</option>`).join('');
+    if(fs.innerHTML!==h) fs.innerHTML=h;
+    fs.value=String(fire);
+  }
+  const fn=document.getElementById('mpFireNote');
+  if(fn) fn.textContent=`Fire payı %${fire} — mal adetinin %${fire} fazlasına kadar normal sayılır`;
 
   // ---- Atölye bazlı toplama ----
   const g={};
@@ -8863,27 +8955,49 @@ function renderMalPoset(){
     if(m>0){ g[a].mal+=m; g[a].poset+=p; }
     else   { g[a].eksikIrs++; g[a].eksikPoset+=p; }
   });
-  const satirlar=Object.values(g).map(x=>{
+  let satirlar=Object.values(g).map(x=>{
     x.fark = x.mal>0 ? (x.poset-x.mal) : 0;
     x.oran = x.mal>0 ? Math.round(x.poset/x.mal*100) : 0;
     x.d    = _malDurum(x.poset, x.mal);
+    x.asim = x.d.asim||0;
     return x;
-  }).sort((a,b)=>(b.fark-a.fark)||(b.poset-a.poset));
+  }).sort((a,b)=>(b.asim-a.asim)||(b.fark-a.fark)||(b.poset-a.poset));
 
+  // ---- Durum çipleri (filtre) ----
+  const sayim={ all:satirlar.length,
+    asan:  satirlar.filter(x=>x.asim>0).length,
+    normal:satirlar.filter(x=>x.mal>0 && x.asim<=0).length,
+    eksik: satirlar.filter(x=>x.eksikIrs>0).length };
+  const cips=[
+    {k:'all',    ad:'Tümü',            ic:'fa-layer-group',          n:sayim.all},
+    {k:'asan',   ad:'Fire payını aşan',ic:'fa-triangle-exclamation', n:sayim.asan},
+    {k:'normal', ad:'Normal',          ic:'fa-circle-check',         n:sayim.normal},
+    {k:'eksik',  ad:'Mal adeti eksik', ic:'fa-circle-question',      n:sayim.eksik}
+  ];
+  const ch=document.getElementById('mpDurumChips');
+  if(ch) ch.innerHTML=cips.map(c=>`<button type="button" class="mp-chip${mpDurum===c.k?' on':''}" onclick="mpSetDurum('${c.k}')">
+      <i class="fas ${c.ic}"></i> ${c.ad} <b>${c.n}</b></button>`).join('');
+
+  // KPI'lar filtreden ÖNCEKİ tam tabloya göre — toplamlar bozulmasın
   const tMal    = satirlar.reduce((s,x)=>s+x.mal,0);
   const tPoset  = satirlar.reduce((s,x)=>s+x.poset,0);
-  const tFazla  = satirlar.reduce((s,x)=>s+Math.max(0,x.fark),0);
+  const tAsim   = satirlar.reduce((s,x)=>s+Math.max(0,x.asim),0);
   const tEksik  = satirlar.reduce((s,x)=>s+x.eksikIrs,0);
   const tSerbest= serbest.reduce((s,i)=>s+_mpPoset(i),0);
   const genelOran = tMal? Math.round(tPoset/tMal*100) : 0;
-  const oranRenk  = genelOran>130?'#ef4444':genelOran>110?'#f59e0b':'#10b981';
+  const oranRenk  = genelOran>100+fire+10 ? '#ef4444' : genelOran>100+fire ? '#f59e0b' : '#10b981';
 
   document.getElementById('mpKpis').innerHTML =
     _mpKpi('fa-shirt','#8b5cf6', _n(tMal),   'Dikilen Mal (adet)', tEksik?`${tEksik} irsaliyede mal adeti yok`:'tüm irsaliyelerde girili') +
-    _mpKpi('fa-box','#3b82f6',   _n(tPoset), 'Verilen Poşet',      'mal adeti girili irsaliyeler') +
-    _mpKpi('fa-scale-unbalanced','#f59e0b', _n(tFazla), 'Fazla Poşet', tFazla?'atölyeye sorulacak fark':'fark yok') +
-    _mpKpi('fa-percent', oranRenk, '%'+genelOran, 'Poşet / Mal Oranı', '%110 altı normal') +
+    _mpKpi('fa-box','#3b82f6',   _n(tPoset), 'Verilen Poşet',      `fire payıyla üst sınır ${_n(Math.round(tMal*(1+fire/100)))}`) +
+    _mpKpi('fa-scale-unbalanced','#f59e0b', _n(tAsim), 'Fire Üstü Fazla', tAsim?'hesabı sorulacak fark':'aşım yok') +
+    _mpKpi('fa-percent', oranRenk, '%'+genelOran, 'Poşet / Mal Oranı', `%${100+fire} altı normal`) +
     _mpKpi('fa-clipboard-question','#06b6d4', _n(tSerbest), 'Serbest Verilen (poşet)', `${serbest.length} irsaliye`);
+
+  // ---- Çip filtresi tabloya uygulanır ----
+  if(mpDurum==='asan')        satirlar=satirlar.filter(x=>x.asim>0);
+  else if(mpDurum==='normal') satirlar=satirlar.filter(x=>x.mal>0 && x.asim<=0);
+  else if(mpDurum==='eksik')  satirlar=satirlar.filter(x=>x.eksikIrs>0);
 
   // ---- Atölye tablosu ----
   const rozet=d=>{
@@ -8892,35 +9006,37 @@ function renderMalPoset(){
   };
   document.getElementById('mpAtolye').innerHTML = satirlar.length ? `
     <div class="mp-table-wrap"><table class="mp-table">
-      <thead><tr><th>Atölye</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fark</th><th>Oran</th><th>Durum</th></tr></thead>
+      <thead><tr><th>Atölye</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th title="Fire payıyla verilebilecek üst sınır">Fire Sınırı</th><th title="Fire payının üstünde kalan fazlalık">Aşım</th><th>Oran</th><th>Durum</th></tr></thead>
       <tbody>${satirlar.map((x,ix)=>`
         <tr class="mp-row ${x.d.k}" onclick="mpToggleDetay(${ix})">
           <td><b>${esc(x.ad)}</b><i class="fas fa-chevron-down mp-chev" id="mpChev${ix}"></i></td>
           <td class="c">${x.irs}</td>
           <td class="c">${x.mal?_n(x.mal):'<span class="mp-dim">—</span>'}</td>
           <td class="c">${_n(x.poset)}${x.eksikPoset?`<span class="mp-dim"> +${_n(x.eksikPoset)}*</span>`:''}</td>
-          <td class="c"><b style="color:${x.fark>0?'#ef4444':x.fark<0?'#10b981':'var(--text-muted)'}">${x.mal?(x.fark>0?'+':'')+_n(x.fark):'—'}</b></td>
+          <td class="c">${x.mal?_n(x.d.limit):'<span class="mp-dim">—</span>'}</td>
+          <td class="c"><b style="color:${x.asim>0?'#ef4444':'var(--text-muted)'}">${x.mal?(x.asim>0?'+'+_n(x.asim):'yok'):'—'}</b></td>
           <td class="c"><b>${x.mal?'%'+x.oran:'—'}</b></td>
           <td>${rozet(x.d)}${(x.eksikIrs&&x.d.k!=='yok')?`<span class="mp-eksik" title="${x.eksikIrs} irsaliyede mal adeti girilmemiş (${_n(x.eksikPoset)} poşet) — orana katılmadı">+${x.eksikIrs} eksik</span>`:''}</td>
         </tr>
-        <tr class="mp-detay" id="mpDetay${ix}" style="display:none;"><td colspan="7">
-          <div class="mp-detay-in">${x.kayitlar.map(k=>`
-            <div class="mp-drow" onclick="event.stopPropagation();showDetailUni(${k.id},'standart')">
+        <tr class="mp-detay" id="mpDetay${ix}" style="display:none;"><td colspan="8">
+          <div class="mp-detay-in">${x.kayitlar.map(k=>{
+            const kd=_malDurum(k.poset,k.mal);
+            return `<div class="mp-drow" onclick="event.stopPropagation();showDetailUni(${k.id},'standart')">
               <span class="mp-dno">${esc(k.no)}</span>
               <span class="mp-dtar">${esc(k.tarih||'-')}</span>
-              <span class="mp-dmod">${esc(k.model||'-')}</span>
+              <span class="mp-dmod">${esc(k.model||'—')}</span>
               <span class="mp-dqty">${_n(k.poset)} poşet</span>
               <span class="mp-dqty">${k.mal?_n(k.mal)+' mal':'<i>mal adeti yok</i>'}</span>
-              <span class="mp-dfark" style="color:${k.mal&&k.poset>k.mal?'#ef4444':'var(--text-muted)'}">${k.mal?(k.poset-k.mal>0?'+'+_n(k.poset-k.mal)+' fazla':'normal'):''}</span>
-            </div>`).join('')}</div>
+              <span class="mp-dfark" style="color:${kd.asim>0?'#ef4444':'var(--text-muted)'}">${k.mal?(kd.asim>0?'+'+_n(kd.asim)+' aşım':'sınır içinde'):''}</span>
+            </div>`;}).join('')}</div>
         </td></tr>`).join('')}
       </tbody></table></div>
       ${satirlar.some(x=>x.eksikPoset)?'<div class="mp-not">* Mal adeti girilmemiş irsaliyelerin poşeti — oran hesabına katılmadı. Satıra tıklayıp hangi irsaliye olduğunu görebilirsiniz.</div>':'<div class="mp-not">Satıra tıklayın — o atölyenin irsaliyeleri tek tek açılır.</div>'}`
-    : '<div class="mp-empty"><i class="fas fa-inbox"></i> Bu dönemde poşet irsaliyesi yok.</div>';
+    : `<div class="mp-empty"><i class="fas fa-inbox"></i> ${mpDurum==='all'?'Bu dönemde poşet irsaliyesi yok.':'Bu filtreye uyan atölye yok.'}</div>`;
 
   // ---- Ay ay döküm ----
   const ay={};
-  data.forEach(i=>{
+  tumu.forEach(i=>{
     const k=_mpAyKey(i);
     if(!ay[k]) ay[k]={k,irs:0,mal:0,poset:0,eksikIrs:0,eksikPoset:0,serbest:0,serbestIrs:0};
     const p=_mpPoset(i);
@@ -8933,20 +9049,23 @@ function renderMalPoset(){
   const aylar=Object.values(ay).sort((a,b)=>b.k.localeCompare(a.k));
   document.getElementById('mpAylik').innerHTML = aylar.length ? `
     <div class="mp-table-wrap"><table class="mp-table">
-      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fark</th><th>Oran</th><th>Serbest</th></tr></thead>
+      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fire Sınırı</th><th>Aşım</th><th>Oran</th><th>Serbest</th></tr></thead>
       <tbody>${aylar.map(a=>{
-        const fark=a.mal?a.poset-a.mal:0, oran=a.mal?Math.round(a.poset/a.mal*100):0;
-        return `<tr>
-          <td><b>${_mpAyAd(a.k)}</b></td>
+        const ad=_malDurum(a.poset,a.mal);
+        const sec=(mpAy===a.k);
+        return `<tr class="mp-row${sec?' sec':''}" onclick="mpSetAy('${sec?'all':a.k}')" title="${sec?'Ay filtresini kaldır':'Sadece bu ayı göster'}">
+          <td><b>${_mpAyAd(a.k)}</b>${sec?' <i class="fas fa-filter mp-fic"></i>':''}</td>
           <td class="c">${a.irs}${a.eksikIrs?`<span class="mp-dim"> (${a.eksikIrs} eksik)</span>`:''}</td>
           <td class="c">${a.mal?_n(a.mal):'<span class="mp-dim">—</span>'}</td>
           <td class="c">${_n(a.poset)}${a.eksikPoset?`<span class="mp-dim"> +${_n(a.eksikPoset)}*</span>`:''}</td>
-          <td class="c"><b style="color:${fark>0?'#ef4444':'var(--text-muted)'}">${a.mal?(fark>0?'+':'')+_n(fark):'—'}</b></td>
-          <td class="c"><b style="color:${oran>130?'#ef4444':oran>110?'#f59e0b':'inherit'}">${a.mal?'%'+oran:'—'}</b></td>
+          <td class="c">${a.mal?_n(ad.limit):'<span class="mp-dim">—</span>'}</td>
+          <td class="c"><b style="color:${ad.asim>0?'#ef4444':'var(--text-muted)'}">${a.mal?(ad.asim>0?'+'+_n(ad.asim):'yok'):'—'}</b></td>
+          <td class="c"><b style="color:${a.mal?(ad.k==='bad'?'#ef4444':ad.k==='warn'?'#f59e0b':'inherit'):'inherit'}">${a.mal?'%'+ad.oran:'—'}</b></td>
           <td class="c">${a.serbest?_n(a.serbest)+` <span class="mp-dim">(${a.serbestIrs})</span>`:'<span class="mp-dim">—</span>'}</td>
         </tr>`;
       }).join('')}</tbody></table></div>
-      ${aylar.some(a=>a.eksikPoset)?'<div class="mp-not">* Mal adeti girilmemiş irsaliyelerin poşeti — oran hesabına katılmadı.</div>':''}`
+      ${aylar.some(a=>a.eksikPoset)?'<div class="mp-not">* Mal adeti girilmemiş irsaliyelerin poşeti — oran hesabına katılmadı.</div>':''}
+      <div class="mp-not">Aya tıklayın — üstteki tablo sadece o ayı gösterir.</div>`
     : '<div class="mp-empty"><i class="fas fa-inbox"></i> Bu dönemde kayıt yok.</div>';
 
   // ---- Serbest irsaliyeler ----
@@ -8964,6 +9083,58 @@ function renderMalPoset(){
         </tr>`).join('')}</tbody></table></div>`
     : '<div class="mp-empty"><i class="fas fa-clipboard-question"></i> Bu dönemde serbest irsaliye kesilmemiş.</div>';
 }
+
+// ---- Mal/Poşet sekmesi filtreleri ----
+let mpAy='all', mpDurum='all';
+function mpSetAy(v){ mpAy=v||'all'; renderMalPoset(); }
+function mpSetDurum(v){ mpDurum=v||'all'; renderMalPoset(); }
+function mpSetFire(v){ _setFireOrani(v); renderMalPoset(); try{ _malOraniGoster(); }catch(_){} }
+function _mpFillAy(list){
+  const sel=document.getElementById('mpAyFilter'); if(!sel) return;
+  const kler=[...new Set(list.map(_mpAyKey))].sort().reverse();
+  if(mpAy!=='all' && kler.indexOf(mpAy)===-1) mpAy='all';
+  const h='<option value="all">Tüm Aylar</option>'+kler.map(k=>`<option value="${k}">${_mpAyAd(k)}</option>`).join('');
+  if(sel.innerHTML!==h) sel.innerHTML=h;
+  sel.value=mpAy;
+}
+
+// ---- Yazdır: ay sonu hesabı için sade A4 çıktı ----
+function mpPrint(){
+  const tablo=id=>{ const el=document.getElementById(id); return el?el.innerHTML:''; };
+  const bilgi=[];
+  bilgi.push(reportRange==='all'?'Tüm zamanlar':'Son '+reportRange+' gün');
+  if(reportAtolye!=='all') bilgi.push('Atölye: '+reportAtolye);
+  if(mpAy!=='all') bilgi.push('Ay: '+_mpAyAd(mpAy));
+  if(mpDurum!=='all') bilgi.push({asan:'Fire payını aşanlar',normal:'Normaller',eksik:'Mal adeti eksikler'}[mpDurum]||'');
+  bilgi.push('Fire payı %'+_fireOrani());
+  const kpi=Array.from(document.querySelectorAll('#mpKpis .rep-kpi')).map(k=>
+    '<div class="pk"><div class="pkv">'+((k.querySelector('.rep-kpi-val')||{}).textContent||'')+'</div>'+
+    '<div class="pkl">'+((k.querySelector('.rep-kpi-lbl')||{}).textContent||'')+'</div></div>').join('');
+  const now=new Date();
+  const w=window.open('','_blank');
+  if(!w){ toast('Yazdırma penceresi açılamadı (pop-up engeli olabilir)','error'); return; }
+  w.document.write('<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Mal / Poşet Dengesi</title><style>'+
+    '*{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;}'+
+    'h1{font-size:19px;margin:0 0 3px;} .sub{color:#666;font-size:12px;margin-bottom:14px;}'+
+    '.pks{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:16px;}'+
+    '.pk{border:1px solid #ddd;border-radius:7px;padding:8px 10px;} .pkv{font-size:17px;font-weight:800;} .pkl{font-size:10px;color:#666;}'+
+    'h2{font-size:13px;margin:16px 0 7px;padding-bottom:4px;border-bottom:1px solid #ddd;}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px;} th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;}'+
+    'th{background:#f4f4f7;font-size:10px;text-transform:uppercase;} .c{text-align:center;}'+
+    '.mp-detay,.mp-chev,.mp-not{display:none !important;} .mp-badge,.mp-eksik{border:1px solid #ccc;border-radius:10px;padding:1px 6px;font-size:9px;}'+
+    '.imza{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:34px;} .imza div{border-top:1px solid #111;padding-top:4px;font-size:10px;color:#555;text-align:center;}'+
+    '@page{size:A4;margin:12mm;}</style></head><body>'+
+    '<h1>Mal / Poşet Dengesi</h1><div class="sub">'+bilgi.filter(Boolean).join(' · ')+' — '+now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR')+'</div>'+
+    '<div class="pks">'+kpi+'</div>'+
+    '<h2>Atölye Bazlı Denge</h2>'+tablo('mpAtolye')+
+    '<h2>Ay Ay Döküm</h2>'+tablo('mpAylik')+
+    '<h2>Serbest İrsaliyeler</h2>'+tablo('mpSerbest')+
+    '<div class="imza"><div>Hazırlayan</div><div>Onaylayan</div></div>'+
+    '</body></html>');
+  w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(_){} }, 350);
+}
+
 function mpToggleDetay(ix){
   const el=document.getElementById('mpDetay'+ix); if(!el) return;
   const ac = el.style.display==='none';
@@ -9378,6 +9549,9 @@ function printReports(){
     'table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;}'+
     '.rep-stat{border:1px solid #eee;border-radius:8px;padding:10px;} .rep-stat-val{font-size:18px;font-weight:800;} .rep-stat-lbl{font-size:11px;color:#666;}'+
     '.rep-empty-mini{color:#888;font-size:12px;text-align:center;padding:16px 0;}'+
+    '.mp-bar,.mp-chev,.mp-detay{display:none !important;} .mp-table td.c,.mp-table th{text-align:center;}'+
+    '.mp-badge,.mp-eksik{border:1px solid #ccc;border-radius:10px;padding:1px 6px;font-size:9px;}'+
+    '.mp-not{font-size:10px;color:#666;margin-top:6px;} .mp-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:14px;}'+
     '@media print{ body{margin:12mm;} @page{margin:10mm;} }'+
     '</style></head><body>'+
     '<h1>İrsaliye Pro — Raporlar</h1>'+
