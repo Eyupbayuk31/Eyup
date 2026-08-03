@@ -18384,7 +18384,9 @@ AK._renkFromText = function(nm){ if(!nm) return null; if(AK._NOT_RENK.test(nm)) 
 // Bir sayfanın metninden {code, model, renk, size} çıkar
 AK._pageInfo = function(t){
   t=t.replace(/\s+/g,' ');
-  var cm=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{2}\d{2,4})/);        // MODEL/COLORCODE
+  // Renk kodunda rakam sayısı 1–4 olabilir (ör. BR2). Eskiden en az 2 rakam
+  // isteniyordu; BR2 gibi kodlar okunamayıp renk "kodsuz" kalıyordu.
+  var cm=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{2}\d{1,4})/);        // MODEL/COLORCODE
   var sz=t.match(/SIZE\s*:\s*([0-9]?[A-Za-z]{1,3})/i);  // 3XL/4XL/2XL gibi rakamla başlayanlar da yakalansın
   var nm=t.match(/\b([A-Z][a-z]{2,12})\s+SIZE\s*:/);                          // renk adı (SIZE'dan önce)
   var code=cm?cm[2]:null;
@@ -18515,7 +18517,7 @@ AK._yikamaColors = function(bytes, onlyWash){ return window.pdfjsLib.getDocument
         var isBarkod=/SIZE\s*:/i.test(full)||/SP\.?\s*N/i.test(full);
         if(isBarkod || !AK._WASH_RE.test(full)){ i++; return scan(); }
       }
-      var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{2,4})/);
+      var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{1,4})/);
       var nm=full.replace(/\s+/g,' ').match(/\b([A-Z][a-z]{2,12})\)/);
       var code=cm?cm[2]:null; var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
       return AK._textCrop(pdf,pageNum,3.4).then(function(r){ if((r.ink||0)>=150) out.push({code:code, renk:renk, url:r.url}); i++; return scan(); }); }); }
@@ -18561,9 +18563,9 @@ AK._pngUrl = function(bytes,fn){ var bin='',u=new Uint8Array(bytes); for(var i=0
 //  I6391AX/YL155  ·  I6391AX-(YL155, Solid)  ·  FIXTURE I6391AX / YL155  ·  yalın I6391AX
 AK._detectModel = function(bytes){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){ return pdf.getPage(1).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
   var t=tc.items.map(function(x){return x.str;}).join(' ').replace(/\s+/g,' ');
-  var m=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{1,3}\d{2,4})/);           // MODEL/COLOR
+  var m=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{1,3}\d{1,4})/);           // MODEL/COLOR
   if(m) return {model:m[1], renk:m[2]};
-  m=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*-\s*\(\s*([A-Z]{1,3}\d{2,4})/);            // MODEL-(COLOR
+  m=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*-\s*\(\s*([A-Z]{1,3}\d{1,4})/);            // MODEL-(COLOR
   if(m) return {model:m[1], renk:m[2]};
   m=t.match(/\b([A-Z]\d{4}[A-Z]{2})\b/);                                          // yalın MODEL
   if(m) return {model:m[1], renk:''};
@@ -19005,7 +19007,7 @@ AK.parseSummary = function(bytes){
       });
       if(!tot) continue;
       var rk=(map.renk!=null?(r[map.renk]||''):'').toString().trim();  // "BK81 - BLACK"
-      var cm=rk.match(/([A-Z]{2}\d{2,4})/i);
+      var cm=rk.match(/([A-Z]{2}\d{1,4})/i);
       var key=model.toUpperCase()+'|'+po+'|'+(cm?cm[1].toUpperCase():'');
       // Aynı satır iki tabloda da var. "Beden Bazlı Toplam Sipariş" tablosunda
       // bedenler GERÇEK adettir (lot sütunu yoktur) — asıl istediğimiz odur.
