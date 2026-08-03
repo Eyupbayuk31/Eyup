@@ -1659,10 +1659,6 @@ if(typeof Chart==='undefined'){
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
             <div class="form-group"><label id="iModelLbl">Model Kodu *</label><input class="form-input" id="iModel" placeholder="Örn: MK-2024"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="iTarih" type="date"></div>
-            <div class="form-group serbest-only" id="grpSerbestFirma" style="grid-column:span 2;display:none;">
-              <label>Alıcı Firma * <span class="lbl-ipucu">poşeti satın alan / dışarıdan gelen firma</span></label>
-              <input class="form-input" id="iSerbestFirma" placeholder="Örn: Serkan Tekstil">
-            </div>
             <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label id="iAtolyeLbl">Atölye *</label>
               <select class="form-input" id="iAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
               <button type="button" class="form-input" id="iAtolyeBtn" onclick="openAtolyePicker('iAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="iAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
@@ -1679,8 +1675,8 @@ if(typeof Chart==='undefined'){
               <div class="mal-orani" id="malOrani"></div>
             </div>
             <div class="form-group serbest-only" id="grpSerbestSebep" style="grid-column:span 2;display:none;">
-              <label>Neden aldı? * <span class="lbl-ipucu">ay sonu hesap sorulursa bu açıklama raporda çıkar</span></label>
-              <input class="form-input" id="iSerbestSebep" placeholder="Örn: Kendi işi için satın aldı — nakit ödendi">
+              <label>Neden verildi? * <span class="lbl-ipucu">ay sonu hesap sorulursa bu açıklama raporda çıkar</span></label>
+              <input class="form-input" id="iSerbestSebep" placeholder="Örn: Elinde kalan işi paketlemek için istedi">
             </div>
           </div>
           <div class="form-group" style="margin-top:6px;"><label>Açıklama</label><textarea class="form-input" id="iAciklama" placeholder="Varsa not ekleyin..." rows="2"></textarea></div>
@@ -2712,7 +2708,7 @@ if(typeof Chart==='undefined'){
           <div id="mpAylik"></div>
         </div>
         <div class="rep-card">
-          <div class="rep-card-head"><i class="fas fa-handshake"></i> Serbest İrsaliyeler — Dışarıya Verilen / Satılan</div>
+          <div class="rep-card-head"><i class="fas fa-clipboard-question"></i> Serbest İrsaliyeler — Modele Bağlı Olmadan Verilenler</div>
           <div id="mpSerbest"></div>
         </div>
       </div>
@@ -6038,9 +6034,10 @@ function _malOraniGoster(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SERBEST İRSALİYE — poşeti atölyeye değil, dışarıya (satış) veriyoruz
-// Örn. Serkan Tekstil poşet satın aldı. Model/atölye zorunlu değil,
-// bunun yerine alıcı firma + neden aldığı yazılır; raporda ayrı çıkar.
+// SERBEST İRSALİYE — yine atölyeye kesilir, ama bir modele/mal adetine
+// bağlı değildir. Atölye "şu iş için lazım" deyip poşet ister; model
+// kodu zorunlu değil, bunun yerine neden verildiği yazılır. Ay sonu
+// raporunda mal/poşet oranına karışmaz, sebebiyle ayrı listelenir.
 // ═══════════════════════════════════════════════════════════════════
 let _serbestMod=false;
 function serbestModOn(){ return _serbestMod===true; }
@@ -6048,44 +6045,38 @@ function nRenderSerbestMode(){
   const host=document.getElementById('nSerbestMode'); if(!host) return;
   const on=serbestModOn();
   host.innerHTML='<span class="f-stock-chip '+(on?'off':'on')+'">'+
-      '<i class="fas '+(on?'fa-handshake':'fa-industry')+'"></i> '+
-      (on?'✦ Serbest irsaliye · Dışarıya satış — alıcı firma ve sebebi yazılır'
-         :'Atölye irsaliyesi · Dikim için verilir, mal adetiyle karşılaştırılır')+
+      '<i class="fas '+(on?'fa-clipboard-question':'fa-industry')+'"></i> '+
+      (on?'✦ Serbest irsaliye · Modele bağlı değil — neden verildiği yazılır, mal oranına karışmaz'
+         :'Model irsaliyesi · Dikim için verilir, mal adetiyle karşılaştırılır')+
     '</span>'+
     '<button type="button" class="btn btn-sm btn-secondary" onclick="toggleSerbestMod()">'+
-      '<i class="fas '+(on?'fa-toggle-on':'fa-toggle-off')+'"></i> '+(on?'Atölyeye dön':'Serbest irsaliye')+
+      '<i class="fas '+(on?'fa-toggle-on':'fa-toggle-off')+'"></i> '+(on?'Normale dön':'Serbest irsaliye')+
     '</button>';
   document.querySelectorAll('#page-new .serbest-only').forEach(el=>{ el.style.display = on?'':'none'; });
   const mg=document.getElementById('grpMalAdedi'); if(mg) mg.style.display = on?'none':'';
-  const ml=document.getElementById('iModelLbl');   if(ml) ml.textContent  = on?'Model / Ürün':'Model Kodu *';
-  const al=document.getElementById('iAtolyeLbl');  if(al) al.textContent  = on?'Atölye (opsiyonel)':'Atölye *';
-  const te=document.getElementById('iTeslimEdenLbl'); if(te) te.textContent = on?'Teslim Eden':'Teslim Eden *';
-  const ta=document.getElementById('iTeslimAlanLbl'); if(ta) ta.textContent = on?'Teslim Alan':'Teslim Alan *';
+  const ml=document.getElementById('iModelLbl');   if(ml) ml.textContent  = on?'Model / Ürün (opsiyonel)':'Model Kodu *';
 }
 function setSerbestMod(on){ _serbestMod=!!on; nRenderSerbestMode(); }
 function toggleSerbestMod(){
   setSerbestMod(!_serbestMod);
-  if(_serbestMod){ setTimeout(()=>{ const f=document.getElementById('iSerbestFirma'); if(f) f.focus(); },60); }
+  if(_serbestMod){ setTimeout(()=>{ const f=document.getElementById('iSerbestSebep'); if(f) f.focus(); },60); }
 }
 
 function saveIrsaliye(){
   const serbest=serbestModOn();
-  const serbestFirma=(document.getElementById('iSerbestFirma')?.value||'').trim();
   const serbestSebep=(document.getElementById('iSerbestSebep')?.value||'').trim();
   const model=document.getElementById('iModel').value.trim();
   const tarih=document.getElementById('iTarih').value;
-  const atolyeSec=document.getElementById('iAtolye').value;
+  const atolye=document.getElementById('iAtolye').value;
   const teslimEden=document.getElementById('iTeslimEden').value.trim();
   const teslimAlan=document.getElementById('iTeslimAlan').value.trim();
+  // Serbest irsaliyede yalnızca model kodu zorunlu değil — atölye ve teslim bilgileri yine gerekli
+  if(!tarih||!atolye||!teslimEden||!teslimAlan) return toast('Zorunlu alanları doldurun','error');
   if(serbest){
-    if(!tarih) return toast('Tarih zorunlu','error');
-    if(!serbestFirma) return toast('Alıcı firmayı yazın','error');
-    if(!serbestSebep) return toast('Neden aldığını yazın — ay sonu hesap sorulunca gerekli','error');
-  } else {
-    if(!model||!tarih||!atolyeSec||!teslimEden||!teslimAlan)return toast('Zorunlu alanları doldurun','error');
+    if(!serbestSebep) return toast('Neden verildiğini yazın — ay sonu hesap sorulunca gerekli','error');
+  } else if(!model){
+    return toast('Zorunlu alanları doldurun','error');
   }
-  // Serbest irsaliyede alıcı firma "atölye" alanına yazılır; liste/rapor/PDF tek alandan okur
-  const atolye = serbest ? (serbestFirma||atolyeSec) : atolyeSec;
   const termin=document.getElementById('iTermin').value;
   const durum=document.getElementById('iDurum').value;
   const aciklama=document.getElementById('iAciklama').value.trim();
@@ -6099,7 +6090,7 @@ function saveIrsaliye(){
     if(idx===-1){ toast('Düzenlenen kayıt bulunamadı','error'); cancelEditUni(); return; }
     const existing=list[idx];
     returnStockFromIrsaliye(existing);
-    const updated={...existing,model:(model||(serbest?'Serbest Satış':'')),tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
+    const updated={...existing,model,tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
                    malAdedi:serbest?0:malAdedi, serbest, serbestSebep:serbest?serbestSebep:''};
     list[idx]=updated;
     setData('irsaliyeler',list);
@@ -6111,7 +6102,7 @@ function saveIrsaliye(){
   }
 
   const no=getNextNo();
-  const item={id:Date.now(),no:'IRS-'+String(no).padStart(3,'0'),type:'standart',model:(model||(serbest?'Serbest Satış':'')),tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
+  const item={id:Date.now(),no:'IRS-'+String(no).padStart(3,'0'),type:'standart',model,tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
               malAdedi:serbest?0:malAdedi, serbest, serbestSebep:serbest?serbestSebep:'', createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'standart');
   const list=getData('irsaliyeler');list.unshift(item);setData('irsaliyeler',list);incNextNo();
@@ -6120,7 +6111,7 @@ function saveIrsaliye(){
   // Stoktan düş
   deductStockFromIrsaliye(item);
 
-  ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestFirma','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   try{ _malOraniGoster(); }catch(_){}
   setSerbestMod(false);
   _syncAtolyeLabel('iAtolye');
@@ -6508,7 +6499,7 @@ function getItemDetail(item){
     const parts=[];
     const sizeNames={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     const bantNames={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
-    if(item.serbest) parts.push('🤝 SERBEST');
+    if(item.serbest) parts.push('✦ SERBEST');
     if(item.sizes){for(let k in item.sizes){if(item.sizes[k]>0)parts.push(sizeNames[k]+':'+item.sizes[k]);}}
     if(item.bant){for(let k in item.bant){if(item.bant[k]>0)parts.push(bantNames[k]+':'+item.bant[k]);}}
     if(!item.serbest && item.malAdedi>0) parts.push('Mal:'+item.malAdedi);
@@ -6682,11 +6673,11 @@ function showDetailUni(id,type){
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     for(let k in item.sizes){if(item.sizes[k]>0)html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${sizeNames[k]||k}: <b>${item.sizes[k]}</b></div>`;}
     html+='</div>';
-    // Mal adeti / serbest satış dengesi
+    // Mal adeti / serbest irsaliye dengesi
     const _pt=Object.values(item.sizes||{}).reduce((a,b)=>a+(+b||0),0);
     if(item.serbest){
-      html+=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-handshake"></i> Serbest İrsaliye — Dışarıya Satış</div>
-        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> firmasına <b>${_pt.toLocaleString('tr-TR')}</b> poşet verildi.</div>
+      html+=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-clipboard-question"></i> Serbest İrsaliye — Modele Bağlı Değil</div>
+        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_pt.toLocaleString('tr-TR')}</b> poşet verildi — model/mal adetine bağlı değil.</div>
         ${item.serbestSebep?`<div class="dt-mal-n"><i class="fas fa-comment-dots"></i> ${esc(item.serbestSebep)}</div>`:''}
       </div>`;
     } else if(item.malAdedi>0){
@@ -6908,7 +6899,7 @@ function cancelEditUni(){
 function _clearFormFields(type){
   const today = new Date().toISOString().split('T')[0];
   if(type==='standart'){
-    ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestFirma','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const d=document.getElementById('iDurum'); if(d) d.value='bekliyor';
     const t=document.getElementById('iTarih'); if(t) t.value=today;
     try{ setSerbestMod(false); _malOraniGoster(); }catch(_){}
@@ -7134,11 +7125,11 @@ function generatePDF(id, type, mode) {
       }
       const totalS = Object.values(item.sizes).reduce((a,b)=>a+b,0);
       html += `</tbody></table><div class="total-row" style="font-size:${sizeCount >= 5 ? '12px' : '14px'};padding:${sizeCount >= 5 ? '6px 0' : '8px 0'};">Toplam Poşet: ${totalS}</div>`;
-      // Mal adeti / serbest satış kutusu — ay sonu hesabında dayanak olsun
+      // Mal adeti / serbest irsaliye kutusu — ay sonu hesabında dayanak olsun
       if (item.serbest) {
         html += `<div style="margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:6px;font-size:10px;color:#1e3a8a;">
-          <b>🤝 SERBEST İRSALİYE — DIŞARIYA SATIŞ</b><br>
-          Alıcı: <b>${esc(item.atolye||'—')}</b> · Verilen poşet: <b>${totalS.toLocaleString('tr-TR')}</b>
+          <b>SERBEST İRSALİYE — MODELE BAĞLI DEĞİL</b><br>
+          Atölye: <b>${esc(item.atolye||'—')}</b> · Verilen poşet: <b>${totalS.toLocaleString('tr-TR')}</b>
           ${item.serbestSebep?`<br>Sebep: ${esc(item.serbestSebep)}`:''}
         </div>`;
       } else if (item.malAdedi > 0) {
@@ -8892,7 +8883,7 @@ function renderMalPoset(){
     _mpKpi('fa-box','#3b82f6',   _n(tPoset), 'Verilen Poşet',      'mal adeti girili irsaliyeler') +
     _mpKpi('fa-scale-unbalanced','#f59e0b', _n(tFazla), 'Fazla Poşet', tFazla?'atölyeye sorulacak fark':'fark yok') +
     _mpKpi('fa-percent', oranRenk, '%'+genelOran, 'Poşet / Mal Oranı', '%110 altı normal') +
-    _mpKpi('fa-handshake','#06b6d4', _n(tSerbest), 'Serbest Satış (poşet)', `${serbest.length} irsaliye`);
+    _mpKpi('fa-clipboard-question','#06b6d4', _n(tSerbest), 'Serbest Verilen (poşet)', `${serbest.length} irsaliye`);
 
   // ---- Atölye tablosu ----
   const rozet=d=>{
@@ -8942,7 +8933,7 @@ function renderMalPoset(){
   const aylar=Object.values(ay).sort((a,b)=>b.k.localeCompare(a.k));
   document.getElementById('mpAylik').innerHTML = aylar.length ? `
     <div class="mp-table-wrap"><table class="mp-table">
-      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fark</th><th>Oran</th><th>Serbest Satış</th></tr></thead>
+      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fark</th><th>Oran</th><th>Serbest</th></tr></thead>
       <tbody>${aylar.map(a=>{
         const fark=a.mal?a.poset-a.mal:0, oran=a.mal?Math.round(a.poset/a.mal*100):0;
         return `<tr>
@@ -8961,16 +8952,17 @@ function renderMalPoset(){
   // ---- Serbest irsaliyeler ----
   document.getElementById('mpSerbest').innerHTML = serbest.length ? `
     <div class="mp-table-wrap"><table class="mp-table">
-      <thead><tr><th>No</th><th>Tarih</th><th>Alıcı Firma</th><th>Poşet</th><th>Neden aldı?</th></tr></thead>
+      <thead><tr><th>No</th><th>Tarih</th><th>Atölye</th><th>Model / Ürün</th><th>Poşet</th><th>Neden verildi?</th></tr></thead>
       <tbody>${serbest.slice().sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).map(i=>`
         <tr class="mp-row" onclick="showDetailUni(${i.id},'standart')">
           <td><b>${esc(i.no||'-')}</b></td>
           <td>${esc(i.tarih||'-')}</td>
           <td><b>${esc(i.atolye||'-')}</b></td>
+          <td>${esc(i.model||'—')}</td>
           <td class="c"><b>${_n(_mpPoset(i))}</b></td>
           <td class="mp-sebep">${esc(i.serbestSebep||i.aciklama||'—')}</td>
         </tr>`).join('')}</tbody></table></div>`
-    : '<div class="mp-empty"><i class="fas fa-handshake"></i> Bu dönemde serbest (satış) irsaliyesi kesilmemiş.</div>';
+    : '<div class="mp-empty"><i class="fas fa-clipboard-question"></i> Bu dönemde serbest irsaliye kesilmemiş.</div>';
 }
 function mpToggleDetay(ix){
   const el=document.getElementById('mpDetay'+ix); if(!el) return;
@@ -12763,7 +12755,6 @@ function _fillPageFromData(page, data){
     try{
       setSerbestMod(!!data.serbest);
       if(data.serbest){
-        const f=document.getElementById('iSerbestFirma'); if(f) f.value = data.atolye||'';
         const s=document.getElementById('iSerbestSebep'); if(s) s.value = data.serbestSebep||'';
       }
     }catch(_){}
