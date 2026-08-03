@@ -3214,6 +3214,27 @@ if(typeof Chart==='undefined'){
 
         <div class="s-card">
           <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#ef4444,#b91c1c);"><i class="fas fa-shield-halved"></i></div>
+            <div>
+              <h3>Kaynak Koruması</h3>
+              <p>Sağ tık, "Öğeyi denetle" ve kaynak görüntülemeyi engeller</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <label class="s-toggle-row">
+              <span><i class="fas fa-ban" style="width:20px;color:var(--primary);"></i> Sağ tık &amp; geliştirici araçları kilidi</span>
+              <div class="s-switch"><input type="checkbox" id="toggleKoruma" checked onchange="setKaynakKoruma(this.checked)"><span></span></div>
+            </label>
+            <label class="s-toggle-row">
+              <span><i class="fas fa-user-shield" style="width:20px;color:var(--primary);"></i> Yöneticiye de uygula</span>
+              <div class="s-switch"><input type="checkbox" id="toggleKorumaAdmin" onchange="setConfig('korumaAdminDahil',this.checked);_korumaUygula();toast(this.checked?'Yöneticiye de uygulanıyor':'Yönetici muaf','info');"><span></span></div>
+            </label>
+            <div class="s-note"><i class="fas fa-circle-info"></i> Bu kilit meraklı kullanıcıyı durdurur; tarayıcı menüsünden kaynağa ulaşmayı tamamen imkânsız kılmaz. Şifre gibi gizli bilgileri hiçbir zaman sayfaya yazmayın.</div>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-card-head">
             <div class="s-ico" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);"><i class="fas fa-mobile-screen"></i></div>
             <div>
               <h3>Ana Ekrana Ekle (PWA)</h3>
@@ -12419,6 +12440,64 @@ setTimeout(() => {
 })();
 
 
+/* ═══════════════════════════════════════════════════════════════════
+   KAYNAK KORUMASI
+   Atölye/ofis kullanıcısı sağ tıklayıp "Öğeyi denetle" ile kodları
+   kurcalamasın diye sağ tık, F12, Ctrl+Shift+I/J/C/K, Ctrl+U ve
+   Ctrl+S kısayolları kapatılır. Yönetici varsayılan olarak muaftır
+   (ayarlardan ona da uygulanabilir).
+   NOT: Bu bir gizlilik önlemi değil, caydırıcıdır — tarayıcı menüsünden
+   kaynağa ulaşmak yine mümkündür. Gizli bilgi sayfada tutulmamalı.
+   ═══════════════════════════════════════════════════════════════════ */
+function kaynakKorumaAcik(){
+  if(getConfig('kaynakKoruma', true) !== true) return false;
+  // Yönetici muaf — "Yöneticiye de uygula" açıksa herkese uygulanır
+  if(getConfig('korumaAdminDahil', false) === true) return true;
+  try{ return !isCurrentUserAdmin(); }catch(_){ return true; }
+}
+function setKaynakKoruma(on){
+  setConfig('kaynakKoruma', !!on);
+  _korumaUygula();
+  toast(on?'Kaynak koruması açıldı':'Kaynak koruması kapatıldı', on?'success':'info');
+}
+let _korumaSonUyari = 0;
+function _korumaUyar(){
+  const t = Date.now();
+  if(t - _korumaSonUyari < 2500) return;   // arka arkaya basınca toast yağmuru olmasın
+  _korumaSonUyari = t;
+  try{ toast('Bu işlem kapalı — yöneticinize başvurun','info'); }catch(_){}
+}
+function _korumaCtx(e){
+  if(!kaynakKorumaAcik()) return;
+  // Yazı alanlarında sağ tık serbest kalsın: kopyala/yapıştır lazım oluyor
+  const el = e.target;
+  if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA' || el.isContentEditable)) return;
+  e.preventDefault();
+  _korumaUyar();
+}
+function _korumaKey(e){
+  if(!kaynakKorumaAcik()) return;
+  const k = (e.key||'').toLowerCase();
+  const ctrlish = e.ctrlKey || e.metaKey;
+  const engelli =
+    e.key === 'F12' ||
+    (ctrlish && e.shiftKey && ['i','j','c','k','e'].indexOf(k) !== -1) ||
+    (ctrlish && ['u','s'].indexOf(k) !== -1);
+  if(engelli){ e.preventDefault(); e.stopPropagation(); _korumaUyar(); return false; }
+}
+function _korumaUygula(){
+  const on = kaynakKorumaAcik();
+  document.documentElement.setAttribute('data-koruma', on ? 'on' : 'off');
+  const t1=document.getElementById('toggleKoruma');      if(t1) t1.checked = getConfig('kaynakKoruma', true)!==false;
+  const t2=document.getElementById('toggleKorumaAdmin'); if(t2) t2.checked = getConfig('korumaAdminDahil', false)===true;
+}
+(function _korumaKur(){
+  document.addEventListener('contextmenu', _korumaCtx, true);
+  document.addEventListener('keydown', _korumaKey, true);
+  document.addEventListener('DOMContentLoaded', _korumaUygula);
+  try{ _korumaUygula(); }catch(_){}
+})();
+
 // ==== SETTINGS PAGE v2 ====
 function isCurrentUserAdmin(){
   try{
@@ -12709,6 +12788,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const t1=document.getElementById('toggleToast');if(t1)t1.checked=getConfig('toastEnabled',true);
     const t2=document.getElementById('toggleShortcuts');if(t2)t2.checked=getConfig('shortcutsEnabled',true);
     const t3=document.getElementById('toggleConfirm');if(t3)t3.checked=getConfig('confirmDelete',true);
+    try{ _korumaUygula(); }catch(_){}
     // Font slider value label
     const fs=document.getElementById('fontSizeSlider');
     const fsVal=document.getElementById('fsVal');
