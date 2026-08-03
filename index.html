@@ -1655,18 +1655,32 @@ if(typeof Chart==='undefined'){
       <div class="grid-auto">
         <div class="card">
           <div class="card-title"><i class="fas fa-info-circle"></i> Sevk Bilgileri</div>
+          <div id="nSerbestMode" class="f-stock-mode"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
-            <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="iModel" placeholder="Örn: MK-2024"></div>
+            <div class="form-group"><label id="iModelLbl">Model Kodu *</label><input class="form-input" id="iModel" placeholder="Örn: MK-2024"></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="iTarih" type="date"></div>
-            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label>Atölye *</label>
+            <div class="form-group serbest-only" id="grpSerbestFirma" style="grid-column:span 2;display:none;">
+              <label>Alıcı Firma * <span class="lbl-ipucu">poşeti satın alan / dışarıdan gelen firma</span></label>
+              <input class="form-input" id="iSerbestFirma" placeholder="Örn: Serkan Tekstil">
+            </div>
+            <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label id="iAtolyeLbl">Atölye *</label>
               <select class="form-input" id="iAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
               <button type="button" class="form-input" id="iAtolyeBtn" onclick="openAtolyePicker('iAtolye')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;"><span id="iAtolyeBtnLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text-muted);">Atölye Seçin</span><i class="fas fa-chevron-down" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i></button>
             </div>
-            <div class="form-group"><label>Teslim Eden *</label><input class="form-input" id="iTeslimEden" placeholder="Ad Soyad"></div>
-            <div class="form-group"><label>Teslim Alan *</label><input class="form-input" id="iTeslimAlan" placeholder="Ad Soyad"></div>
+            <div class="form-group"><label id="iTeslimEdenLbl">Teslim Eden *</label><input class="form-input" id="iTeslimEden" placeholder="Ad Soyad"></div>
+            <div class="form-group"><label id="iTeslimAlanLbl">Teslim Alan *</label><input class="form-input" id="iTeslimAlan" placeholder="Ad Soyad"></div>
             <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="iTermin" type="date"></div>
             <div class="form-group"><label>Durum</label>
               <select class="form-input" id="iDurum"><option value="bekliyor">⏳ Bekliyor</option><option value="teslim">✓ Teslim Edildi</option></select>
+            </div>
+            <div class="form-group" style="grid-column:span 2;" id="grpMalAdedi">
+              <label>Mal Adeti <span class="lbl-ipucu">kaç adet ürün için verildi — poşet fazlası raporda çıkar</span></label>
+              <input class="form-input" type="number" id="iMalAdedi" placeholder="Örn: 14000" min="0" oninput="_malOraniGoster()">
+              <div class="mal-orani" id="malOrani"></div>
+            </div>
+            <div class="form-group serbest-only" id="grpSerbestSebep" style="grid-column:span 2;display:none;">
+              <label>Neden aldı? * <span class="lbl-ipucu">ay sonu hesap sorulursa bu açıklama raporda çıkar</span></label>
+              <input class="form-input" id="iSerbestSebep" placeholder="Örn: Kendi işi için satın aldı — nakit ödendi">
             </div>
           </div>
           <div class="form-group" style="margin-top:6px;"><label>Açıklama</label><textarea class="form-input" id="iAciklama" placeholder="Varsa not ekleyin..." rows="2"></textarea></div>
@@ -1675,12 +1689,12 @@ if(typeof Chart==='undefined'){
         <div>
           <div class="card" style="margin-bottom:14px;">
             <div class="card-title"><i class="fas fa-box"></i> Poşet Ölçüleri</div>
-            <div class="size-row"><label>30×40 Poşet</label><input class="form-input" type="number" id="s30" placeholder="0" min="0"></div>
-            <div class="size-row"><label>35×45 Poşet</label><input class="form-input" type="number" id="s35" placeholder="0" min="0"></div>
-            <div class="size-row"><label>40×60 Poşet</label><input class="form-input" type="number" id="s40" placeholder="0" min="0"></div>
-            <div class="size-row"><label>50×70 Poşet</label><input class="form-input" type="number" id="s50" placeholder="0" min="0"></div>
-            <div class="size-row"><label>60×90 Poşet</label><input class="form-input" type="number" id="s60" placeholder="0" min="0"></div>
-            <div class="size-row"><label>100×100 Poşet</label><input class="form-input" type="number" id="s100" placeholder="0" min="0"></div>
+            <div class="size-row"><label>30×40 Poşet</label><input class="form-input" type="number" id="s30" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
+            <div class="size-row"><label>35×45 Poşet</label><input class="form-input" type="number" id="s35" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
+            <div class="size-row"><label>40×60 Poşet</label><input class="form-input" type="number" id="s40" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
+            <div class="size-row"><label>50×70 Poşet</label><input class="form-input" type="number" id="s50" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
+            <div class="size-row"><label>60×90 Poşet</label><input class="form-input" type="number" id="s60" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
+            <div class="size-row"><label>100×100 Poşet</label><input class="form-input" type="number" id="s100" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
           </div>
           <div class="card">
             <div class="card-title"><i class="fas fa-tape"></i> Bant & Kılçık</div>
@@ -2476,6 +2490,7 @@ if(typeof Chart==='undefined'){
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('heatmap',this)"><i class="fas fa-table-cells"></i> Günler</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('compare',this)"><i class="fas fa-code-compare"></i> Aylık</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('firms',this)"><i class="fas fa-trophy"></i> Firmalar</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('malposet',this)"><i class="fas fa-scale-unbalanced"></i> Mal / Poşet</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn rep-tab-kritik" onclick="showReportTab('kritik',this)"><i class="fas fa-triangle-exclamation"></i> Kritik</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('verimlilik',this)"><i class="fas fa-gauge-high"></i> Verimlilik</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('tahmin',this)"><i class="fas fa-brain"></i> Tahmin</button>
@@ -2679,6 +2694,26 @@ if(typeof Chart==='undefined'){
             <div id="repTabloCount" class="rep-tablo-count"></div>
           </div>
           <div id="repTabloBody" class="rep-tablo-scroll"></div>
+        </div>
+      </div>
+
+      <!-- Mal / Poşet Dengesi — atölye kaç adet mal dikti, kaç poşet aldı? -->
+      <div class="rep-tab" id="rep-malposet" style="display:none;">
+        <div class="mp-kpis" id="mpKpis"></div>
+        <div class="rep-card" style="margin-bottom:16px;">
+          <div class="rep-card-head" style="justify-content:space-between;">
+            <span><i class="fas fa-scale-unbalanced"></i> Atölye Bazlı Mal / Poşet Dengesi</span>
+            <span class="mp-head-note">%110'a kadar fire payı normal sayılır</span>
+          </div>
+          <div id="mpAtolye"></div>
+        </div>
+        <div class="rep-card" style="margin-bottom:16px;">
+          <div class="rep-card-head"><i class="fas fa-calendar-days"></i> Ay Ay Döküm</div>
+          <div id="mpAylik"></div>
+        </div>
+        <div class="rep-card">
+          <div class="rep-card-head"><i class="fas fa-handshake"></i> Serbest İrsaliyeler — Dışarıya Verilen / Satılan</div>
+          <div id="mpSerbest"></div>
         </div>
       </div>
 
@@ -3893,6 +3928,7 @@ function showPage(page){
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
 
   if(page==='fermuar'){ try{ ftRenderStockMode(); }catch(_){} }
+  if(page==='new'){ try{ nRenderSerbestMode(); _malOraniGoster(); }catch(_){} }
   if(page==='akskontrol'){ try{ if(window.AK) AK.onOpen(); }catch(_){} }
   if(page==='tela-kontrol'){ try{ renderTelaKontrol(); }catch(_){} }
 
@@ -5965,18 +6001,97 @@ function incNextNo(){setConfig('nextIrsaliyeNo',getNextNo()+1);updateBadge();}
 // nextBadge üst çubuktan kaldırıldı (yerine arama kutusu geldi); öğe yoksa sessiz geç.
 function updateBadge(){var el=document.getElementById('nextBadge'); if(el) el.textContent='Sıradaki: IRS-'+String(getNextNo()).padStart(3,'0');}
 
+// ═══════════════════════════════════════════════════════════════════
+// MAL ADETİ — verilen poşet / dikilecek mal oranı
+// Atölyeye 14.000 mal için 20.000 poşet verdiysek fark burada görünür,
+// ay sonu raporunda da atölye bazlı toplanır.
+// ═══════════════════════════════════════════════════════════════════
+const POSET_KEYS=['s30','s35','s40','s50','s60','s100'];
+function _posetToplamForm(){
+  return POSET_KEYS.reduce((s,k)=>{const el=document.getElementById(k);return s+(+((el&&el.value)||0)||0);},0);
+}
+function _n(v){ return (+v||0).toLocaleString('tr-TR'); }
+// Poşet/mal oranını sınıflandırır — tek yerden, form ve rapor aynı eşiği kullansın
+function _malDurum(poset, mal){
+  if(!mal) return {k:'yok', lbl:'Mal adeti girilmemiş', ic:'fa-circle-question'};
+  const oran=Math.round(poset/mal*100);
+  const fark=poset-mal;
+  if(fark<=0)      return {k:'ok',   oran, fark, lbl:'Normal', ic:'fa-circle-check'};
+  if(oran<=110)    return {k:'ok',   oran, fark, lbl:'Normal (fire payı)', ic:'fa-circle-check'};
+  if(oran<=130)    return {k:'warn', oran, fark, lbl:'Fazla poşet', ic:'fa-triangle-exclamation'};
+  return              {k:'bad',  oran, fark, lbl:'Çok fazla poşet', ic:'fa-circle-exclamation'};
+}
+function _malOraniGoster(){
+  const box=document.getElementById('malOrani'); if(!box) return;
+  const mal=+(document.getElementById('iMalAdedi')?.value||0);
+  const poset=_posetToplamForm();
+  if(!mal && !poset){ box.className='mal-orani'; box.innerHTML=''; return; }
+  if(!mal){
+    box.className='mal-orani';
+    box.innerHTML='<i class="fas fa-circle-info"></i> '+_n(poset)+' poşet giriliyor — mal adetini yazarsanız ay sonu raporda fazlalık görünür.';
+    return;
+  }
+  const d=_malDurum(poset, mal);
+  box.className='mal-orani '+d.k;
+  box.innerHTML='<i class="fas '+d.ic+'"></i> <b>'+_n(poset)+'</b> poşet / <b>'+_n(mal)+'</b> mal · <b>%'+d.oran+'</b>'+
+    (d.fark>0?' — <b>'+_n(d.fark)+'</b> fazla poşet':' — fazlalık yok');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SERBEST İRSALİYE — poşeti atölyeye değil, dışarıya (satış) veriyoruz
+// Örn. Serkan Tekstil poşet satın aldı. Model/atölye zorunlu değil,
+// bunun yerine alıcı firma + neden aldığı yazılır; raporda ayrı çıkar.
+// ═══════════════════════════════════════════════════════════════════
+let _serbestMod=false;
+function serbestModOn(){ return _serbestMod===true; }
+function nRenderSerbestMode(){
+  const host=document.getElementById('nSerbestMode'); if(!host) return;
+  const on=serbestModOn();
+  host.innerHTML='<span class="f-stock-chip '+(on?'off':'on')+'">'+
+      '<i class="fas '+(on?'fa-handshake':'fa-industry')+'"></i> '+
+      (on?'✦ Serbest irsaliye · Dışarıya satış — alıcı firma ve sebebi yazılır'
+         :'Atölye irsaliyesi · Dikim için verilir, mal adetiyle karşılaştırılır')+
+    '</span>'+
+    '<button type="button" class="btn btn-sm btn-secondary" onclick="toggleSerbestMod()">'+
+      '<i class="fas '+(on?'fa-toggle-on':'fa-toggle-off')+'"></i> '+(on?'Atölyeye dön':'Serbest irsaliye')+
+    '</button>';
+  document.querySelectorAll('#page-new .serbest-only').forEach(el=>{ el.style.display = on?'':'none'; });
+  const mg=document.getElementById('grpMalAdedi'); if(mg) mg.style.display = on?'none':'';
+  const ml=document.getElementById('iModelLbl');   if(ml) ml.textContent  = on?'Model / Ürün':'Model Kodu *';
+  const al=document.getElementById('iAtolyeLbl');  if(al) al.textContent  = on?'Atölye (opsiyonel)':'Atölye *';
+  const te=document.getElementById('iTeslimEdenLbl'); if(te) te.textContent = on?'Teslim Eden':'Teslim Eden *';
+  const ta=document.getElementById('iTeslimAlanLbl'); if(ta) ta.textContent = on?'Teslim Alan':'Teslim Alan *';
+}
+function setSerbestMod(on){ _serbestMod=!!on; nRenderSerbestMode(); }
+function toggleSerbestMod(){
+  setSerbestMod(!_serbestMod);
+  if(_serbestMod){ setTimeout(()=>{ const f=document.getElementById('iSerbestFirma'); if(f) f.focus(); },60); }
+}
+
 function saveIrsaliye(){
+  const serbest=serbestModOn();
+  const serbestFirma=(document.getElementById('iSerbestFirma')?.value||'').trim();
+  const serbestSebep=(document.getElementById('iSerbestSebep')?.value||'').trim();
   const model=document.getElementById('iModel').value.trim();
   const tarih=document.getElementById('iTarih').value;
-  const atolye=document.getElementById('iAtolye').value;
+  const atolyeSec=document.getElementById('iAtolye').value;
   const teslimEden=document.getElementById('iTeslimEden').value.trim();
   const teslimAlan=document.getElementById('iTeslimAlan').value.trim();
-  if(!model||!tarih||!atolye||!teslimEden||!teslimAlan)return toast('Zorunlu alanları doldurun','error');
+  if(serbest){
+    if(!tarih) return toast('Tarih zorunlu','error');
+    if(!serbestFirma) return toast('Alıcı firmayı yazın','error');
+    if(!serbestSebep) return toast('Neden aldığını yazın — ay sonu hesap sorulunca gerekli','error');
+  } else {
+    if(!model||!tarih||!atolyeSec||!teslimEden||!teslimAlan)return toast('Zorunlu alanları doldurun','error');
+  }
+  // Serbest irsaliyede alıcı firma "atölye" alanına yazılır; liste/rapor/PDF tek alandan okur
+  const atolye = serbest ? (serbestFirma||atolyeSec) : atolyeSec;
   const termin=document.getElementById('iTermin').value;
   const durum=document.getElementById('iDurum').value;
   const aciklama=document.getElementById('iAciklama').value.trim();
   const sizes={s30:+(document.getElementById('s30').value||0),s35:+(document.getElementById('s35').value||0),s40:+(document.getElementById('s40').value||0),s50:+(document.getElementById('s50').value||0),s60:+(document.getElementById('s60').value||0),s100:+(document.getElementById('s100').value||0)};
   const bant={genis:+(document.getElementById('bGenis').value||0),dar:+(document.getElementById('bDar').value||0),kilcik:+(document.getElementById('bKilcik').value||0)};
+  const malAdedi=+(document.getElementById('iMalAdedi').value||0);   // kaç adet ürün için verildi
 
   if(window._editUni && window._editUni.type==='standart'){
     const list=getData('irsaliyeler');
@@ -5984,7 +6099,8 @@ function saveIrsaliye(){
     if(idx===-1){ toast('Düzenlenen kayıt bulunamadı','error'); cancelEditUni(); return; }
     const existing=list[idx];
     returnStockFromIrsaliye(existing);
-    const updated={...existing,model,tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant};
+    const updated={...existing,model:(model||(serbest?'Serbest Satış':'')),tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
+                   malAdedi:serbest?0:malAdedi, serbest, serbestSebep:serbest?serbestSebep:''};
     list[idx]=updated;
     setData('irsaliyeler',list);
     deductStockFromIrsaliye(updated);
@@ -5995,7 +6111,8 @@ function saveIrsaliye(){
   }
 
   const no=getNextNo();
-  const item={id:Date.now(),no:'IRS-'+String(no).padStart(3,'0'),type:'standart',model,tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,createdAt:new Date().toISOString()};
+  const item={id:Date.now(),no:'IRS-'+String(no).padStart(3,'0'),type:'standart',model:(model||(serbest?'Serbest Satış':'')),tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
+              malAdedi:serbest?0:malAdedi, serbest, serbestSebep:serbest?serbestSebep:'', createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'standart');
   const list=getData('irsaliyeler');list.unshift(item);setData('irsaliyeler',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'standart');
@@ -6003,7 +6120,9 @@ function saveIrsaliye(){
   // Stoktan düş
   deductStockFromIrsaliye(item);
 
-  ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik'].forEach(id=>document.getElementById(id).value='');
+  ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestFirma','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  try{ _malOraniGoster(); }catch(_){}
+  setSerbestMod(false);
   _syncAtolyeLabel('iAtolye');
   document.getElementById('iDurum').value='bekliyor';
   const today=new Date().toISOString().split('T')[0];document.getElementById('iTarih').value=today;
@@ -6334,7 +6453,8 @@ function applyFilters(){
       (i.teslimEden||'').toLowerCase().includes(search)||
       (i.teslimAlan||'').toLowerCase().includes(search)||
       (i.firma||'').toLowerCase().includes(search)||
-      (i.aciklama||'').toLowerCase().includes(search)
+      (i.aciklama||'').toLowerCase().includes(search)||
+      (i.serbestSebep||'').toLowerCase().includes(search)
     );
   }
   
@@ -6388,8 +6508,10 @@ function getItemDetail(item){
     const parts=[];
     const sizeNames={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     const bantNames={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
+    if(item.serbest) parts.push('🤝 SERBEST');
     if(item.sizes){for(let k in item.sizes){if(item.sizes[k]>0)parts.push(sizeNames[k]+':'+item.sizes[k]);}}
     if(item.bant){for(let k in item.bant){if(item.bant[k]>0)parts.push(bantNames[k]+':'+item.bant[k]);}}
+    if(!item.serbest && item.malAdedi>0) parts.push('Mal:'+item.malAdedi);
     return parts.join(' · ')||'—';
   }
   if(item._type==='fermuar')return item.totalAdet?item.totalAdet+' adet':'—';
@@ -6560,7 +6682,20 @@ function showDetailUni(id,type){
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
     for(let k in item.sizes){if(item.sizes[k]>0)html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${sizeNames[k]||k}: <b>${item.sizes[k]}</b></div>`;}
     html+='</div>';
-    if(item.bant){
+    // Mal adeti / serbest satış dengesi
+    const _pt=Object.values(item.sizes||{}).reduce((a,b)=>a+(+b||0),0);
+    if(item.serbest){
+      html+=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-handshake"></i> Serbest İrsaliye — Dışarıya Satış</div>
+        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> firmasına <b>${_pt.toLocaleString('tr-TR')}</b> poşet verildi.</div>
+        ${item.serbestSebep?`<div class="dt-mal-n"><i class="fas fa-comment-dots"></i> ${esc(item.serbestSebep)}</div>`:''}
+      </div>`;
+    } else if(item.malAdedi>0){
+      const d=_malDurum(_pt, +item.malAdedi);
+      html+=`<div class="dt-mal ${d.k}"><div class="dt-mal-h"><i class="fas ${d.ic}"></i> Mal / Poşet Dengesi — ${d.lbl}</div>
+        <div class="dt-mal-b"><b>${(+item.malAdedi).toLocaleString('tr-TR')}</b> adet mal için <b>${_pt.toLocaleString('tr-TR')}</b> poşet · <b>%${d.oran}</b>${d.fark>0?` — <b>${d.fark.toLocaleString('tr-TR')}</b> fazla poşet`:''}</div>
+      </div>`;
+    }
+    if(item.bant && Object.values(item.bant).some(v=>+v>0)){
       html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-tape"></i> Bant & Kılçık</div>';
       html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
       for(let k in item.bant){if(item.bant[k]>0)html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bantNames[k]||k}: <b>${item.bant[k]}</b></div>`;}
@@ -6773,9 +6908,10 @@ function cancelEditUni(){
 function _clearFormFields(type){
   const today = new Date().toISOString().split('T')[0];
   if(type==='standart'){
-    ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestFirma','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const d=document.getElementById('iDurum'); if(d) d.value='bekliyor';
     const t=document.getElementById('iTarih'); if(t) t.value=today;
+    try{ setSerbestMod(false); _malOraniGoster(); }catch(_){}
   } else if(type==='fermuar'){
     ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     ['xxs','xs','s','m','l','xl','xxl','3xl','tek'].forEach(s=>{const ec=document.getElementById('fer_'+s+'cm');const ea=document.getElementById('fer_'+s+'a');if(ec)ec.value='';if(ea)ea.value='';});
@@ -6998,6 +7134,22 @@ function generatePDF(id, type, mode) {
       }
       const totalS = Object.values(item.sizes).reduce((a,b)=>a+b,0);
       html += `</tbody></table><div class="total-row" style="font-size:${sizeCount >= 5 ? '12px' : '14px'};padding:${sizeCount >= 5 ? '6px 0' : '8px 0'};">Toplam Poşet: ${totalS}</div>`;
+      // Mal adeti / serbest satış kutusu — ay sonu hesabında dayanak olsun
+      if (item.serbest) {
+        html += `<div style="margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:6px;font-size:10px;color:#1e3a8a;">
+          <b>🤝 SERBEST İRSALİYE — DIŞARIYA SATIŞ</b><br>
+          Alıcı: <b>${esc(item.atolye||'—')}</b> · Verilen poşet: <b>${totalS.toLocaleString('tr-TR')}</b>
+          ${item.serbestSebep?`<br>Sebep: ${esc(item.serbestSebep)}`:''}
+        </div>`;
+      } else if (item.malAdedi > 0) {
+        const _d = _malDurum(totalS, +item.malAdedi);
+        const _renk = _d.k==='bad' ? {bg:'#fef2f2',bd:'#fecaca',ln:'#ef4444',tx:'#991b1b'}
+                    : _d.k==='warn'? {bg:'#fffbeb',bd:'#fde68a',ln:'#f59e0b',tx:'#92400e'}
+                    :                {bg:'#f0fdf4',bd:'#bbf7d0',ln:'#10b981',tx:'#065f46'};
+        html += `<div style="margin-top:8px;padding:8px 10px;background:${_renk.bg};border:1px solid ${_renk.bd};border-left:4px solid ${_renk.ln};border-radius:6px;font-size:10px;color:${_renk.tx};">
+          <b>MAL ADETİ:</b> ${(+item.malAdedi).toLocaleString('tr-TR')} adet · <b>POŞET:</b> ${totalS.toLocaleString('tr-TR')} · <b>ORAN: %${_d.oran}</b>${_d.fark>0?` · <b>${_d.fark.toLocaleString('tr-TR')} fazla poşet</b>`:''}
+        </div>`;
+      }
     }
     if (item.bant) {
       let hasBant = Object.values(item.bant).some(v => v > 0);
@@ -8007,6 +8159,7 @@ function renderReportTab(tab){
   else if(tab==='heatmap') renderWeekHeatmap();
   else if(tab==='compare') renderMonthlyCompare();
   else if(tab==='firms') renderTopFirms();
+  else if(tab==='malposet') renderMalPoset();
   else if(tab==='kritik') renderKritikAksiyon();
   else if(tab==='verimlilik') renderVerimlilik();
   else if(tab==='tahmin') renderTahmin();
@@ -8682,6 +8835,150 @@ function renderTopFirms(){
 /* ============================================================
    KRİTİK AKSİYON
 ============================================================ */
+/* ═══════════════════════════════════════════════════════════════════
+   MAL / POŞET DENGESİ RAPORU
+   "Bu adam 15 bin mal dikmiş ama 40 bin poşet almış" sorusunun cevabı.
+   Atölye bazlı: verilen poşet ↔ girilen mal adeti; serbest (satış)
+   irsaliyeleri sebepleriyle ayrı listelenir, orana karışmaz.
+   ═══════════════════════════════════════════════════════════════════ */
+const _MP_AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function _mpPoset(i){ return Object.values(i.sizes||{}).reduce((a,b)=>a+(+b||0),0); }
+function _mpAyKey(i){
+  const d=new Date(i.tarih||i.createdAt||0);
+  if(isNaN(d.getTime())) return '0000-00';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function _mpAyAd(key){
+  const p=key.split('-'); const m=+p[1];
+  return (m>=1&&m<=12) ? (_MP_AYLAR[m-1]+' '+p[0]) : 'Tarihsiz';
+}
+function _mpKpi(ic,renk,val,lbl,mini){
+  return `<div class="card rep-kpi"><div class="rep-kpi-icon" style="background:${renk}20;color:${renk}"><i class="fas ${ic}"></i></div>
+    <div class="rep-kpi-body"><div class="rep-kpi-val">${val}</div><div class="rep-kpi-lbl">${lbl}</div>${mini?`<div class="rep-kpi-mini">${mini}</div>`:''}</div></div>`;
+}
+function renderMalPoset(){
+  const data    = getReportData().filter(i=>i._type==='standart');
+  const serbest = data.filter(i=>i.serbest);
+  const uretim  = data.filter(i=>!i.serbest);
+
+  // ---- Atölye bazlı toplama ----
+  const g={};
+  uretim.forEach(i=>{
+    const a=(i.atolye||'Belirsiz').toString().trim()||'Belirsiz';
+    if(!g[a]) g[a]={ad:a,irs:0,mal:0,poset:0,eksikIrs:0,eksikPoset:0,kayitlar:[]};
+    const p=_mpPoset(i), m=+i.malAdedi||0;
+    g[a].irs++;
+    g[a].kayitlar.push({id:i.id,no:i.no||'',tarih:i.tarih||'',model:i.model||'',poset:p,mal:m});
+    if(m>0){ g[a].mal+=m; g[a].poset+=p; }
+    else   { g[a].eksikIrs++; g[a].eksikPoset+=p; }
+  });
+  const satirlar=Object.values(g).map(x=>{
+    x.fark = x.mal>0 ? (x.poset-x.mal) : 0;
+    x.oran = x.mal>0 ? Math.round(x.poset/x.mal*100) : 0;
+    x.d    = _malDurum(x.poset, x.mal);
+    return x;
+  }).sort((a,b)=>(b.fark-a.fark)||(b.poset-a.poset));
+
+  const tMal    = satirlar.reduce((s,x)=>s+x.mal,0);
+  const tPoset  = satirlar.reduce((s,x)=>s+x.poset,0);
+  const tFazla  = satirlar.reduce((s,x)=>s+Math.max(0,x.fark),0);
+  const tEksik  = satirlar.reduce((s,x)=>s+x.eksikIrs,0);
+  const tSerbest= serbest.reduce((s,i)=>s+_mpPoset(i),0);
+  const genelOran = tMal? Math.round(tPoset/tMal*100) : 0;
+  const oranRenk  = genelOran>130?'#ef4444':genelOran>110?'#f59e0b':'#10b981';
+
+  document.getElementById('mpKpis').innerHTML =
+    _mpKpi('fa-shirt','#8b5cf6', _n(tMal),   'Dikilen Mal (adet)', tEksik?`${tEksik} irsaliyede mal adeti yok`:'tüm irsaliyelerde girili') +
+    _mpKpi('fa-box','#3b82f6',   _n(tPoset), 'Verilen Poşet',      'mal adeti girili irsaliyeler') +
+    _mpKpi('fa-scale-unbalanced','#f59e0b', _n(tFazla), 'Fazla Poşet', tFazla?'atölyeye sorulacak fark':'fark yok') +
+    _mpKpi('fa-percent', oranRenk, '%'+genelOran, 'Poşet / Mal Oranı', '%110 altı normal') +
+    _mpKpi('fa-handshake','#06b6d4', _n(tSerbest), 'Serbest Satış (poşet)', `${serbest.length} irsaliye`);
+
+  // ---- Atölye tablosu ----
+  const rozet=d=>{
+    const r = d.k==='bad'?'#ef4444' : d.k==='warn'?'#f59e0b' : d.k==='ok'?'#10b981' : 'var(--text-muted)';
+    return `<span class="mp-badge" style="color:${r};background:${d.k==='yok'?'var(--glass)':r+'1f'};border-color:${d.k==='yok'?'var(--border)':r+'44'}"><i class="fas ${d.ic}"></i> ${d.lbl}</span>`;
+  };
+  document.getElementById('mpAtolye').innerHTML = satirlar.length ? `
+    <div class="mp-table-wrap"><table class="mp-table">
+      <thead><tr><th>Atölye</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fark</th><th>Oran</th><th>Durum</th></tr></thead>
+      <tbody>${satirlar.map((x,ix)=>`
+        <tr class="mp-row ${x.d.k}" onclick="mpToggleDetay(${ix})">
+          <td><b>${esc(x.ad)}</b><i class="fas fa-chevron-down mp-chev" id="mpChev${ix}"></i></td>
+          <td class="c">${x.irs}</td>
+          <td class="c">${x.mal?_n(x.mal):'<span class="mp-dim">—</span>'}</td>
+          <td class="c">${_n(x.poset)}${x.eksikPoset?`<span class="mp-dim"> +${_n(x.eksikPoset)}*</span>`:''}</td>
+          <td class="c"><b style="color:${x.fark>0?'#ef4444':x.fark<0?'#10b981':'var(--text-muted)'}">${x.mal?(x.fark>0?'+':'')+_n(x.fark):'—'}</b></td>
+          <td class="c"><b>${x.mal?'%'+x.oran:'—'}</b></td>
+          <td>${rozet(x.d)}${(x.eksikIrs&&x.d.k!=='yok')?`<span class="mp-eksik" title="${x.eksikIrs} irsaliyede mal adeti girilmemiş (${_n(x.eksikPoset)} poşet) — orana katılmadı">+${x.eksikIrs} eksik</span>`:''}</td>
+        </tr>
+        <tr class="mp-detay" id="mpDetay${ix}" style="display:none;"><td colspan="7">
+          <div class="mp-detay-in">${x.kayitlar.map(k=>`
+            <div class="mp-drow" onclick="event.stopPropagation();showDetailUni(${k.id},'standart')">
+              <span class="mp-dno">${esc(k.no)}</span>
+              <span class="mp-dtar">${esc(k.tarih||'-')}</span>
+              <span class="mp-dmod">${esc(k.model||'-')}</span>
+              <span class="mp-dqty">${_n(k.poset)} poşet</span>
+              <span class="mp-dqty">${k.mal?_n(k.mal)+' mal':'<i>mal adeti yok</i>'}</span>
+              <span class="mp-dfark" style="color:${k.mal&&k.poset>k.mal?'#ef4444':'var(--text-muted)'}">${k.mal?(k.poset-k.mal>0?'+'+_n(k.poset-k.mal)+' fazla':'normal'):''}</span>
+            </div>`).join('')}</div>
+        </td></tr>`).join('')}
+      </tbody></table></div>
+      ${satirlar.some(x=>x.eksikPoset)?'<div class="mp-not">* Mal adeti girilmemiş irsaliyelerin poşeti — oran hesabına katılmadı. Satıra tıklayıp hangi irsaliye olduğunu görebilirsiniz.</div>':'<div class="mp-not">Satıra tıklayın — o atölyenin irsaliyeleri tek tek açılır.</div>'}`
+    : '<div class="mp-empty"><i class="fas fa-inbox"></i> Bu dönemde poşet irsaliyesi yok.</div>';
+
+  // ---- Ay ay döküm ----
+  const ay={};
+  data.forEach(i=>{
+    const k=_mpAyKey(i);
+    if(!ay[k]) ay[k]={k,irs:0,mal:0,poset:0,eksikIrs:0,eksikPoset:0,serbest:0,serbestIrs:0};
+    const p=_mpPoset(i);
+    if(i.serbest){ ay[k].serbest+=p; ay[k].serbestIrs++; return; }
+    ay[k].irs++;
+    // Mal adeti girilmemiş kayıtlar oranı bozmasın — ayrı sayılır
+    if(+i.malAdedi>0){ ay[k].mal+=+i.malAdedi; ay[k].poset+=p; }
+    else { ay[k].eksikIrs++; ay[k].eksikPoset+=p; }
+  });
+  const aylar=Object.values(ay).sort((a,b)=>b.k.localeCompare(a.k));
+  document.getElementById('mpAylik').innerHTML = aylar.length ? `
+    <div class="mp-table-wrap"><table class="mp-table">
+      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fark</th><th>Oran</th><th>Serbest Satış</th></tr></thead>
+      <tbody>${aylar.map(a=>{
+        const fark=a.mal?a.poset-a.mal:0, oran=a.mal?Math.round(a.poset/a.mal*100):0;
+        return `<tr>
+          <td><b>${_mpAyAd(a.k)}</b></td>
+          <td class="c">${a.irs}${a.eksikIrs?`<span class="mp-dim"> (${a.eksikIrs} eksik)</span>`:''}</td>
+          <td class="c">${a.mal?_n(a.mal):'<span class="mp-dim">—</span>'}</td>
+          <td class="c">${_n(a.poset)}${a.eksikPoset?`<span class="mp-dim"> +${_n(a.eksikPoset)}*</span>`:''}</td>
+          <td class="c"><b style="color:${fark>0?'#ef4444':'var(--text-muted)'}">${a.mal?(fark>0?'+':'')+_n(fark):'—'}</b></td>
+          <td class="c"><b style="color:${oran>130?'#ef4444':oran>110?'#f59e0b':'inherit'}">${a.mal?'%'+oran:'—'}</b></td>
+          <td class="c">${a.serbest?_n(a.serbest)+` <span class="mp-dim">(${a.serbestIrs})</span>`:'<span class="mp-dim">—</span>'}</td>
+        </tr>`;
+      }).join('')}</tbody></table></div>
+      ${aylar.some(a=>a.eksikPoset)?'<div class="mp-not">* Mal adeti girilmemiş irsaliyelerin poşeti — oran hesabına katılmadı.</div>':''}`
+    : '<div class="mp-empty"><i class="fas fa-inbox"></i> Bu dönemde kayıt yok.</div>';
+
+  // ---- Serbest irsaliyeler ----
+  document.getElementById('mpSerbest').innerHTML = serbest.length ? `
+    <div class="mp-table-wrap"><table class="mp-table">
+      <thead><tr><th>No</th><th>Tarih</th><th>Alıcı Firma</th><th>Poşet</th><th>Neden aldı?</th></tr></thead>
+      <tbody>${serbest.slice().sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).map(i=>`
+        <tr class="mp-row" onclick="showDetailUni(${i.id},'standart')">
+          <td><b>${esc(i.no||'-')}</b></td>
+          <td>${esc(i.tarih||'-')}</td>
+          <td><b>${esc(i.atolye||'-')}</b></td>
+          <td class="c"><b>${_n(_mpPoset(i))}</b></td>
+          <td class="mp-sebep">${esc(i.serbestSebep||i.aciklama||'—')}</td>
+        </tr>`).join('')}</tbody></table></div>`
+    : '<div class="mp-empty"><i class="fas fa-handshake"></i> Bu dönemde serbest (satış) irsaliyesi kesilmemiş.</div>';
+}
+function mpToggleDetay(ix){
+  const el=document.getElementById('mpDetay'+ix); if(!el) return;
+  const ac = el.style.display==='none';
+  el.style.display = ac?'':'none';
+  const c=document.getElementById('mpChev'+ix); if(c) c.classList.toggle('open', ac);
+}
+
 function renderKritikAksiyon(){
   const data = getReportData().filter(_repHasStatus).filter(i => !_repIsDone(i.durum));
   const today = new Date(); today.setHours(0,0,0,0);
@@ -12447,7 +12744,7 @@ function _getAllUnifiedWithType(){
 
 function _fillPageFromData(page, data){
   const map = {
-    new: { model:'iModel', tarih:'iTarih', atolye:'iAtolye', teslimEden:'iTeslimEden', teslimAlan:'iTeslimAlan', termin:'iTermin', durum:'iDurum', aciklama:'iAciklama' },
+    new: { model:'iModel', tarih:'iTarih', atolye:'iAtolye', teslimEden:'iTeslimEden', teslimAlan:'iTeslimAlan', termin:'iTermin', durum:'iDurum', aciklama:'iAciklama', malAdedi:'iMalAdedi' },
     fermuar: { model:'fModel', tarih:'fTarih', atolye:'fAtolye', teslimEden:'fTeslimEden', teslimAlan:'fTeslimAlan', renk:'fRenk', termin:'fTermin', aciklama:'fAciklama' },
     lastik: { model:'lModel', tarih:'lTarih', atolye:'lAtolye', teslimEden:'lTeslimEden', teslimAlan:'lTeslimAlan', renk:'lRenk', termin:'lTermin', aciklama:'lAciklama', cm:'lCm', metre:'lMetre' },
     dugme:  { model:'dModel', tarih:'dTarih', atolye:'dAtolye', teslimEden:'dTeslimEden', teslimAlan:'dTeslimAlan', termin:'dTermin', aciklama:'dAciklama', adet:'dAdet' },
@@ -12461,9 +12758,20 @@ function _fillPageFromData(page, data){
     if(el && data[k] != null) el.value = data[k];
     if(k==='atolye') _syncAtolyeLabel(map[k]);
   });
+  // Serbest (satış) irsaliye düzenleniyorsa modu ve alanlarını geri yükle
+  if(page==='new'){
+    try{
+      setSerbestMod(!!data.serbest);
+      if(data.serbest){
+        const f=document.getElementById('iSerbestFirma'); if(f) f.value = data.atolye||'';
+        const s=document.getElementById('iSerbestSebep'); if(s) s.value = data.serbestSebep||'';
+      }
+    }catch(_){}
+  }
   // Sizes / beden dolumu (standart)
   if(page==='new' && data.sizes){
     ['s30','s35','s40','s50','s60','s100'].forEach(k=>{const el=document.getElementById(k);if(el && data.sizes[k]!=null) el.value = data.sizes[k];});
+    try{ _malOraniGoster(); }catch(_){}
     if(data.bant){
       const bmap = {genis:'bGenis', dar:'bDar', kilcik:'bKilcik'};
       Object.keys(bmap).forEach(k=>{const el=document.getElementById(bmap[k]);if(el && data.bant[k]!=null) el.value = data.bant[k];});

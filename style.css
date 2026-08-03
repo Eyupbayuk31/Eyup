@@ -13932,6 +13932,69 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .f-stock-mode .btn{ white-space:nowrap; }
 
 /* ═══════════════════════════════════════════════════════════════
+   MAL ADETİ / POŞET DENGESİ
+   Formdaki canlı oran çipi, detay modalindeki özet ve
+   Raporlar > Mal / Poşet sekmesi
+   ═══════════════════════════════════════════════════════════════ */
+.lbl-ipucu{ font-weight:500; font-size:10.5px; color:var(--text-muted); text-transform:none; letter-spacing:0; margin-left:6px; }
+
+.mal-orani{ margin-top:7px; font-size:11.5px; font-weight:600; line-height:1.5; color:var(--text-muted);
+  padding:0; min-height:0; transition:all .18s ease; }
+.mal-orani:not(:empty){ padding:7px 11px; border-radius:9px; border:1px solid var(--border); background:var(--glass); }
+.mal-orani i{ margin-right:5px; }
+.mal-orani.ok  { color:var(--success); border-color:color-mix(in srgb, var(--success) 32%, var(--border)); background:color-mix(in srgb, var(--success) 10%, transparent); }
+.mal-orani.warn{ color:var(--warning); border-color:color-mix(in srgb, var(--warning) 32%, var(--border)); background:color-mix(in srgb, var(--warning) 10%, transparent); }
+.mal-orani.bad { color:var(--danger);  border-color:color-mix(in srgb, var(--danger) 32%, var(--border));  background:color-mix(in srgb, var(--danger) 10%, transparent); }
+
+/* Detay modali özeti */
+.dt-mal{ border:1px solid var(--border); border-left:4px solid var(--text-muted); background:var(--glass);
+  border-radius:11px; padding:10px 13px; margin-bottom:14px; }
+.dt-mal-h{ font-size:12px; font-weight:800; letter-spacing:.2px; margin-bottom:5px; display:flex; align-items:center; gap:7px; }
+.dt-mal-b{ font-size:12.5px; color:var(--text); line-height:1.6; }
+.dt-mal-n{ font-size:11.5px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); line-height:1.55; }
+.dt-mal-n i{ margin-right:5px; opacity:.75; }
+.dt-mal.ok     { border-left-color:var(--success); } .dt-mal.ok .dt-mal-h{ color:var(--success); }
+.dt-mal.warn   { border-left-color:var(--warning); } .dt-mal.warn .dt-mal-h{ color:var(--warning); }
+.dt-mal.bad    { border-left-color:var(--danger);  } .dt-mal.bad .dt-mal-h{ color:var(--danger); }
+.dt-mal.serbest{ border-left-color:var(--primary); } .dt-mal.serbest .dt-mal-h{ color:var(--primary); }
+
+/* Rapor sekmesi */
+.mp-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px; }
+.mp-head-note{ font-size:11px; font-weight:600; color:var(--text-muted); }
+.mp-table-wrap{ overflow-x:auto; }
+.mp-table{ width:100%; border-collapse:collapse; min-width:640px; }
+.mp-table th{ padding:9px 10px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--text-muted); background:var(--glass); border-bottom:1px solid var(--border); white-space:nowrap; }
+.mp-table td{ padding:10px; font-size:12.5px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.mp-table td.c{ text-align:center; white-space:nowrap; }
+.mp-row{ cursor:pointer; transition:background .15s ease; }
+.mp-row:hover{ background:var(--glass); }
+.mp-dim{ color:var(--text-muted); }
+.mp-badge{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700;
+  padding:3px 9px; border-radius:999px; border:1px solid var(--border); white-space:nowrap; }
+.mp-badge i{ font-size:10px; }
+.mp-eksik{ display:inline-block; margin-left:6px; font-size:10px; font-weight:700; color:var(--text-muted);
+  background:var(--glass); border:1px solid var(--border); border-radius:999px; padding:2px 7px; }
+.mp-chev{ float:right; font-size:10px; color:var(--text-muted); transition:transform .2s ease; margin-top:3px; }
+.mp-chev.open{ transform:rotate(180deg); }
+.mp-detay td{ padding:0; background:var(--glass); }
+.mp-detay-in{ padding:8px 10px; display:flex; flex-direction:column; gap:4px; }
+.mp-drow{ display:grid; grid-template-columns:90px 92px 1fr 110px 110px 110px; gap:8px; align-items:center;
+  font-size:11.5px; padding:6px 9px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border); cursor:pointer; }
+.mp-drow:hover{ border-color:var(--primary); }
+.mp-dno{ font-weight:800; color:var(--primary); }
+.mp-dtar,.mp-dqty,.mp-dfark{ color:var(--text-muted); }
+.mp-dmod{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.mp-sebep{ color:var(--text-muted); line-height:1.5; }
+.mp-not{ margin-top:9px; font-size:11px; color:var(--text-muted); line-height:1.5; }
+.mp-empty{ padding:26px 14px; text-align:center; color:var(--text-muted); font-size:12.5px; }
+.mp-empty i{ display:block; font-size:24px; margin-bottom:8px; opacity:.5; }
+@media (max-width:768px){
+  .mp-drow{ grid-template-columns:1fr 1fr; gap:4px 8px; }
+  .mp-head-note{ display:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    ONAY BEKLENİYOR EKRANI (kayıt sonrası kurucu onayı)
    ═══════════════════════════════════════════════════════════════ */
 .lg-pending{ text-align:center; padding:8px 4px 4px; animation:lgCardIn 0.4s cubic-bezier(.22,1,.36,1); }
