@@ -11876,9 +11876,14 @@ function registerSW() {
       });
     }).catch(function(e){ console.warn('[sw] kayıt olmadı:', e && e.message); });
   });
-  // Denetleyici değişince bir kez yenile → kullanıcı eski sürümde kalmasın
+  // Denetleyici değişince bir kez yenile → kullanıcı eski sürümde kalmasın.
+  // ÖNEMLİ: yalnızca GERÇEK güncellemede. İlk ziyarette de controllerchange
+  // tetikleniyor; koşulsuz yenileyince kullanıcı sayfayı açar açmaz ekran
+  // bir kez sıfırlanıyordu (form doldururken veri kaybı riski).
+  var oncedenKontrolluydu = !!navigator.serviceWorker.controller;
   var yenilendi = false;
   navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(!oncedenKontrolluydu) return;   // ilk kurulum — yenileme yok
     if(yenilendi) return; yenilendi = true; location.reload();
   });
 }
