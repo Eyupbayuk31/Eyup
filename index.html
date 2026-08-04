@@ -18842,6 +18842,46 @@ AK._labelForGarment = function(renk){
   return null;
 };
 AK._labelNote = function(renk, pref){ return 'Mal rengi '+(renk||'—')+' olduğu için '+(pref==='white'?'BEYAZ/EKRU':'SİYAH')+' dokuma etiket kullanılacak.'; };
+// Dokuma etiketin KENDİ rengi. Kod tablosundaki kayda güvenilmez: eski
+// sürümde oraya malın rengi ("Ekru") yazılıyordu ve föy siyah etiketin
+// altına "BEYAZ/EKRU kullanılacak" basıyordu. Bu yüzden ton her zaman
+// resmin kendisinden ölçülür; ölçüm bitene kadar tabloya düşülür.
+AK._toneCache = {};     // resim url → 'Siyah' | 'Beyaz' | null (kararsız)
+AK._toneDone  = {};     // aynı resmi iki kez ölçme
+AK._etiketTonu = function(f){
+  var img = f && f.images && f.images[0];
+  if(img && Object.prototype.hasOwnProperty.call(AK._toneCache, img)){
+    var t = AK._toneCache[img];
+    return t==='Siyah' ? 'black' : t==='Beyaz' ? 'white' : null;
+  }
+  var lr=(f && f.renk||'').toLowerCase();
+  if(/siyah|black/.test(lr)) return 'black';
+  if(/beyaz|white|ekru|ecru|krem|bej/.test(lr)) return 'white';
+  return null;
+};
+// Arşivdeki dokuma etiketlerinin tonunu ölç, yanlış kod tablosu kaydını da düzelt
+AK._tonlariOlc = function(m){
+  if(!m || !m.shared || typeof AK._labelTone!=='function') return;
+  var isler=[];
+  m.shared.forEach(function(s){
+    if(s.type!=='dokuma') return;
+    var u = s.images && s.images[0];
+    if(!u || AK._toneDone[u]) return;
+    AK._toneDone[u] = true;
+    isler.push(AK._labelTone(u).then(function(t){
+      AK._toneCache[u] = t;
+      if(!t) return;
+      if(s.renk !== t) s.renk = t;
+      // kod tablosundaki eski/yanlış rengi sessizce düzelt
+      try{
+        if(s.code){ var mp=AK.map(); var e=mp.png[s.code];
+          if(e && e.renk!==t){ e.renk=t; AK.saveMap(mp); } }
+      }catch(_){}
+    }).catch(function(){ AK._toneCache[u]=null; }));
+  });
+  if(!isler.length) return;
+  Promise.all(isler).then(function(){ try{ AK.rebuildColors(); }catch(_){} });
+};
 
 // ---- Kod tablosu (localStorage, tohumlu) ----
 AK.LS_MAP='ak_codemap_v2'; AK.LS_REC='ak_records_v2';
@@ -19438,28 +19478,41 @@ AK._colorsFromMerged = function(m, prev){
     if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:effRenk,code:col.code||null,name:'fiyat:'+k});
     // Ortak dosyalar. Dokuma etiketi MAL RENGİNE göre seçilir (açık→beyaz,
     // koyu→siyah); uygun olmayan etiket gizlenir + açıklama eklenir.
-    var labelPref = AK._labelForGarment(effRenk);
     // Lisanslı model: barkodta "License" geçiyorsa ya da arşivde lisans
     // etiketi/kartı varsa.
     var isLisans = !!col.lisans || m.shared.some(function(s){ return s.type==='lisansEtiketi'||s.type==='lisansKarti'; });
+    // LİSANSLI MODELDE DOKUMA HER ZAMAN SİYAHTIR — mal ekru/beyaz olsa bile.
+    // Mal rengi kuralı (açık→beyaz, koyu→siyah) yalnızca lisanssız modeller için.
+    var labelPref = isLisans ? 'black' : AK._labelForGarment(effRenk);
     m.shared.forEach(function(s){
       if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
         files.push({type:'yikama',images:[s.images[ci]],renk:effRenk,name:'yikamaS:'+k}); return;
       }
       if(s.type==='dokuma' && labelPref){
-        var lr=(s.renk||'').toLowerCase();
-        var isWhite=/beyaz|white|ekru|ecru|krem|bej/.test(lr), isBlack=/siyah|black/.test(lr);
-        if(isWhite||isBlack){
-          var match=(labelPref==='white'&&isWhite)||(labelPref==='black'&&isBlack);
+        // Etiketin KENDİ rengi resimden ölçülür — föydeki not resimle çelişmesin
+        var ton = AK._etiketTonu(s);
+        if(ton){
+          var match = (labelPref===ton);
           // Mal rengine uymayan etiket yalnızca LİSANSLI modellerde listelenir:
           // açık malda siyah dokuma sadece orada, müşteri isteğiyle takılıyor.
           // Normal modelde gösterilmesi föyü gereksiz kalabalıklaştırıyordu.
           if(!match && !isLisans) return;
+          var etiketAd = (ton==='black' ? 'SİYAH' : 'BEYAZ/EKRU');
+          var not;
+          if(isLisans){
+            // Lisanslı modelde kural nettir: her zaman SİYAH dokuma.
+            not = match
+              ? ('LİSANSLI MODEL — mal rengi '+(effRenk||'—')+' olsa bile lisanslı modellerde HER ZAMAN SİYAH dokuma etiket takılır.')
+              : ('DİKKAT: LİSANSLI MODEL — her zaman SİYAH dokuma etiket takılır. Bu etiket '+etiketAd+', takmayın; arşivdeki siyah etiketi kullanın.');
+          } else if(match){
+            not = AK._labelNote(effRenk, labelPref);
+          } else {
+            not = 'DİKKAT: Mal rengi '+(effRenk||'—')+' için normalde '+(labelPref==='white'?'BEYAZ/EKRU':'SİYAH')+
+                  ' dokuma kullanılır, arşivden gelen etiket '+etiketAd+'. Takmadan önce doğrulayın.';
+          }
           files.push(Object.assign({}, s, {
-            note: match ? AK._labelNote(effRenk, labelPref)
-                        : ('Mal rengi '+(effRenk||'—')+' için normalde '+(labelPref==='white'?'BEYAZ/EKRU':'SİYAH')+
-                           ' dokuma kullanılır. Lisanslı model olduğu için bu '+(isBlack?'SİYAH':'BEYAZ')+
-                           ' etiket müşteri isteğiyle takılabilir.'),
+            renk: (ton==='black' ? 'Siyah' : 'Beyaz'),   // başlıkta etiketin kendi rengi yazsın
+            note: not,
             _labelPref: match
           }));
           return;
@@ -19481,6 +19534,7 @@ AK._colorsFromMerged = function(m, prev){
 };
 AK.rebuildColors = function(){
   var m=AK._merged; if(!m){ if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); return; }
+  try{ AK._tonlariOlc(m); }catch(_){}   // dokuma etiketlerin gerçek rengini ölç (bitince tekrar çağırır)
   var prev={}; AK.state.colors.forEach(function(c){ prev[AK._ckey(c.code||c.renk, c.model)]=c; });
   var newColors = AK._colorsFromMerged(m, prev);
   AK.state.colors = newColors.length ? newColors : AK.state.colors;
