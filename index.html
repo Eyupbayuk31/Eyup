@@ -6577,7 +6577,8 @@ function getTypeBadge(type){
   return `<span class="type-badge ${type}"><i class="fas ${icons[type]||'fa-tag'}"></i>${labels[type]||type}</span>`;
 }
 
-function getItemDetail(item){
+// gizle: kağıda basılan çıktılarda mal adeti gösterilmez (atölye nüshası)
+function getItemDetail(item, gizle){
   if(item._type==='standart'){
     const parts=[];
     const sizeNames={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
@@ -6585,7 +6586,7 @@ function getItemDetail(item){
     if(item.serbest) parts.push('✦ SERBEST');
     if(item.sizes){for(let k in item.sizes){if(item.sizes[k]>0)parts.push(sizeNames[k]+':'+item.sizes[k]);}}
     if(item.bant){for(let k in item.bant){if(item.bant[k]>0)parts.push(bantNames[k]+':'+item.bant[k]);}}
-    if(!item.serbest && item.malAdedi>0) parts.push('Mal:'+item.malAdedi);
+    if(!gizle && !item.serbest && item.malAdedi>0) parts.push('Mal:'+item.malAdedi);
     return parts.join(' · ')||'—';
   }
   if(item._type==='fermuar')return item.totalAdet?item.totalAdet+' adet':'—';
@@ -7212,24 +7213,14 @@ function generatePDF(id, type, mode) {
       }
       const totalS = Object.values(item.sizes).reduce((a,b)=>a+b,0);
       html += `</tbody></table><div class="total-row" style="font-size:${sizeCount >= 5 ? '12px' : '14px'};padding:${sizeCount >= 5 ? '6px 0' : '8px 0'};">Toplam Poşet: ${totalS}</div>`;
-      // Mal adeti / serbest irsaliye kutusu — ay sonu hesabında dayanak olsun
+      // Serbest irsaliyede sebep kağıda da yazılır — atölyedeki nüshada dursun.
+      // Mal/poşet oranı, fire payı ve aşım İRSALİYEDE YAZMAZ; onlar yalnızca
+      // uygulama içindeki Raporlar > Mal / Poşet sekmesinde görünür.
       if (item.serbest) {
         html += `<div style="margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:6px;font-size:10px;color:#1e3a8a;">
           <b>SERBEST İRSALİYE — MODELE BAĞLI DEĞİL</b><br>
           Atölye: <b>${esc(item.atolye||'—')}</b> · Verilen poşet: <b>${totalS.toLocaleString('tr-TR')}</b>
           ${item.serbestSebep?`<br>Sebep: ${esc(item.serbestSebep)}`:''}
-        </div>`;
-      } else if (item.malAdedi > 0) {
-        const _ps = _posetSayilan(item.sizes);          // dengeye giren: 30×40 + 35×45
-        const _pdig = totalS - _ps;                     // diğer ölçüler — sayılmaz
-        const _d = _malDurum(_ps, +item.malAdedi);
-        const _renk = _d.k==='bad' ? {bg:'#fef2f2',bd:'#fecaca',ln:'#ef4444',tx:'#991b1b'}
-                    : _d.k==='warn'? {bg:'#fffbeb',bd:'#fde68a',ln:'#f59e0b',tx:'#92400e'}
-                    :                {bg:'#f0fdf4',bd:'#bbf7d0',ln:'#10b981',tx:'#065f46'};
-        html += `<div style="margin-top:8px;padding:8px 10px;background:${_renk.bg};border:1px solid ${_renk.bd};border-left:4px solid ${_renk.ln};border-radius:6px;font-size:10px;color:${_renk.tx};">
-          <b>MAL ADETİ:</b> ${(+item.malAdedi).toLocaleString('tr-TR')} adet · <b>POŞET (30×40+35×45):</b> ${_ps.toLocaleString('tr-TR')} · <b>ORAN: %${_d.oran}</b><br>
-          Fire payı %${_d.fire} ile üst sınır: <b>${_d.limit.toLocaleString('tr-TR')}</b>${_d.asim>0?` · <b>${_d.asim.toLocaleString('tr-TR')} AŞIM</b>`:' · sınır içinde'}
-          ${_pdig>0?`<br>Diğer ölçülerde ${_pdig.toLocaleString('tr-TR')} poşet daha var — dengeye katılmaz.`:''}
         </div>`;
       }
     }
@@ -16090,7 +16081,7 @@ function printListPDF(){
   // Satırlar
   let rows = '';
   list.forEach((it, idx)=>{
-    const detay = (typeof getItemDetail==='function') ? (getItemDetail(it)||'-') : '-';
+    const detay = (typeof getItemDetail==='function') ? (getItemDetail(it, true)||'-') : '-';
     rows += `<tr>
       <td style="text-align:center;">${idx+1}</td>
       <td><b>${esc(it.no)||'-'}</b></td>
