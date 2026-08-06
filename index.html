@@ -1670,7 +1670,7 @@ if(typeof Chart==='undefined'){
               <select class="form-input" id="iDurum"><option value="bekliyor">⏳ Bekliyor</option><option value="teslim">✓ Teslim Edildi</option></select>
             </div>
             <div class="form-group" style="grid-column:span 2;" id="grpMalAdedi">
-              <label>Mal Adeti <span class="lbl-ipucu">kaç adet ürün için verildi — poşet fazlası raporda çıkar</span></label>
+              <label>Mal Adeti <span class="lbl-ipucu">kaç adet ürün için verildi — sadece 30×40 ve 35×45 poşetlerle karşılaştırılır</span></label>
               <input class="form-input" type="number" id="iMalAdedi" placeholder="Örn: 14000" min="0" oninput="_malOraniGoster()">
               <div class="mal-orani" id="malOrani"></div>
             </div>
@@ -6060,9 +6060,24 @@ function updateBadge(){var el=document.getElementById('nextBadge'); if(el) el.te
 // ay sonu raporunda da atölye bazlı toplanır.
 // ═══════════════════════════════════════════════════════════════════
 const POSET_KEYS=['s30','s35','s40','s50','s60','s100'];
-function _posetToplamForm(){
-  return POSET_KEYS.reduce((s,k)=>{const el=document.getElementById(k);return s+(+((el&&el.value)||0)||0);},0);
+// Mal/poşet dengesinde SADECE ürün poşetleri sayılır: 30×40 ve 35×45.
+// Büyük ölçüler (40×60, 50×70, 60×90, 100×100) koli/taşıma poşetidir,
+// mal adediyle bire bir ilişkisi yok — hesaba katılmaz.
+const POSET_SAYILAN=['s30','s35'];
+const POSET_SAYILAN_AD='30×40 + 35×45';
+function _posetSayilan(sizes){
+  if(!sizes) return 0;
+  return POSET_SAYILAN.reduce((s,k)=>s+(+sizes[k]||0),0);
 }
+function _posetToplam(sizes){
+  if(!sizes) return 0;
+  return POSET_KEYS.reduce((s,k)=>s+(+sizes[k]||0),0);
+}
+function _posetFormSizes(){
+  const o={}; POSET_KEYS.forEach(k=>{const el=document.getElementById(k); o[k]=+((el&&el.value)||0)||0;});
+  return o;
+}
+function _posetToplamForm(){ return _posetSayilan(_posetFormSizes()); }
 function _n(v){ return (+v||0).toLocaleString('tr-TR'); }
 // Fire payı — atölyede yırtılan/bozulan poşet. Normali %5-7; ayarlanabilir.
 function _fireOrani(){ const v=+getConfig('fireOrani',7); return (v>=0&&v<=50)?v:7; }
@@ -6084,18 +6099,21 @@ function _malDurum(poset, mal){
 function _malOraniGoster(){
   const box=document.getElementById('malOrani'); if(!box) return;
   const mal=+(document.getElementById('iMalAdedi')?.value||0);
-  const poset=_posetToplamForm();
+  const sizes=_posetFormSizes();
+  const poset=_posetSayilan(sizes);          // sadece 30×40 + 35×45
+  const digerler=_posetToplam(sizes)-poset;  // büyük ölçüler — hesaba katılmaz
+  const digerNot = digerler>0 ? ' <span class="mal-orani-alt">Diğer ölçülerdeki '+_n(digerler)+' poşet hesaba katılmaz.</span>' : '';
   if(!mal && !poset){ box.className='mal-orani'; box.innerHTML=''; return; }
   if(!mal){
     box.className='mal-orani';
-    box.innerHTML='<i class="fas fa-circle-info"></i> '+_n(poset)+' poşet giriliyor — mal adetini yazarsanız ay sonu raporda fazlalık görünür.';
+    box.innerHTML='<i class="fas fa-circle-info"></i> '+_n(poset)+' poşet ('+POSET_SAYILAN_AD+') giriliyor — mal adetini yazarsanız ay sonu raporda fazlalık görünür.'+digerNot;
     return;
   }
   const d=_malDurum(poset, mal);
   box.className='mal-orani '+d.k;
-  box.innerHTML='<i class="fas '+d.ic+'"></i> <b>'+_n(poset)+'</b> poşet / <b>'+_n(mal)+'</b> mal · <b>%'+d.oran+'</b>'+
+  box.innerHTML='<i class="fas '+d.ic+'"></i> <b>'+_n(poset)+'</b> poşet ('+POSET_SAYILAN_AD+') / <b>'+_n(mal)+'</b> mal · <b>%'+d.oran+'</b>'+
     '<span class="mal-orani-alt">fire payı %'+d.fire+' ile üst sınır <b>'+_n(d.limit)+'</b>'+
-    (d.asim>0?' — <b>'+_n(d.asim)+'</b> aşım':' — sınır içinde')+'</span>';
+    (d.asim>0?' — <b>'+_n(d.asim)+'</b> aşım':' — sınır içinde')+'</span>'+digerNot;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -6739,17 +6757,20 @@ function showDetailUni(id,type){
     for(let k in item.sizes){if(item.sizes[k]>0)html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${sizeNames[k]||k}: <b>${item.sizes[k]}</b></div>`;}
     html+='</div>';
     // Mal adeti / serbest irsaliye dengesi
-    const _pt=Object.values(item.sizes||{}).reduce((a,b)=>a+(+b||0),0);
+    const _pt=_posetSayilan(item.sizes);                        // sadece 30×40 + 35×45
+    const _pd=_posetToplam(item.sizes)-_pt;                     // hesaba katılmayan büyük ölçüler
+    const _pdNot=_pd>0?`<div class="dt-mal-n"><i class="fas fa-box"></i> Diğer ölçülerde ${_pd.toLocaleString('tr-TR')} poşet daha var — dengeye katılmaz.</div>`:'';
     if(item.serbest){
       html+=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-clipboard-question"></i> Serbest İrsaliye — Modele Bağlı Değil</div>
-        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_pt.toLocaleString('tr-TR')}</b> poşet verildi — model/mal adetine bağlı değil.</div>
+        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_posetToplam(item.sizes).toLocaleString('tr-TR')}</b> poşet verildi — model/mal adetine bağlı değil.</div>
         ${item.serbestSebep?`<div class="dt-mal-n"><i class="fas fa-comment-dots"></i> ${esc(item.serbestSebep)}</div>`:''}
       </div>`;
     } else if(item.malAdedi>0){
       const d=_malDurum(_pt, +item.malAdedi);
       html+=`<div class="dt-mal ${d.k}"><div class="dt-mal-h"><i class="fas ${d.ic}"></i> Mal / Poşet Dengesi — ${d.lbl}</div>
-        <div class="dt-mal-b"><b>${(+item.malAdedi).toLocaleString('tr-TR')}</b> adet mal için <b>${_pt.toLocaleString('tr-TR')}</b> poşet · <b>%${d.oran}</b></div>
+        <div class="dt-mal-b"><b>${(+item.malAdedi).toLocaleString('tr-TR')}</b> adet mal için <b>${_pt.toLocaleString('tr-TR')}</b> poşet (${POSET_SAYILAN_AD}) · <b>%${d.oran}</b></div>
         <div class="dt-mal-n"><i class="fas fa-percent"></i> Fire payı %${d.fire} ile üst sınır <b>${d.limit.toLocaleString('tr-TR')}</b>${d.asim>0?` — <b>${d.asim.toLocaleString('tr-TR')}</b> aşım`:' — sınır içinde'}</div>
+        ${_pdNot}
       </div>`;
     }
     if(item.bant && Object.values(item.bant).some(v=>+v>0)){
@@ -7199,13 +7220,16 @@ function generatePDF(id, type, mode) {
           ${item.serbestSebep?`<br>Sebep: ${esc(item.serbestSebep)}`:''}
         </div>`;
       } else if (item.malAdedi > 0) {
-        const _d = _malDurum(totalS, +item.malAdedi);
+        const _ps = _posetSayilan(item.sizes);          // dengeye giren: 30×40 + 35×45
+        const _pdig = totalS - _ps;                     // diğer ölçüler — sayılmaz
+        const _d = _malDurum(_ps, +item.malAdedi);
         const _renk = _d.k==='bad' ? {bg:'#fef2f2',bd:'#fecaca',ln:'#ef4444',tx:'#991b1b'}
                     : _d.k==='warn'? {bg:'#fffbeb',bd:'#fde68a',ln:'#f59e0b',tx:'#92400e'}
                     :                {bg:'#f0fdf4',bd:'#bbf7d0',ln:'#10b981',tx:'#065f46'};
         html += `<div style="margin-top:8px;padding:8px 10px;background:${_renk.bg};border:1px solid ${_renk.bd};border-left:4px solid ${_renk.ln};border-radius:6px;font-size:10px;color:${_renk.tx};">
-          <b>MAL ADETİ:</b> ${(+item.malAdedi).toLocaleString('tr-TR')} adet · <b>POŞET:</b> ${totalS.toLocaleString('tr-TR')} · <b>ORAN: %${_d.oran}</b><br>
+          <b>MAL ADETİ:</b> ${(+item.malAdedi).toLocaleString('tr-TR')} adet · <b>POŞET (30×40+35×45):</b> ${_ps.toLocaleString('tr-TR')} · <b>ORAN: %${_d.oran}</b><br>
           Fire payı %${_d.fire} ile üst sınır: <b>${_d.limit.toLocaleString('tr-TR')}</b>${_d.asim>0?` · <b>${_d.asim.toLocaleString('tr-TR')} AŞIM</b>`:' · sınır içinde'}
+          ${_pdig>0?`<br>Diğer ölçülerde ${_pdig.toLocaleString('tr-TR')} poşet daha var — dengeye katılmaz.`:''}
         </div>`;
       }
     }
@@ -8932,7 +8956,9 @@ function renderTopFirms(){
    irsaliyeleri sebepleriyle ayrı listelenir, orana karışmaz.
    ═══════════════════════════════════════════════════════════════════ */
 const _MP_AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-function _mpPoset(i){ return Object.values(i.sizes||{}).reduce((a,b)=>a+(+b||0),0); }
+// Dengeye giren poşet: SADECE 30×40 ve 35×45. Büyük ölçüler koli poşetidir.
+function _mpPoset(i){ return _posetSayilan(i && i.sizes); }
+function _mpPosetHepsi(i){ return _posetToplam(i && i.sizes); }
 function _mpAyKey(i){
   const d=new Date(i.tarih||i.createdAt||0);
   if(isNaN(d.getTime())) return '0000-00';
@@ -8963,7 +8989,7 @@ function renderMalPoset(){
     fs.value=String(fire);
   }
   const fn=document.getElementById('mpFireNote');
-  if(fn) fn.textContent=`Fire payı %${fire} — mal adetinin %${fire} fazlasına kadar normal sayılır`;
+  if(fn) fn.textContent=`Sadece ${POSET_SAYILAN_AD} poşet sayılır · fire payı %${fire}`;
 
   // ---- Atölye bazlı toplama ----
   const g={};
@@ -9004,13 +9030,13 @@ function renderMalPoset(){
   const tPoset  = satirlar.reduce((s,x)=>s+x.poset,0);
   const tAsim   = satirlar.reduce((s,x)=>s+Math.max(0,x.asim),0);
   const tEksik  = satirlar.reduce((s,x)=>s+x.eksikIrs,0);
-  const tSerbest= serbest.reduce((s,i)=>s+_mpPoset(i),0);
+  const tSerbest= serbest.reduce((s,i)=>s+_mpPosetHepsi(i),0);   // serbestte denge yok, tamamı yazılır
   const genelOran = tMal? Math.round(tPoset/tMal*100) : 0;
   const oranRenk  = genelOran>100+fire+10 ? '#ef4444' : genelOran>100+fire ? '#f59e0b' : '#10b981';
 
   document.getElementById('mpKpis').innerHTML =
     _mpKpi('fa-shirt','#8b5cf6', _n(tMal),   'Dikilen Mal (adet)', tEksik?`${tEksik} irsaliyede mal adeti yok`:'tüm irsaliyelerde girili') +
-    _mpKpi('fa-box','#3b82f6',   _n(tPoset), 'Verilen Poşet',      `fire payıyla üst sınır ${_n(Math.round(tMal*(1+fire/100)))}`) +
+    _mpKpi('fa-box','#3b82f6',   _n(tPoset), 'Verilen Poşet ('+POSET_SAYILAN_AD+')', `fire payıyla üst sınır ${_n(Math.round(tMal*(1+fire/100)))}`) +
     _mpKpi('fa-scale-unbalanced','#f59e0b', _n(tAsim), 'Fire Üstü Fazla', tAsim?'hesabı sorulacak fark':'aşım yok') +
     _mpKpi('fa-percent', oranRenk, '%'+genelOran, 'Poşet / Mal Oranı', `%${100+fire} altı normal`) +
     _mpKpi('fa-clipboard-question','#06b6d4', _n(tSerbest), 'Serbest Verilen (poşet)', `${serbest.length} irsaliye`);
@@ -9027,7 +9053,7 @@ function renderMalPoset(){
   };
   document.getElementById('mpAtolye').innerHTML = satirlar.length ? `
     <div class="mp-table-wrap"><table class="mp-table">
-      <thead><tr><th>Atölye</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th title="Fire payıyla verilebilecek üst sınır">Fire Sınırı</th><th title="Fire payının üstünde kalan fazlalık">Aşım</th><th>Oran</th><th>Durum</th></tr></thead>
+      <thead><tr><th>Atölye</th><th>İrsaliye</th><th>Dikilen Mal</th><th title="Sadece 30×40 ve 35×45">Verilen Poşet</th><th title="Fire payıyla verilebilecek üst sınır">Fire Sınırı</th><th title="Fire payının üstünde kalan fazlalık">Aşım</th><th>Oran</th><th>Durum</th></tr></thead>
       <tbody>${satirlar.map((x,ix)=>`
         <tr class="mp-row ${x.d.k}" onclick="mpToggleDetay(${ix})">
           <td><b>${esc(x.ad)}</b><i class="fas fa-chevron-down mp-chev" id="mpChev${ix}"></i></td>
@@ -9052,6 +9078,7 @@ function renderMalPoset(){
             </div>`;}).join('')}</div>
         </td></tr>`).join('')}
       </tbody></table></div>
+      <div class="mp-not"><b>Sadece ${POSET_SAYILAN_AD} poşetler sayılır</b> — 40×60, 50×70, 60×90 ve 100×100 koli/taşıma poşetidir, denge hesabına girmez.</div>
       ${satirlar.some(x=>x.eksikPoset)?'<div class="mp-not">* Mal adeti girilmemiş irsaliyelerin poşeti — oran hesabına katılmadı. Satıra tıklayıp hangi irsaliye olduğunu görebilirsiniz.</div>':'<div class="mp-not">Satıra tıklayın — o atölyenin irsaliyeleri tek tek açılır.</div>'}`
     : `<div class="mp-empty"><i class="fas fa-inbox"></i> ${mpDurum==='all'?'Bu dönemde poşet irsaliyesi yok.':'Bu filtreye uyan atölye yok.'}</div>`;
 
@@ -9061,7 +9088,7 @@ function renderMalPoset(){
     const k=_mpAyKey(i);
     if(!ay[k]) ay[k]={k,irs:0,mal:0,poset:0,eksikIrs:0,eksikPoset:0,serbest:0,serbestIrs:0};
     const p=_mpPoset(i);
-    if(i.serbest){ ay[k].serbest+=p; ay[k].serbestIrs++; return; }
+    if(i.serbest){ ay[k].serbest+=_mpPosetHepsi(i); ay[k].serbestIrs++; return; }
     ay[k].irs++;
     // Mal adeti girilmemiş kayıtlar oranı bozmasın — ayrı sayılır
     if(+i.malAdedi>0){ ay[k].mal+=+i.malAdedi; ay[k].poset+=p; }
@@ -9070,7 +9097,7 @@ function renderMalPoset(){
   const aylar=Object.values(ay).sort((a,b)=>b.k.localeCompare(a.k));
   document.getElementById('mpAylik').innerHTML = aylar.length ? `
     <div class="mp-table-wrap"><table class="mp-table">
-      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th>Verilen Poşet</th><th>Fire Sınırı</th><th>Aşım</th><th>Oran</th><th>Serbest</th></tr></thead>
+      <thead><tr><th>Ay</th><th>İrsaliye</th><th>Dikilen Mal</th><th title="Sadece 30×40 ve 35×45">Verilen Poşet</th><th>Fire Sınırı</th><th>Aşım</th><th>Oran</th><th>Serbest</th></tr></thead>
       <tbody>${aylar.map(a=>{
         const ad=_malDurum(a.poset,a.mal);
         const sec=(mpAy===a.k);
@@ -9099,7 +9126,7 @@ function renderMalPoset(){
           <td>${esc(i.tarih||'-')}</td>
           <td><b>${esc(i.atolye||'-')}</b></td>
           <td>${esc(i.model||'—')}</td>
-          <td class="c"><b>${_n(_mpPoset(i))}</b></td>
+          <td class="c"><b>${_n(_mpPosetHepsi(i))}</b></td>
           <td class="mp-sebep">${esc(i.serbestSebep||i.aciklama||'—')}</td>
         </tr>`).join('')}</tbody></table></div>`
     : '<div class="mp-empty"><i class="fas fa-clipboard-question"></i> Bu dönemde serbest irsaliye kesilmemiş.</div>';
