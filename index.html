@@ -6801,141 +6801,136 @@ function showDetailUni(id,type){
   if(item.termin && item.durum!=='teslim'){
     try{ terminLate = new Date(item.termin) < new Date(new Date().toDateString()); }catch(_){}
   }
-  const _tile=(ic,lbl,valHtml,extraCls)=>`<div class="dt-info ${extraCls||''}">
-      <div class="dt-info-ic"><i class="fas ${ic}"></i></div>
-      <div class="dt-info-body"><div class="dt-info-lbl">${lbl}</div><div class="dt-info-val">${valHtml}</div></div>
-    </div>`;
-  const durumHtml = item.durum==='teslim'
-    ? '<span class="dt-pill dt-pill-ok"><i class="fas fa-circle-check"></i> Teslim Edildi</span>'
-    : '<span class="dt-pill dt-pill-wait"><i class="fas fa-hourglass-half"></i> Bekliyor</span>';
-  let html=`<div class="dt-info-grid">
-    ${_tile('fa-tag','Tür', getTypeBadge(type))}
-    ${_tile('fa-calendar-day','Tarih', esc(item.tarih||'-'))}
-    ${_tile('fa-cube','Model / Ürün', (item.model||item.urun)
-        ? `<a href="javascript:void(0)" class="dt-mk" onclick="closeModal&&closeModal();MK.ac('${esc(item.model||item.urun)}')" title="Model kartını aç">${esc(item.model||item.urun)} <i class="fas fa-arrow-up-right-from-square"></i></a>`
-        : '-', 'dt-info-full dt-info-hero')}
-    ${_tile('fa-industry','Atölye / Firma', esc(item.atolye||item.firma||'-'))}
-    ${_tile('fa-circle-info','Durum', durumHtml)}
-    ${item.termin?_tile('fa-hourglass-half','Termin', esc(item.termin)+(terminLate?' <span class="dt-late">· GECİKTİ</span>':''), terminLate?'dt-info-late':''):''}
-    ${item.teslimEden?_tile('fa-truck-ramp-box','Teslim Eden', esc(item.teslimEden)):''}
-    ${item.teslimAlan?_tile('fa-hand-holding-heart','Teslim Alan', esc(item.teslimAlan)):''}
+  // ── Yardımcılar ──────────────────────────────────────────────
+  const _n0 = v => (+v||0).toLocaleString('tr-TR');
+  // Künye satırı: etiket + değer (ikon yok — yoğun ve okunur dursun)
+  const kv = (lbl, val, cls) => val ? `<div class="dt-kv ${cls||''}"><dt>${lbl}</dt><dd>${val}</dd></div>` : '';
+  // Bölüm: başlık + sağda özet + içerik
+  const sec = (ic, baslik, sag, ic2) => `<section class="dt-sec">
+      <header><i class="fas ${ic}"></i><h4>${baslik}</h4>${sag?`<span class="dt-sec-sag">${sag}</span>`:''}</header>
+      <div class="dt-sec-b">${ic2}</div></section>`;
+  // Küçük değer kutucuğu
+  const chip = (lbl, val, alt) => `<div class="dt-chip"><span class="dt-chip-l">${lbl}</span><span class="dt-chip-v">${val}</span>${alt?`<span class="dt-chip-a">${alt}</span>`:''}</div>`;
+  // Büyük tek sayı kutusu
+  const stat = (lbl, val, birim) => `<div class="dt-stat"><span class="dt-stat-l">${lbl}</span><span class="dt-stat-v">${val}${birim?`<em>${birim}</em>`:''}</span></div>`;
+  const toplamBar = (lbl, val) => `<div class="dt-toplam"><span>${lbl}</span><b>${val}</b></div>`;
+
+  const model = item.model||item.urun||'';
+  const durumOk = item.durum==='teslim';
+
+  // ── KÜNYE: modelin kendisi kahraman, durum sağda ─────────────
+  let html = `<div class="dt-kunye${terminLate?' gec':''}">
+    <div class="dt-kunye-l">
+      <span class="dt-kunye-lbl">Model / Ürün</span>
+      ${model
+        ? `<a href="javascript:void(0)" class="dt-model" onclick="closeModal&&closeModal();MK.ac('${esc(model)}')" title="Model kartını aç">${esc(model)}<i class="fas fa-arrow-up-right-from-square"></i></a>`
+        : `<span class="dt-model dt-model-yok">—</span>`}
+      ${item.atolye||item.firma ? `<span class="dt-kunye-alt"><i class="fas fa-industry"></i> ${esc(item.atolye||item.firma)}</span>`:''}
+    </div>
+    <div class="dt-kunye-r">
+      ${item.durum ? (durumOk
+        ? '<span class="dt-pill dt-pill-ok"><i class="fas fa-circle-check"></i> Teslim Edildi</span>'
+        : '<span class="dt-pill dt-pill-wait"><i class="fas fa-hourglass-half"></i> Bekliyor</span>') : ''}
+      ${terminLate ? '<span class="dt-pill dt-pill-gec"><i class="fas fa-triangle-exclamation"></i> Termin geçti</span>' : ''}
+    </div>
   </div>`;
-  
-  // Type-specific details
-  if(type==='standart'&&item.sizes){
+
+  // ── KÜNYE ALTI: tarih / termin / teslim bilgileri ────────────
+  const kunye = [
+    kv('Tarih', esc(item.tarih||'')),
+    kv('Termin', item.termin?esc(item.termin):'', terminLate?'gec':''),
+    kv('Teslim Eden', esc(item.teslimEden||'')),
+    kv('Teslim Alan', esc(item.teslimAlan||'')),
+    kv('Renk', item.renk?esc(item.renk):''),
+    kv('PO', item.po?esc(item.po):'')
+  ].filter(Boolean).join('');
+  if(kunye) html += `<dl class="dt-kvs">${kunye}</dl>`;
+
+  // ── TÜRE ÖZEL İÇERİK ─────────────────────────────────────────
+  if(type==='standart' && item.sizes){
     const sizeNames={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     const bantNames={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
-    html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-box"></i> Poşet Ölçüleri</div>';
-    html+='<div class="dt-chips">';
-    for(let k in item.sizes){if(item.sizes[k]>0)html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${sizeNames[k]||k}: <b>${item.sizes[k]}</b></div>`;}
-    html+='</div>';
-    // Mal adeti / serbest irsaliye dengesi
-    const _pt=_posetSayilan(item.sizes);                        // sadece 30×40 + 35×45
-    const _pd=_posetToplam(item.sizes)-_pt;                     // hesaba katılmayan büyük ölçüler
-    const _pdNot=_pd>0?`<div class="dt-mal-n"><i class="fas fa-box"></i> Diğer ölçülerde ${_pd.toLocaleString('tr-TR')} poşet daha var — dengeye katılmaz.</div>`:'';
+    const dolu=Object.keys(item.sizes).filter(k=>+item.sizes[k]>0);
+    if(dolu.length){
+      html += sec('fa-box','Poşet Ölçüleri', _n0(_posetToplam(item.sizes))+' adet',
+        `<div class="dt-chips">${dolu.map(k=>chip(sizeNames[k]||k, _n0(item.sizes[k]))).join('')}</div>`);
+    }
+    // Mal / poşet dengesi
+    const _pt=_posetSayilan(item.sizes);
+    const _pd=_posetToplam(item.sizes)-_pt;
+    const _pdNot=_pd>0?`<div class="dt-mal-n"><i class="fas fa-box"></i> Diğer ölçülerde ${_n0(_pd)} poşet daha var — dengeye katılmaz.</div>`:'';
     if(item.serbest){
       html+=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-clipboard-question"></i> Serbest İrsaliye — Modele Bağlı Değil</div>
-        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_posetToplam(item.sizes).toLocaleString('tr-TR')}</b> poşet verildi — model/mal adetine bağlı değil.</div>
+        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_n0(_posetToplam(item.sizes))}</b> poşet verildi — model/mal adetine bağlı değil.</div>
         ${item.serbestSebep?`<div class="dt-mal-n"><i class="fas fa-comment-dots"></i> ${esc(item.serbestSebep)}</div>`:''}
       </div>`;
     } else if(item.malAdedi>0){
       const d=_malDurum(_pt, +item.malAdedi);
       html+=`<div class="dt-mal ${d.k}"><div class="dt-mal-h"><i class="fas ${d.ic}"></i> Mal / Poşet Dengesi — ${d.lbl}</div>
-        <div class="dt-mal-b"><b>${(+item.malAdedi).toLocaleString('tr-TR')}</b> adet mal için <b>${_pt.toLocaleString('tr-TR')}</b> poşet (${POSET_SAYILAN_AD}) · <b>%${d.oran}</b></div>
-        <div class="dt-mal-n"><i class="fas fa-percent"></i> Fire payı %${d.fire} ile üst sınır <b>${d.limit.toLocaleString('tr-TR')}</b>${d.asim>0?` — <b>${d.asim.toLocaleString('tr-TR')}</b> aşım`:' — sınır içinde'}</div>
+        <div class="dt-mal-b"><b>${_n0(item.malAdedi)}</b> adet mal için <b>${_n0(_pt)}</b> poşet (${POSET_SAYILAN_AD}) · <b>%${d.oran}</b></div>
+        <div class="dt-mal-n"><i class="fas fa-percent"></i> Fire payı %${d.fire} ile üst sınır <b>${_n0(d.limit)}</b>${d.asim>0?` — <b>${_n0(d.asim)}</b> aşım`:' — sınır içinde'}</div>
         ${_pdNot}
       </div>`;
     }
     if(item.bant && Object.values(item.bant).some(v=>+v>0)){
-      html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-tape"></i> Bant & Kılçık</div>';
-      html+='<div class="dt-chips">';
-      for(let k in item.bant){if(item.bant[k]>0)html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bantNames[k]||k}: <b>${item.bant[k]}</b></div>`;}
-      html+='</div>';
+      html += sec('fa-tape','Bant & Kılçık','',
+        `<div class="dt-chips">${Object.keys(item.bant).filter(k=>+item.bant[k]>0)
+          .map(k=>chip(bantNames[k]||k, _n0(item.bant[k]))).join('')}</div>`);
     }
-  }
-  if(type==='fermuar'&&item.beden){
-    if(item.renk){
-      html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;">
-        <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span>
-        <span style="font-weight:700;font-size:14px;">${item.renk}</span>
-      </div>`;
-    }
-    if(item.hideBeden){
-      html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Fermuar Detayları</div>';
-      html+='<div class="dt-chips">';
-      groupFermuarBedenByCm(item.beden).forEach(g=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${g.cm} cm: <b>${g.adet}</b> adet</div>`;});
-      html+='</div>';
-    } else {
-      html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
-      html+='<div class="dt-chips">';
-      const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-      sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bedenLabel[k]||k}: <b>${bv.adet??0}</b> adet (${bv.cm??'-'} cm)</div>`;});
-      html+='</div>';
-    }
-    html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.totalAdet||0} adet</div>`;
-  }
-  if(type==='lastik'){
-    if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
-    html+=`<div class="dt-chips dt-chips-lg">
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Genişlik (CM)</div><div style="font-size:20px;font-weight:800;">${item.cm||'-'} cm</div></div>
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>
-    </div>`;
-  }
-  if(type==='dugme'){
-    html+=`<div class="dt-chips dt-chips-lg">
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Adet</div><div style="font-size:20px;font-weight:800;">${item.adet||0} adet</div></div>
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;border-left:4px solid var(--primary);"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">🎨 Renk</div><div style="font-size:18px;font-weight:800;">${item.renk||'—'}</div></div>
-    </div>`;
-  }
-  if(type==='satenaskilik'){
-    html+=`<div class="dt-chips dt-chips-lg">
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Toplam Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>
-      <div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;border-left:4px solid var(--primary);"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">🎨 Renk</div><div style="font-size:18px;font-weight:800;">${item.renk||'—'}</div></div>
-    </div>`;
-  }
-  if(type==='dantel'){
-    if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
-    html+=`<div style="padding:12px;background:var(--glass);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;"><div style="font-weight:700;color:var(--primary);margin-bottom:4px;">Toplam Metre</div><div style="font-size:20px;font-weight:800;">${item.metre||0} m</div></div>`;
-  }
-  if(type==='kordon'&&item.olcular&&item.olcular.length){
-    if(item.renk){html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--glass);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">Renk:</span><span style="font-weight:700;font-size:14px;">${item.renk}</span></div>`;}
-    html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-bezier-curve"></i> Kordon Ölçüleri</div>';
-    html+='<div class="dt-chips">';
-    item.olcular.forEach(o=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;"><b>${o.cm} cm</b> → ${o.adet} adet</div>`;});
-    html+='</div>';
-    html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.totalAdet||0} adet</div>`;
-  }
-  if(type==='toptan'&&item.beden){
-    html+='<div style="font-weight:700;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-ruler-horizontal"></i> Beden Detayları</div>';
-    html+='<div class="dt-chips">';
-    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-    sortBedenKeys(item.beden).forEach(k=>{html+=`<div style="padding:6px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:12px;">${bl[k]||k}: <b>${item.beden[k]}</b></div>`;});
-    html+='</div>';
-    html+=`<div style="text-align:right;font-weight:700;color:var(--primary);">Toplam: ${item.total||0} adet</div>`;
-  }
-  if(item.aciklama||item.not){
-    html+=`<div style="padding:10px;background:var(--glass);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--text-muted);margin-top:8px;"><i class="fas fa-sticky-note" style="margin-right:6px;"></i>${item.aciklama||item.not}</div>`;
   }
 
-  // Fotoğrafları göster
-  if(item._photos && Array.isArray(item._photos) && item._photos.length > 0){
-    html+='<div style="font-weight:700;margin-top:16px;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-camera"></i> Kanıt Fotoğrafları</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px;">';
-    item._photos.forEach((photo,idx)=>{
-      const imgSrc = photo.url || photo.data || '';
-      if(imgSrc){
-        html+=`<div style="position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--glass);">
-          <img src="${imgSrc}" alt="Fotoğraf ${idx+1}" style="width:100%;height:150px;object-fit:cover;cursor:pointer;" onclick="window.open('${imgSrc}','_blank')">
-          <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#fff;padding:4px 8px;font-size:10px;text-align:center;">Fotoğraf ${idx+1}</div>
-        </div>`;
-      }
-    });
-    html+='</div>';
-  } else if(item._photoUrl){
-    html+='<div style="font-weight:700;margin-top:16px;margin-bottom:8px;color:var(--primary);font-size:13px;"><i class="fas fa-camera"></i> Kanıt Fotoğrafı</div>';
-    html+=`<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--glass);max-width:300px;">
-      <img src="${item._photoUrl}" alt="Kanıt Fotoğrafı" style="width:100%;height:auto;cursor:pointer;" onclick="window.open('${item._photoUrl}','_blank')">
-    </div>`;
+  if(type==='fermuar' && item.beden){
+    const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
+    const ic = item.hideBeden
+      ? groupFermuarBedenByCm(item.beden).map(g=>chip(g.cm+' cm', _n0(g.adet), 'adet')).join('')
+      : sortBedenKeys(item.beden).map(k=>{ const bv=item.beden[k]||{};
+          return chip(bedenLabel[k]||k, _n0(bv.adet??0), (bv.cm??'-')+' cm'); }).join('');
+    html += sec('fa-ruler-horizontal', item.hideBeden?'Fermuar Ölçüleri':'Beden Detayları',
+      _n0(item.totalAdet||0)+' adet', `<div class="dt-chips">${ic}</div>`);
+    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet');
+  }
+
+  if(type==='lastik'){
+    html += sec('fa-ruler','Lastik','', `<div class="dt-stats">
+      ${stat('Genişlik', item.cm||'-', 'cm')}
+      ${stat('Metre', _n0(item.metre), 'm')}
+    </div>`);
+  }
+  if(type==='dugme'){
+    html += sec('fa-circle-dot','Düğme','', `<div class="dt-stats">${stat('Adet', _n0(item.adet), 'adet')}</div>`);
+  }
+  if(type==='satenaskilik'){
+    html += sec('fa-ribbon','Saten Askılık','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
+  }
+  if(type==='dantel'){
+    html += sec('fa-border-all','Dantel','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
+  }
+  if(type==='kordon' && item.olcular && item.olcular.length){
+    html += sec('fa-bezier-curve','Kordon Ölçüleri', _n0(item.totalAdet||0)+' adet',
+      `<div class="dt-chips">${item.olcular.map(o=>chip(o.cm+' cm', _n0(o.adet), 'adet')).join('')}</div>`);
+    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet');
+  }
+  if(type==='toptan' && item.beden){
+    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
+    html += sec('fa-boxes-stacked','Beden Detayları', _n0(item.total||0)+' adet',
+      `<div class="dt-chips">${sortBedenKeys(item.beden).map(k=>chip(bl[k]||k, _n0(item.beden[k]))).join('')}</div>`);
+    html += toplamBar('Toplam', _n0(item.total||0)+' adet');
+  }
+
+  // ── NOT ──────────────────────────────────────────────────────
+  if(item.aciklama||item.not){
+    html += `<div class="dt-not"><i class="fas fa-sticky-note"></i><span>${esc(item.aciklama||item.not)}</span></div>`;
+  }
+
+  // ── FOTOĞRAFLAR ──────────────────────────────────────────────
+  const _fotolar=[];
+  if(item._photos && Array.isArray(item._photos)) item._photos.forEach(f=>{ const u=f.url||f.data||''; if(u) _fotolar.push(u); });
+  else if(item._photoUrl) _fotolar.push(item._photoUrl);
+  if(_fotolar.length){
+    html += sec('fa-camera','Kanıt Fotoğrafları', _fotolar.length+' fotoğraf',
+      `<div class="dt-fotos">${_fotolar.map((u,i)=>
+        `<button type="button" class="dt-foto" onclick="window.open('${u}','_blank')" title="Büyüt">
+           <img src="${u}" alt="Fotoğraf ${i+1}" loading="lazy"><span>${i+1}</span></button>`).join('')}</div>`);
   }
 
   document.getElementById('modalContent').innerHTML=html;
