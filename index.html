@@ -16328,7 +16328,7 @@ document.addEventListener('DOMContentLoaded', function(){
           if(i<0) return;
           const d=MK.topla(m.kod);
           if(!d.varMi) return;
-          rows.push({grup:'page', skor: 1200-i*6, ad:'Model Kartı · '+m.ad, sayfa:'model', model:m.kod,
+          rows.push({grup:'mk', skor: 1200-i*6, ad:m.ad, sayfa:'model', model:m.kod,
             aciklama:[d.renkler.length?d.renkler.length+' renk':'', d.toplamAdet?MK._n(d.toplamAdet)+' adet':'',
                       d.irsaliyeler.length+' irsaliye', d.foyler.length?d.foyler.length+' föy':''].filter(Boolean).join(' · ')});
         });
@@ -16338,7 +16338,9 @@ document.addEventListener('DOMContentLoaded', function(){
     Object.keys(TYPE_META).forEach(type=>{
       let list=[]; try{ list=getData(TYPE_META[type].key)||[]; }catch(e){}
       list.forEach(it=>{
-        if(!q){ rows.push({grup:'irs', skor:0, item:it, type}); return; }
+        // Arama boşken TÜM kayıtlar dökülüyordu (120 satır) — anlamsız gürültü.
+        // Boşken yalnızca en son birkaç kayıt "Son kayıtlar" olarak listelenir.
+        if(!q){ rows.push({grup:'son', skor: +new Date(it.createdAt||it.tarih||0)||0, item:it, type}); return; }
         const blob=buildSearchBlob(it,type);
         if(blob.indexOf(q)<0) return;
         let skor=100;
@@ -16362,7 +16364,8 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     });
     rows.sort((a,b)=>b.skor-a.skor);
-    gsRows = rows.slice(0, 120);
+    // Boşken: yalnızca son 6 kayıt (sayfa/menü satırları da gösterilmez)
+    gsRows = q ? rows.slice(0, 60) : rows.filter(r=>r.grup==='son').slice(0, 6);
     gsIdx = 0;
     renderResults(q);
   }
@@ -16370,52 +16373,71 @@ document.addEventListener('DOMContentLoaded', function(){
   function renderResults(q){
     const host=document.getElementById('gsList');
     const say=document.getElementById('gsCount');
-    const sayilar={page:0,irs:0,mod:0};
+    const sayilar={mk:0,page:0,irs:0,mod:0,son:0};
     gsRows.forEach(r=>sayilar[r.grup]++);
-    // filtre çipleri
+    // Filtre çipleri — yalnızca dolu gruplar. Boş aramada çip gösterilmez.
     const fil=document.getElementById('gsFilters');
-    const cips=[['all','Tümü',gsRows.length],['page','Sayfalar',sayilar.page],['irs','İrsaliyeler',sayilar.irs],['mod','Takip & Stok',sayilar.mod]];
-    fil.innerHTML=cips.map(([id,ad,n])=>
-      '<button type="button" class="gs-chip'+(gsFiltre===id?' on':'')+(n?'':' bos')+'" onclick="window._gsFilt(\''+id+'\')">'+ad+
-      (n?'<span>'+n+'</span>':'')+'</button>').join('');
+    const cips=[['all','Tümü',gsRows.length],['mk','Model',sayilar.mk],['irs','İrsaliye',sayilar.irs],
+                ['mod','Takip & Stok',sayilar.mod],['page','Menü',sayilar.page]];
+    fil.innerHTML = q ? cips.filter(([id,ad,n])=>id==='all'||n>0).map(([id,ad,n])=>
+      '<button type="button" class="gs-chip'+(gsFiltre===id?' on':'')+'" onclick="window._gsFilt(\''+id+'\')">'+ad+
+      '<span>'+n+'</span></button>').join('') : '';
 
     const gorunen=gsRows.filter(r=>gsFiltre==='all'||r.grup===gsFiltre);
-    if(say) say.textContent = gorunen.length ? (gorunen.length+' sonuç') : '';
+    if(say) say.textContent = q ? (gorunen.length+' sonuç') : '';
     if(!gorunen.length){
       host.innerHTML='<div class="gs-empty"><i class="fas fa-magnifying-glass"></i>'+
-        '<div class="gs-empty-t">'+(q?'Sonuç bulunamadı':'Aramaya başla')+'</div>'+
-        '<div class="gs-empty-s">Model kodu, irsaliye no, atölye ya da menü adı yazabilirsin<br>'+
-        '<b>M10173</b> · <b>IRS-053</b> · <b>tela</b> · <b>ayarlar</b></div></div>';
+        '<div class="gs-empty-t">'+(q?'Sonuç bulunamadı':'Ne arıyorsun?')+'</div>'+
+        '<div class="gs-empty-s">'+(q?'Başka bir kelime deneyin.':'Model kodu, irsaliye no, atölye ya da menü adı yazın.')+'</div>'+
+        '<div class="gs-ornek"><span>I6399AX</span><span>IRS-053</span><span>tela</span><span>ayarlar</span></div></div>';
       return;
     }
     let html='', sonGrup='';
-    const grupAd={page:'Sayfalar',irs:'İrsaliyeler',mod:'Takip & Stok'};
+    const grupAd={mk:'Model kartı',page:'Menü',irs:'İrsaliyeler',mod:'Takip & Stok',son:'Son kayıtlar'};
     gorunen.forEach((r,i)=>{
       if(r.grup!==sonGrup){ html+='<div class="gs-group">'+grupAd[r.grup]+'</div>'; sonGrup=r.grup; }
       const aktif=(i===gsIdx)?' active':'';
+      const sar=(ic)=>'<div class="gs-item'+aktif+(r.grup==='mk'?' gs-mk':'')+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+ic+'</div>';
+
+      // ── MODEL KARTI: en belirgin satır
+      if(r.grup==='mk'){
+        html+=sar('<div class="gs-ic gs-ic-mk"><i class="fas fa-cube"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+_vur(r.ad,q)+'<span class="gs-tag">Model kartı</span></div>'+
+          '<div class="gs-meta">'+_esc(r.aciklama||'')+'</div></div>'+
+          '<span class="gs-git"><i class="fas fa-arrow-right"></i></span>');
+        return;
+      }
+      // ── MENÜ
       if(r.grup==='page'){
-        var _mk=!!r.model;
-        html+='<div class="gs-item gs-page'+aktif+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+
-          '<div class="gs-ic" style="background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary);"><i class="fas '+(_mk?'fa-cube':'fa-diagram-project')+'"></i></div>'+
-          '<div class="gs-body"><div class="gs-title">'+_vur(r.ad,q)+'</div><div class="gs-meta">'+(_mk?_esc(r.aciklama||''):'Sayfayı aç')+'</div></div>'+
-          '<span class="gs-badge">'+(_mk?'Model':'Menü')+'</span></div>';
-      } else if(r.grup==='irs'){
+        html+=sar('<div class="gs-ic gs-ic-menu"><i class="fas fa-diagram-project"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+_vur(r.ad,q)+'</div>'+
+          '<div class="gs-meta">Sayfayı aç</div></div>'+
+          '<span class="gs-git"><i class="fas fa-arrow-right"></i></span>');
+        return;
+      }
+      // ── İRSALİYE (arama sonucu ya da son kayıt)
+      if(r.grup==='irs' || r.grup==='son'){
         const it=r.item, meta=TYPE_META[r.type];
-        const alt=[it.model, it.atolye||it.firma||it.musteri, it.termin?('Termin '+it.termin):''].filter(Boolean).join(' • ');
-        html+='<div class="gs-item'+aktif+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+
-          '<div class="gs-ic" style="background:'+meta.color+'22;color:'+meta.color+';"><i class="fas '+meta.ic+'"></i></div>'+
+        const teslim=(it.durum==='teslim');
+        // Alt satırda modeli TEKRAR yazma — üstte zaten çipte duruyor
+        const alt=[it.atolye||it.firma||it.musteri, it.tarih, it.termin?('termin '+it.termin):'']
+                  .filter(Boolean).join(' · ');
+        html+=sar('<div class="gs-ic" style="background:'+meta.color+'1f;color:'+meta.color+';"><i class="fas '+meta.ic+'"></i></div>'+
           '<div class="gs-body"><div class="gs-title">'+_vur(it.no||'(no yok)',q)+
             (it.model?'<span class="gs-mdl">'+_vur(it.model,q)+'</span>':'')+'</div>'+
           '<div class="gs-meta">'+_esc(alt)+'</div></div>'+
-          '<span class="gs-badge">'+meta.lbl+'</span></div>';
-      } else {
-        const m=r.mod;
-        html+='<div class="gs-item'+aktif+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+
-          '<div class="gs-ic" style="background:'+m.color+'22;color:'+m.color+';"><i class="fas '+m.ic+'"></i></div>'+
-          '<div class="gs-body"><div class="gs-title">'+_vur(r.ad||'(adsız)',q)+'</div>'+
-          '<div class="gs-meta">'+_esc(m.alt(r.item)||'')+'</div></div>'+
-          '<span class="gs-badge">'+m.lbl+'</span></div>';
+          '<span class="gs-sag">'+
+            (it.durum?('<span class="gs-dr '+(teslim?'ok':'bek')+'">'+(teslim?'Teslim':'Bekliyor')+'</span>'):'')+
+            '<span class="gs-badge" style="color:'+meta.color+';border-color:'+meta.color+'55;">'+meta.lbl+'</span>'+
+          '</span>');
+        return;
       }
+      // ── TAKİP & STOK
+      const m=r.mod;
+      html+=sar('<div class="gs-ic" style="background:'+m.color+'1f;color:'+m.color+';"><i class="fas '+m.ic+'"></i></div>'+
+        '<div class="gs-body"><div class="gs-title">'+_vur(r.ad||'(adsız)',q)+'</div>'+
+        '<div class="gs-meta">'+_esc(m.alt(r.item)||'')+'</div></div>'+
+        '<span class="gs-badge" style="color:'+m.color+';border-color:'+m.color+'55;">'+m.lbl+'</span>');
     });
     host.innerHTML=html;
   }
@@ -16427,10 +16449,8 @@ document.addEventListener('DOMContentLoaded', function(){
     const r=gorunen[i]; if(!r) return;
     closeGlobalSearch();
     try{
-      if(r.grup==='page'){
-        if(r.model && typeof MK!=='undefined'){ MK.ac(r.model); return; }
-        if(typeof showPage==='function') showPage(r.sayfa); return;
-      }
+      if(r.grup==='mk'){ if(typeof MK!=='undefined') MK.ac(r.model); return; }
+      if(r.grup==='page'){ if(typeof showPage==='function') showPage(r.sayfa); return; }
       if(r.grup==='mod'){
         if(typeof showPage==='function') showPage(r.mod.sayfa);
         // Varsa o sayfanın arama kutusuna model kodunu yaz
