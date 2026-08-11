@@ -2813,6 +2813,17 @@ if(typeof Chart==='undefined'){
             <i class="fas fa-file-pdf"></i>
             <span>Termin PDF</span>
           </button>
+          <span class="aks-hazir-grup">
+            <button class="aks-btn aks-btn-hazir" onclick="aksHazirlanacakPdf()" title="Seçili ayda termini olan ve henüz çıkmamış modelleri hazırlık listesi olarak PDF verir">
+              <i class="fas fa-clipboard-list"></i>
+              <span>Hazırlanacak Modeller</span>
+            </button>
+            <select class="aks-hazir-ay" id="aksHazirAy" onchange="aksSetHazirAy(this.value)" title="Hangi ayın termini listelensin">
+              <option value="0" selected>Bu ay</option>
+              <option value="1">Gelecek ay</option>
+              <option value="01">Bu ay + gelecek ay</option>
+            </select>
+          </span>
           <button class="aks-btn aks-btn-primary" onclick="addNewAksesuarRow()">
             <i class="fas fa-plus"></i>
             <span>Yeni Kayıt</span>
@@ -4035,6 +4046,7 @@ function showPage(page){
   if(page==='new'){ try{ nRenderSerbestMode(); _malOraniGoster(); }catch(_){} }
   if(page==='model'){ try{ MK.ciz(); setTimeout(function(){ var i=document.getElementById('mkInput'); if(i&&!i.value) i.focus(); }, 120); }catch(_){} }
   if(page==='akskontrol'){ try{ if(window.AK) AK.onOpen(); }catch(_){} }
+  if(page==='aksesuar'){ try{ _aksHazirAySenkron(); }catch(_){} }
   if(page==='tela-kontrol'){ try{ renderTelaKontrol(); }catch(_){} }
 
   // Liste sayfasi acikken buluttan hafif polling ile taze tut (canli
@@ -5044,6 +5056,132 @@ function aksTerminPdf(){
     pdf.save('termin-raporu.pdf');
     toast(sel.length+' model PDF olarak indirildi ✓','success');
   }catch(err){ console.error('[termin pdf]', err); toast('PDF oluşturulamadı: '+((err&&err.message)||err),'error'); }
+}
+
+// ── Hazırlanacak Modeller ───────────────────────────────────────────
+// Kural: seçili AYDA termini olan modeller listelenir. Çıkış (Dikim)
+// tarihi girilmişse model çıkmış demektir — listede gözükmez.
+// Elde kalan iş neyse onu hazırlayıp çıkacaksınız.
+const AKS_AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+function aksHazirAy(){ var v=getConfig('aksHazirAy','0'); return (v==='0'||v==='1'||v==='01')?v:'0'; }
+function aksSetHazirAy(v){ setConfig('aksHazirAy', v); }
+function _aksHazirAySenkron(){ var el=document.getElementById('aksHazirAy'); if(el) el.value=aksHazirAy(); }
+// Çıkış alanı dolu mu? ("." veya boşluk sayılmaz)
+function _aksCikisVar(v){ return /[a-z0-9]/i.test((v==null?'':(''+v))); }
+
+function aksHazirlanacakPdf(){
+  try{
+    if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF motoru yüklenemedi (internet gerekli)','error'); return; }
+    var list=getData('aksesuarlar')||[];
+    if(!list.length){ toast('Kayıt yok','info'); return; }
+
+    var now=new Date();
+    var nowIdx=now.getFullYear()*12+now.getMonth();
+    var mod=aksHazirAy();
+    var hedef = mod==='0' ? [nowIdx] : mod==='1' ? [nowIdx+1] : [nowIdx, nowIdx+1];
+    var ayAd=function(idx){ return AKS_AYLAR[((idx%12)+12)%12]+' '+Math.floor(idx/12); };
+    var baslikAy = hedef.map(ayAd).join(' + ');
+
+    var cikmis=0, aysiz=0;
+    var sel=[];
+    list.forEach(function(a){
+      var ym=_aksTerminYM(a.termin);
+      if(!ym){ aysiz++; return; }
+      var idx=ym.y*12+(ym.m-1);
+      if(hedef.indexOf(idx)<0) return;
+      if(_aksCikisVar(a.cikisDikim)){ cikmis++; return; }   // çıkmış — hazırlanacak listesinde yeri yok
+      sel.push({a:a, idx:idx});
+    });
+    if(!sel.length){
+      toast(baslikAy+' için hazırlanacak model yok'+(cikmis?(' ('+cikmis+' model zaten çıkmış)'):''),'info');
+      return;
+    }
+    // Termin gününe göre sırala (aynı gün → model koduna göre)
+    var gunNo=function(t){ var s=(''+(t||'')); var m=s.match(/^(\d{1,2})[.\/\-]/); if(m) return +m[1];
+      m=s.match(/^\d{4}[.\/\-]\d{1,2}[.\/\-](\d{1,2})/); return m?+m[1]:99; };
+    sel.sort(function(p,q){ return (p.idx-q.idx) || (gunNo(p.a.termin)-gunNo(q.a.termin))
+      || ((p.a.modelKodu||'').localeCompare(q.a.modelKodu||'','tr')); });
+
+    // Eksik aksesuarlar (0 olan kalemler) — hazırlıkta neye bakılacağını gösterir
+    var ACC=[['markaEtiketi','Marka Et.'],['icBarkod','Ic Barkod'],['yikamaTalimati','Yikama'],
+             ['yikamaToptan','Fiyat Karti'],['ecom','Ecom'],['istanbulSticker','Ist.Sticker'],
+             ['susEtiketi','Sus Et.'],['susKarti','Sus Karti'],['lisansKarti','Lisans K.']];
+    // Uzun listeler satırı taşırıp kelimeyi ortadan kesiyordu; ilk 4 kalem
+    // yazılır, kalanı "+N" olarak toplanır.
+    var eksikStr=function(a){
+      var e=ACC.filter(function(c){ return !(+a[c[0]]>0); }).map(function(c){ return c[1]; });
+      if(!e.length) return '';
+      return e.length>4 ? (e.slice(0,4).join(', ')+' +'+(e.length-4)) : e.join(', ');
+    };
+
+    var pdf=AK._newPdf();
+    var W=210, PH=297, mL=10, mR=10;
+    var T=function(s,x,y,o){ pdf.text(AK._tr(s==null?'':(''+s)),x,y,o); };
+    var cols=[
+      {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
+      {t:'Model Kodu',  x:mL+8,    w:40, a:'left'},
+      {t:'Koli',        x:mL+48,   w:16, a:'left'},
+      {t:'Termin',      x:mL+64,   w:24, a:'left'},
+      {t:'Adet',        x:mL+88,   w:20, a:'right'},
+      {t:'Eksik Aksesuar', x:mL+108, w:82, a:'left'}
+    ];
+    var tx=function(c){ return c.a==='right'? c.x+c.w-2 : c.a==='center'? c.x+c.w/2 : c.x+2; };
+    var opt=function(c){ return c.a==='left'? undefined : {align:c.a}; };
+    function drawHeader(y){
+      pdf.setFillColor(30,41,59); pdf.rect(mL,y,W-mL-mR,8,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
+      cols.forEach(function(c){ T(c.t, tx(c), y+5.4, opt(c)); });
+      return y+8;
+    }
+
+    // Başlık
+    pdf.setTextColor(15,23,42); pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+    T('Hazirlanacak Modeller', mL, 16);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(100,116,139);
+    T(baslikAy+' termini  ·  '+sel.length+' model  ·  '+now.toLocaleDateString('tr-TR'), mL, 22);
+    var toplamAdet=sel.reduce(function(t,s){ return t+(parseInt(s.a.adet,10)||0); },0);
+    var not='Cikis (Dikim) tarihi girilmis modeller listeye alinmadi'+(cikmis?(' ('+cikmis+' model)'):'')+'.';
+    T('Toplam '+toplamAdet.toLocaleString('tr-TR')+' adet  ·  '+not, mL, 27);
+
+    var y=drawHeader(32);
+    var rowH=7;
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+    var sonIdx=null;
+    sel.forEach(function(s,i){
+      // Ay değişince araya ayırıcı koy (bu ay + gelecek ay seçildiyse)
+      if(hedef.length>1 && s.idx!==sonIdx){
+        if(y+12 > PH-12){ pdf.addPage(); y=drawHeader(16); }
+        sonIdx=s.idx;
+        pdf.setFillColor(226,232,240); pdf.rect(mL,y,W-mL-mR,6,'F');
+        pdf.setTextColor(30,41,59); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
+        T(ayAd(s.idx)+' termini', mL+2, y+4.3);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+        y+=6;
+      }
+      if(y+rowH > PH-12){ pdf.addPage(); y=drawHeader(16); pdf.setFont('helvetica','normal'); pdf.setFontSize(8); }
+      if(i%2===1){ pdf.setFillColor(241,245,249); pdf.rect(mL,y,W-mL-mR,rowH,'F'); }
+      var a=s.a;
+      // hazırlandı kutusu — atölyede tik atılacak
+      pdf.setDrawColor(120,130,145); pdf.setLineWidth(0.3);
+      pdf.rect(cols[0].x+2.2, y+1.9, 3.2, 3.2);
+      pdf.setTextColor(15,23,42);
+      T(a.modelKodu||'—', tx(cols[1]), y+4.8, opt(cols[1]));
+      T(a.koliNo||'—',    tx(cols[2]), y+4.8, opt(cols[2]));
+      T(a.termin||'—',    tx(cols[3]), y+4.8, opt(cols[3]));
+      T((parseInt(a.adet,10)||0).toLocaleString('tr-TR'), tx(cols[4]), y+4.8, opt(cols[4]));
+      var ek=eksikStr(a);
+      if(ek){ pdf.setTextColor(190,18,60); pdf.setFontSize(7.2);
+        T(ek, tx(cols[5]), y+4.8, opt(cols[5]));
+        pdf.setFontSize(8);
+      } else { pdf.setTextColor(22,163,74); pdf.setFont('helvetica','bold');
+        T('Tamam', tx(cols[5]), y+4.8, opt(cols[5])); pdf.setFont('helvetica','normal'); }
+      pdf.setDrawColor(226,232,240); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
+      y+=rowH;
+    });
+
+    pdf.save('hazirlanacak-modeller.pdf');
+    toast(sel.length+' model listelendi ✓'+(cikmis?(' · '+cikmis+' çıkmış model atlandı'):''),'success');
+  }catch(err){ console.error('[hazirlanacak pdf]', err); toast('PDF oluşturulamadı: '+((err&&err.message)||err),'error'); }
 }
 
 function addNewAksesuarRow(){
@@ -9424,7 +9562,6 @@ function krPrint(){
     'h1{font-size:19px;margin:0 0 3px;} .sub{color:#666;font-size:12px;margin-bottom:14px;}'+
     'table{width:100%;border-collapse:collapse;font-size:11px;} th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;}'+
     'th{background:#f4f4f7;font-size:10px;text-transform:uppercase;} .c{text-align:center;}'+
-    '.imza{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:34px;} .imza div{border-top:1px solid #111;padding-top:4px;font-size:10px;color:#555;text-align:center;}'+
     '@page{size:A4;margin:12mm;}</style></head><body>'+
     '<h1>Atölye Karnesi</h1><div class="sub">'+bilgi.join(' · ')+' — '+now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR')+'</div>'+
     '<table><thead><tr><th>#</th><th>Atölye</th><th>Puan</th><th>İş</th><th>Adet</th><th>Zamanında</th><th>Ort. Gecikme</th><th>Geciken</th><th>Fazla Poşet</th></tr></thead><tbody>'+
@@ -9436,7 +9573,6 @@ function krPrint(){
       '<td class="c">'+(x.geciken||'—')+'</td>'+
       '<td class="c">'+(x.asimOran==null?'—':(x.asim?'+'+_n(x.asim):'yok'))+'</td></tr>').join('')+
     '</tbody></table>'+
-    '<div class="imza"><div>Hazırlayan</div><div>Onaylayan</div></div>'+
     '</body></html>');
   w.document.close();
   setTimeout(function(){ try{ w.focus(); w.print(); }catch(_){} }, 350);
@@ -9663,14 +9799,12 @@ function mpPrint(){
     'table{width:100%;border-collapse:collapse;font-size:11px;} th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;}'+
     'th{background:#f4f4f7;font-size:10px;text-transform:uppercase;} .c{text-align:center;}'+
     '.mp-detay,.mp-chev,.mp-not{display:none !important;} .mp-badge,.mp-eksik{border:1px solid #ccc;border-radius:10px;padding:1px 6px;font-size:9px;}'+
-    '.imza{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:34px;} .imza div{border-top:1px solid #111;padding-top:4px;font-size:10px;color:#555;text-align:center;}'+
     '@page{size:A4;margin:12mm;}</style></head><body>'+
     '<h1>Mal / Poşet Dengesi</h1><div class="sub">'+bilgi.filter(Boolean).join(' · ')+' — '+now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR')+'</div>'+
     '<div class="pks">'+kpi+'</div>'+
     '<h2>Atölye Bazlı Denge</h2>'+tablo('mpAtolye')+
     '<h2>Ay Ay Döküm</h2>'+tablo('mpAylik')+
     '<h2>Serbest İrsaliyeler</h2>'+tablo('mpSerbest')+
-    '<div class="imza"><div>Hazırlayan</div><div>Onaylayan</div></div>'+
     '</body></html>');
   w.document.close();
   setTimeout(function(){ try{ w.focus(); w.print(); }catch(_){} }, 350);

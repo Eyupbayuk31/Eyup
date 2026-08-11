@@ -2365,6 +2365,22 @@ body::after{
   transform:translateY(-2px);
 }
 
+/* Hazırlanacak Modeller butonu + ay seçici */
+.aks-hazir-grup{ display:inline-flex; align-items:stretch; gap:0; border-radius:10px; overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--primary) 38%,var(--border)); }
+.aks-btn-hazir{ border:0 !important; border-radius:0 !important;
+  background:color-mix(in srgb,var(--primary) 16%,transparent) !important;
+  color:var(--primary) !important; font-weight:700; }
+.aks-btn-hazir:hover{ background:color-mix(in srgb,var(--primary) 26%,transparent) !important; }
+.aks-hazir-ay{ border:0; border-left:1px solid color-mix(in srgb,var(--primary) 30%,var(--border));
+  background:color-mix(in srgb,var(--primary) 9%,transparent); color:var(--primary);
+  font:inherit; font-size:12px; font-weight:700; padding:0 26px 0 10px; cursor:pointer; outline:0;
+  appearance:none; -webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-size:4px 4px,4px 4px; background-position:right 12px center,right 16px center; background-repeat:no-repeat; }
+.aks-hazir-ay option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
+@media (max-width:640px){ .aks-hazir-grup{ width:100%; } .aks-btn-hazir{ flex:1; justify-content:center; } }
+
 .aks-btn-danger{
   background:linear-gradient(135deg,var(--danger),color-mix(in srgb,var(--danger) 70%,#000));
   color:#fff;
