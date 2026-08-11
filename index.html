@@ -3739,27 +3739,32 @@ if(typeof Chart==='undefined'){
 
     <!-- Etiket kütüphanesi: arşivde gelmeyen etiketi kayıtlı görselden ekle -->
     <div class="modal-overlay" id="akLibModal">
-      <div class="modal" style="max-width:720px;">
-        <div class="modal-header"><h3><i class="fas fa-images" style="color:var(--primary);margin-right:7px;"></i>Dokuma Etiket Kütüphanesi</h3><button class="modal-close" onclick="AK.closeLib()">&times;</button></div>
-        <div class="modal-body">
-          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Sadece <b>dokuma (marka etiketi)</b> içindir — dokuma her modelde aynıdır. Arşivde gelmezse buradan seçip ekleyin, föyde boş çıkmasın. İç barkod, fiyat kartı ve yıkama modele özeldir; onlar mutlaka arşivden gelir. Yüklediğiniz her arşiv arka planda taranır.</p>
-          <div class="ak-lib-top">
-            <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod veya renk ara (ör. AULBW13729, siyah)" oninput="AK.renderLib()" autocomplete="off"></div>
-            <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara(false,true)" title="Bütün arşivleri baştan tara (normalde kendiliğinden yapılır)"><i class="fas fa-rotate"></i> Yeniden tara</button>
-          </div>
-          <div id="akLibList" class="ak-lib-grid"></div>
-          <div class="ak-lib-add">
-            <div class="ak-lib-add-t"><i class="fas fa-plus"></i> Yeni dokuma etiketi kaydet</div>
-            <div class="ak-lib-add-row">
-              <input id="akLibCode" class="form-input" placeholder="Kod (ör. AULBW13729)" autocomplete="off">
-              <select id="akLibType" class="form-input"></select>
-              <input id="akLibRenk" class="form-input" placeholder="Etiket rengi (ops.)" autocomplete="off">
+      <div class="modal ak-lib-modal">
+        <div class="modal-header"><h3><i class="fas fa-tag" style="color:var(--primary);margin-right:7px;"></i>Dokuma Etiket Kütüphanesi</h3><button class="modal-close" onclick="AK.closeLib()">&times;</button></div>
+
+        <div class="ak-lib-bar">
+          <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod veya renk ara — AULBW13729, siyah…" oninput="AK.renderLib()" autocomplete="off"></div>
+          <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara(false,true)" title="Bütün arşivleri baştan tara (normalde kendiliğinden yapılır)"><i class="fas fa-rotate"></i><span>Yeniden tara</span></button>
+        </div>
+
+        <div id="akLibList" class="ak-lib-list"></div>
+
+        <div class="ak-lib-foot">
+          <details class="ak-lib-det">
+            <summary><i class="fas fa-plus"></i> Kendim etiket ekleyeyim</summary>
+            <div class="ak-lib-add">
+              <div class="ak-lib-add-row">
+                <input id="akLibCode" class="form-input" placeholder="Kod (ör. AULBW13729)" autocomplete="off">
+                <select id="akLibType" class="form-input"></select>
+                <input id="akLibRenk" class="form-input" placeholder="Etiket rengi (ops.)" autocomplete="off">
+              </div>
+              <div class="ak-lib-add-row">
+                <input id="akLibFile" class="form-input" type="file" accept="image/*">
+                <button class="btn btn-primary btn-sm" onclick="AK.libYukle()"><i class="fas fa-floppy-disk"></i> Kaydet</button>
+              </div>
             </div>
-            <div class="ak-lib-add-row">
-              <input id="akLibFile" class="form-input" type="file" accept="image/*">
-              <button class="btn btn-primary btn-sm" onclick="AK.libYukle()"><i class="fas fa-floppy-disk"></i> Kütüphaneye kaydet</button>
-            </div>
-          </div>
+          </details>
+          <p class="ak-lib-hint"><i class="fas fa-circle-info"></i> Sadece <b>dokuma</b> içindir; dokuma her modelde aynıdır. İç barkod, fiyat kartı ve yıkama modele özeldir — onlar arşivden gelmek zorunda. Yüklediğin her arşiv arka planda taranır.</p>
         </div>
       </div>
     </div>
@@ -20651,19 +20656,25 @@ AK.renderLib = function(){
     });
   }
   if(!keys.length){
-    host.innerHTML='<div class="ak-empty">'+(Object.keys(L).length?'Aramaya uyan etiket yok.':'Kütüphane boş — arşiv yükledikçe etiketler buraya kaydedilir.')+'</div>';
+    host.innerHTML='<div class="ak-lib-bos"><i class="fas fa-tag"></i>'+
+      (Object.keys(L).length?'Aramaya uyan dokuma etiketi yok.':'Kütüphane boş — arşiv yükledikçe dokuma etiketleri buraya düşer.')+'</div>';
     return;
   }
   var eklenebilir = AK._libCid!=null;
   host.innerHTML=keys.map(function(k){
-    var e=L[k], lbl=(AK.TYPES[e.type]&&AK.TYPES[e.type].label)||e.type||'—';
-    return '<div class="ak-lib-card">'+
-      '<div class="ak-lib-img"><img src="'+e.img+'" alt="'+AK._esc(k)+'"></div>'+
-      '<div class="ak-lib-meta"><b>'+AK._esc(k)+'</b><span>'+AK._esc(lbl)+(e.renk?' · '+AK._esc(e.renk):'')+'</span>'+
-        (e.model?'<em>'+AK._esc(e.model)+'</em>':'')+'</div>'+
-      '<div class="ak-lib-act">'+
-        (eklenebilir?'<button class="btn btn-xs btn-primary" onclick="AK.libEkle(\''+k+'\')"><i class="fas fa-plus"></i> Ekle</button>':'')+
-        '<button class="btn btn-xs btn-secondary" onclick="AK.libSil(\''+k+'\')" title="Kütüphaneden sil"><i class="fas fa-trash"></i></button>'+
+    var e=L[k];
+    var ton=(e.renk||'').toLocaleLowerCase('tr');
+    var tonCls = /siyah|black/.test(ton) ? 'siyah' : /beyaz|white|ekru|krem/.test(ton) ? 'beyaz' : '';
+    return '<div class="ak-lrow">'+
+      '<div class="ak-lrow-img"><img src="'+e.img+'" alt="'+AK._esc(k)+'"></div>'+
+      '<div class="ak-lrow-info">'+
+        '<div class="ak-lrow-t"><b>'+AK._esc(k)+'</b>'+
+          (e.renk?'<span class="ak-lrow-ton '+tonCls+'">'+AK._esc(e.renk)+'</span>':'')+'</div>'+
+        '<div class="ak-lrow-s">Dokuma (Marka Etiketi)'+(e.model?' · <em>'+AK._esc(e.model)+'</em>':'')+'</div>'+
+      '</div>'+
+      '<div class="ak-lrow-act">'+
+        (eklenebilir?'<button class="btn btn-sm btn-primary" onclick="AK.libEkle(\''+k+'\')"><i class="fas fa-plus"></i> Ekle</button>':'')+
+        '<button class="ak-lrow-x" onclick="AK.libSil(\''+k+'\')" title="Kütüphaneden sil"><i class="fas fa-trash"></i></button>'+
       '</div></div>';
   }).join('');
 };
