@@ -2508,6 +2508,7 @@ if(typeof Chart==='undefined'){
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('heatmap',this)"><i class="fas fa-table-cells"></i> Günler</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('compare',this)"><i class="fas fa-code-compare"></i> Aylık</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('firms',this)"><i class="fas fa-trophy"></i> Firmalar</button>
+          <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('karne',this)"><i class="fas fa-medal"></i> Atölye Karnesi</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('malposet',this)"><i class="fas fa-scale-unbalanced"></i> Mal / Poşet</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn rep-tab-kritik" onclick="showReportTab('kritik',this)"><i class="fas fa-triangle-exclamation"></i> Kritik</button>
           <button class="btn btn-sm btn-secondary rep-tab-btn" onclick="showReportTab('verimlilik',this)"><i class="fas fa-gauge-high"></i> Verimlilik</button>
@@ -2712,6 +2713,39 @@ if(typeof Chart==='undefined'){
             <div id="repTabloCount" class="rep-tablo-count"></div>
           </div>
           <div id="repTabloBody" class="rep-tablo-scroll"></div>
+        </div>
+      </div>
+
+      <!-- Atölye Karnesi — kime iş vereceğine karar verirken bakılacak sayfa -->
+      <div class="rep-tab" id="rep-karne" style="display:none;">
+        <div class="kr-bar">
+          <div class="kr-bar-l">
+            <label class="kr-g"><i class="fas fa-arrow-down-wide-short"></i>
+              <select id="krSirala" onchange="krSetSirala(this.value)">
+                <option value="puan">Karne puanına göre</option>
+                <option value="is">İş sayısına göre</option>
+                <option value="adet">Adete göre</option>
+                <option value="gecikme">Gecikmeye göre</option>
+              </select>
+            </label>
+            <label class="kr-g" title="Bu sayıdan az işi olan atölye listelenmez"><i class="fas fa-filter"></i>
+              <select id="krMinIs" onchange="krSetMinIs(this.value)">
+                <option value="1">Tüm atölyeler</option>
+                <option value="3">En az 3 iş</option>
+                <option value="5">En az 5 iş</option>
+                <option value="10">En az 10 iş</option>
+              </select>
+            </label>
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="krPrint()"><i class="fas fa-print"></i> Yazdır</button>
+        </div>
+        <div id="krKartlar"></div>
+        <div class="rep-card">
+          <div class="rep-card-head" style="justify-content:space-between;">
+            <span><i class="fas fa-table"></i> Karşılaştırma Tablosu</span>
+            <span class="kr-head-note">Puan: zamanında teslim %55 · gecikme %25 · fazla poşet %20</span>
+          </div>
+          <div id="krTablo"></div>
         </div>
       </div>
 
@@ -6163,6 +6197,7 @@ function toggleSerbestMod(){
   if(_serbestMod){ setTimeout(()=>{ const f=document.getElementById('iSerbestSebep'); if(f) f.focus(); },60); }
 }
 
+let _malUyariGosterildi=false;   // aynı kayıtta ikinci kez uyarma
 function saveIrsaliye(){
   const serbest=serbestModOn();
   const serbestSebep=(document.getElementById('iSerbestSebep')?.value||'').trim();
@@ -6202,6 +6237,17 @@ function saveIrsaliye(){
     return;
   }
 
+  // Mal adeti girilmemişse ay sonu raporunda o irsaliye orana katılmaz —
+  // kaydetmeden önce bir kez hatırlat (serbest irsaliyede zaten sorulmaz).
+  if(!serbest && !malAdedi && _posetSayilan(sizes)>0 && !_malUyariGosterildi){
+    _malUyariGosterildi=true;
+    toast("Mal adeti boş — ay sonu raporunda bu irsaliye orana katılmaz. Yine de kaydetmek için tekrar Kaydet'e basın.",'warning');
+    var _me=document.getElementById('iMalAdedi');
+    if(_me){ _me.focus(); _me.classList.add('alan-uyari'); setTimeout(function(){ _me.classList.remove('alan-uyari'); }, 2200); }
+    return;
+  }
+  _malUyariGosterildi=false;
+
   const no=getNextNo();
   const item={id:Date.now(),no:'IRS-'+String(no).padStart(3,'0'),type:'standart',model,tarih,atolye,teslimEden,teslimAlan,termin,durum,aciklama,sizes,bant,
               malAdedi:serbest?0:malAdedi, serbest, serbestSebep:serbest?serbestSebep:'', createdAt:new Date().toISOString()};
@@ -6214,6 +6260,7 @@ function saveIrsaliye(){
 
   ['iModel','iTarih','iAtolye','iTeslimEden','iTeslimAlan','iTermin','iAciklama','s30','s35','s40','s50','s60','s100','bGenis','bDar','bKilcik','iMalAdedi','iSerbestSebep'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   try{ _malOraniGoster(); }catch(_){}
+  _malUyariGosterildi=false;
   setSerbestMod(false);
   _syncAtolyeLabel('iAtolye');
   document.getElementById('iDurum').value='bekliyor';
@@ -6297,7 +6344,10 @@ function returnStockFromIrsaliye(irsaliye) {
 
 function toggleDurum(id){
   let list=getData('irsaliyeler');const item=list.find(i=>i.id===id);
-  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';item._updatedAt=Date.now();try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData('irsaliyeler',list);applyFilters();toast('Durum güncellendi');}
+  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';item._updatedAt=Date.now();
+    // Teslim damgası: atölye karnesinde "zamanında mı teslim etti" bunun üzerinden ölçülür
+    if(item.durum==='teslim'){ if(!item.teslimAt) item.teslimAt=Date.now(); } else { delete item.teslimAt; }
+    try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData('irsaliyeler',list);applyFilters();toast('Durum güncellendi');}
 }
 
 // Legacy compat - redirect to new unified function
@@ -6716,7 +6766,9 @@ function renderFilteredList(list){
 function toggleDurumUni(id,type){
   const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   let list=getData(key);const item=list.find(i=>i.id===id);
-  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';item._updatedAt=Date.now();try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);applyFilters();toast('Durum güncellendi');}
+  if(item){item.durum=item.durum==='teslim'?'bekliyor':'teslim';item._updatedAt=Date.now();
+    if(item.durum==='teslim'){ if(!item.teslimAt) item.teslimAt=Date.now(); } else { delete item.teslimAt; }
+    try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);applyFilters();toast('Durum güncellendi');}
 }
 
 function deleteItemUni(id,type){
@@ -8538,6 +8590,7 @@ function renderReportTab(tab){
   else if(tab==='heatmap') renderWeekHeatmap();
   else if(tab==='compare') renderMonthlyCompare();
   else if(tab==='firms') renderTopFirms();
+  else if(tab==='karne') renderKarne();
   else if(tab==='malposet') renderMalPoset();
   else if(tab==='kritik') renderKritikAksiyon();
   else if(tab==='verimlilik') renderVerimlilik();
@@ -9214,6 +9267,186 @@ function renderTopFirms(){
 /* ============================================================
    KRİTİK AKSİYON
 ============================================================ */
+/* ═══════════════════════════════════════════════════════════════════
+   ATÖLYE KARNESİ
+   "Kime iş vereyim" sorusunun cevabı. Ölçülenler:
+   • Zamanında teslim oranı — termini olan ve teslim edilmiş işlerde,
+     teslim damgası termini geçmemiş mi?
+   • Ortalama gecikme (gün)
+   • Açık işlerden kaçı gecikmiş
+   • Fire payını aşan fazla poşet (mal adeti girilenlerde)
+   Veri yoksa uydurulmaz — "veri yok" yazar ve puana katılmaz.
+   ═══════════════════════════════════════════════════════════════════ */
+let krSira='puan', krMinIs=1;
+function krSetSirala(v){ krSira=v||'puan'; renderKarne(); }
+function krSetMinIs(v){ krMinIs=+v||1; renderKarne(); }
+const GUN=86400000;
+// Teslim damgası: yeni kayıtlarda teslimAt, eskilerde son değişiklik tarihi
+function _krTeslimTs(i){
+  if(i.teslimAt) return +i.teslimAt;
+  if(i.durum==='teslim' && i._updatedAt) return +i._updatedAt;
+  return 0;
+}
+// Gecikme GÜN GÜN sayılır: termin 11'i, teslim 16'sı ise 5 gün geç.
+// Saat farkıyla hesaplanırsa 4,4 gün çıkıp yuvarlanıyordu — atölyenin
+// "5 gün geciktin" dediği rakamla tutmuyordu.
+function _krGun0(ts){ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); }
+function _krTerminTs(str){
+  const m=String(str||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]).getTime();     // yerel gece yarısı
+  const d=new Date(str); return isNaN(d.getTime())?0:_krGun0(d.getTime());
+}
+function krTopla(){
+  const data=getReportData().filter(_repHasStatus);
+  const bugun=new Date(); bugun.setHours(0,0,0,0);
+  const g={};
+  data.forEach(i=>{
+    const a=(i.atolye||i.firma||'Belirsiz').toString().trim()||'Belirsiz';
+    if(!g[a]) g[a]={ad:a, is:0, adet:0, teslim:0, acik:0, geciken:0,
+                    terminli:0, zamaninda:0, gecikmeGun:0, gecikmeSay:0, damgasiz:0,
+                    mal:0, poset:0, asim:0, serbest:0, sonIs:0};
+    const x=g[a];
+    x.is++;
+    x.adet += _repItemQty(i) || _posetSayilan(i.sizes) || 0;
+    const t=new Date(i.tarih||i.createdAt||0);
+    if(!isNaN(t.getTime()) && t.getTime()>x.sonIs) x.sonIs=t.getTime();
+    if(i.serbest) x.serbest++;
+    const teslimEdildi=_repIsDone(i.durum);
+    if(teslimEdildi){
+      x.teslim++;
+      const trm=_krTerminTs(i.termin);
+      if(trm){
+        const ts=_krTeslimTs(i);
+        if(ts){
+          x.terminli++;
+          const td=_krGun0(ts);
+          if(td<=trm) x.zamaninda++;
+          else { x.gecikmeGun += Math.round((td-trm)/GUN); x.gecikmeSay++; }
+        } else x.damgasiz++;
+      }
+    } else {
+      x.acik++;
+      if(i.termin && new Date(i.termin)<bugun) x.geciken++;
+    }
+    // Fazla poşet (yalnızca poşet irsaliyesi + mal adeti girilmişse)
+    if(i._type==='standart' && !i.serbest && +i.malAdedi>0){
+      const ps=_posetSayilan(i.sizes), m=+i.malAdedi;
+      x.mal+=m; x.poset+=ps;
+      const d=_malDurum(ps,m);
+      if(d.asim>0) x.asim+=d.asim;
+    }
+  });
+  const liste=Object.values(g).map(x=>{
+    x.zamanOran = x.terminli ? Math.round(x.zamaninda/x.terminli*100) : null;
+    x.ortGecikme = x.gecikmeSay ? +(x.gecikmeGun/x.gecikmeSay).toFixed(1) : (x.terminli?0:null);
+    x.asimOran = x.mal ? Math.round(x.asim/x.mal*100) : null;
+    x.puan = krPuan(x);
+    return x;
+  }).filter(x=>x.is>=krMinIs);
+  const sirala={
+    puan:(a,b)=>((b.puan==null?-1:b.puan)-(a.puan==null?-1:a.puan))||(b.is-a.is),
+    is:(a,b)=>b.is-a.is,
+    adet:(a,b)=>b.adet-a.adet,
+    gecikme:(a,b)=>((b.ortGecikme==null?-1:b.ortGecikme)-(a.ortGecikme==null?-1:a.ortGecikme))
+  }[krSira]||((a,b)=>b.is-a.is);
+  liste.sort(sirala);
+  return liste;
+}
+// Karne puanı: yalnızca ölçülebilen kalemler üzerinden, ağırlıklar yeniden dengelenir
+function krPuan(x){
+  const par=[];
+  if(x.zamanOran!=null) par.push({p:x.zamanOran, w:55});
+  if(x.ortGecikme!=null) par.push({p:Math.max(0, 100-x.ortGecikme*10), w:25});   // 10 gün gecikme = 0
+  if(x.asimOran!=null)   par.push({p:Math.max(0, 100-x.asimOran*3), w:20});      // %33 aşım = 0
+  if(!par.length) return null;
+  const tw=par.reduce((s,q)=>s+q.w,0);
+  return Math.round(par.reduce((s,q)=>s+q.p*q.w,0)/tw);
+}
+function _krRenk(p){ return p==null?'var(--text-muted)': p>=85?'#10b981' : p>=70?'#84cc16' : p>=50?'#f59e0b' : '#ef4444'; }
+function _krHarf(p){ return p==null?'—': p>=90?'A' : p>=80?'B' : p>=70?'C' : p>=55?'D' : 'E'; }
+function renderKarne(){
+  const liste=krTopla();
+  const kart=document.getElementById('krKartlar');
+  const tab=document.getElementById('krTablo');
+  if(!liste.length){
+    if(kart) kart.innerHTML='';
+    if(tab) tab.innerHTML='<div class="mp-empty"><i class="fas fa-inbox"></i> Bu dönemde/filtrede atölye kaydı yok.</div>';
+    return;
+  }
+  const sel=document.getElementById('krSirala'); if(sel) sel.value=krSira;
+  const sel2=document.getElementById('krMinIs'); if(sel2) sel2.value=String(krMinIs);
+
+  // İlk 3 atölye kart olarak
+  kart.innerHTML='<div class="kr-kartlar">'+liste.slice(0,3).map((x,i)=>{
+    const r=_krRenk(x.puan);
+    return `<div class="kr-kart">
+      <div class="kr-kart-h"><span class="kr-sira">${i+1}</span><b>${esc(x.ad)}</b></div>
+      <div class="kr-puan" style="color:${r}">
+        <span class="kr-harf" style="border-color:${r}">${_krHarf(x.puan)}</span>
+        <span class="kr-p">${x.puan==null?'—':x.puan}<em>/100</em></span>
+      </div>
+      <div class="kr-bar-cizgi"><span style="width:${x.puan==null?0:x.puan}%;background:${r}"></span></div>
+      <div class="kr-satir"><span>İş</span><b>${x.is}</b></div>
+      <div class="kr-satir"><span>Zamanında</span><b>${x.zamanOran==null?'<i>veri yok</i>':'%'+x.zamanOran}</b></div>
+      <div class="kr-satir"><span>Ort. gecikme</span><b>${x.ortGecikme==null?'<i>veri yok</i>':x.ortGecikme+' gün'}</b></div>
+      <div class="kr-satir"><span>Fazla poşet</span><b>${x.asimOran==null?'<i>veri yok</i>':_n(x.asim)}</b></div>
+    </div>`;
+  }).join('')+'</div>';
+
+  tab.innerHTML=`<div class="mp-table-wrap"><table class="mp-table">
+    <thead><tr><th>#</th><th>Atölye</th><th>Puan</th><th>İş</th><th>Adet</th>
+      <th title="Termini olan ve teslim edilen işlerde zamanında oranı">Zamanında</th>
+      <th>Ort. Gecikme</th><th title="Termini geçmiş, hâlâ açık iş">Geciken</th>
+      <th title="Fire payının üstünde verilen poşet">Fazla Poşet</th><th>Serbest</th></tr></thead>
+    <tbody>${liste.map((x,i)=>{
+      const r=_krRenk(x.puan);
+      return `<tr>
+        <td class="c">${i+1}</td>
+        <td><b>${esc(x.ad)}</b>${x.damgasiz?`<span class="kr-dmg" title="${x.damgasiz} teslim işinde tarih damgası yok — zamanında oranına katılmadı">${x.damgasiz} damgasız</span>`:''}</td>
+        <td class="c"><span class="kr-rz" style="color:${r};border-color:${r}55;background:${x.puan==null?'transparent':r+'1a'}">${_krHarf(x.puan)} ${x.puan==null?'':x.puan}</span></td>
+        <td class="c">${x.is}<span class="mp-dim"> (${x.acik} açık)</span></td>
+        <td class="c">${_n(x.adet)}</td>
+        <td class="c">${x.zamanOran==null?'<span class="mp-dim">—</span>':`<b style="color:${x.zamanOran>=85?'#10b981':x.zamanOran>=60?'#f59e0b':'#ef4444'}">%${x.zamanOran}</b><span class="mp-dim"> ${x.zamaninda}/${x.terminli}</span>`}</td>
+        <td class="c">${x.ortGecikme==null?'<span class="mp-dim">—</span>':(x.ortGecikme?`<b style="color:${x.ortGecikme>3?'#ef4444':'#f59e0b'}">${x.ortGecikme} gün</b>`:'<span style="color:#10b981">yok</span>')}</td>
+        <td class="c">${x.geciken?`<b style="color:#ef4444">${x.geciken}</b>`:'<span class="mp-dim">—</span>'}</td>
+        <td class="c">${x.asimOran==null?'<span class="mp-dim">—</span>':(x.asim?`<b style="color:#ef4444">+${_n(x.asim)}</b><span class="mp-dim"> %${x.asimOran}</span>`:'<span style="color:#10b981">yok</span>')}</td>
+        <td class="c">${x.serbest||'<span class="mp-dim">—</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>
+    <div class="mp-not">Zamanında teslim, işin <b>teslim işaretlendiği tarih</b> ile terminin karşılaştırılmasıdır. Bu özellikten önce teslim edilmiş kayıtlarda son değişiklik tarihi kullanılır; damgası olmayanlar orana katılmaz ve "damgasız" diye işaretlenir.</div>`;
+}
+function krPrint(){
+  const liste=krTopla();
+  if(!liste.length) return toast('Yazdırılacak kayıt yok','info');
+  const now=new Date();
+  const bilgi=[reportRange==='all'?'Tüm zamanlar':'Son '+reportRange+' gün'];
+  if(reportAtolye!=='all') bilgi.push('Atölye: '+reportAtolye);
+  if(krMinIs>1) bilgi.push('En az '+krMinIs+' iş');
+  const w=window.open('','_blank');
+  if(!w){ toast('Yazdırma penceresi açılamadı (pop-up engeli olabilir)','error'); return; }
+  w.document.write('<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Atölye Karnesi</title><style>'+
+    '*{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;}'+
+    'h1{font-size:19px;margin:0 0 3px;} .sub{color:#666;font-size:12px;margin-bottom:14px;}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px;} th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;}'+
+    'th{background:#f4f4f7;font-size:10px;text-transform:uppercase;} .c{text-align:center;}'+
+    '.imza{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:34px;} .imza div{border-top:1px solid #111;padding-top:4px;font-size:10px;color:#555;text-align:center;}'+
+    '@page{size:A4;margin:12mm;}</style></head><body>'+
+    '<h1>Atölye Karnesi</h1><div class="sub">'+bilgi.join(' · ')+' — '+now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR')+'</div>'+
+    '<table><thead><tr><th>#</th><th>Atölye</th><th>Puan</th><th>İş</th><th>Adet</th><th>Zamanında</th><th>Ort. Gecikme</th><th>Geciken</th><th>Fazla Poşet</th></tr></thead><tbody>'+
+    liste.map((x,i)=>'<tr><td class="c">'+(i+1)+'</td><td>'+esc(x.ad)+'</td>'+
+      '<td class="c">'+_krHarf(x.puan)+' '+(x.puan==null?'':x.puan)+'</td>'+
+      '<td class="c">'+x.is+'</td><td class="c">'+_n(x.adet)+'</td>'+
+      '<td class="c">'+(x.zamanOran==null?'—':'%'+x.zamanOran)+'</td>'+
+      '<td class="c">'+(x.ortGecikme==null?'—':x.ortGecikme+' gün')+'</td>'+
+      '<td class="c">'+(x.geciken||'—')+'</td>'+
+      '<td class="c">'+(x.asimOran==null?'—':(x.asim?'+'+_n(x.asim):'yok'))+'</td></tr>').join('')+
+    '</tbody></table>'+
+    '<div class="imza"><div>Hazırlayan</div><div>Onaylayan</div></div>'+
+    '</body></html>');
+  w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(_){} }, 350);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    MAL / POŞET DENGESİ RAPORU
    "Bu adam 15 bin mal dikmiş ama 40 bin poşet almış" sorusunun cevabı.
@@ -10899,7 +11132,9 @@ function bulkDurum(durum){
     const type=cb.dataset.type;
     const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
     let list=getData(key);const item=list.find(i=>i.id===id);
-    if(item){item.durum=durum;item._updatedAt=Date.now();try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);}
+    if(item){item.durum=durum;item._updatedAt=Date.now();
+      if(durum==='teslim'){ if(!item.teslimAt) item.teslimAt=Date.now(); } else { delete item.teslimAt; }
+      try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);}
   });
   bulkClear();applyFilters();
   toast(checks.length+' kayıt güncellendi');

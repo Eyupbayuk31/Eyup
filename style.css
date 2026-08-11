@@ -13941,6 +13941,11 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
    ═══════════════════════════════════════════════════════════════ */
 .lbl-ipucu{ font-weight:500; font-size:10.5px; color:var(--text-muted); text-transform:none; letter-spacing:0; margin-left:6px; }
 
+/* Kaydederken eksik bırakılan alanın kısa süreli vurgusu */
+.alan-uyari{ border-color:var(--warning) !important;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--warning) 22%, transparent) !important;
+  animation:alanUyari .5s ease; }
+@keyframes alanUyari{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-4px);} 75%{transform:translateX(4px);} }
 .mal-orani{ margin-top:7px; font-size:11.5px; font-weight:600; line-height:1.5; color:var(--text-muted);
   padding:0; min-height:0; transition:all .18s ease; }
 .mal-orani:not(:empty){ padding:7px 11px; border-radius:9px; border:1px solid var(--border); background:var(--glass); }
@@ -14000,6 +14005,49 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .mp-chip.on b{ color:var(--primary); }
 .mp-row.sec{ background:color-mix(in oklab, var(--primary) 10%, transparent); }
 .mp-fic{ font-size:10px; color:var(--primary); margin-left:5px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ATÖLYE KARNESİ
+   ═══════════════════════════════════════════════════════════════ */
+.kr-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.kr-bar-l{display:flex;align-items:center;gap:9px;flex-wrap:wrap;flex:1;min-width:0;}
+.kr-g{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:20px;
+  border:1px solid var(--border);background:var(--glass);color:var(--text-muted);font-size:11.5px;font-weight:700;cursor:pointer;}
+.kr-g select{appearance:none;-webkit-appearance:none;background:transparent;border:0;outline:0;color:var(--text);
+  font:inherit;font-weight:700;cursor:pointer;padding-right:12px;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-size:4px 4px,4px 4px;background-position:right 2px center,right 6px center;background-repeat:no-repeat;}
+.kr-g select option{background:var(--bg-card-solid,var(--bg-card));color:var(--text);}
+.kr-head-note{font-size:10.5px;font-weight:600;color:var(--text-muted);}
+
+.kr-kartlar{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:16px;}
+.kr-kart{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px 16px;}
+.kr-kart-h{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+.kr-kart-h b{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.kr-sira{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;background:color-mix(in srgb,var(--primary) 18%,transparent);color:var(--primary);}
+.kr-puan{display:flex;align-items:center;gap:11px;margin-bottom:9px;}
+.kr-harf{width:40px;height:40px;border-radius:11px;border:2px solid;display:flex;align-items:center;justify-content:center;
+  font-size:19px;font-weight:900;flex-shrink:0;}
+.kr-p{font-size:26px;font-weight:800;line-height:1;}
+.kr-p em{font-size:12px;font-style:normal;font-weight:600;opacity:.65;margin-left:2px;}
+.kr-bar-cizgi{height:6px;border-radius:99px;background:var(--glass);overflow:hidden;margin-bottom:11px;}
+.kr-bar-cizgi span{display:block;height:100%;border-radius:99px;transition:width .5s ease;}
+.kr-satir{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px;
+  border-top:1px solid var(--border);}
+.kr-satir:first-of-type{border-top:0;}
+.kr-satir span{color:var(--text-muted);}
+.kr-satir b{font-weight:700;}
+.kr-satir b i{font-style:normal;font-weight:500;color:var(--text-muted);font-size:10.5px;}
+.kr-rz{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:3px 10px;
+  border-radius:999px;border:1px solid var(--border);}
+.kr-dmg{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;color:var(--text-muted);
+  background:var(--glass);border:1px solid var(--border);border-radius:999px;padding:1px 7px;}
+@media (max-width:600px){
+  .kr-bar{flex-direction:column;align-items:stretch;}
+  .kr-bar .btn{width:100%;justify-content:center;}
+  .kr-head-note{display:none;}
+}
 
 /* Rapor sekmesi */
 .mp-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px; }
