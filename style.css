@@ -14369,6 +14369,81 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ak-m-x:hover{color:var(--danger);border-color:var(--danger);}
 
 /* ═══════════════════════════════════════════════════════════════
+   MODEL KARTI
+   Model kodunu yaz → irsaliye, föy, tela, fermuar tek ekranda
+   ═══════════════════════════════════════════════════════════════ */
+.dt-mk{color:var(--primary);text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:7px;cursor:pointer;}
+.dt-mk:hover{text-decoration:underline;}
+.dt-mk i{font-size:11px;opacity:.75;}
+.mk-search{position:relative;display:flex;gap:9px;align-items:center;margin-bottom:18px;}
+.mk-search>i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--primary);font-size:15px;pointer-events:none;z-index:2;}
+.mk-search input{flex:1;padding-left:40px;height:48px;font-size:15px;font-weight:600;letter-spacing:.5px;}
+.mk-search .btn{height:48px;white-space:nowrap;}
+.mk-oneri{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
+  background:var(--bg-card-solid,var(--bg-card));border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 18px 46px rgba(0,0,0,.34);overflow:hidden;display:none;max-height:340px;overflow-y:auto;}
+.mk-oneri.acik{display:block;}
+.mk-oneri-r{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;cursor:pointer;
+  padding:10px 14px;background:transparent;border:0;border-bottom:1px solid var(--border);transition:background .12s ease;}
+.mk-oneri-r:last-child{border-bottom:0;}
+.mk-oneri-r:hover,.mk-oneri-r.on{background:color-mix(in srgb,var(--primary) 13%,transparent);}
+.mk-oneri-r b{font-size:13.5px;font-weight:800;letter-spacing:.4px;}
+.mk-oneri-r span{font-size:11px;color:var(--text-muted);}
+.mk-oneri-bos{padding:14px;font-size:12px;color:var(--text-muted);text-align:center;}
+
+.mk-bos{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:56px 20px;text-align:center;color:var(--text-muted);
+  border:1px dashed var(--border);border-radius:16px;background:var(--glass);}
+.mk-bos i{font-size:32px;opacity:.4;margin-bottom:4px;}
+.mk-bos b{font-size:15px;color:var(--text);}
+.mk-bos span{font-size:12.5px;max-width:420px;line-height:1.6;}
+
+.mk-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:18px 20px;border-radius:16px 16px 0 0;border:1px solid var(--border);border-bottom:0;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 16%,var(--bg-card)),var(--bg-card));}
+.mk-kod{font-size:34px;font-weight:900;letter-spacing:1px;line-height:1.05;}
+.mk-hero-sub{font-size:12px;color:var(--text-muted);margin-top:4px;font-weight:600;}
+.mk-son{font-size:11.5px;color:var(--text-muted);font-weight:600;}
+.mk-son i{margin-right:5px;color:var(--primary);}
+.mk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--border);border:1px solid var(--border);border-radius:0 0 16px 16px;overflow:hidden;margin-bottom:18px;}
+.mk-kpi{background:var(--bg-card);padding:13px 15px;display:flex;flex-direction:column;gap:2px;min-width:0;}
+.mk-kpi-ic{color:var(--primary);font-size:12px;margin-bottom:2px;}
+.mk-kpi-v{font-size:22px;font-weight:800;line-height:1.1;}
+.mk-kpi-l{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+.mk-kpi-a{font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;}
+
+.mk-blok{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);margin-bottom:16px;overflow:hidden;}
+.mk-blok-h{display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:13px;font-weight:800;
+  border-bottom:1px solid var(--border);background:var(--glass);}
+.mk-blok-h i{color:var(--primary);}
+.mk-blok-s{margin-left:auto;font-size:11px;font-weight:600;color:var(--text-muted);}
+.mk-tw{overflow-x:auto;}
+.mk-t{width:100%;border-collapse:collapse;min-width:560px;}
+.mk-t th{padding:9px 12px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+.mk-t td{padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.mk-t tr:last-child td{border-bottom:0;}
+.mk-t td.c{text-align:center;white-space:nowrap;}
+.mk-tik{cursor:pointer;transition:background .14s ease;}
+.mk-tik:hover{background:var(--glass);}
+.mk-dim{color:var(--text-muted);}
+.mk-rz{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--border);}
+.mk-rz.ok{color:var(--success);background:color-mix(in srgb,var(--success) 13%,transparent);border-color:color-mix(in srgb,var(--success) 32%,transparent);}
+.mk-rz.bek{color:var(--text-muted);}
+.mk-gn{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:2px 8px;
+  border-radius:999px;border:1px solid var(--border);color:var(--text-muted);}
+.mk-gn.ok{color:var(--success);border-color:color-mix(in srgb,var(--success) 32%,transparent);
+  background:color-mix(in srgb,var(--success) 12%,transparent);}
+.mk-not{padding:9px 16px;font-size:10.5px;color:var(--text-muted);border-top:1px solid var(--border);}
+@media (max-width:700px){
+  .mk-search{flex-wrap:wrap;}
+  .mk-search input{min-width:100%;}
+  .mk-search .btn{width:100%;justify-content:center;}
+  .mk-kod{font-size:26px;}
+}
+
+/* ═══════════════════════════════════════════════════════════════
    GELEN NUMUNE
    Aksesuar kartının altındaki fotoğraf şeridi + karşılaştırma ekranı
    ═══════════════════════════════════════════════════════════════ */
@@ -14433,10 +14508,17 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .btn.btn-danger-soft:hover{background:color-mix(in srgb,var(--danger) 20%,transparent);}
 @media (max-width:760px){
   .ak-cmp-grid{grid-template-columns:1fr;}
-  .ak-cmp-img img{max-height:38vh;}
+  .ak-cmp-img{min-height:150px;}
+  .ak-cmp-img img{max-height:32vh;}
   .ak-cmp-foot{flex-direction:column;align-items:stretch;}
   .ak-cmp-foot .btn,.ak-cmp-foot-r{width:100%;}
   .ak-cmp-foot-r .btn{flex:1;justify-content:center;}
+  /* Dar tabletlerde de aksesuar kartı taşmasın */
+  .ak-gn-add span{display:none;}
+  .ak-gn-add{padding:0 14px;}
+}
+@media (max-width:430px){
+  .ak-gn-th{width:46px;height:46px;}
 }
 
 /* Kütüphane modali — kendi içinde kayar, .modal'ın overflow:hidden'ına takılmaz */
@@ -14541,6 +14623,17 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   .ak-lib-bar .btn span{display:none;}
   .ak-lrow-img{flex:0 0 64px;width:64px;height:42px;}
   .ak-lrow-act .btn i{margin:0;}
+}
+
+/* Modal açıkken yüzen ekle (+) butonu düğmelerin üstüne binmesin */
+body:has(.modal-overlay.show) .fab,
+body:has(.modal-overlay.show) .v8-fab-menu{ opacity:0; pointer-events:none; }
+
+/* Telefonda alt menü sabit duruyor — modalların düğmeleri onun altında kalmasın.
+   Bu blok, .ak-cmp-modal / .ak-lib-modal temel tanımlarından SONRA gelmeli. */
+@media (max-width:760px){
+  .ak-cmp-modal,.ak-lib-modal{ max-height:calc(100dvh - 104px) !important; margin-bottom:84px !important; }
+  .ak-cmp-foot,.ak-lib-foot{ padding-bottom:14px; }
 }
 /* kayıt seçimi (toplu yazdırma) */
 .ak-rec-chk{display:flex;align-items:center;flex-shrink:0;cursor:pointer;position:relative;}
