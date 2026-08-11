@@ -14410,6 +14410,12 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .dt-mk{color:var(--primary);text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:7px;cursor:pointer;}
 .dt-mk:hover{text-decoration:underline;}
 .dt-mk i{font-size:11px;opacity:.75;}
+.mk-ipucu{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted);
+  border:1px solid var(--border);background:var(--glass);border-radius:999px;padding:6px 13px;white-space:nowrap;}
+.mk-ipucu i{color:var(--primary);}
+.mk-ipucu kbd{font-family:inherit;font-size:10px;font-weight:700;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:5px;padding:1px 5px;margin-left:2px;}
+@media (max-width:760px){ .mk-ipucu{display:none;} }
 .mk-search{position:relative;display:flex;gap:9px;align-items:center;margin-bottom:18px;}
 .mk-search>i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--primary);font-size:15px;pointer-events:none;z-index:2;}
 .mk-search input{flex:1;padding-left:40px;height:48px;font-size:15px;font-weight:600;letter-spacing:.5px;}

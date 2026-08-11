@@ -1381,7 +1381,6 @@ if(typeof Chart==='undefined'){
         <a href="javascript:void(0)" data-page="new" onclick="showPage('new')"><i class="fas fa-plus-circle"></i><span>Yeni İrsaliye</span></a>
         <a href="javascript:void(0)" data-page="list" onclick="showPage('list')"><i class="fas fa-list"></i><span>İrsaliyeler</span></a>
         <a href="javascript:void(0)" data-page="akskontrol" onclick="showPage('akskontrol')"><i class="fas fa-clipboard-check"></i><span>Aksesuar Kontrol</span></a>
-        <a href="javascript:void(0)" data-page="model" onclick="showPage('model')"><i class="fas fa-cube"></i><span>Model Kartı</span></a>
       </div>
     </div>
 
@@ -3776,6 +3775,7 @@ if(typeof Chart==='undefined'){
     <div class="page" id="page-model">
       <div class="section-header">
         <div><h2>Model Kartı</h2><p>Bir modelin her şeyi tek ekranda — irsaliyeler, aksesuar föyleri, tela, fermuar</p></div>
+        <span class="mk-ipucu"><i class="fas fa-magnifying-glass"></i> Üstteki aramaya model kodu yazarak da açabilirsiniz <kbd>Ctrl</kbd><kbd>K</kbd></span>
       </div>
       <div class="mk-search">
         <i class="fas fa-cube"></i>
@@ -8360,7 +8360,7 @@ MK.yenile = function(){ if(MK._son) MK.ciz(); };
 MK.ciz = function(){
   var host=document.getElementById('mkGovde'); if(!host) return;
   var K=MK._son;
-  if(!K){ host.innerHTML='<div class="mk-bos"><i class="fas fa-cube"></i><b>Model kodu yazın</b><span>Yazmaya başlayınca öneriler çıkar. Modelin irsaliyeleri, aksesuar föyleri, telası ve fermuarı burada toplanır.</span></div>'; return; }
+  if(!K){ host.innerHTML='<div class="mk-bos"><i class="fas fa-cube"></i><b>Model kodu yazın</b><span>Yazmaya başlayınca öneriler çıkar. Modelin irsaliyeleri, aksesuar föyleri, telası ve fermuarı burada toplanır.<br>Üstteki arama kutusuna (Ctrl+K) model kodu yazarak ya da herhangi bir irsaliyedeki model koduna tıklayarak da gelebilirsiniz.</span></div>'; return; }
   var d=MK.topla(K);
   if(!d.varMi){ host.innerHTML='<div class="mk-bos"><i class="fas fa-circle-question"></i><b>'+MK._esc(K)+' bulunamadı</b><span>Bu model kodu ile kayıtlı irsaliye, föy, tela veya fermuar yok.</span></div>'; return; }
   host.innerHTML =
@@ -16280,7 +16280,10 @@ document.addEventListener('DOMContentLoaded', function(){
   let gsRows = [];      // tüm sonuçlar tek düz dizi (klavye gezinme için)
   let gsIdx = 0;
   let gsFiltre = 'all'; // all | page | irs | mod
-  const _tl = v => (v==null?'':(''+v)).toLocaleLowerCase('tr');
+  // Türkçe küçültme I → ı yapıyor; "I6399AX" kodunu "i6399" yazarak arayınca
+  // ı≠i olduğu için hiçbir sonuç çıkmıyordu. Aramada noktalı/noktasız i aynı
+  // sayılır — kullanıcı hangisini yazarsa yazsın bulsun.
+  const _tl = v => (v==null?'':(''+v)).replace(/[İIıi]/g,'i').toLocaleLowerCase('tr');
   const _esc = v => (''+(v==null?'':v)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   // Eşleşen parçayı vurgula
   function _vur(metin,q){
