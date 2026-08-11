@@ -14782,6 +14782,101 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
 .gs-empty > i{ font-size:30px; opacity:.35; }
 .gs-empty-t{ margin-top:12px; font-size:14px; font-weight:800; color:var(--text-main); }
 .gs-empty-s{ margin-top:7px; font-size:12px; line-height:1.9; }
+
+/* ═══════════════════════════════════════════════════════════════
+   İRSALİYE DETAY PENCERESİ — geniş ekranda ferahlat
+   600px'lik dar bir kutuda içerik 50vh'lik pencereden kayıyor, buton
+   bloğu da yarısını kaplıyordu. Artık pencere geniş, bilgi kutuları
+   3 sütun, butonlar tek sıra ve alçak.
+   ═══════════════════════════════════════════════════════════════ */
+.modal-detail{ max-width:900px !important; max-height:92vh !important; }
+.modal-body-new{ max-height:none !important; flex:1 1 auto; min-height:0; padding:22px 26px !important;
+  overscroll-behavior:contain; }
+.modal-body-new::-webkit-scrollbar{ width:9px; }
+.modal-body-new::-webkit-scrollbar-thumb{ background:color-mix(in srgb,var(--primary) 28%,transparent) !important;
+  border-radius:9px; }
+@media (min-width:900px){
+  .dt-info-grid{ grid-template-columns:repeat(3,1fr) !important; }
+  .dt-info-full,.dt-info-hero{ grid-column:span 3 !important; }
+}
+/* Butonlar: dikey blok yerine tek sıra, ikon+yazı yan yana */
+.modal-actions-new{ padding:14px 26px !important; }
+.modal-actions-primary{ grid-template-columns:1fr 1fr; gap:10px; margin-bottom:9px !important; }
+.modal-actions-secondary{ grid-template-columns:repeat(5,1fr) !important; gap:8px !important; }
+.modal-action-btn{ flex-direction:row !important; gap:8px !important; padding:11px 10px !important;
+  border-radius:10px !important; }
+.modal-action-btn i{ font-size:14px !important; }
+.modal-action-btn span{ font-size:12px !important; }
+@media (max-width:900px){
+  .modal-actions-secondary{ grid-template-columns:repeat(3,1fr) !important; }
+}
+@media (max-width:560px){
+  .modal-actions-secondary{ grid-template-columns:repeat(2,1fr) !important; }
+  .modal-action-btn{ flex-direction:column !important; gap:5px !important; padding:10px 6px !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HIZLI ARAMA — yeniden düzen
+   Boş aramada 120 satır dökülüyordu; satırlarda model iki kez yazıyordu.
+   Artık: boşken son kayıtlar, aramada gruplu ve tek anlamlı satır.
+   ═══════════════════════════════════════════════════════════════ */
+.gs-overlay{ padding-top:8vh !important; }
+.gs-box{ width:min(760px,94vw) !important; max-height:78vh !important; border-radius:18px !important;
+  border:1px solid color-mix(in srgb,var(--primary) 18%,var(--border)) !important;
+  box-shadow:0 28px 80px rgba(0,0,0,.5) !important; }
+.gs-head{ padding:16px 18px !important; gap:12px !important; }
+.gs-head > i{ color:var(--text-muted); font-size:15px; }
+.gs-input{ font-size:16.5px !important; font-weight:600; }
+.gs-input::placeholder{ font-weight:500; opacity:.65; }
+.gs-list{ max-height:none !important; flex:1 1 auto; min-height:0; overscroll-behavior:contain; padding:6px 0 8px; }
+.gs-list::-webkit-scrollbar{ width:9px; }
+.gs-list::-webkit-scrollbar-thumb{ background:color-mix(in srgb,var(--primary) 28%,transparent); border-radius:9px; }
+
+.gs-group{ padding:10px 18px 5px !important; font-size:10px !important; font-weight:800 !important;
+  letter-spacing:.9px !important; text-transform:uppercase; color:var(--text-muted) !important;
+  border:0 !important; background:transparent !important; }
+.gs-item{ border-bottom:0 !important; margin:0 8px; padding:9px 10px !important; border-radius:11px !important;
+  gap:11px !important; }
+.gs-item.active,.gs-item:hover{ background:color-mix(in srgb,var(--primary) 15%,transparent) !important; }
+.gs-item.active .gs-title,.gs-item:hover .gs-title{ color:var(--text-main) !important; }
+.gs-item.active .gs-meta,.gs-item:hover .gs-meta{ color:var(--text-muted) !important; }
+.gs-item.active .gs-badge,.gs-item:hover .gs-badge{ background:transparent !important; }
+.gs-ic{ width:34px !important; height:34px !important; border-radius:10px !important; font-size:13px !important; }
+.gs-ic-mk{ background:color-mix(in srgb,var(--primary) 20%,transparent); color:var(--primary); }
+.gs-ic-menu{ background:var(--glass); color:var(--text-muted); }
+.gs-title{ display:flex; align-items:center; gap:8px; font-size:13.5px !important; }
+.gs-meta{ font-size:11px !important; margin-top:2px !important; }
+.gs-mdl{ font-size:10.5px !important; padding:1px 7px !important; }
+.gs-tag{ font-size:9.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase;
+  color:var(--primary); background:color-mix(in srgb,var(--primary) 15%,transparent);
+  border:1px solid color-mix(in srgb,var(--primary) 32%,transparent); border-radius:999px; padding:1px 8px; }
+.gs-sag{ display:flex; align-items:center; gap:7px; flex-shrink:0; }
+.gs-badge{ background:transparent !important; border:1px solid var(--border); font-size:10px !important;
+  font-weight:700 !important; padding:2px 9px !important; }
+.gs-dr{ font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:999px; border:1px solid var(--border);
+  color:var(--text-muted); }
+.gs-dr.ok{ color:var(--success); border-color:color-mix(in srgb,var(--success) 34%,transparent);
+  background:color-mix(in srgb,var(--success) 12%,transparent); }
+.gs-dr.bek{ color:var(--warning); border-color:color-mix(in srgb,var(--warning) 34%,transparent);
+  background:color-mix(in srgb,var(--warning) 12%,transparent); }
+.gs-git{ flex-shrink:0; color:var(--text-muted); font-size:11px; opacity:0; transition:opacity .15s ease,transform .15s ease; }
+.gs-item.active .gs-git,.gs-item:hover .gs-git{ opacity:.9; transform:translateX(2px); }
+
+/* Model kartı satırı diğerlerinden ayrılsın */
+.gs-mk{ background:color-mix(in srgb,var(--primary) 7%,transparent);
+  border:1px solid color-mix(in srgb,var(--primary) 22%,transparent) !important; }
+.gs-mk .gs-title{ font-size:14.5px !important; font-weight:800; letter-spacing:.4px; }
+
+.gs-ornek{ display:flex; gap:7px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
+.gs-ornek span{ font-size:11px; font-weight:600; color:var(--text-muted); background:var(--glass);
+  border:1px solid var(--border); border-radius:999px; padding:4px 11px; }
+.gs-filters:empty{ display:none; }
+@media (max-width:600px){
+  .gs-overlay{ padding-top:0 !important; align-items:stretch !important; }
+  .gs-box{ width:100vw !important; max-height:100dvh !important; border-radius:0 !important; }
+  .gs-sag .gs-badge{ display:none; }
+}
+
 .gs-empty-s b{
   font-family:ui-monospace,'JetBrains Mono',monospace; font-size:11px;
   padding:2px 7px; border-radius:6px; background:var(--glass);
