@@ -4890,20 +4890,48 @@ function _aksParseAdet(v){
   if(/^\d{1,3}([.,]\d{3})+$/.test(s)) return parseInt(s.replace(/[.,]/g,''),10)||0; // binlik ayraç
   var n=parseFloat(s.replace(',', '.')); return isNaN(n)?0:Math.round(n);
 }
-// İçe aktarım için en uygun sayfa: MODEL + en çok aksesuar sütunu eşleşen
-function _aksBestSheet(X, wb){
+// Takip edilen aksesuar kalemleri (sayaçlı sütunlar) ve başlıkları
+var AKS_KALEMLER = ['markaEtiketi','icBarkod','yikamaTalimati','yikamaToptan','ecom',
+                    'istanbulSticker','susEtiketi','susKarti','lisansKarti'];
+var AKS_KALEM_AD = {markaEtiketi:'Marka Et.', icBarkod:'Ic Barkod', yikamaTalimati:'Yikama',
+                    yikamaToptan:'Fiyat Karti', ecom:'Ecom', istanbulSticker:'Ist.Sticker',
+                    susEtiketi:'Sus Et.', susKarti:'Sus Karti', lisansKarti:'Lisans K.'};
+// Bir kaydın hangi kalemleri takip ettiği: içe aktarımda sayfada bulunan
+// sütunlar (a.alanlar); elle eklenen kayıtlarda hepsi.
+function _aksKalemleri(a){
+  return (a && Array.isArray(a.alanlar) && a.alanlar.length) ? a.alanlar : AKS_KALEMLER;
+}
+// Aksesuar takibi tutulan müşteri sayfaları. Dosyada KORDON/FERMUAR/LASTİK
+// gibi başka sayfalar da var; onlar aksesuar takibi değil, alınmaz.
+var AKS_SAYFALAR = [{ad:'Defacto', re:/defacto/i}, {ad:'Mavi', re:/^\s*mavi\s*$/i}];
+function _aksSayfaOku(X, wb, sn){
+  var aoa=X.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+  var hi=aoa.findIndex(function(r){ return Array.isArray(r) && r.some(function(c){ return /model/i.test(''+c); }); });
+  if(hi<0) return null;
+  var fields=(aoa[hi]||[]).map(_aksMapHeader);
+  if(fields.indexOf('modelKodu')<0) return null;
+  return {name:sn, aoa:aoa, hi:hi, fields:fields};
+}
+// İçe aktarılacak sayfalar: önce bilinen müşteri sayfaları (Defacto + Mavi),
+// hiçbiri yoksa MODEL sütunu olan en zengin tek sayfa (eski davranış).
+function _aksSheets(X, wb){
+  var out=[];
+  AKS_SAYFALAR.forEach(function(m){
+    wb.SheetNames.forEach(function(sn){
+      if(!m.re.test(sn)) return;
+      var sh=_aksSayfaOku(X, wb, sn);
+      if(sh){ sh.musteri=m.ad; out.push(sh); }
+    });
+  });
+  if(out.length) return out;
   var best=null, bestScore=-1;
   wb.SheetNames.forEach(function(sn){
-    var aoa=X.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
-    var hi=aoa.findIndex(function(r){ return Array.isArray(r) && r.some(function(c){ return /model/i.test(''+c); }); });
-    if(hi<0) return;
-    var fields=(aoa[hi]||[]).map(_aksMapHeader);
-    if(fields.indexOf('modelKodu')<0) return;
+    var sh=_aksSayfaOku(X, wb, sn); if(!sh) return;
     var acc=['markaEtiketi','icBarkod','yikamaTalimati','yikamaToptan','ecom','istanbulSticker','susEtiketi','susKarti','lisansKarti'];
-    var score=fields.filter(function(f){ return acc.indexOf(f)>=0; }).length + (sn.toLowerCase().indexOf('defacto')>=0?5:0);
-    if(score>bestScore){ bestScore=score; best={name:sn, aoa:aoa, hi:hi}; }
+    var score=sh.fields.filter(function(f){ return acc.indexOf(f)>=0; }).length;
+    if(score>bestScore){ bestScore=score; sh.musteri=''; sh.ad=sn; best=sh; }
   });
-  return best;
+  return best?[best]:[];
 }
 function _aksCellStr(v){
   if(v==null) return '';
@@ -4917,45 +4945,70 @@ function importAksesuarFromExcel(files){
   reader.onload = function(e){
     try{
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-      const best = _aksBestSheet(XLSX, wb);
-      if(!best){ toast('MODEL sütunu olan bir sayfa bulunamadı','error'); return; }
-      const rows = best.aoa, hi = best.hi;
-      const headers = (rows[hi]||[]).map(_aksMapHeader);
+      const sheets = _aksSheets(XLSX, wb);
+      if(!sheets.length){ toast('MODEL sütunu olan bir sayfa bulunamadı','error'); return; }
       let list = getData('aksesuarlar');
-      let added=0, updated=0;
-      for(let ri=hi+1; ri<rows.length; ri++){
-        const row = rows[ri]; if(!Array.isArray(row)) continue;
-        const rec = {};
-        headers.forEach((f,ci)=>{ if(f) rec[f]=row[ci]; });
-        const model = _aksCellStr(rec.modelKodu);
-        if(!model) continue;
-        const koli = _aksCellStr(rec.koliNo);
-        const item = {
-          modelKodu: model,
-          cikisDikim: _aksCellStr(rec.cikisDikim),
-          koliNo: koli,
-          termin: _aksCellStr(rec.termin),
-          adet: _aksParseAdet(rec.adet),
-          markaEtiketi: _aksParseCheck(rec.markaEtiketi),
-          icBarkod: _aksParseCheck(rec.icBarkod),
-          yikamaTalimati: _aksParseCheck(rec.yikamaTalimati),
-          yikamaToptan: _aksParseCheck(rec.yikamaToptan),
-          ecom: _aksParseCheck(rec.ecom),
-          istanbulSticker: _aksParseCheck(rec.istanbulSticker),
-          susEtiketi: _aksParseCheck(rec.susEtiketi),
-          susKarti: _aksParseCheck(rec.susKarti),
-          lisansKarti: _aksParseCheck(rec.lisansKarti),
-          raf: _aksCellStr(rec.raf),
-          cikisUtupaket: _aksCellStr(rec.cikisUtupaket)
-        };
-        // Aynı model+koli varsa güncelle, yoksa ekle
-        const idx = list.findIndex(a => (a.modelKodu||'').toLocaleLowerCase('tr')===model.toLocaleLowerCase('tr') && (a.koliNo||'')===koli);
-        if(idx>=0){ Object.assign(list[idx], item, {updatedAt:new Date().toISOString()}); updated++; }
-        else { list.unshift(Object.assign({id:Date.now()+Math.floor(Math.random()*100000), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}, item)); added++; }
-      }
+      let added=0, updated=0, cikmisAtlandi=0;
+      const ozet=[];
+      // Aynı model+koli tabloda hem çıkışlı hem çıkışsız satır olarak geçebiliyor
+      // (aynı modelin ikinci partisi). Bu aktarımda çıkışsız görülen anahtarı,
+      // sonradan gelen çıkışlı satır ezip "çıkmış" yapmasın.
+      const temizAnahtar = new Set();
+      sheets.forEach(function(sh){
+        const rows = sh.aoa, hi = sh.hi, headers = sh.fields;
+        let a0=0, u0=0, c0=0;
+        // Her müşteride her aksesuar kalemi yok (ör. Mavi'de Ecom / İç Barkod
+        // sütunu yok). Sayfada gerçekten bulunan kalemleri kaydet ki "eksik"
+        // hesabı olmayan sütunları eksik saymasın.
+        const alanlar = AKS_KALEMLER.filter(function(k){ return headers.indexOf(k)>=0; });
+        for(let ri=hi+1; ri<rows.length; ri++){
+          const row = rows[ri]; if(!Array.isArray(row)) continue;
+          const rec = {};
+          headers.forEach((f,ci)=>{ if(f) rec[f]=row[ci]; });
+          const model = _aksCellStr(rec.modelKodu);
+          if(!model) continue;
+          const koli = _aksCellStr(rec.koliNo);
+          const cikis = _aksCellStr(rec.cikisDikim);
+          const item = {
+            modelKodu: model,
+            musteri: sh.musteri||'',
+            cikisDikim: cikis,
+            koliNo: koli,
+            termin: _aksCellStr(rec.termin),
+            adet: _aksParseAdet(rec.adet),
+            markaEtiketi: _aksParseCheck(rec.markaEtiketi),
+            icBarkod: _aksParseCheck(rec.icBarkod),
+            yikamaTalimati: _aksParseCheck(rec.yikamaTalimati),
+            yikamaToptan: _aksParseCheck(rec.yikamaToptan),
+            ecom: _aksParseCheck(rec.ecom),
+            istanbulSticker: _aksParseCheck(rec.istanbulSticker),
+            susEtiketi: _aksParseCheck(rec.susEtiketi),
+            susKarti: _aksParseCheck(rec.susKarti),
+            lisansKarti: _aksParseCheck(rec.lisansKarti),
+            raf: _aksCellStr(rec.raf),
+            cikisUtupaket: _aksCellStr(rec.cikisUtupaket),
+            alanlar: alanlar
+          };
+          const anahtar = (sh.musteri||'')+''+model.toLocaleLowerCase('tr')+''+koli;
+          const cikmis = _aksCikisVar(cikis);
+          // Bu aktarımda aynı model+koli çıkışsız olarak geldiyse, çıkışlı satırı yok say
+          if(cikmis && temizAnahtar.has(anahtar)){ c0++; continue; }
+          if(!cikmis) temizAnahtar.add(anahtar);
+          // Aynı müşteri + model + koli varsa güncelle
+          const idx = list.findIndex(a =>
+            (a.modelKodu||'').toLocaleLowerCase('tr')===model.toLocaleLowerCase('tr') &&
+            (a.koliNo||'')===koli &&
+            ((a.musteri||'')===(sh.musteri||'') || !a.musteri));
+          if(idx>=0){ Object.assign(list[idx], item, {updatedAt:new Date().toISOString()}); u0++; }
+          else if(cikmis){ c0++; }   // çıkmış ve tabloda da yok → hiç almaya gerek yok
+          else { list.unshift(Object.assign({id:Date.now()+Math.floor(Math.random()*100000), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()}, item)); a0++; }
+        }
+        added+=a0; updated+=u0; cikmisAtlandi+=c0;
+        ozet.push((sh.musteri||sh.ad||'Sayfa')+': '+a0+' yeni'+(u0?(', '+u0+' güncel'):''));
+      });
       setData('aksesuarlar', list);
       renderAksesuarTable();
-      toast('"'+best.name+'" sayfasından '+added+' model eklendi'+(updated?(', '+updated+' güncellendi'):'')+' ✓','success');
+      toast(ozet.join('  ·  ')+(cikmisAtlandi?('  ·  '+cikmisAtlandi+' çıkmış model alınmadı'):'')+' ✓','success');
     }catch(err){ console.error('[aks import]', err); toast('Excel okunamadı: '+((err&&err.message)||err),'error'); }
   };
   reader.readAsArrayBuffer(file);
@@ -4965,9 +5018,20 @@ function _aksTerminYM(termin){
   var s=(termin==null?'':(''+termin)).trim(); if(!s) return null;
   var m;
   m=s.match(/^(\d{4})[.\/\-](\d{1,2})[.\/\-](\d{1,2})/);        // yyyy-mm-dd
-  if(m){ return {y:+m[1], m:+m[2]}; }
-  m=s.match(/^(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{2,4})/);      // dd.mm.yyyy
-  if(m){ var y=+m[3]; if(y<100) y+=2000; return {y:y, m:+m[2]}; }
+  if(m){ return {y:+m[1], m:+m[2], d:+m[3]}; }
+  // 17.09.2026 → gün.ay.yıl (elle yazılan Türkçe biçim)
+  // 9/17/26    → ay/gün/yıl (Excel'in tarih hücresini yazdırdığı biçim)
+  m=s.match(/^(\d{1,2})([.\/\-])(\d{1,2})[.\/\-](\d{2,4})/);
+  if(m){
+    var y=+m[4]; if(y<100) y+=2000;
+    var a=+m[1], bb=+m[3];
+    var ayOnce = (m[2]==='/');            // eğik çizgi → ay önde
+    if(ayOnce && a>12) ayOnce=false;      // 17/09/26 gibi yazılmışsa gün önde
+    if(!ayOnce && bb>12) ayOnce=true;     // 9.17.26 gibi ise ay önde
+    var ay = ayOnce ? a : bb, gun = ayOnce ? bb : a;
+    if(ay<1 || ay>12) return null;
+    return {y:y, m:ay, d:gun};
+  }
   if(/^\d+(\.\d+)?$/.test(s)){                                   // Excel serial number
     var n=parseFloat(s);
     if(n>20000 && n<80000){
@@ -5090,26 +5154,23 @@ function aksHazirlanacakPdf(){
       var idx=ym.y*12+(ym.m-1);
       if(hedef.indexOf(idx)<0) return;
       if(_aksCikisVar(a.cikisDikim)){ cikmis++; return; }   // çıkmış — hazırlanacak listesinde yeri yok
-      sel.push({a:a, idx:idx});
+      sel.push({a:a, idx:idx, gun:ym.d||99});
     });
     if(!sel.length){
       toast(baslikAy+' için hazırlanacak model yok'+(cikmis?(' ('+cikmis+' model zaten çıkmış)'):''),'info');
       return;
     }
     // Termin gününe göre sırala (aynı gün → model koduna göre)
-    var gunNo=function(t){ var s=(''+(t||'')); var m=s.match(/^(\d{1,2})[.\/\-]/); if(m) return +m[1];
-      m=s.match(/^\d{4}[.\/\-]\d{1,2}[.\/\-](\d{1,2})/); return m?+m[1]:99; };
-    sel.sort(function(p,q){ return (p.idx-q.idx) || (gunNo(p.a.termin)-gunNo(q.a.termin))
+    sel.sort(function(p,q){ return (p.idx-q.idx) || (p.gun-q.gun)
       || ((p.a.modelKodu||'').localeCompare(q.a.modelKodu||'','tr')); });
 
-    // Eksik aksesuarlar (0 olan kalemler) — hazırlıkta neye bakılacağını gösterir
-    var ACC=[['markaEtiketi','Marka Et.'],['icBarkod','Ic Barkod'],['yikamaTalimati','Yikama'],
-             ['yikamaToptan','Fiyat Karti'],['ecom','Ecom'],['istanbulSticker','Ist.Sticker'],
-             ['susEtiketi','Sus Et.'],['susKarti','Sus Karti'],['lisansKarti','Lisans K.']];
+    // Eksik aksesuarlar (0 olan kalemler) — hazırlıkta neye bakılacağını gösterir.
+    // Sadece o müşteride takip edilen kalemlere bakılır.
     // Uzun listeler satırı taşırıp kelimeyi ortadan kesiyordu; ilk 4 kalem
     // yazılır, kalanı "+N" olarak toplanır.
     var eksikStr=function(a){
-      var e=ACC.filter(function(c){ return !(+a[c[0]]>0); }).map(function(c){ return c[1]; });
+      var e=_aksKalemleri(a).filter(function(k){ return !(+a[k]>0); })
+                            .map(function(k){ return AKS_KALEM_AD[k]||k; });
       if(!e.length) return '';
       return e.length>4 ? (e.slice(0,4).join(', ')+' +'+(e.length-4)) : e.join(', ');
     };
@@ -5117,7 +5178,18 @@ function aksHazirlanacakPdf(){
     var pdf=AK._newPdf();
     var W=210, PH=297, mL=10, mR=10;
     var T=function(s,x,y,o){ pdf.text(AK._tr(s==null?'':(''+s)),x,y,o); };
-    var cols=[
+    // Birden fazla müşteri varsa (Defacto + Mavi) müşteri sütunu da göster
+    var musteriler={}; sel.forEach(function(s){ if(s.a.musteri) musteriler[s.a.musteri]=1; });
+    var musVar = Object.keys(musteriler).length>1;
+    var cols = musVar ? [
+      {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
+      {t:'Model Kodu',  x:mL+8,    w:38, a:'left'},
+      {t:'Musteri',     x:mL+46,   w:20, a:'left'},
+      {t:'Koli',        x:mL+66,   w:14, a:'left'},
+      {t:'Termin',      x:mL+80,   w:22, a:'left'},
+      {t:'Adet',        x:mL+102,  w:18, a:'right'},
+      {t:'Eksik Aksesuar', x:mL+120, w:70, a:'left'}
+    ] : [
       {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
       {t:'Model Kodu',  x:mL+8,    w:40, a:'left'},
       {t:'Koli',        x:mL+48,   w:16, a:'left'},
@@ -5127,6 +5199,15 @@ function aksHazirlanacakPdf(){
     ];
     var tx=function(c){ return c.a==='right'? c.x+c.w-2 : c.a==='center'? c.x+c.w/2 : c.x+2; };
     var opt=function(c){ return c.a==='left'? undefined : {align:c.a}; };
+    // Uzun model adları ("M1611360 KIRMIZI BEYAZ ÇİZGİLİ") sütunu taşırıyordu:
+    // önce puntoyu küçült, yine sığmazsa sonunu kısalt.
+    var sigdir=function(s, c, y, punto){
+      var t=AK._tr(s==null?'':(''+s)), w=c.w-3, ps=punto;
+      while(ps>5.6 && pdf.getTextWidth(t)>w){ ps-=0.4; pdf.setFontSize(ps); }
+      while(t.length>3 && pdf.getTextWidth(t)>w){ t=t.slice(0,-2)+'.'; }
+      pdf.text(t, tx(c), y, opt(c));
+      pdf.setFontSize(punto);
+    };
     function drawHeader(y){
       pdf.setFillColor(30,41,59); pdf.rect(mL,y,W-mL-mR,8,'F');
       pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
@@ -5165,16 +5246,17 @@ function aksHazirlanacakPdf(){
       pdf.setDrawColor(120,130,145); pdf.setLineWidth(0.3);
       pdf.rect(cols[0].x+2.2, y+1.9, 3.2, 3.2);
       pdf.setTextColor(15,23,42);
-      T(a.modelKodu||'—', tx(cols[1]), y+4.8, opt(cols[1]));
-      T(a.koliNo||'—',    tx(cols[2]), y+4.8, opt(cols[2]));
-      T(a.termin||'—',    tx(cols[3]), y+4.8, opt(cols[3]));
-      T((parseInt(a.adet,10)||0).toLocaleString('tr-TR'), tx(cols[4]), y+4.8, opt(cols[4]));
-      var ek=eksikStr(a);
-      if(ek){ pdf.setTextColor(190,18,60); pdf.setFontSize(7.2);
-        T(ek, tx(cols[5]), y+4.8, opt(cols[5]));
-        pdf.setFontSize(8);
+      var ci=1;
+      sigdir(a.modelKodu||'—', cols[ci], y+4.8, 8); ci++;
+      if(musVar){ pdf.setTextColor(71,85,105); sigdir(a.musteri||'—', cols[ci], y+4.8, 8);
+        pdf.setTextColor(15,23,42); ci++; }
+      sigdir(a.koliNo||'—', cols[ci], y+4.8, 8); ci++;
+      sigdir(a.termin||'—', cols[ci], y+4.8, 8); ci++;
+      T((parseInt(a.adet,10)||0).toLocaleString('tr-TR'), tx(cols[ci]), y+4.8, opt(cols[ci])); ci++;
+      var ek=eksikStr(a), cE=cols[ci];
+      if(ek){ pdf.setTextColor(190,18,60); sigdir(ek, cE, y+4.8, 7.2); pdf.setFontSize(8);
       } else { pdf.setTextColor(22,163,74); pdf.setFont('helvetica','bold');
-        T('Tamam', tx(cols[5]), y+4.8, opt(cols[5])); pdf.setFont('helvetica','normal'); }
+        T('Tamam', tx(cE), y+4.8, opt(cE)); pdf.setFont('helvetica','normal'); }
       pdf.setDrawColor(226,232,240); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
       y+=rowH;
     });
@@ -5283,6 +5365,7 @@ function renderAksesuarTable(){
   if(search){
     filteredList = filteredList.filter(a =>
       (a.modelKodu || '').toLowerCase().includes(search) ||
+      (a.musteri || '').toLowerCase().includes(search) ||
       (a.koliNo || '').toLowerCase().includes(search) ||
       (a.raf || '').toLowerCase().includes(search)
     );
@@ -5337,21 +5420,29 @@ function renderAksesuarTable(){
       return `<input type="number" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',+this.value)" class="aks-input aks-input-number" min="0">`;
     };
 
+    // Birden fazla müşteri (Defacto/Mavi) karışabildiği için model yanında rozet
+    const mus = item.musteri ? `<span class="aks-mus" title="${item.musteri}">${item.musteri}</span>` : '';
+    // O müşteride olmayan kalemler sayaç yerine "—" gösterilir
+    const kalem = _aksKalemleri(item);
+    const renderKalem = (field) => kalem.indexOf(field)<0
+      ? `<span class="aks-yok" title="Bu müşteride takip edilmiyor">—</span>`
+      : renderCounter(field);
+
     return `<tr class="aks-row" style="animation-delay:${index * 0.02}s;">
-      <td class="aks-td aks-td-sticky-left">${renderTextInput('modelKodu', 'z7069')}</td>
+      <td class="aks-td aks-td-sticky-left">${renderTextInput('modelKodu', 'z7069')}${mus}</td>
       <td class="aks-td">${renderTextInput('cikisDikim', '02.03.2026 Sür Tekstil')}</td>
       <td class="aks-td">${renderTextInput('koliNo', 'K-001')}</td>
       <td class="aks-td">${renderTextInput('termin', '15.04.2026')}</td>
       <td class="aks-td">${renderNumberInput('adet')}</td>
-      <td class="aks-td">${renderCounter('markaEtiketi')}</td>
-      <td class="aks-td">${renderCounter('icBarkod')}</td>
-      <td class="aks-td">${renderCounter('yikamaTalimati')}</td>
-      <td class="aks-td">${renderCounter('yikamaToptan')}</td>
-      <td class="aks-td">${renderCounter('ecom')}</td>
-      <td class="aks-td">${renderCounter('istanbulSticker')}</td>
-      <td class="aks-td">${renderCounter('susEtiketi')}</td>
-      <td class="aks-td">${renderCounter('susKarti')}</td>
-      <td class="aks-td">${renderCounter('lisansKarti')}</td>
+      <td class="aks-td">${renderKalem('markaEtiketi')}</td>
+      <td class="aks-td">${renderKalem('icBarkod')}</td>
+      <td class="aks-td">${renderKalem('yikamaTalimati')}</td>
+      <td class="aks-td">${renderKalem('yikamaToptan')}</td>
+      <td class="aks-td">${renderKalem('ecom')}</td>
+      <td class="aks-td">${renderKalem('istanbulSticker')}</td>
+      <td class="aks-td">${renderKalem('susEtiketi')}</td>
+      <td class="aks-td">${renderKalem('susKarti')}</td>
+      <td class="aks-td">${renderKalem('lisansKarti')}</td>
       <td class="aks-td">${renderTextInput('raf', 'A-12')}</td>
       <td class="aks-td">${renderTextInput('cikisUtupaket', '20.04.2026')}</td>
       <td class="aks-td aks-td-sticky-right">
@@ -5370,11 +5461,12 @@ function exportAksesuarToExcel(){
     return;
   }
 
-  let csv = 'Model Kodu,Çıkış (Dikim),Koli No,Termin,Adet,Marka Etiketi,İç Barkod,Yıkama Talimatı,Yıkama (Toptan),Ecom,İstanbul Sticker,Süs Etiketi,Süs Kartı,Lisans Kartı,Raf,Çıkış (Ütüpaket)\n';
+  let csv = 'Model Kodu,Müşteri,Çıkış (Dikim),Koli No,Termin,Adet,Marka Etiketi,İç Barkod,Yıkama Talimatı,Yıkama (Toptan),Ecom,İstanbul Sticker,Süs Etiketi,Süs Kartı,Lisans Kartı,Raf,Çıkış (Ütüpaket)\n';
 
   list.forEach(item => {
     const row = [
       item.modelKodu || '',
+      item.musteri || '',
       item.cikisDikim || '',
       item.koliNo || '',
       item.termin || '',
