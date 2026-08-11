@@ -14368,34 +14368,108 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
 .ak-m-x:hover{color:var(--danger);border-color:var(--danger);}
 
-.ak-lib-top{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
-.ak-lib-top .ak-lib-search{flex:1;min-width:200px;margin-bottom:0;}
-.ak-lib-top .btn{white-space:nowrap;}
-.ak-lib-search{position:relative;margin-bottom:12px;}
-.ak-lib-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;}
-.ak-lib-search input{padding-left:32px;}
-.ak-lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;
-  max-height:340px;overflow-y:auto;padding-right:4px;}
-.ak-lib-card{border:1px solid var(--border);border-radius:11px;overflow:hidden;background:var(--bg-card);
-  display:flex;flex-direction:column;transition:border-color .15s ease;}
-.ak-lib-card:hover{border-color:var(--primary);}
-.ak-lib-img{background:#fff;height:92px;display:flex;align-items:center;justify-content:center;padding:6px;}
-.ak-lib-img img{max-width:100%;max-height:100%;object-fit:contain;}
-.ak-lib-meta{padding:7px 9px 4px;display:flex;flex-direction:column;gap:1px;min-width:0;}
-.ak-lib-meta b{font-size:11.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ak-lib-meta span{font-size:10.5px;color:var(--text-muted);}
-.ak-lib-meta em{font-size:10px;color:var(--primary);font-style:normal;font-weight:600;}
-.ak-lib-act{display:flex;gap:5px;padding:6px 9px 9px;margin-top:auto;}
-.ak-lib-act .btn{flex:1;justify-content:center;}
-.ak-lib-act .btn-secondary{flex:0 0 auto;}
-.ak-lib-add{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
-.ak-lib-add-t{font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;}
-.ak-lib-add-t i{margin-right:5px;}
+/* Kütüphane modali — kendi içinde kayar, .modal'ın overflow:hidden'ına takılmaz */
+.ak-lib-modal{
+  max-width:640px; width:100%;
+  max-height:min(86dvh,760px);
+  display:flex; flex-direction:column;
+  padding:0; overflow:hidden;
+}
+.ak-lib-modal .modal-header{
+  padding:16px 20px 14px; margin:0; flex:0 0 auto;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.ak-lib-modal .modal-header h3{margin:0;font-size:16px;font-weight:800;}
+.ak-lib-modal .modal-close{
+  flex:0 0 auto;width:30px;height:30px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--text-muted);
+  font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;
+  transition:all .15s ease;
+}
+.ak-lib-modal .modal-close:hover{color:var(--danger);border-color:var(--danger);}
+.ak-lib-bar{
+  flex:0 0 auto; display:flex; gap:9px; align-items:center;
+  padding:12px 20px; border-bottom:1px solid var(--border);
+  background:var(--glass);
+}
+.ak-lib-bar .btn{white-space:nowrap;}
+.ak-lib-search{position:relative;flex:1;min-width:0;}
+.ak-lib-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;pointer-events:none;}
+.ak-lib-search input{padding-left:32px;width:100%;}
+
+/* KAYAN ALAN — fare tekerleği burada çalışır */
+.ak-lib-list{
+  flex:1 1 auto; min-height:120px;
+  overflow-y:auto; overscroll-behavior:contain;
+  padding:10px 14px; display:flex; flex-direction:column; gap:8px;
+}
+.ak-lib-list::-webkit-scrollbar{width:8px;}
+.ak-lib-list::-webkit-scrollbar-track{background:transparent;}
+.ak-lib-list::-webkit-scrollbar-thumb{background:color-mix(in srgb, var(--primary) 30%, transparent);border-radius:8px;}
+.ak-lib-list::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb, var(--primary) 55%, transparent);}
+
+/* Etiket satırı */
+.ak-lrow{
+  display:flex; align-items:center; gap:12px;
+  padding:9px 11px; border:1px solid var(--border); border-radius:12px;
+  background:var(--bg-card); transition:border-color .15s ease, background .15s ease;
+}
+.ak-lrow:hover{border-color:color-mix(in srgb, var(--primary) 45%, var(--border));background:var(--glass);}
+.ak-lrow-img{
+  flex:0 0 84px; width:84px; height:52px; border-radius:8px; overflow:hidden;
+  background:#fff; border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; padding:4px;
+}
+.ak-lrow-img img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
+.ak-lrow-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+.ak-lrow-t{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.ak-lrow-t b{font-size:13px;font-weight:800;letter-spacing:.2px;}
+.ak-lrow-ton{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;
+  border:1px solid var(--border);color:var(--text-muted);background:var(--glass);
+  display:inline-flex;align-items:center;gap:5px;
+}
+.ak-lrow-ton::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--text-muted);}
+.ak-lrow-ton.siyah::before{background:#141414;box-shadow:0 0 0 1px rgba(255,255,255,.35);}
+.ak-lrow-ton.beyaz::before{background:#f5f5f5;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+.ak-lrow-s{font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ak-lrow-s em{font-style:normal;color:var(--primary);font-weight:600;}
+.ak-lrow-act{flex:0 0 auto;display:flex;align-items:center;gap:6px;}
+.ak-lrow-x{
+  width:30px;height:30px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--text-muted);
+  display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s ease;
+}
+.ak-lrow-x:hover{color:var(--danger);border-color:var(--danger);background:color-mix(in srgb, var(--danger) 10%, transparent);}
+.ak-lib-bos{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:34px 16px;color:var(--text-muted);font-size:12.5px;text-align:center;
+}
+.ak-lib-bos i{font-size:26px;opacity:.4;}
+
+/* Alt bölüm */
+.ak-lib-foot{flex:0 0 auto;border-top:1px solid var(--border);padding:12px 20px 16px;background:var(--glass);}
+.ak-lib-det summary{
+  cursor:pointer;font-size:12px;font-weight:700;color:var(--primary);
+  list-style:none;padding:4px 0;user-select:none;
+}
+.ak-lib-det summary::-webkit-details-marker{display:none;}
+.ak-lib-det summary i{margin-right:5px;}
+.ak-lib-add{padding-top:10px;}
 .ak-lib-add-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
 .ak-lib-add-row .form-input{flex:1;min-width:130px;}
 .ak-lib-add-row .btn{white-space:nowrap;}
+.ak-lib-hint{font-size:10.5px;color:var(--text-muted);line-height:1.55;margin:10px 0 0;}
+.ak-lib-hint i{color:var(--primary);margin-right:4px;}
+.ak-lib-hint b{color:var(--text);}
+
 @media (max-width:600px){
-  .ak-lib-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
+  .ak-lib-modal{max-height:92dvh;}
+  .ak-lib-bar{flex-wrap:wrap;}
+  .ak-lib-bar .btn span{display:none;}
+  .ak-lrow-img{flex:0 0 64px;width:64px;height:42px;}
+  .ak-lrow-act .btn i{margin:0;}
 }
 /* kayıt seçimi (toplu yazdırma) */
 .ak-rec-chk{display:flex;align-items:center;flex-shrink:0;cursor:pointer;position:relative;}

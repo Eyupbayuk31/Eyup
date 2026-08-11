@@ -3,7 +3,7 @@
    Uygulama tek dosya ve sık güncelleniyor; HTML'i önbellekten vermek kullanıcıyı
    eski sürümde bırakır. Bu yüzden HTML her zaman ağdan istenir, ağ yoksa
    önbellekteki son sürüm gösterilir (çevrimdışı çalışsın diye). */
-const CACHE = 'irsaliye-v1';
+const CACHE = 'irsaliye-v2';
 const KABUK = ['/', '/index.html', '/style.css',
   '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/manifest.webmanifest'];
 
@@ -27,12 +27,15 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(istek.url);
   if (url.origin !== self.location.origin) return;   // CDN/Firebase isteklerine karışma
 
-  // HTML gezinmesi → ağ öncelikli
-  if (istek.mode === 'navigate' || (istek.headers.get('accept') || '').includes('text/html')) {
+  // HTML ve CSS → ağ öncelikli. style.css her sürümde HTML ile birlikte
+  // değişiyor; önbellekten verilince yeni ekranlar eski stille açılıyor
+  // (kutular üst üste biniyor, liste kaymıyor). Ağ yoksa önbelleğe düşer.
+  const cssMi = url.pathname.endsWith('.css');
+  if (cssMi || istek.mode === 'navigate' || (istek.headers.get('accept') || '').includes('text/html')) {
     e.respondWith(
       fetch(istek)
         .then(y => { const kopya = y.clone(); caches.open(CACHE).then(c => c.put(istek, kopya)); return y; })
-        .catch(() => caches.match(istek).then(y => y || caches.match('/index.html')))
+        .catch(() => caches.match(istek).then(y => y || (cssMi ? undefined : caches.match('/index.html'))))
     );
     return;
   }
