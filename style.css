@@ -14368,6 +14368,9 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
   display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
 .ak-m-x:hover{color:var(--danger);border-color:var(--danger);}
 
+.ak-lib-top{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.ak-lib-top .ak-lib-search{flex:1;min-width:200px;margin-bottom:0;}
+.ak-lib-top .btn{white-space:nowrap;}
 .ak-lib-search{position:relative;margin-bottom:12px;}
 .ak-lib-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;}
 .ak-lib-search input{padding-left:32px;}
