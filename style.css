@@ -2615,6 +2615,32 @@ body::after{
   background:var(--bg-card-hover);
 }
 
+/* Müşteri rozeti — Defacto / Mavi aynı tabloda karıştığı için */
+.aks-mus{
+  display:block;
+  margin:1px 0 0 12px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  opacity:.75;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:120px;
+}
+
+/* O müşteride takip edilmeyen aksesuar kalemi */
+.aks-yok{
+  display:block;
+  text-align:center;
+  color:var(--text-muted);
+  opacity:.35;
+  font-size:14px;
+  user-select:none;
+}
+
 .aks-input{
   width:100%;
   padding:8px 12px;
