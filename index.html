@@ -3740,16 +3740,16 @@ if(typeof Chart==='undefined'){
     <!-- Etiket kütüphanesi: arşivde gelmeyen etiketi kayıtlı görselden ekle -->
     <div class="modal-overlay" id="akLibModal">
       <div class="modal" style="max-width:720px;">
-        <div class="modal-header"><h3><i class="fas fa-images" style="color:var(--primary);margin-right:7px;"></i>Etiket Kütüphanesi</h3><button class="modal-close" onclick="AK.closeLib()">&times;</button></div>
+        <div class="modal-header"><h3><i class="fas fa-images" style="color:var(--primary);margin-right:7px;"></i>Dokuma Etiket Kütüphanesi</h3><button class="modal-close" onclick="AK.closeLib()">&times;</button></div>
         <div class="modal-body">
-          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Arşivde gelmeyen etiketi buradan seçip renk kartına ekleyin — föyde boş çıkmasın. Yüklediğiniz her arşiv arka planda taranır, etiketler kendiliğinden buraya düşer.</p>
+          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Sadece <b>dokuma (marka etiketi)</b> içindir — dokuma her modelde aynıdır. Arşivde gelmezse buradan seçip ekleyin, föyde boş çıkmasın. İç barkod, fiyat kartı ve yıkama modele özeldir; onlar mutlaka arşivden gelir. Yüklediğiniz her arşiv arka planda taranır.</p>
           <div class="ak-lib-top">
-            <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod, tip veya renk ara (ör. AULBW13729, dokuma)" oninput="AK.renderLib()" autocomplete="off"></div>
+            <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod veya renk ara (ör. AULBW13729, siyah)" oninput="AK.renderLib()" autocomplete="off"></div>
             <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara(false,true)" title="Bütün arşivleri baştan tara (normalde kendiliğinden yapılır)"><i class="fas fa-rotate"></i> Yeniden tara</button>
           </div>
           <div id="akLibList" class="ak-lib-grid"></div>
           <div class="ak-lib-add">
-            <div class="ak-lib-add-t"><i class="fas fa-plus"></i> Yeni etiket kaydet</div>
+            <div class="ak-lib-add-t"><i class="fas fa-plus"></i> Yeni dokuma etiketi kaydet</div>
             <div class="ak-lib-add-row">
               <input id="akLibCode" class="form-input" placeholder="Kod (ör. AULBW13729)" autocomplete="off">
               <select id="akLibType" class="form-input"></select>
@@ -18962,15 +18962,18 @@ AK.LS_LIB='ak_labels_v2';
 AK.LIB_MAX=80;              // kütüphanede tutulacak en fazla etiket
 AK.LIB_IMG_W=440;           // saklanan görselin en fazla genişliği (px)
 AK.LIB_IMG_MAX=180000;      // ~135 KB üstü görsel saklanmaz (bulut kotası)
-// Kütüphaneye SADECE modelden modele tekrar eden ortak etiketler girer.
-// İç barkod / fiyat kartı / yıkama modele+renge özeldir (BK81 her modelde var);
-// bunlar kütüphaneye alınırsa yanlış modelin barkodu takılabilir.
-AK.LIB_TYPES = ['dokuma','kartArka','lisansEtiketi','lisansKarti','susKarti'];
+// Kütüphane SADECE DOKUMA (marka etiketi) içindir. Dokuma modelden modele
+// aynıdır (siyah/beyaz), arşivde gelmezse elde olandan takılır.
+// Diğer her şey — özellikle İÇ BARKOD ve fiyat kartı — modele+renge özeldir;
+// onlar SİSTEMDEN, yani arşivin kendisinden gelmek ZORUNDA.
+AK.LIB_TYPES = ['dokuma'];
 AK.lib = function(){
   var raw=AK._get(AK.LS_LIB);
-  if(Array.isArray(raw)&&raw[0]&&raw[0].items) return raw[0].items;
-  if(raw && !Array.isArray(raw)) return raw;   // eski yerel format
-  return {};
+  var o = (Array.isArray(raw)&&raw[0]&&raw[0].items) ? raw[0].items
+        : (raw && !Array.isArray(raw)) ? raw : {};
+  // Eski sürümden kalan dokuma dışı kayıtlar gösterilmez
+  var t={}; Object.keys(o).forEach(function(k){ if(o[k] && AK.LIB_TYPES.indexOf(o[k].type)>=0) t[k]=o[k]; });
+  return t;
 };
 AK.saveLib = function(L){ AK._set(AK.LS_LIB, [{id:'ak_labels', items:L||{}}]); };
 // Görseli küçült — kütüphane bulut kotasını doldurmasın
@@ -19543,10 +19546,13 @@ AK.renderColors = function(){
         ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
       '<div class="ak-libbar">'+
-        '<button class="btn btn-sm btn-secondary" onclick="AK.openLib('+c.id+')"><i class="fas fa-images"></i> Etiket Ekle</button>'+
-        '<span class="ak-libbar-note">'+((miss&&miss.length)
-            ? 'Eksik: <b>'+miss.join(', ')+'</b> — arşivde gelmediyse kütüphaneden ekleyin.'
-            : 'Arşivde gelmeyen bir etiketi kayıtlı görselden ekleyebilirsiniz.')+'</span>'+
+        '<button class="btn btn-sm btn-secondary" onclick="AK.openLib('+c.id+')"><i class="fas fa-images"></i> Dokuma Ekle</button>'+
+        '<span class="ak-libbar-note">'+(
+            (miss && miss.indexOf('Dokuma (Marka Etiketi)')>=0)
+              ? '<b>Dokuma etiketi eksik</b> — arşivde gelmediyse kütüphaneden ekleyin.'
+            : (miss && miss.length)
+              ? 'Eksik: <b>'+miss.join(', ')+'</b> — bunlar arşivden gelmek zorunda, arşivi kontrol edin.'
+              : 'Arşivde dokuma gelmediyse kayıtlı görselden ekleyebilirsiniz.')+'</span>'+
       '</div>'+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
