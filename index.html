@@ -437,6 +437,7 @@
       'ak_codemap_v2',       // Aksesuar Kontrol kod tablosu — array-of-one formatinda
       'ak_labels_v2',        // Aksesuar Kontrol etiket kutuphanesi (kod → gorsel) — array-of-one
       'ak_ziplinks_v2',      // Aksesuar Kontrol kaynak arsiv GitHub linkleri — array-of-one (baska PC'den regen)
+      'ak_gelen_v1',         // Gelen numune metasi (kim/ne zaman/onay/link) — gorsel IndexedDB'de
       'deleted_ids'          // TOMBSTONE: kalici silinen id'ler — offline cihazlar geri diriltmesin
     ];
     const RECENT_WRITE_MS = 5000;
@@ -3765,6 +3766,39 @@ if(typeof Chart==='undefined'){
             </div>
           </details>
           <p class="ak-lib-hint"><i class="fas fa-circle-info"></i> Sadece <b>dokuma</b> içindir; dokuma her modelde aynıdır. İç barkod, fiyat kartı ve yıkama modele özeldir — onlar arşivden gelmek zorunda. Yüklediğin her arşiv arka planda taranır.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gelen numune karşılaştırma: arşivdeki etiket ile gelen yan yana -->
+    <div class="modal-overlay" id="akCmpModal">
+      <div class="modal ak-cmp-modal">
+        <div class="modal-header">
+          <h3><i class="fas fa-code-compare" style="color:var(--primary);margin-right:7px;"></i><span id="akCmpTitle">Numune Karşılaştırma</span></h3>
+          <button class="modal-close" onclick="AK.cmpKapat()">&times;</button>
+        </div>
+        <div class="ak-cmp-body">
+          <div class="ak-cmp-grid">
+            <figure class="ak-cmp-fig">
+              <figcaption><i class="fas fa-database"></i> SİSTEMDEKİ <em>(arşivden)</em></figcaption>
+              <div class="ak-cmp-img" id="akCmpSys"></div>
+            </figure>
+            <figure class="ak-cmp-fig gelen">
+              <figcaption><i class="fas fa-camera"></i> GELEN <em id="akCmpWho"></em></figcaption>
+              <div class="ak-cmp-img" id="akCmpNew"></div>
+            </figure>
+          </div>
+          <div class="ak-cmp-note">
+            <label>Not <span>(uygunsuzluk varsa yaz — föye basılır)</span></label>
+            <input id="akCmpNot" class="form-input" placeholder="Örn: renk tonu farklı, yazı puntosu küçük…" autocomplete="off">
+          </div>
+        </div>
+        <div class="ak-cmp-foot">
+          <button class="btn btn-secondary" onclick="AK.cmpSil()"><i class="fas fa-trash"></i> Sil</button>
+          <div class="ak-cmp-foot-r">
+            <button class="btn btn-danger-soft" onclick="AK.cmpKarar(false)"><i class="fas fa-circle-xmark"></i> Uygun Değil</button>
+            <button class="btn btn-primary" onclick="AK.cmpKarar(true)"><i class="fas fa-circle-check"></i> Uygun</button>
+          </div>
         </div>
       </div>
     </div>
@@ -19567,6 +19601,7 @@ AK.renderColors = function(){
       '</div>'+
     '</div>';
   }).join('');
+  try{ AK._gelenKucukleriDoldur(); }catch(_){}
 };
 AK.setField = function(id,f,v){ var c=AK._c(id); if(c){ c[f]=v; } };
 // Renk elle değişince dokuma etiket seçimi (açık→beyaz, koyu→siyah) yeniden
@@ -19600,9 +19635,96 @@ AK.matchesHtml = function(c){
       (f.note?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+f.note+'</div>':'')+
       '</div>'+
       (f._manuel?'<button class="ak-m-x" title="Karttan çıkar" onclick="AK.libCikar('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\')"><i class="fas fa-xmark"></i></button>':'')+
+      AK.gelenHtml(c, f.type)+
       '</div>';
   }).join('');
   return '<div class="ak-matches">'+cards+'</div>';
+};
+
+// Aksesuar kartının altındaki "gelen numune" şeridi
+AK.gelenHtml = function(c, tip){
+  if(!AK.TYPES[tip]) return '';
+  var list=AK.gelenFor(c, tip);
+  var inp='gnf_'+c.id+'_'+tip;
+  var buton='<label class="ak-gn-add" for="'+inp+'" title="Gelen numunenin fotoğrafını çek / seç">'+
+      '<i class="fas fa-camera"></i><span>'+(list.length?'Ekle':'Gelen numune')+'</span>'+
+      '<input id="'+inp+'" type="file" accept="image/*" capture="environment" '+
+      'onchange="AK.gelenSec('+c.id+',\''+tip+'\',this)"></label>';
+  if(!list.length) return '<div class="ak-gn ak-gn-bos">'+buton+'</div>';
+  var kucukler=list.map(function(x,i){
+    var dr = x.onay===true?'ok':x.onay===false?'no':'';
+    return '<button type="button" class="ak-gn-th '+dr+'" data-gid="'+x.id+'" '+
+      'onclick="AK.gelenAc('+c.id+',\''+tip+'\',\''+x.id+'\')" title="Karşılaştır">'+
+      '<img alt="gelen">'+
+      (dr?'<i class="fas '+(dr==='ok'?'fa-circle-check':'fa-circle-xmark')+'"></i>':'')+
+      '</button>';
+  }).join('');
+  var onayli=list.filter(function(x){return x.onay===true;}).length;
+  var red=list.filter(function(x){return x.onay===false;}).length;
+  var rozet = red ? '<span class="ak-gn-rz no">Uygun değil</span>'
+            : onayli ? '<span class="ak-gn-rz ok">Kontrol edildi</span>'
+            : '<span class="ak-gn-rz bek">Onay bekliyor</span>';
+  return '<div class="ak-gn">'+
+    '<div class="ak-gn-h"><i class="fas fa-images"></i> Gelen numune '+rozet+'</div>'+
+    '<div class="ak-gn-row">'+kucukler+buton+'</div>'+
+  '</div>';
+};
+// ---- Karşılaştırma ekranı ----
+AK._cmp = null;
+AK.gelenAc = function(cid, tip, gid){
+  var c=AK._c(cid); if(!c) return;
+  var meta=AK.gelenFor(c,tip).filter(function(x){ return x.id===gid; })[0]; if(!meta) return;
+  AK._cmp={cid:cid, tip:tip, gid:gid};
+  var f=(c.files||[]).filter(function(x){ return x.type===tip; })[0];
+  var t=document.getElementById('akCmpTitle');
+  if(t) t.textContent=((AK.TYPES[tip]&&AK.TYPES[tip].label)||tip)+(c.renk?' · '+c.renk:'');
+  var who=document.getElementById('akCmpWho');
+  if(who){
+    var d=meta.ts?new Date(meta.ts):null;
+    who.textContent='('+(meta.by||'—')+(d?' · '+d.toLocaleDateString('tr-TR')+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'')+')';
+  }
+  var sys=document.getElementById('akCmpSys');
+  if(sys) sys.innerHTML = (f && f.images && f.images[0])
+    ? '<img src="'+f.images[0]+'" alt="sistem">'
+    : '<div class="ak-cmp-yok"><i class="fas fa-circle-question"></i> Arşivde bu etiket yok</div>';
+  var yeni=document.getElementById('akCmpNew');
+  if(yeni) yeni.innerHTML='<div class="ak-cmp-yok"><i class="fas fa-spinner fa-spin"></i></div>';
+  AK.gelenGorsel(meta).then(function(u){
+    if(!yeni) return;
+    yeni.innerHTML = u ? '<img src="'+u+'" alt="gelen">'
+      : '<div class="ak-cmp-yok"><i class="fas fa-cloud-arrow-down"></i> Görsel bu cihazda yok<br><small>Çekildiği cihazdan bakın</small></div>';
+  });
+  var n=document.getElementById('akCmpNot'); if(n) n.value=meta.not||'';
+  document.getElementById('akCmpModal').classList.add('show');
+};
+AK.cmpKapat = function(){ document.getElementById('akCmpModal').classList.remove('show'); AK._cmp=null; };
+AK.cmpKarar = function(uygun){
+  var x=AK._cmp; if(!x) return;
+  var n=document.getElementById('akCmpNot');
+  AK.gelenOnay(x.cid, x.tip, x.gid, !!uygun, n?n.value:'');
+  AK.cmpKapat();
+  if(typeof toast==='function') toast(uygun?'Numune uygun işaretlendi':'Numune UYGUN DEĞİL işaretlendi', uygun?'success':'error');
+};
+AK.cmpSil = function(){
+  var x=AK._cmp; if(!x) return;
+  AK.cmpKapat();
+  AK.gelenSil(x.cid, x.tip, x.gid);
+};
+// input[type=file] → oku ve ekle
+AK.gelenSec = function(cid, tip, input){
+  var f=input && input.files && input.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(e){ AK.gelenEkle(cid, tip, e.target.result); };
+  rd.onerror=function(){ if(typeof toast==='function') toast('Fotoğraf okunamadı','error'); };
+  rd.readAsDataURL(f);
+  input.value='';
+};
+// Küçük görselleri asenkron doldur (dataURL'ler HTML'e gömülmesin)
+AK._gelenKucukleriDoldur = function(){
+  document.querySelectorAll('.ak-gn-th[data-gid]').forEach(function(btn){
+    var img=btn.querySelector('img'); if(!img || img.src) return;
+    AK.gelenGorsel({id:btn.getAttribute('data-gid')}).then(function(u){ if(u) img.src=u; });
+  });
 };
 
 // Çok renk + çok arşiv: birleşik veri AK._merged'de tutulur, renk kartları
@@ -20150,7 +20272,36 @@ AK._renderColorPage = function(pdf, c){
   // YAPIŞTIRILACAĞI kesikli kutu → sistemdeki ile gelen yan yana kanıt olur.
   // Yıkama kendi sayfasında büyük basılır; yapıştırma kutusu altına gelir.
   var LEFTW=106, GAP=6, RIGHTW=cw-LEFTW-GAP;
-  function pasteBox(x,yy,w,h){
+  // Gelen numune kutusu. Fotoğraf çekilmişse kesik çizgili boş kutu yerine
+  // fotoğrafın kendisi basılır — kağıda bant yapıştırmaya gerek kalmaz.
+  function pasteBox(x,yy,w,h,tip){
+    var g = tip ? AK.gelenFor(c, tip) : [];
+    var foto = null, meta = null;
+    for(var i=0;i<g.length;i++){
+      var u = AK._gelenBellek[g[i].id];
+      if(u){ foto=u; meta=g[i]; if(g[i].onay===true) break; }   // onaylı varsa onu tercih et
+    }
+    if(foto){
+      var pr=null; try{ pr=pdf.getImageProperties(foto); }catch(e){ pr=null; }
+      var renk = meta && meta.onay===true ? [16,140,90] : meta && meta.onay===false ? [200,50,50] : [150,158,172];
+      pdf.setDrawColor(renk[0],renk[1],renk[2]); pdf.setLineWidth(0.5);
+      try{ pdf.roundedRect(x,yy,w,h,2.5,2.5); }catch(_){ pdf.rect(x,yy,w,h); }
+      if(pr){
+        var iw=w-4, ih=iw*pr.height/pr.width, mx=h-9;
+        if(ih>mx){ ih=mx; iw=ih*pr.width/pr.height; }
+        try{ pdf.addImage(foto,'JPEG',x+(w-iw)/2,yy+2,iw,ih,undefined,'FAST'); }catch(e){}
+        pdf.setTextColor(renk[0],renk[1],renk[2]); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.6);
+        var dm = meta && meta.onay===true ? 'GELEN NUMUNE · UYGUN'
+               : meta && meta.onay===false ? 'GELEN NUMUNE · UYGUN DEĞİL' : 'GELEN NUMUNE';
+        T(dm, x+w/2, yy+h-3.6, {align:'center'});
+        if(meta && meta.not){
+          pdf.setFont('helvetica','italic'); pdf.setFontSize(6);
+          T(String(meta.not).slice(0,58), x+w/2, yy+h-1.2, {align:'center'});
+        }
+      }
+      pdf.setFont('helvetica','normal');
+      return;
+    }
     try{ pdf.setLineDashPattern([1.6,1.4],0); }catch(_){ }
     pdf.setDrawColor(150,158,172); pdf.setLineWidth(0.4);
     try{ pdf.roundedRect(x,yy,w,h,2.5,2.5); }catch(_){ pdf.rect(x,yy,w,h); }
@@ -20173,7 +20324,9 @@ AK._renderColorPage = function(pdf, c){
     if(!big){
       // kolon başlıkları
       pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.8);
-      T('SİSTEMDEKİ (arşivden)', M+SYSIND, y+2.2); T('GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
+      var _gv = AK.gelenFor(c, f.type).some(function(x){ return !!AK._gelenBellek[x.id]; });
+      T('SİSTEMDEKİ (arşivden)', M+SYSIND, y+2.2);
+      T(_gv?'GELEN — fotoğrafı çekildi':'GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
     }
     f.images.forEach(function(url,ii){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
@@ -20192,7 +20345,7 @@ AK._renderColorPage = function(pdf, c){
         // böylece gelen numune kutusuna bir tık yakın durur.
         var xoff=M+Math.min(Math.max(LEFTW-w,0),SYSIND);
         pdf.addImage(url,'PNG',xoff,y,w,h,undefined,'FAST');
-        if(ii===0){ pasteBox(M+LEFTW+GAP, y, RIGHTW, Math.max(h,22)); }
+        if(ii===0){ pasteBox(M+LEFTW+GAP, y, RIGHTW, Math.max(h,22), f.type); }
         y+=h+3;
       }
     });
@@ -20211,10 +20364,11 @@ AK._newPdf = function(){ var JP=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.
 // kayıtların geriye uyumu için okunur ama yeni yazılmaz.)
 AK._db=null;
 AK._openDb = function(){ return new Promise(function(res,rej){ if(AK._db){ res(AK._db); return; }
-  var rq=indexedDB.open('ak_pdfs',2);
+  var rq=indexedDB.open('ak_pdfs',3);
   rq.onupgradeneeded=function(){ var db=rq.result;
     if(!db.objectStoreNames.contains('pdfs')) db.createObjectStore('pdfs');
-    if(!db.objectStoreNames.contains('zips')) db.createObjectStore('zips'); };
+    if(!db.objectStoreNames.contains('zips')) db.createObjectStore('zips');
+    if(!db.objectStoreNames.contains('gelen')) db.createObjectStore('gelen'); };  // gelen numune fotoğrafları
   rq.onsuccess=function(){ AK._db=rq.result; res(AK._db); };
   rq.onerror=function(){ rej(rq.error); }; }); };
 AK._idbPut = function(st,key,val){ return AK._openDb().then(function(db){ return new Promise(function(res,rej){ var tx=db.transaction(st,'readwrite'); tx.objectStore(st).put(val,key); tx.oncomplete=res; tx.onerror=function(){ rej(tx.error); }; }); }).catch(function(e){ console.warn('[AK] idb yazılamadı',e); }); };
@@ -20222,6 +20376,145 @@ AK._idbGet = function(st,key){ return AK._openDb().then(function(db){ return new
 AK._idbDel = function(st,key){ return AK._openDb().then(function(db){ db.transaction(st,'readwrite').objectStore(st).delete(key); }).catch(function(){}); };
 AK.saveZipBlob = function(key,file){ return AK._idbPut('zips',key,file); };
 AK.getZipBlob  = function(key){ return AK._idbGet('zips',key); };
+
+/* ═══════════════════════════════════════════════════════════════════
+   GELEN NUMUNE
+   Atölyeden/tedarikçiden gelen etiketin fotoğrafı. Eskiden föy kağıdına
+   bantla yapıştırılıyordu; artık telefonla çekilip sistemde arşivdekiyle
+   yan yana duruyor ve föye basılıyor.
+
+   Saklama iki katmanlı:
+   • Görselin kendisi IndexedDB'de ('gelen' store) — büyük, buluta gitmez.
+   • Meta (kim, ne zaman, onay, bulut linki) senkronlu haritada. Böylece
+     diğer PC de kimin ne zaman onayladığını görür; link varsa görseli de.
+   ═══════════════════════════════════════════════════════════════════ */
+AK.LS_GELEN='ak_gelen_v1';
+AK.GELEN_W=1000;          // saklanan fotoğrafın en fazla genişliği
+AK.GELEN_KALITE=0.72;     // jpeg kalitesi — okunur ama küçük
+AK.gelenMap = function(){
+  var raw=AK._get(AK.LS_GELEN);
+  if(Array.isArray(raw)&&raw[0]&&raw[0].map) return raw[0].map;
+  if(raw && !Array.isArray(raw)) return raw;
+  return {};
+};
+AK.saveGelenMap = function(m){ AK._set(AK.LS_GELEN, [{id:'ak_gelen', map:m||{}}]); };
+// Renk kartının kimliği: aynı model+PO+renk kodu her cihazda aynı anahtarı verir
+AK._gelenKey = function(c){
+  if(!c) return '';
+  var mdl=((c.model||AK.state.model||'')+'').toUpperCase().trim();
+  var po =((c.po||'')+'').trim();
+  var kod=((c.code||c.renk||'')+'').toUpperCase().trim();
+  return [mdl,po,kod].join('|');
+};
+AK.gelenFor = function(c, tip){
+  var m=AK.gelenMap(), k=AK._gelenKey(c);
+  var g=m[k]; if(!g) return [];
+  var a=g[tip]; return Array.isArray(a)?a:[];
+};
+AK.gelenSayi = function(c){
+  var m=AK.gelenMap(), g=m[AK._gelenKey(c)]; if(!g) return 0;
+  return Object.keys(g).reduce(function(s,t){ return s+((g[t]||[]).length); },0);
+};
+// Fotoğrafı küçült — telefon fotoğrafı 4 MB, bize 100 KB yeter
+AK._fotoKucult = function(dataUrl){
+  return new Promise(function(res){
+    var im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.width||1, h=im.height||1, M=AK.GELEN_W;
+        if(w>M){ h=Math.round(h*M/w); w=M; }
+        if(h>M){ w=Math.round(w*M/h); h=M; }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        var x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0,w,h);
+        res(cv.toDataURL('image/jpeg', AK.GELEN_KALITE));
+      }catch(e){ res(dataUrl); }
+    };
+    im.onerror=function(){ res(null); };
+    im.src=dataUrl;
+  });
+};
+AK._kim = function(){ try{ return localStorage.getItem('irsaliye_last_user')||''; }catch(e){ return ''; } };
+// Gelen numune ekle → IndexedDB'ye görsel, haritaya meta, arka planda buluta
+AK.gelenEkle = function(cid, tip, dataUrl){
+  var c=AK._c(cid); if(!c || !tip || !dataUrl) return Promise.resolve(null);
+  return AK._fotoKucult(dataUrl).then(function(small){
+    if(!small) throw new Error('Görsel okunamadı');
+    var id='g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    return AK._idbPut('gelen', id, small).then(function(){
+      var m=AK.gelenMap(), k=AK._gelenKey(c);
+      if(!m[k]) m[k]={};
+      if(!m[k][tip]) m[k][tip]=[];
+      m[k][tip].push({ id:id, ts:Date.now(), by:AK._kim(), url:'', onay:null, not:'' });
+      AK.saveGelenMap(m);
+      AK._gelenBellek[id]=small;
+      AK.renderColors();
+      if(typeof toast==='function') toast('Gelen numune eklendi — '+((AK.TYPES[tip]&&AK.TYPES[tip].label)||tip),'success');
+      AK._gelenBulutaYolla(id, small);
+      return id;
+    });
+  }).catch(function(e){ if(typeof toast==='function') toast('Fotoğraf eklenemedi: '+(e&&e.message||e),'error'); return null; });
+};
+// Bulut linki → diğer cihaz da görsün (link yoksa yalnızca bu cihazda görünür)
+AK._gelenBulutaYolla = function(id, dataUrl){
+  if(typeof _uploadPhotoToCatbox!=='function') return;
+  try{
+    _uploadPhotoToCatbox(dataUrl).then(function(url){
+      if(!url) return;
+      var m=AK.gelenMap(); var bulundu=false;
+      Object.keys(m).forEach(function(k){ Object.keys(m[k]).forEach(function(t){
+        (m[k][t]||[]).forEach(function(x){ if(x.id===id && !x.url){ x.url=url; bulundu=true; } });
+      }); });
+      if(bulundu) AK.saveGelenMap(m);
+    }).catch(function(){});
+  }catch(e){}
+};
+AK.gelenSil = function(cid, tip, id){
+  if(!confirm('Bu gelen numune fotoğrafı silinsin mi?')) return;
+  var c=AK._c(cid); if(!c) return;
+  var m=AK.gelenMap(), k=AK._gelenKey(c);
+  if(m[k] && m[k][tip]){
+    m[k][tip]=m[k][tip].filter(function(x){ return x.id!==id; });
+    if(!m[k][tip].length) delete m[k][tip];
+    if(!Object.keys(m[k]).length) delete m[k];
+    AK.saveGelenMap(m);
+  }
+  AK._idbDel('gelen', id); delete AK._gelenBellek[id];
+  AK.renderColors();
+};
+// Onay durumu: true = uygun, false = uygun değil
+AK.gelenOnay = function(cid, tip, id, deger, not){
+  var c=AK._c(cid); if(!c) return;
+  var m=AK.gelenMap(), k=AK._gelenKey(c);
+  ((m[k]||{})[tip]||[]).forEach(function(x){
+    if(x.id===id){ x.onay=deger; if(not!==undefined) x.not=not||''; x.onayBy=AK._kim(); x.onayTs=Date.now(); }
+  });
+  AK.saveGelenMap(m);
+  AK.renderColors();
+};
+// Görseli getir: bellek → IndexedDB → bulut linki
+AK._gelenBellek = {};
+AK.gelenGorsel = function(meta){
+  if(!meta) return Promise.resolve(null);
+  if(AK._gelenBellek[meta.id]) return Promise.resolve(AK._gelenBellek[meta.id]);
+  return AK._idbGet('gelen', meta.id).then(function(v){
+    if(v){ AK._gelenBellek[meta.id]=v; return v; }
+    return meta.url || null;   // bu cihazda yok → bulut linki
+  }).catch(function(){ return meta.url||null; });
+};
+// Bu kartın bütün gelen görselleri bellekte mi? (PDF senkron çizildiği için gerekli)
+AK._gelenHazir = function(c){
+  var m=AK.gelenMap(), g=m[AK._gelenKey(c)]||{};
+  return Object.keys(g).every(function(t){
+    return (g[t]||[]).every(function(x){ return !!AK._gelenBellek[x.id] || !x.id; });
+  });
+};
+// Bir renk kartının tüm gelen görsellerini önceden yükle (föy/karşılaştırma için)
+AK.gelenYukle = function(c){
+  var m=AK.gelenMap(), g=m[AK._gelenKey(c)]||{};
+  var hepsi=[];
+  Object.keys(g).forEach(function(t){ (g[t]||[]).forEach(function(x){ hepsi.push(x); }); });
+  return Promise.all(hepsi.map(function(x){ return AK.gelenGorsel(x); })).then(function(){ return true; });
+};
 
 // ---- Kaynak arşivleri GitHub'a yükle → başka PC'den de föy üretilebilsin ----
 // URL'ler senkronlu haritada (ak_ziplinks_v2) tutulur; yükleme onZip'te arka
@@ -20406,6 +20699,11 @@ AK.generate = function(id, mode){
   var c=AK._c(id); if(!c) return;
   if(!AK.state.model){ alert('Önce Model Kodu girin.'); return; }
   if(!c.files){ alert('Önce bu renk için ZIP yükleyin.'); return; }
+  // Gelen numune fotoğrafları IndexedDB'de; PDF senkron çiziliyor, önce belleğe al
+  if(AK.gelenSayi(c) && !AK._gelenHazir(c)){
+    AK.gelenYukle(c).then(function(){ AK.generate(id, mode); });
+    return;
+  }
   var order=AK.STAGE_ORDER[AK.state.asama];
   var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
   if(!have.length){ alert('Bu aşamaya ait aksesuar bulunamadı. Bilinmeyen dosyaları etiketleyin.'); return; }
@@ -20419,7 +20717,7 @@ AK.generate = function(id, mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
-  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), types:have.map(function(f){return f.type;}) }, 200);
+  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), types:have.map(function(f){return f.type;}), gelenKey:AK._gelenKey(c), gelenSayi:AK.gelenSayi(c) }, 200);
   if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi ✓ (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓'),'success');
 };
 
