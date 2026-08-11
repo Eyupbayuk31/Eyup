@@ -19189,8 +19189,8 @@ AK._yikamaColors = function(bytes, onlyWash){ return window.pdfjsLib.getDocument
       }
       var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{1,4})/);
       var nm=full.replace(/\s+/g,' ').match(/\b([A-Z][a-z]{2,12})\)/);
-      var code=cm?cm[2]:null; var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
-      return AK._textCrop(pdf,pageNum,3.4).then(function(r){ if((r.ink||0)>=150) out.push({code:code, renk:renk, url:r.url}); i++; return scan(); }); }); }
+      var code=cm?cm[2]:null; var model=cm?cm[1]:null; var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
+      return AK._textCrop(pdf,pageNum,3.4).then(function(r){ if((r.ink||0)>=150) out.push({code:code, renk:renk, model:model, url:r.url}); i++; return scan(); }); }); }
   return scan();
 }); };
 // Fall in Love birleşik etiket: TÜM dolu sayfaları tam (okunur) render et, renge
@@ -19319,7 +19319,9 @@ AK.processEntries = function(entries){
           if(x.adet && Object.keys(x.adet).length){ if(!col.adet) col.adet={}; Object.keys(x.adet).forEach(function(sz){ col.adet[sz]=x.adet[sz]; sizeSet[sz]=true; }); } }); }); }
         if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
           var coded=list.filter(function(x){return x.code;});
-          if(coded.length){ coded.forEach(function(x){ ensureColor(x.code,x.renk).yikama=[x.url]; }); }
+          // Yıkama sayfasındaki "I6399AX-(PN74" kalıbından model de okunur;
+          // modelsiz kova açılırsa aynı renk iki kez görünüyordu.
+          if(coded.length){ coded.forEach(function(x){ ensureColor(x.code,x.renk,x.model).yikama=[x.url]; }); }
           // kodsuz sayfalar (eski tip) → ortak (tüm renklere)
           var nocode=list.filter(function(x){return !x.code;}).map(function(x){return x.url;});
           if(nocode.length) shared.push({name:name,type:'yikama',code:null,renk:null,images:nocode});
@@ -19480,6 +19482,16 @@ AK._merged = null; AK._zipNames = []; AK._zipKeys = [];
 AK._colorsFromMerged = function(m, prev){
   prev = prev || {};
   var codes=Object.keys(m.byColor);
+  // Yıkama talimatı PDF'i modelin TÜM renklerini içerebiliyor; oysa arşivdeki
+  // sipariş sadece bir kısmını kapsıyor. Sadece yıkaması olan (barkodu/fiyat
+  // kartı olmayan) renk bu siparişte YOKTUR — kart açılmaz. Yalnızca hiçbir
+  // renkte barkod yoksa (tek başına yıkama arşivi yüklenmişse) hepsi kalır.
+  var barkodluVar = codes.some(function(k){ var c=m.byColor[k];
+    return (c.icbarkod&&c.icbarkod.length) || (c.fiyat&&c.fiyat.length) || (c.combo&&c.combo.length); });
+  if(barkodluVar){
+    codes = codes.filter(function(k){ var c=m.byColor[k];
+      return (c.icbarkod&&c.icbarkod.length) || (c.fiyat&&c.fiyat.length) || (c.combo&&c.combo.length); });
+  }
   var colorCount=codes.length;
   return codes.map(function(k,ci){
     var col=m.byColor[k]; var files=[];
@@ -19728,7 +19740,15 @@ AK._pickSummaryRows = function(rows, model, po, code){
   if(!M) return {rows:[], reason:'model yok'};
   var mine=rows.filter(function(r){ return r.model===M; });
   if(!mine.length) return {rows:[], reason:'tabloda model yok'};
-  if(code){ var byCode=mine.filter(function(r){ return r.code===(''+code).toUpperCase(); }); if(byCode.length) mine=byCode; }
+  if(code){
+    var C=(''+code).toUpperCase();
+    var byCode=mine.filter(function(r){ return r.code===C; });
+    if(byCode.length) mine=byCode;
+    // Tabloda renk kodu SÜTUNU var ama bu renk yoksa: o renk bu siparişte
+    // yok demektir. Eskiden modelin tüm renkleri toplanıyordu ve olmayan
+    // renge (ör. arşivde yıkaması kalmış bir renk) devasa adet yazılıyordu.
+    else if(mine.some(function(r){ return !!r.code; })) return {rows:[], reason:'tabloda bu renk yok'};
+  }
   // Gruplama AY bazındadır: aynı ay içindeki PO'lar aynı sevkiyat dönemidir,
   // gün gün farklı olabilirler (03.08 ve 20.08 aynı gruba girer).
   var monKey=function(r){ var ym=_aksTerminYM(r.termin); return ym ? (ym.y+'-'+(ym.m<10?'0':'')+ym.m) : (r.termin||'—'); };
@@ -19798,12 +19818,15 @@ AK.applySummary = function(){
     var pick=AK._pickSummaryRows(rows, model, c.po, c.code);
     if(!pick.rows.length) return;
     // Aynı termindeki birden çok PO → beden beden topla
+    // TOPTAN satırları (TOPTAN-5 / TOPTAN-7) ana adete EKLENMEZ: föyde ayrı
+    // satır olarak "ayrı dikilecek" diye basılıyor, ikisini de toplarsak
+    // atölye aynı malı iki kez sayar.
     var sum={}, top={};
     pick.rows.forEach(function(r){ Object.keys(r.sizes).forEach(function(k){
-      sum[k]=(sum[k]||0)+r.sizes[k];
       if(r.toptan) top[k]=(top[k]||0)+r.sizes[k];
+      else         sum[k]=(sum[k]||0)+r.sizes[k];
     }); });
-    if(!Object.keys(sum).length) return;
+    if(!Object.keys(sum).length && !Object.keys(top).length) return;
     c.toptan = Object.keys(top).length ? top : null;
     c.adet=c.adet||{};
     AK.SIZES.forEach(function(b){ c.adet[b[0]] = sum[b[0]]!=null ? sum[b[0]] : ''; });
@@ -19884,7 +19907,7 @@ AK.buildFoyHtml = function(c){
     var tpT=foyBeds.reduce(function(a,b){ return a+(parseInt(c.toptan[b[0]],10)||0); },0);
     if(tpT>0){
       tpH='<div class="qty" style="border-color:#f0c896;margin-top:-6px;">'+
-        '<div class="qh" style="background:#fff7ed;color:#b45309;">Toptan (TOPTAN-5 / TOPTAN-7) — ayrı dikilecek</div>'+
+        '<div class="qh" style="background:#fff7ed;color:#b45309;">Toptan (TOPTAN-5 / TOPTAN-7) — ayrı dikilecek, üstteki adete dahil değil</div>'+
         '<div class="qcells">'+foyBeds.map(function(b){
           return '<div class="qc"><span>'+b[1]+'</span><b>'+((parseInt(c.toptan[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
         }).join('')+'<div class="qc total"><span>TOPTAN</span><b>'+tpT.toLocaleString('tr')+'</b></div></div></div>';
@@ -19979,7 +20002,7 @@ AK._renderColorPage = function(pdf, c){
       pdf.setTextColor(255,255,255); pdf.setFontSize(9); T(String(tpTot), tqx+colw/2, y+6, {align:'center'});
       y+=th+3.2;
       pdf.setTextColor(180,83,9); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
-      T('» Bunun '+tpTot+' adedi TOPTAN siparişidir (TOPTAN-5 / TOPTAN-7) — AYRI DİKİLECEK.', M, y);
+      T('» AYRICA '+tpTot+' adet TOPTAN siparişi var (TOPTAN-5 / TOPTAN-7) — AYRI DİKİLECEK, üstteki adete dahil değildir.', M, y);
       pdf.setFont('helvetica','normal'); y+=3.5;
     }
   }
