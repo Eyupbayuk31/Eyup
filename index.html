@@ -3742,10 +3742,10 @@ if(typeof Chart==='undefined'){
       <div class="modal" style="max-width:720px;">
         <div class="modal-header"><h3><i class="fas fa-images" style="color:var(--primary);margin-right:7px;"></i>Etiket Kütüphanesi</h3><button class="modal-close" onclick="AK.closeLib()">&times;</button></div>
         <div class="modal-body">
-          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Arşivde gelmeyen etiketi buradan seçip renk kartına ekleyin — föyde boş çıkmasın. Arşivlerde gelen her etiket otomatik kaydedilir.</p>
+          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Arşivde gelmeyen etiketi buradan seçip renk kartına ekleyin — föyde boş çıkmasın. Yüklediğiniz her arşiv arka planda taranır, etiketler kendiliğinden buraya düşer.</p>
           <div class="ak-lib-top">
             <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod, tip veya renk ara (ör. AULBW13729, dokuma)" oninput="AK.renderLib()" autocomplete="off"></div>
-            <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara()" title="Yüklü ve daha önce yüklenmiş arşivlerdeki etiketleri kütüphaneye al"><i class="fas fa-rotate"></i> Arşivlerden tara</button>
+            <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara(false,true)" title="Bütün arşivleri baştan tara (normalde kendiliğinden yapılır)"><i class="fas fa-rotate"></i> Yeniden tara</button>
           </div>
           <div id="akLibList" class="ak-lib-grid"></div>
           <div class="ak-lib-add">
@@ -18962,6 +18962,10 @@ AK.LS_LIB='ak_labels_v2';
 AK.LIB_MAX=80;              // kütüphanede tutulacak en fazla etiket
 AK.LIB_IMG_W=440;           // saklanan görselin en fazla genişliği (px)
 AK.LIB_IMG_MAX=180000;      // ~135 KB üstü görsel saklanmaz (bulut kotası)
+// Kütüphaneye SADECE modelden modele tekrar eden ortak etiketler girer.
+// İç barkod / fiyat kartı / yıkama modele+renge özeldir (BK81 her modelde var);
+// bunlar kütüphaneye alınırsa yanlış modelin barkodu takılabilir.
+AK.LIB_TYPES = ['dokuma','kartArka','lisansEtiketi','lisansKarti','susKarti'];
 AK.lib = function(){
   var raw=AK._get(AK.LS_LIB);
   if(Array.isArray(raw)&&raw[0]&&raw[0].items) return raw[0].items;
@@ -18988,7 +18992,8 @@ AK._imgKucult = function(url, maxW){
 };
 // Arşivden gelen (veya elle etiketlenen) görseli kütüphaneye yaz
 AK.libKaydet = function(code, type, renk, url, model){
-  if(!code || !type || !url || type==='unknown' || type==='ignored') return Promise.resolve(false);
+  if(!code || !type || !url) return Promise.resolve(false);
+  if(AK.LIB_TYPES.indexOf(type)<0) return Promise.resolve(false);   // renge özel etiketler kütüphaneye girmez
   return AK._imgKucult(url, AK.LIB_IMG_W).then(function(small){
     if(!small || small.length>AK.LIB_IMG_MAX) return false;
     var L=AK.lib();
@@ -19006,6 +19011,20 @@ AK.libKaydet = function(code, type, renk, url, model){
 AK.libSil = function(code){
   if(!confirm(code+' etiketi kütüphaneden silinsin mi?')) return;
   var L=AK.lib(); delete L[code]; AK.saveLib(L); AK.renderLib();
+};
+// Hangi arşivlerin taranmış olduğu (yerel — buluta gitmesine gerek yok).
+// Böylece her açılışta aynı arşivler tekrar tekrar açılmaz.
+AK.LS_LIBSCAN='ak_lib_scanned';
+AK._tarandi = function(){ try{ var a=JSON.parse(localStorage.getItem(AK.LS_LIBSCAN)); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
+AK._tarandiEkle = function(k){
+  try{ var a=AK._tarandi(); if(a.indexOf(k)<0){ a.push(k); if(a.length>400) a=a.slice(-400); localStorage.setItem(AK.LS_LIBSCAN, JSON.stringify(a)); } }catch(e){}
+};
+// Kod tablosu değişti → daha önce "bilinmiyor" diye atlanan görseller artık
+// tanınabilir; taranmış işaretini kaldır ki bir sonraki geçişte alınsınlar.
+AK._tarandiSifirla = function(){ try{ localStorage.removeItem(AK.LS_LIBSCAN); }catch(e){} };
+// Sessiz, arka planda çalışan tarama — kullanıcı hiçbir şeye basmasın
+AK.libArkaPlanTara = function(){
+  try{ if(AK._libTarayor) return; AK.libTara(true,false); }catch(e){}
 };
 
 // ---- Kütüphaneler (lazy CDN) ----
@@ -19428,7 +19447,8 @@ AK.processEntries = function(entries){
 AK.state = { model:'', asama:'dikim', atolye:'', colors:[] };
 AK._cid = 1;
 AK.touch = function(){ AK.state.model = (document.getElementById('akModel')||{}).value || ''; AK.state.atolye = (document.getElementById('akAtolye')||{}).value || ''; };
-AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords(); };
+AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords();
+  setTimeout(function(){ AK.libArkaPlanTara(); }, 1200); };   // etiket kütüphanesini sessizce güncelle
 
 AK.setAsama = function(a){ AK.state.asama=a;
   var sd=document.getElementById('akSegDikim'), su=document.getElementById('akSegUtu');
@@ -19733,6 +19753,7 @@ AK.onZip = function(id, fileList){
     AK.rebuildColors();
     // Arşivler işlendi, model/PO/renk belli → şimdi özet tablodan adetleri al
     if(xls.length) AK.applySummaryFiles(xls);
+    setTimeout(function(){ AK.libArkaPlanTara(); }, 400);   // etiketleri kütüphaneye al
   })
   .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
@@ -19986,6 +20007,8 @@ AK.tag = function(id,name,type){
       m.png[f.code]=e; AK.saveMap(m);
       // Elle etiketlenen görsel de kütüphaneye girsin
       try{ if(f.images&&f.images[0]) AK.libKaydet(f.code, type, renk, f.images[0], c.model); }catch(_){}
+      // Artık bu kod tanınıyor → eski arşivlerdeki aynı etiket de alınabilsin
+      try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 600); }catch(_){}
     };
     if(type==='dokuma' && f.images && f.images[0]){
       AK._labelTone(f.images[0]).then(saveCode).catch(function(){ saveCode(null); });
@@ -20544,21 +20567,19 @@ AK.openLib = function(cid){
   AK._libCid = cid || null;
   var sel=document.getElementById('akLibType');
   if(sel && !sel.options.length){
-    sel.innerHTML=Object.keys(AK.STAGE_ORDER).map(function(st){
-      return '<optgroup label="'+AK.STAGE_LABEL[st]+'">'+AK.STAGE_ORDER[st].map(function(t){
-        return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('')+'</optgroup>';
-    }).join('');
+    sel.innerHTML=AK.LIB_TYPES.map(function(t){
+      return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('');
   }
   AK.renderLib();
   document.getElementById('akLibModal').classList.add('show');
-  // Kütüphane boşsa kullanıcı uğraşmasın: yüklü/kayıtlı arşivlerden kendi alsın
-  if(!Object.keys(AK.lib()).length) setTimeout(function(){ AK.libTara(true); }, 80);
+  // Taranmamış arşiv varsa sessizce alınır — kullanıcı hiçbir şeye basmasın
+  setTimeout(function(){ AK.libArkaPlanTara(); }, 80);
 };
 // Arşivlerdeki etiket görsellerini kütüphaneye al.
 // Önce ekranda yüklü olanlar (hızlı), sonra daha önce yüklenmiş arşivler
 // (IndexedDB'de duran ya da buluttan inen ZIP/RAR'lar) taranır.
-AK.libTara = function(sessiz){
-  if(AK._libTarayor) return; AK._libTarayor=true;
+AK.libTara = function(sessiz, zorla){
+  if(AK._libTarayor) return Promise.resolve(); AK._libTarayor=true;
   var btn=document.getElementById('akLibScanBtn');
   var eskiBtn=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Taranıyor…'; }
@@ -20576,7 +20597,9 @@ AK.libTara = function(sessiz){
   var keys={};
   AK._zipKeys.forEach(function(k){ keys[k]=keys[k]||{}; });
   AK.recs().forEach(function(r){ (r.zipKeys||[]).forEach(function(k){ keys[k]=keys[k]||r.zipUrls||{}; }); });
-  var kl=Object.keys(keys);
+  // Daha önce taranan arşiv tekrar açılmasın (zorla=true ise hepsi yeniden)
+  var tarandi=AK._tarandi();
+  var kl=Object.keys(keys).filter(function(k){ return zorla || tarandi.indexOf(k)<0; });
   var arsiv = !kl.length ? Promise.resolve() : AK.loadLibs().then(function(){
     return kl.reduce(function(ch,k){ return ch.then(function(){
       return AK._getArchiveFiles([k], keys[k]).then(function(files){
@@ -20587,23 +20610,26 @@ AK.libTara = function(sessiz){
             var cat=AK.categorize(e.name);
             if(!cat || !cat.code || !cat.type || cat.type==='unknown') return;
             return AK.libKaydet(cat.code, cat.type, cat.renk, AK._pngUrl(e.bytes, e.name));
-          }); }, Promise.resolve());
+          }); }, Promise.resolve()).then(function(){ AK._tarandiEkle(k); });
         });
       }).catch(function(){});
     }); }, Promise.resolve());
   }).catch(function(){});
 
-  Promise.all(isler).then(function(){ return arsiv; }).then(function(){
+  return Promise.all(isler).then(function(){ return arsiv; }).then(function(){
     AK._libTarayor=false;
     if(btn){ btn.disabled=false; btn.innerHTML=eskiBtn; }
-    AK.renderLib();
+    var acik=document.getElementById('akLibModal');
+    if(acik && acik.classList.contains('show')) AK.renderLib();
     var yeni=Object.keys(AK.lib()).length-oncekiSayi;
     if(!sessiz && typeof toast==='function'){
       toast(yeni>0 ? (yeni+' yeni etiket kütüphaneye eklendi') : 'Arşivlerde yeni etiket bulunamadı', yeni>0?'success':'info');
     }
+    return yeni;
   }).catch(function(){
     AK._libTarayor=false;
     if(btn){ btn.disabled=false; btn.innerHTML=eskiBtn; }
+    return 0;
   });
 };
 AK.closeLib = function(){ document.getElementById('akLibModal').classList.remove('show'); AK._libCid=null; };
@@ -20704,6 +20730,8 @@ AK.addCode = function(){
   var m=AK.map(); m.png[code]={type:type}; if(renk) m.png[code].renk=renk; AK.saveMap(m);
   document.getElementById('akNewCode').value=''; document.getElementById('akNewRenk').value='';
   AK.renderCodeTable();
+  // Yeni kod tanındı → arşivlerdeki görseli de kütüphaneye alalım
+  try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 400); }catch(_){}
 };
 AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); AK.renderCodeTable(); };
 
