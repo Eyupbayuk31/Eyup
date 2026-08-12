@@ -435,6 +435,7 @@
       'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
       'ak_records_v2',       // Aksesuar Kontrol kayitlari (id'li dizi) — cihazlar arasi senkron
       'ak_codemap_v2',       // Aksesuar Kontrol kod tablosu — array-of-one formatinda
+      'ak_labels_v2',        // Aksesuar Kontrol dokuma etiket kutuphanesi (kod → gorsel) — array-of-one
       'ak_ziplinks_v2',      // Aksesuar Kontrol kaynak arsiv GitHub linkleri — array-of-one (baska PC'den regen)
       'deleted_ids'          // TOMBSTONE: kalici silinen id'ler — offline cihazlar geri diriltmesin
     ];
@@ -2835,6 +2836,9 @@ if(typeof Chart==='undefined'){
         </div>
       </div>
 
+      <!-- Müşteri sekmeleri — Excel'deki Defacto / Mavi sayfaları gibi -->
+      <div class="aks-mus-bar" id="aksMusBar"></div>
+
       <div class="aks-toolbar">
         <div class="aks-search-box">
           <i class="fas fa-search"></i>
@@ -3781,7 +3785,41 @@ if(typeof Chart==='undefined'){
       </div>
     </div>
 
-    <!-- Etiket kütüphanesi: arşivde gelmeyen etiketi kayıtlı görselden ekle -->
+    <!-- Dokuma etiket kütüphanesi: arşivde gelmeyen dokumayı kayıtlı görselden ekle -->
+    <div class="modal-overlay" id="akLibModal">
+      <div class="modal ak-lib-modal">
+        <div class="modal-header">
+          <h3><i class="fas fa-tag" style="color:var(--primary);margin-right:7px;"></i>Dokuma Etiket Kütüphanesi
+            <span class="ak-lib-count" id="akLibCount">boş</span></h3>
+          <button class="modal-close" onclick="AK.closeLib()">&times;</button>
+        </div>
+
+        <div class="ak-lib-bar">
+          <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod veya renk ara — AULBW13729, siyah…" oninput="AK.renderLib()" autocomplete="off"></div>
+          <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara(false,true)" title="Bütün arşivleri baştan tara (normalde kendiliğinden yapılır)"><i class="fas fa-rotate"></i><span>Yeniden tara</span></button>
+        </div>
+
+        <div id="akLibList" class="ak-lib-list"></div>
+
+        <div class="ak-lib-foot">
+          <details class="ak-lib-det">
+            <summary><i class="fas fa-plus"></i> Kendim etiket ekleyeyim</summary>
+            <div class="ak-lib-add">
+              <div class="ak-lib-add-row">
+                <input id="akLibCode" class="form-input" placeholder="Kod (ör. AULBW13729)" autocomplete="off">
+                <input id="akLibRenk" class="form-input" placeholder="Etiket rengi (ops.) — siyah / beyaz" autocomplete="off">
+              </div>
+              <div class="ak-lib-add-row">
+                <input id="akLibFile" class="form-input" type="file" accept="image/*">
+                <button class="btn btn-primary btn-sm" onclick="AK.libYukle()"><i class="fas fa-floppy-disk"></i> Kaydet</button>
+              </div>
+            </div>
+          </details>
+          <p class="ak-lib-hint"><i class="fas fa-circle-info"></i> Sadece <b>dokuma</b> içindir; dokuma her modelde aynıdır. İç barkod, fiyat kartı ve yıkama modele özeldir — onlar arşivden gelmek zorunda. Yüklediğin her arşiv arka planda taranır.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= MODEL KARTI ================= -->
     <div class="page" id="page-model">
       <div class="section-header">
@@ -5046,7 +5084,7 @@ function _aksTerminYM(termin){
 function aksTerminPdf(){
   try{
     if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF motoru yüklenemedi (internet gerekli)','error'); return; }
-    var list = getData('aksesuarlar')||[];
+    var list = _aksMusteriSuz(getData('aksesuarlar')||[]);   // seçili müşteri sekmesi
     if(!list.length){ toast('Kayıt yok','info'); return; }
     var now=new Date();
     var nowIdx = now.getFullYear()*12 + now.getMonth();
@@ -5136,10 +5174,11 @@ function _aksCikisVar(v){ return /[a-z0-9]/i.test((v==null?'':(''+v))); }
 function aksHazirlanacakPdf(){
   try{
     if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF motoru yüklenemedi (internet gerekli)','error'); return; }
-    var list=getData('aksesuarlar')||[];
+    var list=_aksMusteriSuz(getData('aksesuarlar')||[]);   // seçili müşteri sekmesi
     if(!list.length){ toast('Kayıt yok','info'); return; }
 
     var now=new Date();
+    var bugun=new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var nowIdx=now.getFullYear()*12+now.getMonth();
     var mod=aksHazirAy();
     var hedef = mod==='0' ? [nowIdx] : mod==='1' ? [nowIdx+1] : [nowIdx, nowIdx+1];
@@ -5154,7 +5193,13 @@ function aksHazirlanacakPdf(){
       var idx=ym.y*12+(ym.m-1);
       if(hedef.indexOf(idx)<0) return;
       if(_aksCikisVar(a.cikisDikim)){ cikmis++; return; }   // çıkmış — hazırlanacak listesinde yeri yok
-      sel.push({a:a, idx:idx, gun:ym.d||99});
+      // Tarihler tabloda karışık geliyor (03.08.2026 / 8/3/26) — hepsi tek
+      // biçime çevrilir, ayrıca termine kaç gün kaldığı hesaplanır.
+      var g=ym.d||1;
+      var tarih=new Date(ym.y, ym.m-1, g);
+      var kalan=Math.round((tarih-bugun)/86400000);
+      sel.push({a:a, idx:idx, gun:g, kalan:kalan,
+                terminMetin:('0'+g).slice(-2)+'.'+('0'+ym.m).slice(-2)+'.'+ym.y});
     });
     if(!sel.length){
       toast(baslikAy+' için hazırlanacak model yok'+(cikmis?(' ('+cikmis+' model zaten çıkmış)'):''),'info');
@@ -5168,98 +5213,194 @@ function aksHazirlanacakPdf(){
     // Sadece o müşteride takip edilen kalemlere bakılır.
     // Uzun listeler satırı taşırıp kelimeyi ortadan kesiyordu; ilk 4 kalem
     // yazılır, kalanı "+N" olarak toplanır.
+    var eksikler=function(a){
+      return _aksKalemleri(a).filter(function(k){ return !(+a[k]>0); })
+                             .map(function(k){ return AKS_KALEM_AD[k]||k; });
+    };
+    var eksikSayi=function(a){ return eksikler(a).length; };
     var eksikStr=function(a){
-      var e=_aksKalemleri(a).filter(function(k){ return !(+a[k]>0); })
-                            .map(function(k){ return AKS_KALEM_AD[k]||k; });
+      var e=eksikler(a);
       if(!e.length) return '';
-      return e.length>4 ? (e.slice(0,4).join(', ')+' +'+(e.length-4)) : e.join(', ');
+      return e.length>3 ? (e.slice(0,3).join(', ')+' +'+(e.length-3)) : e.join(', ');
     };
 
     var pdf=AK._newPdf();
-    var W=210, PH=297, mL=10, mR=10;
+    var W=210, PH=297, mL=12, mR=12, iw=W-mL-mR;   // iç genişlik 186
     var T=function(s,x,y,o){ pdf.text(AK._tr(s==null?'':(''+s)),x,y,o); };
+    var RENK={
+      koyu:[15,23,42], gri:[100,116,139], acikGri:[148,163,184],
+      cizgi:[226,232,240], zebra:[248,250,252],
+      basliktSiyah:[17,24,39], mor:[124,58,237],
+      kirmizi:[190,18,60], turuncu:[194,120,3], yesil:[21,128,61]
+    };
+    var C=function(f,r){ pdf['set'+(f==='f'?'Fill':f==='d'?'Draw':'Text')+'Color'](r[0],r[1],r[2]); };
+
     // Birden fazla müşteri varsa (Defacto + Mavi) müşteri sütunu da göster
     var musteriler={}; sel.forEach(function(s){ if(s.a.musteri) musteriler[s.a.musteri]=1; });
-    var musVar = Object.keys(musteriler).length>1;
+    var musAdlari=Object.keys(musteriler);
+    var musVar = musAdlari.length>1;
     var cols = musVar ? [
-      {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
-      {t:'Model Kodu',  x:mL+8,    w:38, a:'left'},
-      {t:'Musteri',     x:mL+46,   w:20, a:'left'},
-      {t:'Koli',        x:mL+66,   w:14, a:'left'},
-      {t:'Termin',      x:mL+80,   w:22, a:'left'},
-      {t:'Adet',        x:mL+102,  w:18, a:'right'},
-      {t:'Eksik Aksesuar', x:mL+120, w:70, a:'left'}
+      {t:'',            x:mL,     w:9,  a:'center'},   // hazırlandı kutusu
+      {t:'Model Kodu',  x:mL+9,   w:41, a:'left'},
+      {t:'Musteri',     x:mL+50,  w:17, a:'left'},
+      {t:'Koli',        x:mL+67,  w:11, a:'center'},
+      {t:'Termin',      x:mL+78,  w:22, a:'left'},
+      {t:'Kalan',       x:mL+100, w:16, a:'right'},
+      {t:'Adet',        x:mL+116, w:18, a:'right'},
+      {t:'Eksik Aksesuar', x:mL+134, w:52, a:'left'}
     ] : [
-      {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
-      {t:'Model Kodu',  x:mL+8,    w:40, a:'left'},
-      {t:'Koli',        x:mL+48,   w:16, a:'left'},
-      {t:'Termin',      x:mL+64,   w:24, a:'left'},
-      {t:'Adet',        x:mL+88,   w:20, a:'right'},
-      {t:'Eksik Aksesuar', x:mL+108, w:82, a:'left'}
+      {t:'',            x:mL,     w:9,  a:'center'},
+      {t:'Model Kodu',  x:mL+9,   w:48, a:'left'},
+      {t:'Koli',        x:mL+57,  w:12, a:'center'},
+      {t:'Termin',      x:mL+69,  w:23, a:'left'},
+      {t:'Kalan',       x:mL+92,  w:17, a:'right'},
+      {t:'Adet',        x:mL+109, w:19, a:'right'},
+      {t:'Eksik Aksesuar', x:mL+128, w:58, a:'left'}
     ];
-    var tx=function(c){ return c.a==='right'? c.x+c.w-2 : c.a==='center'? c.x+c.w/2 : c.x+2; };
+    var tx=function(c){ return c.a==='right'? c.x+c.w-2.5 : c.a==='center'? c.x+c.w/2 : c.x+2.5; };
     var opt=function(c){ return c.a==='left'? undefined : {align:c.a}; };
     // Uzun model adları ("M1611360 KIRMIZI BEYAZ ÇİZGİLİ") sütunu taşırıyordu:
     // önce puntoyu küçült, yine sığmazsa sonunu kısalt.
-    var sigdir=function(s, c, y, punto){
-      var t=AK._tr(s==null?'':(''+s)), w=c.w-3, ps=punto;
+    var sigdir=function(s, c, y, punto, sx, sw){
+      var t=AK._tr(s==null?'':(''+s)), w=(sw!=null?sw:c.w)-4, ps=punto;
       while(ps>5.6 && pdf.getTextWidth(t)>w){ ps-=0.4; pdf.setFontSize(ps); }
       while(t.length>3 && pdf.getTextWidth(t)>w){ t=t.slice(0,-2)+'.'; }
-      pdf.text(t, tx(c), y, opt(c));
+      pdf.text(t, (sx!=null?sx:tx(c)), y, (sx!=null&&!c)?undefined:opt(c));
       pdf.setFontSize(punto);
     };
+    // Termine kaç gün kaldı → kısa etiket + renk
+    var kalanBilgi=function(k){
+      if(k<0)  return {t:Math.abs(k)+' g gecti', r:RENK.kirmizi, kalin:true};
+      if(k===0)return {t:'Bugun',                r:RENK.kirmizi, kalin:true};
+      if(k<=3) return {t:k+' gun',               r:RENK.turuncu, kalin:true};
+      if(k<=7) return {t:k+' gun',               r:RENK.turuncu, kalin:false};
+      return       {t:k+' gun',                  r:RENK.gri,     kalin:false};
+    };
+
+    var toplamAdet=sel.reduce(function(t,s){ return t+(parseInt(s.a.adet,10)||0); },0);
+    var eksikli=sel.filter(function(s){ return eksikStr(s.a); }).length;
+    var geciken=sel.filter(function(s){ return s.kalan<0; }).length;
+
+    // ── Üst başlık bandı ────────────────────────────────────────────────
+    function drawBaslik(){
+      C('f',RENK.basliktSiyah); pdf.rect(0,0,W,30,'F');
+      C('f',RENK.mor); pdf.rect(0,30,W,1.2,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(17);
+      T('HAZIRLANACAK MODELLER', mL, 15.5);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+      pdf.setTextColor(190,197,210);
+      var alt=baslikAy+' termini';
+      if(aksMusteri()) alt+='   |   '+aksMusteri();
+      T(alt, mL, 23);
+      pdf.setFontSize(8.5); pdf.setTextColor(150,160,178);
+      T('Liste tarihi', W-mR, 13, {align:'right'});
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+      T(now.toLocaleDateString('tr-TR'), W-mR, 19.5, {align:'right'});
+      pdf.setFont('helvetica','normal');
+    }
+
+    // ── Özet kutuları ───────────────────────────────────────────────────
+    function drawOzet(y){
+      var kutular=[
+        {b:'Model sayisi', d:''+sel.length,                              r:RENK.koyu},
+        {b:'Toplam adet',  d:toplamAdet.toLocaleString('tr-TR'),         r:RENK.koyu},
+        {b:'Eksigi olan',  d:eksikli+' model',                           r:eksikli?RENK.kirmizi:RENK.yesil},
+        {b:'Termini gecen',d:geciken+' model',                           r:geciken?RENK.kirmizi:RENK.yesil}
+      ];
+      var g=3, kw=(iw-g*(kutular.length-1))/kutular.length, kh=15;
+      kutular.forEach(function(k,i){
+        var x=mL+i*(kw+g);
+        C('f',[250,251,253]); C('d',RENK.cizgi); pdf.setLineWidth(0.25);
+        pdf.roundedRect(x,y,kw,kh,1.6,1.6,'FD');
+        C('t',RENK.acikGri); pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
+        T(k.b.toUpperCase(), x+4, y+5.6);
+        C('t',k.r); pdf.setFont('helvetica','bold'); pdf.setFontSize(11.5);
+        sigdir(k.d, null, y+12, 11.5, x+4, kw-4);
+        pdf.setFont('helvetica','normal');
+      });
+      return y+kh;
+    }
+
+    // ── Tablo başlığı ───────────────────────────────────────────────────
     function drawHeader(y){
-      pdf.setFillColor(30,41,59); pdf.rect(mL,y,W-mL-mR,8,'F');
-      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
-      cols.forEach(function(c){ T(c.t, tx(c), y+5.4, opt(c)); });
+      C('f',RENK.basliktSiyah); pdf.rect(mL,y,iw,8,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.6);
+      cols.forEach(function(c){ if(c.t) T(c.t.toUpperCase(), tx(c), y+5.3, opt(c)); });
+      pdf.setFont('helvetica','normal');
       return y+8;
     }
 
-    // Başlık
-    pdf.setTextColor(15,23,42); pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
-    T('Hazirlanacak Modeller', mL, 16);
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(100,116,139);
-    T(baslikAy+' termini  ·  '+sel.length+' model  ·  '+now.toLocaleDateString('tr-TR'), mL, 22);
-    var toplamAdet=sel.reduce(function(t,s){ return t+(parseInt(s.a.adet,10)||0); },0);
-    var not='Cikis (Dikim) tarihi girilmis modeller listeye alinmadi'+(cikmis?(' ('+cikmis+' model)'):'')+'.';
-    T('Toplam '+toplamAdet.toLocaleString('tr-TR')+' adet  ·  '+not, mL, 27);
-
-    var y=drawHeader(32);
-    var rowH=7;
+    drawBaslik();
+    var y=drawOzet(38)+7;
+    y=drawHeader(y);
+    var rowH=7.6, altSinir=PH-16;
     pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
-    var sonIdx=null;
-    sel.forEach(function(s,i){
+    var sonIdx=null, z=0;
+    sel.forEach(function(s){
       // Ay değişince araya ayırıcı koy (bu ay + gelecek ay seçildiyse)
       if(hedef.length>1 && s.idx!==sonIdx){
-        if(y+12 > PH-12){ pdf.addPage(); y=drawHeader(16); }
-        sonIdx=s.idx;
-        pdf.setFillColor(226,232,240); pdf.rect(mL,y,W-mL-mR,6,'F');
-        pdf.setTextColor(30,41,59); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
-        T(ayAd(s.idx)+' termini', mL+2, y+4.3);
-        pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
-        y+=6;
+        if(y+14 > altSinir){ pdf.addPage(); drawBaslik(); y=drawHeader(38); }
+        sonIdx=s.idx; z=0;
+        C('f',[241,245,249]); pdf.rect(mL,y,iw,6.5,'F');
+        C('f',RENK.mor); pdf.rect(mL,y,1.4,6.5,'F');
+        C('t',RENK.koyu); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
+        T(ayAd(s.idx).toUpperCase()+' TERMINI', mL+4.5, y+4.5);
+        pdf.setFont('helvetica','normal');
+        y+=6.5;
       }
-      if(y+rowH > PH-12){ pdf.addPage(); y=drawHeader(16); pdf.setFont('helvetica','normal'); pdf.setFontSize(8); }
-      if(i%2===1){ pdf.setFillColor(241,245,249); pdf.rect(mL,y,W-mL-mR,rowH,'F'); }
-      var a=s.a;
+      if(y+rowH > altSinir){ pdf.addPage(); drawBaslik(); y=drawHeader(38); z=0;
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(8); }
+      if(z%2===1){ C('f',RENK.zebra); pdf.rect(mL,y,iw,rowH,'F'); }
+      z++;
+      var a=s.a, ty=y+5.1;
+      // Termini geçmiş satırı sol kenardan işaretle
+      if(s.kalan<0){ C('f',RENK.kirmizi); pdf.rect(mL,y+0.4,1.1,rowH-0.8,'F'); }
       // hazırlandı kutusu — atölyede tik atılacak
-      pdf.setDrawColor(120,130,145); pdf.setLineWidth(0.3);
-      pdf.rect(cols[0].x+2.2, y+1.9, 3.2, 3.2);
-      pdf.setTextColor(15,23,42);
+      C('d',[148,163,184]); pdf.setLineWidth(0.3);
+      pdf.roundedRect(cols[0].x+2.7, y+2.1, 3.6, 3.6, 0.6, 0.6);
+
       var ci=1;
-      sigdir(a.modelKodu||'—', cols[ci], y+4.8, 8); ci++;
-      if(musVar){ pdf.setTextColor(71,85,105); sigdir(a.musteri||'—', cols[ci], y+4.8, 8);
-        pdf.setTextColor(15,23,42); ci++; }
-      sigdir(a.koliNo||'—', cols[ci], y+4.8, 8); ci++;
-      sigdir(a.termin||'—', cols[ci], y+4.8, 8); ci++;
-      T((parseInt(a.adet,10)||0).toLocaleString('tr-TR'), tx(cols[ci]), y+4.8, opt(cols[ci])); ci++;
-      var ek=eksikStr(a), cE=cols[ci];
-      if(ek){ pdf.setTextColor(190,18,60); sigdir(ek, cE, y+4.8, 7.2); pdf.setFontSize(8);
-      } else { pdf.setTextColor(22,163,74); pdf.setFont('helvetica','bold');
-        T('Tamam', tx(cE), y+4.8, opt(cE)); pdf.setFont('helvetica','normal'); }
-      pdf.setDrawColor(226,232,240); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
+      C('t',RENK.koyu); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
+      sigdir(a.modelKodu||'—', cols[ci], ty, 8); ci++;
+      pdf.setFont('helvetica','normal');
+      if(musVar){ C('t',RENK.gri); sigdir(a.musteri||'—', cols[ci], ty, 7.6); ci++; }
+      C('t',RENK.gri); sigdir(a.koliNo||'—', cols[ci], ty, 8); ci++;
+      C('t',RENK.koyu); sigdir(s.terminMetin, cols[ci], ty, 8); ci++;
+      var kb=kalanBilgi(s.kalan);
+      C('t',kb.r); if(kb.kalin) pdf.setFont('helvetica','bold');
+      sigdir(kb.t, cols[ci], ty, 7.4); pdf.setFont('helvetica','normal'); ci++;
+      var ad=parseInt(a.adet,10)||0;
+      C('t', ad?RENK.koyu:RENK.acikGri);
+      T(ad?ad.toLocaleString('tr-TR'):'—', tx(cols[ci]), ty, opt(cols[ci])); ci++;
+
+      // Eksik aksesuar: önce kırmızı adet rozeti, sonra kalemler
+      var cE=cols[ci], ek=eksikStr(a), n=eksikSayi(a);
+      if(n){
+        C('f',[254,226,232]); pdf.roundedRect(cE.x+2, y+1.9, 6.4, 4, 1, 1, 'F');
+        C('t',RENK.kirmizi); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.6);
+        T(''+n, cE.x+5.2, y+4.85, {align:'center'});
+        pdf.setFont('helvetica','normal');
+        C('t',[71,85,105]);
+        sigdir(ek, cE, ty, 6.8, cE.x+10, cE.w-11);
+      } else {
+        C('t',RENK.yesil); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.4);
+        T('TAMAM', cE.x+2.5, ty);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+      }
+      C('d',RENK.cizgi); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
       y+=rowH;
     });
+
+    // ── Alt bilgi: not + sayfa numarası ─────────────────────────────────
+    var not='Cikis (Dikim) tarihi girilmis modeller listeye alinmadi'+(cikmis?(' - '+cikmis+' model'):'')+'.';
+    var sayfa=pdf.internal.getNumberOfPages();
+    for(var s2=1;s2<=sayfa;s2++){
+      pdf.setPage(s2);
+      C('d',RENK.cizgi); pdf.setLineWidth(0.25); pdf.line(mL,PH-12,W-mR,PH-12);
+      C('t',RENK.acikGri); pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
+      T(not, mL, PH-8);
+      T('Sayfa '+s2+' / '+sayfa, W-mR, PH-8, {align:'right'});
+    }
 
     pdf.save('hazirlanacak-modeller.pdf');
     toast(sel.length+' model listelendi ✓'+(cikmis?(' · '+cikmis+' çıkmış model atlandı'):''),'success');
@@ -5353,8 +5494,37 @@ function updateAksesuarField(id, field, value){
   }
 }
 
+// ── Müşteri sekmeleri (Defacto / Mavi) — Excel'deki sayfa sekmeleri gibi ──
+function aksMusteri(){ return getConfig('aksMusteri','') || ''; }
+function aksSetMusteri(v){ setConfig('aksMusteri', v||''); renderAksesuarTable(); }
+// Kayıtlardaki müşteriler, en çok kayıttan aza doğru
+function _aksMusteriListesi(list){
+  const say={};
+  (list||[]).forEach(a=>{ const m=(a.musteri||'').trim(); if(m) say[m]=(say[m]||0)+1; });
+  return Object.keys(say).sort((x,y)=>say[y]-say[x]||x.localeCompare(y,'tr')).map(m=>({ad:m, n:say[m]}));
+}
+// Seçili sekmeye göre süz. Müşterisi olmayan (elle eklenen) kayıtlar
+// "Tümü"de görünür, bir müşteri seçiliyken gizlenmez ise kafa karıştırır —
+// onları da sadece "Tümü"de gösteriyoruz.
+function _aksMusteriSuz(list){
+  const m=aksMusteri(); if(!m) return list;
+  return list.filter(a=>(a.musteri||'')===m);
+}
+function renderAksesuarMusBar(){
+  const bar=document.getElementById('aksMusBar'); if(!bar) return;
+  const list=getData('aksesuarlar')||[];
+  const mus=_aksMusteriListesi(list);
+  // Tek müşteri (veya hiç) varsa sekmeye gerek yok
+  if(mus.length<2){ bar.innerHTML=''; bar.style.display='none'; if(aksMusteri()) setConfig('aksMusteri',''); return; }
+  bar.style.display='';
+  const akt=aksMusteri();
+  const kutu=(deger,ad,n)=>`<button class="aks-mus-tab${akt===deger?' aktif':''}" onclick="aksSetMusteri('${deger.replace(/'/g,"\\'")}')">
+      <span>${ad}</span><em>${n}</em></button>`;
+  bar.innerHTML = kutu('','Tümü',list.length) + mus.map(m=>kutu(m.ad,m.ad,m.n)).join('');
+}
 function renderAksesuarTable(){
-  let list = getData('aksesuarlar');
+  let list = _aksMusteriSuz(getData('aksesuarlar'));
+  renderAksesuarMusBar();
   const search = document.getElementById('aksesuarSearch')?.value.toLowerCase() || '';
 
   // Tamamlanmış = HEM Çıkış Dikim HEM Ütü Paket çıkışı dolu (nokta/boşluk değil).
@@ -5420,8 +5590,9 @@ function renderAksesuarTable(){
       return `<input type="number" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',+this.value)" class="aks-input aks-input-number" min="0">`;
     };
 
-    // Birden fazla müşteri (Defacto/Mavi) karışabildiği için model yanında rozet
-    const mus = item.musteri ? `<span class="aks-mus" title="${item.musteri}">${item.musteri}</span>` : '';
+    // "Tümü" görünümünde Defacto/Mavi karıştığı için model altında rozet;
+    // tek müşteri seçiliyse sekmede zaten yazıyor, tekrarına gerek yok.
+    const mus = (!aksMusteri() && item.musteri) ? `<span class="aks-mus" title="${item.musteri}">${item.musteri}</span>` : '';
     // O müşteride olmayan kalemler sayaç yerine "—" gösterilir
     const kalem = _aksKalemleri(item);
     const renderKalem = (field) => kalem.indexOf(field)<0
@@ -5455,7 +5626,7 @@ function renderAksesuarTable(){
 }
 
 function exportAksesuarToExcel(){
-  const list = getData('aksesuarlar');
+  const list = _aksMusteriSuz(getData('aksesuarlar'));   // seçili müşteri sekmesi
   if(list.length === 0){
     toast('Dışa aktarılacak veri yok','error');
     return;
@@ -19695,6 +19866,85 @@ AK.saveMap = function(m){ AK._set(AK.LS_MAP, [{id:'ak_codemap', pdf:m.pdf||[], p
 AK.recs = function(){ var r=AK._get(AK.LS_REC); return Array.isArray(r)?r:[]; };
 AK.saveRecs = function(r){ AK._set(AK.LS_REC, r); };
 
+// ═══════════════════════════════════════════════════════════════════
+// DOKUMA ETİKET KÜTÜPHANESİ
+// Arşivde gelen her dokuma etiketi koduyla saklanır. Bir sonraki
+// arşivde dokuma gelmezse föy boş çıkmasın diye buradan
+// (ör. AULBW13729) seçilip renk kartına eklenebilir. İki PC arasında
+// senkron olsun diye array-of-one formatında tutulur.
+// ═══════════════════════════════════════════════════════════════════
+AK.LS_LIB='ak_labels_v2';
+AK.LIB_MAX=80;              // kütüphanede tutulacak en fazla etiket
+AK.LIB_IMG_W=440;           // saklanan görselin en fazla genişliği (px)
+AK.LIB_IMG_MAX=180000;      // ~135 KB üstü görsel saklanmaz (bulut kotası)
+// Kütüphane SADECE DOKUMA (marka etiketi) içindir. Dokuma modelden modele
+// aynıdır (siyah/beyaz), arşivde gelmezse elde olandan takılır.
+// Diğer her şey — özellikle İÇ BARKOD ve fiyat kartı — modele+renge özeldir;
+// onlar SİSTEMDEN, yani arşivin kendisinden gelmek ZORUNDA.
+AK.LIB_TYPES = ['dokuma'];
+AK.lib = function(){
+  var raw=AK._get(AK.LS_LIB);
+  var o = (Array.isArray(raw)&&raw[0]&&raw[0].items) ? raw[0].items
+        : (raw && !Array.isArray(raw)) ? raw : {};
+  // Eski sürümden kalan dokuma dışı kayıtlar gösterilmez
+  var t={}; Object.keys(o).forEach(function(k){ if(o[k] && AK.LIB_TYPES.indexOf(o[k].type)>=0) t[k]=o[k]; });
+  return t;
+};
+AK.saveLib = function(L){ AK._set(AK.LS_LIB, [{id:'ak_labels', items:L||{}}]); };
+// Görseli küçült — kütüphane bulut kotasını doldurmasın
+AK._imgKucult = function(url, maxW){
+  return new Promise(function(res){
+    var im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.width||1, h=im.height||1;
+        if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0,w,h);
+        res(c.toDataURL('image/png'));
+      }catch(e){ res(url); }
+    };
+    im.onerror=function(){ res(null); };
+    im.src=url;
+  });
+};
+// Arşivden gelen (veya elle etiketlenen) görseli kütüphaneye yaz
+AK.libKaydet = function(code, type, renk, url, model){
+  if(!code || !type || !url) return Promise.resolve(false);
+  if(AK.LIB_TYPES.indexOf(type)<0) return Promise.resolve(false);   // renge özel etiketler kütüphaneye girmez
+  return AK._imgKucult(url, AK.LIB_IMG_W).then(function(small){
+    if(!small || small.length>AK.LIB_IMG_MAX) return false;
+    var L=AK.lib();
+    var eski=L[code]||{};
+    L[code]={ type:type, renk:renk||eski.renk||'', img:small, model:model||eski.model||'', ts:Date.now() };
+    var keys=Object.keys(L);
+    if(keys.length>AK.LIB_MAX){
+      keys.sort(function(a,b){ return (L[a].ts||0)-(L[b].ts||0); });
+      delete L[keys[0]];
+    }
+    AK.saveLib(L);
+    return true;
+  }).catch(function(){ return false; });
+};
+AK.libSil = function(code){
+  if(!confirm(code+' etiketi kütüphaneden silinsin mi?')) return;
+  var L=AK.lib(); delete L[code]; AK.saveLib(L); AK.renderLib();
+};
+// Hangi arşivlerin taranmış olduğu (yerel — buluta gitmesine gerek yok).
+// Böylece her açılışta aynı arşivler tekrar tekrar açılmaz.
+AK.LS_LIBSCAN='ak_lib_scanned';
+AK._tarandi = function(){ try{ var a=JSON.parse(localStorage.getItem(AK.LS_LIBSCAN)); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
+AK._tarandiEkle = function(k){
+  try{ var a=AK._tarandi(); if(a.indexOf(k)<0){ a.push(k); if(a.length>400) a=a.slice(-400); localStorage.setItem(AK.LS_LIBSCAN, JSON.stringify(a)); } }catch(e){}
+};
+// Kod tablosu değişti → daha önce "bilinmiyor" diye atlanan görseller artık
+// tanınabilir; taranmış işaretini kaldır ki bir sonraki geçişte alınsınlar.
+AK._tarandiSifirla = function(){ try{ localStorage.removeItem(AK.LS_LIBSCAN); }catch(e){} };
+// Sessiz, arka planda çalışan tarama — kullanıcı hiçbir şeye basmasın
+AK.libArkaPlanTara = function(){
+  try{ if(AK._libTarayor) return; AK.libTara(true,false); }catch(e){}
+};
+
 // ---- Kütüphaneler (lazy CDN) ----
 AK._libs=null;
 AK.loadLibs = function(){
@@ -20074,7 +20324,13 @@ AK.processEntries = function(entries){
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
-        if(/\.(png|jpe?g)$/i.test(name)){ shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
+        if(/\.(png|jpe?g)$/i.test(name)){
+          var _u=AK._pngUrl(bytes,name);
+          shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[_u]});
+          // Tanınan dokuma etiketi kütüphaneye yazılır: sonraki arşivde gelmezse
+          // föy boş kalmasın, oradan seçilip eklenebilsin.
+          if(cat.code && cat.type && cat.type!=='unknown'){ try{ AK.libKaydet(cat.code, cat.type, cat.renk, _u, det.model); }catch(_){} }
+          if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         // Birleşik dosya varsa ayrı barkod/yıkama dosyasını atla (mükerrer olmasın)
         if((cat.type==='icbarkod'||cat.type==='yikama') && hasCombo) return;
@@ -20109,7 +20365,8 @@ AK.processEntries = function(entries){
 AK.state = { model:'', asama:'dikim', atolye:'', colors:[] };
 AK._cid = 1;
 AK.touch = function(){ AK.state.model = (document.getElementById('akModel')||{}).value || ''; AK.state.atolye = (document.getElementById('akAtolye')||{}).value || ''; };
-AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords(); };
+AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords();
+  setTimeout(function(){ AK.libArkaPlanTara(); }, 1200); };   // etiket kütüphanesini sessizce güncelle
 
 AK.setAsama = function(a){ AK.state.asama=a;
   var sd=document.getElementById('akSegDikim'), su=document.getElementById('akSegUtu');
@@ -20203,6 +20460,15 @@ AK.renderColors = function(){
         '<input type="file" accept=".zip,.rar,.7z,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
         ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
+      '<div class="ak-libbar">'+
+        '<button class="btn btn-sm btn-secondary" onclick="AK.openLib('+c.id+')"><i class="fas fa-images"></i> Dokuma Ekle</button>'+
+        '<span class="ak-libbar-note">'+(
+            (miss && miss.indexOf('Dokuma (Marka Etiketi)')>=0)
+              ? '<b>Dokuma etiketi eksik</b> — arşivde gelmediyse kütüphaneden ekleyin.'
+            : (miss && miss.length)
+              ? 'Eksik: <b>'+miss.join(', ')+'</b> — bunlar arşivden gelmek zorunda, arşivi kontrol edin.'
+              : 'Arşivde dokuma gelmediyse kayıtlı görselden ekleyebilirsiniz.')+'</span>'+
+      '</div>'+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
         '<button class="btn btn-secondary" onclick="AK.generate('+c.id+',\'print\')"><i class="fas fa-print"></i> Yazdır</button>'+
@@ -20237,12 +20503,14 @@ AK.matchesHtml = function(c){
         '<select class="form-input ak-m-tag" onchange="AK.tag('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\',this.value)"><option value="">— tipini seç —</option>'+opts+'<option value="__ignore">Yoksay</option></select>'+
         '</div></div>';
     }
-    return '<div class="ak-match">'+
+    return '<div class="ak-match'+(f._manuel?' ak-m-manuel':'')+'">'+
       '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas '+(ICON[f.type]||'fa-file')+'"></i></span><img src="'+(f.images[0]||'')+'"></div>'+
-      '<div class="ak-m-meta"><div class="ak-m-type">'+(f.label||AK.TYPES[f.type].label)+'</div>'+
+      '<div class="ak-m-meta"><div class="ak-m-type">'+(f.label||AK.TYPES[f.type].label)+(f._manuel?' <span class="ak-m-el">kütüphane</span>':'')+'</div>'+
       '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div>'+
-      (f.note?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+f.note+'</div>':'')+
-      '</div></div>';
+      ((f.note||f._uiNot)?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+(f.note||f._uiNot)+'</div>':'')+
+      '</div>'+
+      (f._manuel?'<button class="ak-m-x" title="Karttan çıkar" onclick="AK.libCikar('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\')"><i class="fas fa-xmark"></i></button>':'')+
+      '</div>';
   }).join('');
   return '<div class="ak-matches">'+cards+'</div>';
 };
@@ -20331,7 +20599,10 @@ AK._colorsFromMerged = function(m, prev){
     var beds=AK.SIZES.map(function(b){return b[0];}); var padet=p.adet||{};
     var hasUser=beds.some(function(bk){ return padet[bk]!=='' && padet[bk]!=null && padet[bk]!==undefined; });
     var adet; if(hasUser){ adet=padet; } else if(col.adet){ adet={}; beds.forEach(function(bk){ if(col.adet[bk]!=null) adet[bk]=col.adet[bk]; }); } else { adet={}; }
-    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', model:col.model||null, po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice() };
+    // Kütüphaneden elle eklenen etiketler arşiv yeniden kurulunca kaybolmasın
+    var manuel=(p._manuel||[]).slice();
+    manuel.forEach(function(mf){ if(!files.some(function(x){ return x.name===mf.name; })) files.push(mf); });
+    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', model:col.model||null, po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice(), _manuel:manuel };
   });
 };
 AK.rebuildColors = function(){
@@ -20403,6 +20674,7 @@ AK.onZip = function(id, fileList){
     AK.rebuildColors();
     // Arşivler işlendi, model/PO/renk belli → şimdi özet tablodan adetleri al
     if(xls.length) AK.applySummaryFiles(xls);
+    setTimeout(function(){ AK.libArkaPlanTara(); }, 400);   // etiketleri kütüphaneye al
   })
   .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
@@ -20654,6 +20926,10 @@ AK.tag = function(id,name,type){
     var saveCode=function(renk){
       var m=AK.map(); var e={type:type}; if(renk) e.renk=renk;
       m.png[f.code]=e; AK.saveMap(m);
+      // Elle etiketlenen görsel de kütüphaneye girsin
+      try{ if(f.images&&f.images[0]) AK.libKaydet(f.code, type, renk, f.images[0], c.model); }catch(_){}
+      // Artık bu kod tanınıyor → eski arşivlerdeki aynı etiket de alınabilsin
+      try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 600); }catch(_){}
     };
     if(type==='dokuma' && f.images && f.images[0]){
       AK._labelTone(f.images[0]).then(saveCode).catch(function(){ saveCode(null); });
@@ -21207,6 +21483,159 @@ AK.clearRecords = function(){ if(!confirm('Tüm aksesuar kontrol kayıtları sil
 };
 
 // ---- Kod tablosu modalı ----
+// ---- Dokuma etiket kütüphanesi UI ----
+AK._libCid = null;
+AK.openLib = function(cid){
+  AK._libCid = cid || null;
+  AK.renderLib();
+  document.getElementById('akLibModal').classList.add('show');
+  // Taranmamış arşiv varsa sessizce alınır — kullanıcı hiçbir şeye basmasın
+  setTimeout(function(){ AK.libArkaPlanTara(); }, 80);
+};
+// Arşivlerdeki dokuma etiketlerini kütüphaneye al.
+// Önce ekranda yüklü olanlar (hızlı), sonra daha önce yüklenmiş arşivler
+// (IndexedDB'de duran ya da buluttan inen ZIP/RAR'lar) taranır.
+AK.libTara = function(sessiz, zorla){
+  if(AK._libTarayor) return Promise.resolve(); AK._libTarayor=true;
+  var btn=document.getElementById('akLibScanBtn');
+  var eskiBtn=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Taranıyor…'; }
+  var oncekiSayi=Object.keys(AK.lib()).length;
+  var isler=[];
+  var ekle=function(code,type,renk,url,model){
+    if(!code||!type||!url||type==='unknown'||type==='ignored') return;
+    isler.push(AK.libKaydet(code,type,renk,url,model));
+  };
+  // a) Şu an ekranda yüklü olanlar
+  if(AK._merged && AK._merged.shared) AK._merged.shared.forEach(function(s){ ekle(s.code,s.type,s.renk,s.images&&s.images[0],AK.state.model); });
+  (AK.state.colors||[]).forEach(function(c){ (c.files||[]).forEach(function(f){ ekle(f.code,f.type,f.renk,f.images&&f.images[0],c.model||AK.state.model); }); });
+
+  // b) Daha önce yüklenmiş arşivler — kayıtlardaki zipKeys üzerinden
+  var keys={};
+  AK._zipKeys.forEach(function(k){ keys[k]=keys[k]||{}; });
+  AK.recs().forEach(function(r){ (r.zipKeys||[]).forEach(function(k){ keys[k]=keys[k]||r.zipUrls||{}; }); });
+  // Daha önce taranan arşiv tekrar açılmasın (zorla=true ise hepsi yeniden)
+  var tarandi=AK._tarandi();
+  var kl=Object.keys(keys).filter(function(k){ return zorla || tarandi.indexOf(k)<0; });
+  var arsiv = !kl.length ? Promise.resolve() : AK.loadLibs().then(function(){
+    return kl.reduce(function(ch,k){ return ch.then(function(){
+      return AK._getArchiveFiles([k], keys[k]).then(function(files){
+        if(!files || !files[0]) return;
+        return AK._extractEntries(files[0]).then(function(entries){
+          return (entries||[]).reduce(function(c2,e){ return c2.then(function(){
+            if(!/\.(png|jpe?g)$/i.test(e.name||'')) return;
+            var cat=AK.categorize(e.name);
+            if(!cat || !cat.code || !cat.type || cat.type==='unknown') return;
+            return AK.libKaydet(cat.code, cat.type, cat.renk, AK._pngUrl(e.bytes, e.name));
+          }); }, Promise.resolve()).then(function(){ AK._tarandiEkle(k); });
+        });
+      }).catch(function(){});
+    }); }, Promise.resolve());
+  }).catch(function(){});
+
+  return Promise.all(isler).then(function(){ return arsiv; }).then(function(){
+    AK._libTarayor=false;
+    if(btn){ btn.disabled=false; btn.innerHTML=eskiBtn; }
+    var acik=document.getElementById('akLibModal');
+    if(acik && acik.classList.contains('show')) AK.renderLib();
+    var yeni=Object.keys(AK.lib()).length-oncekiSayi;
+    if(!sessiz && typeof toast==='function'){
+      toast(yeni>0 ? (yeni+' yeni dokuma etiketi kütüphaneye eklendi') : 'Arşivlerde yeni dokuma etiketi bulunamadı', yeni>0?'success':'info');
+    }
+    return yeni;
+  }).catch(function(){
+    AK._libTarayor=false;
+    if(btn){ btn.disabled=false; btn.innerHTML=eskiBtn; }
+    return 0;
+  });
+};
+AK.closeLib = function(){ document.getElementById('akLibModal').classList.remove('show'); AK._libCid=null; };
+AK.renderLib = function(){
+  var host=document.getElementById('akLibList'); if(!host) return;
+  var L=AK.lib();
+  var q=((document.getElementById('akLibSearch')||{}).value||'').toLocaleLowerCase('tr').trim();
+  var keys=Object.keys(L).sort(function(a,b){ return (L[b].ts||0)-(L[a].ts||0); });
+  var sayac=document.getElementById('akLibCount');
+  if(sayac) sayac.textContent = keys.length ? (keys.length+' etiket') : 'boş';
+  if(q){
+    keys=keys.filter(function(k){
+      var e=L[k];
+      return (k+' '+(e.renk||'')+' '+(e.model||'')).toLocaleLowerCase('tr').indexOf(q)>=0;
+    });
+  }
+  if(!keys.length){
+    host.innerHTML='<div class="ak-lib-bos"><i class="fas fa-tag"></i>'+
+      (Object.keys(L).length?'Aramaya uyan dokuma etiketi yok.':'Kütüphane boş — arşiv yükledikçe dokuma etiketleri buraya kendiliğinden düşer.')+'</div>';
+    return;
+  }
+  var eklenebilir = AK._libCid!=null;
+  host.innerHTML=keys.map(function(k){
+    var e=L[k];
+    var ton=(e.renk||'').toLocaleLowerCase('tr');
+    var tonCls = /siyah|black/.test(ton) ? 'siyah' : /beyaz|white|ekru|krem/.test(ton) ? 'beyaz' : '';
+    return '<div class="ak-lrow">'+
+      '<div class="ak-lrow-img"><img src="'+e.img+'" alt="'+AK._esc(k)+'"></div>'+
+      '<div class="ak-lrow-info">'+
+        '<div class="ak-lrow-t"><b>'+AK._esc(k)+'</b>'+
+          (e.renk?'<span class="ak-lrow-ton '+tonCls+'">'+AK._esc(e.renk)+'</span>':'')+'</div>'+
+        '<div class="ak-lrow-s">Dokuma (Marka Etiketi)'+(e.model?' · <em>'+AK._esc(e.model)+'</em>':'')+'</div>'+
+      '</div>'+
+      '<div class="ak-lrow-act">'+
+        (eklenebilir?'<button class="btn btn-sm btn-primary" onclick="AK.libEkle(\''+k+'\')"><i class="fas fa-plus"></i> Ekle</button>':'')+
+        '<button class="ak-lrow-x" onclick="AK.libSil(\''+k+'\')" title="Kütüphaneden sil"><i class="fas fa-trash"></i></button>'+
+      '</div></div>';
+  }).join('');
+};
+// Kütüphaneden renk kartına etiket ekle
+AK.libEkle = function(code){
+  var cid=AK._libCid; if(cid==null) return;
+  var L=AK.lib(), e=L[code]; if(!e) return;
+  var c=AK._c(cid); if(!c) return;
+  if(!c.files) c.files=[];
+  if(!c._manuel) c._manuel=[];
+  var nm='lib:'+code;
+  if(c.files.some(function(f){ return f.name===nm; })){ if(typeof toast==='function') toast('Bu etiket zaten ekli','info'); return; }
+  // _uiNot sadece ekranda görünür; föy PDF'ine "kütüphaneden eklendi" gibi
+  // bir not ASLA basılmaz — föy atölyeye gidiyor, orada işi yok.
+  var f={ name:nm, type:e.type, code:code, renk:e.renk||null, images:[e.img], _manuel:true,
+          _uiNot:'Kütüphaneden eklendi — bu arşivde gelmemişti.' };
+  c.files.push(f); c._manuel.push(f);
+  // Etiketin kendi rengini görselden doğrula (siyah / beyaz)
+  AK._labelTone(e.img).then(function(t){ if(t){ f.renk=t; AK.renderColors(); } }).catch(function(){});
+  AK.closeLib(); AK.renderColors();
+  if(typeof toast==='function') toast('Dokuma etiketi eklendi: '+code,'success');
+};
+// Elle eklenen etiketi karttan çıkar
+AK.libCikar = function(cid, name){
+  var c=AK._c(cid); if(!c) return;
+  c.files=(c.files||[]).filter(function(f){ return f.name!==name; });
+  c._manuel=(c._manuel||[]).filter(function(f){ return f.name!==name; });
+  AK.renderColors();
+};
+// Dışarıdan görsel yükleyip kütüphaneye kaydet
+AK.libYukle = function(){
+  var code=((document.getElementById('akLibCode')||{}).value||'').trim().toUpperCase();
+  var renk=((document.getElementById('akLibRenk')||{}).value||'').trim();
+  var fi=document.getElementById('akLibFile');
+  var file=fi&&fi.files&&fi.files[0];
+  if(!code) return alert('Kod yazın (ör. AULBW13729).');
+  if(!file) return alert('Görsel seçin.');
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    AK.libKaydet(code, 'dokuma', renk, ev.target.result).then(function(ok){
+      if(!ok){ alert('Görsel kaydedilemedi — dosya çok büyük olabilir. Daha küçük bir görsel deneyin.'); return; }
+      // Kod tablosuna da yaz ki bir daha sorulmasın
+      try{ var m=AK.map(); var en={type:'dokuma'}; if(renk) en.renk=renk; m.png[code]=en; AK.saveMap(m); }catch(_){}
+      document.getElementById('akLibCode').value='';
+      document.getElementById('akLibRenk').value='';
+      fi.value='';
+      AK.renderLib();
+      if(typeof toast==='function') toast('Dokuma etiketi kütüphaneye kaydedildi: '+code,'success');
+    });
+  };
+  rd.readAsDataURL(file);
+};
+
 AK.openCodeTable = function(){ AK.renderCodeTable(); document.getElementById('akCodeModal').classList.add('show'); };
 AK.closeCodeTable = function(){ document.getElementById('akCodeModal').classList.remove('show'); };
 AK.renderCodeTable = function(){
@@ -21224,6 +21653,8 @@ AK.addCode = function(){
   var m=AK.map(); m.png[code]={type:type}; if(renk) m.png[code].renk=renk; AK.saveMap(m);
   document.getElementById('akNewCode').value=''; document.getElementById('akNewRenk').value='';
   AK.renderCodeTable();
+  // Yeni kod tanındı → arşivlerdeki aynı görseli de kütüphaneye alalım
+  try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 400); }catch(_){}
 };
 AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); AK.renderCodeTable(); };
 
