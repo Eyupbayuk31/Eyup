@@ -435,6 +435,7 @@
       'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
       'ak_records_v2',       // Aksesuar Kontrol kayitlari (id'li dizi) — cihazlar arasi senkron
       'ak_codemap_v2',       // Aksesuar Kontrol kod tablosu — array-of-one formatinda
+      'ak_labels_v2',        // Aksesuar Kontrol dokuma etiket kutuphanesi (kod → gorsel) — array-of-one
       'ak_ziplinks_v2',      // Aksesuar Kontrol kaynak arsiv GitHub linkleri — array-of-one (baska PC'den regen)
       'deleted_ids'          // TOMBSTONE: kalici silinen id'ler — offline cihazlar geri diriltmesin
     ];
@@ -3784,7 +3785,41 @@ if(typeof Chart==='undefined'){
       </div>
     </div>
 
-    <!-- Etiket kütüphanesi: arşivde gelmeyen etiketi kayıtlı görselden ekle -->
+    <!-- Dokuma etiket kütüphanesi: arşivde gelmeyen dokumayı kayıtlı görselden ekle -->
+    <div class="modal-overlay" id="akLibModal">
+      <div class="modal ak-lib-modal">
+        <div class="modal-header">
+          <h3><i class="fas fa-tag" style="color:var(--primary);margin-right:7px;"></i>Dokuma Etiket Kütüphanesi
+            <span class="ak-lib-count" id="akLibCount">boş</span></h3>
+          <button class="modal-close" onclick="AK.closeLib()">&times;</button>
+        </div>
+
+        <div class="ak-lib-bar">
+          <div class="ak-lib-search"><i class="fas fa-search"></i><input id="akLibSearch" class="form-input" placeholder="Kod veya renk ara — AULBW13729, siyah…" oninput="AK.renderLib()" autocomplete="off"></div>
+          <button class="btn btn-sm btn-secondary" id="akLibScanBtn" onclick="AK.libTara(false,true)" title="Bütün arşivleri baştan tara (normalde kendiliğinden yapılır)"><i class="fas fa-rotate"></i><span>Yeniden tara</span></button>
+        </div>
+
+        <div id="akLibList" class="ak-lib-list"></div>
+
+        <div class="ak-lib-foot">
+          <details class="ak-lib-det">
+            <summary><i class="fas fa-plus"></i> Kendim etiket ekleyeyim</summary>
+            <div class="ak-lib-add">
+              <div class="ak-lib-add-row">
+                <input id="akLibCode" class="form-input" placeholder="Kod (ör. AULBW13729)" autocomplete="off">
+                <input id="akLibRenk" class="form-input" placeholder="Etiket rengi (ops.) — siyah / beyaz" autocomplete="off">
+              </div>
+              <div class="ak-lib-add-row">
+                <input id="akLibFile" class="form-input" type="file" accept="image/*">
+                <button class="btn btn-primary btn-sm" onclick="AK.libYukle()"><i class="fas fa-floppy-disk"></i> Kaydet</button>
+              </div>
+            </div>
+          </details>
+          <p class="ak-lib-hint"><i class="fas fa-circle-info"></i> Sadece <b>dokuma</b> içindir; dokuma her modelde aynıdır. İç barkod, fiyat kartı ve yıkama modele özeldir — onlar arşivden gelmek zorunda. Yüklediğin her arşiv arka planda taranır.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= MODEL KARTI ================= -->
     <div class="page" id="page-model">
       <div class="section-header">
@@ -19831,6 +19866,85 @@ AK.saveMap = function(m){ AK._set(AK.LS_MAP, [{id:'ak_codemap', pdf:m.pdf||[], p
 AK.recs = function(){ var r=AK._get(AK.LS_REC); return Array.isArray(r)?r:[]; };
 AK.saveRecs = function(r){ AK._set(AK.LS_REC, r); };
 
+// ═══════════════════════════════════════════════════════════════════
+// DOKUMA ETİKET KÜTÜPHANESİ
+// Arşivde gelen her dokuma etiketi koduyla saklanır. Bir sonraki
+// arşivde dokuma gelmezse föy boş çıkmasın diye buradan
+// (ör. AULBW13729) seçilip renk kartına eklenebilir. İki PC arasında
+// senkron olsun diye array-of-one formatında tutulur.
+// ═══════════════════════════════════════════════════════════════════
+AK.LS_LIB='ak_labels_v2';
+AK.LIB_MAX=80;              // kütüphanede tutulacak en fazla etiket
+AK.LIB_IMG_W=440;           // saklanan görselin en fazla genişliği (px)
+AK.LIB_IMG_MAX=180000;      // ~135 KB üstü görsel saklanmaz (bulut kotası)
+// Kütüphane SADECE DOKUMA (marka etiketi) içindir. Dokuma modelden modele
+// aynıdır (siyah/beyaz), arşivde gelmezse elde olandan takılır.
+// Diğer her şey — özellikle İÇ BARKOD ve fiyat kartı — modele+renge özeldir;
+// onlar SİSTEMDEN, yani arşivin kendisinden gelmek ZORUNDA.
+AK.LIB_TYPES = ['dokuma'];
+AK.lib = function(){
+  var raw=AK._get(AK.LS_LIB);
+  var o = (Array.isArray(raw)&&raw[0]&&raw[0].items) ? raw[0].items
+        : (raw && !Array.isArray(raw)) ? raw : {};
+  // Eski sürümden kalan dokuma dışı kayıtlar gösterilmez
+  var t={}; Object.keys(o).forEach(function(k){ if(o[k] && AK.LIB_TYPES.indexOf(o[k].type)>=0) t[k]=o[k]; });
+  return t;
+};
+AK.saveLib = function(L){ AK._set(AK.LS_LIB, [{id:'ak_labels', items:L||{}}]); };
+// Görseli küçült — kütüphane bulut kotasını doldurmasın
+AK._imgKucult = function(url, maxW){
+  return new Promise(function(res){
+    var im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.width||1, h=im.height||1;
+        if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0,w,h);
+        res(c.toDataURL('image/png'));
+      }catch(e){ res(url); }
+    };
+    im.onerror=function(){ res(null); };
+    im.src=url;
+  });
+};
+// Arşivden gelen (veya elle etiketlenen) görseli kütüphaneye yaz
+AK.libKaydet = function(code, type, renk, url, model){
+  if(!code || !type || !url) return Promise.resolve(false);
+  if(AK.LIB_TYPES.indexOf(type)<0) return Promise.resolve(false);   // renge özel etiketler kütüphaneye girmez
+  return AK._imgKucult(url, AK.LIB_IMG_W).then(function(small){
+    if(!small || small.length>AK.LIB_IMG_MAX) return false;
+    var L=AK.lib();
+    var eski=L[code]||{};
+    L[code]={ type:type, renk:renk||eski.renk||'', img:small, model:model||eski.model||'', ts:Date.now() };
+    var keys=Object.keys(L);
+    if(keys.length>AK.LIB_MAX){
+      keys.sort(function(a,b){ return (L[a].ts||0)-(L[b].ts||0); });
+      delete L[keys[0]];
+    }
+    AK.saveLib(L);
+    return true;
+  }).catch(function(){ return false; });
+};
+AK.libSil = function(code){
+  if(!confirm(code+' etiketi kütüphaneden silinsin mi?')) return;
+  var L=AK.lib(); delete L[code]; AK.saveLib(L); AK.renderLib();
+};
+// Hangi arşivlerin taranmış olduğu (yerel — buluta gitmesine gerek yok).
+// Böylece her açılışta aynı arşivler tekrar tekrar açılmaz.
+AK.LS_LIBSCAN='ak_lib_scanned';
+AK._tarandi = function(){ try{ var a=JSON.parse(localStorage.getItem(AK.LS_LIBSCAN)); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
+AK._tarandiEkle = function(k){
+  try{ var a=AK._tarandi(); if(a.indexOf(k)<0){ a.push(k); if(a.length>400) a=a.slice(-400); localStorage.setItem(AK.LS_LIBSCAN, JSON.stringify(a)); } }catch(e){}
+};
+// Kod tablosu değişti → daha önce "bilinmiyor" diye atlanan görseller artık
+// tanınabilir; taranmış işaretini kaldır ki bir sonraki geçişte alınsınlar.
+AK._tarandiSifirla = function(){ try{ localStorage.removeItem(AK.LS_LIBSCAN); }catch(e){} };
+// Sessiz, arka planda çalışan tarama — kullanıcı hiçbir şeye basmasın
+AK.libArkaPlanTara = function(){
+  try{ if(AK._libTarayor) return; AK.libTara(true,false); }catch(e){}
+};
+
 // ---- Kütüphaneler (lazy CDN) ----
 AK._libs=null;
 AK.loadLibs = function(){
@@ -20210,7 +20324,13 @@ AK.processEntries = function(entries){
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
-        if(/\.(png|jpe?g)$/i.test(name)){ shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[AK._pngUrl(bytes,name)]}); if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
+        if(/\.(png|jpe?g)$/i.test(name)){
+          var _u=AK._pngUrl(bytes,name);
+          shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[_u]});
+          // Tanınan dokuma etiketi kütüphaneye yazılır: sonraki arşivde gelmezse
+          // föy boş kalmasın, oradan seçilip eklenebilsin.
+          if(cat.code && cat.type && cat.type!=='unknown'){ try{ AK.libKaydet(cat.code, cat.type, cat.renk, _u, det.model); }catch(_){} }
+          if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         // Birleşik dosya varsa ayrı barkod/yıkama dosyasını atla (mükerrer olmasın)
         if((cat.type==='icbarkod'||cat.type==='yikama') && hasCombo) return;
@@ -20245,7 +20365,8 @@ AK.processEntries = function(entries){
 AK.state = { model:'', asama:'dikim', atolye:'', colors:[] };
 AK._cid = 1;
 AK.touch = function(){ AK.state.model = (document.getElementById('akModel')||{}).value || ''; AK.state.atolye = (document.getElementById('akAtolye')||{}).value || ''; };
-AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords(); };
+AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords();
+  setTimeout(function(){ AK.libArkaPlanTara(); }, 1200); };   // etiket kütüphanesini sessizce güncelle
 
 AK.setAsama = function(a){ AK.state.asama=a;
   var sd=document.getElementById('akSegDikim'), su=document.getElementById('akSegUtu');
@@ -20339,6 +20460,15 @@ AK.renderColors = function(){
         '<input type="file" accept=".zip,.rar,.7z,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
         ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
+      '<div class="ak-libbar">'+
+        '<button class="btn btn-sm btn-secondary" onclick="AK.openLib('+c.id+')"><i class="fas fa-images"></i> Dokuma Ekle</button>'+
+        '<span class="ak-libbar-note">'+(
+            (miss && miss.indexOf('Dokuma (Marka Etiketi)')>=0)
+              ? '<b>Dokuma etiketi eksik</b> — arşivde gelmediyse kütüphaneden ekleyin.'
+            : (miss && miss.length)
+              ? 'Eksik: <b>'+miss.join(', ')+'</b> — bunlar arşivden gelmek zorunda, arşivi kontrol edin.'
+              : 'Arşivde dokuma gelmediyse kayıtlı görselden ekleyebilirsiniz.')+'</span>'+
+      '</div>'+
       '<div class="ak-gen">'+
         '<button class="btn btn-primary" onclick="AK.generate('+c.id+')"><i class="fas fa-file-pdf"></i> Föy Oluştur (PDF)</button>'+
         '<button class="btn btn-secondary" onclick="AK.generate('+c.id+',\'print\')"><i class="fas fa-print"></i> Yazdır</button>'+
@@ -20373,12 +20503,14 @@ AK.matchesHtml = function(c){
         '<select class="form-input ak-m-tag" onchange="AK.tag('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\',this.value)"><option value="">— tipini seç —</option>'+opts+'<option value="__ignore">Yoksay</option></select>'+
         '</div></div>';
     }
-    return '<div class="ak-match">'+
+    return '<div class="ak-match'+(f._manuel?' ak-m-manuel':'')+'">'+
       '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas '+(ICON[f.type]||'fa-file')+'"></i></span><img src="'+(f.images[0]||'')+'"></div>'+
-      '<div class="ak-m-meta"><div class="ak-m-type">'+(f.label||AK.TYPES[f.type].label)+'</div>'+
+      '<div class="ak-m-meta"><div class="ak-m-type">'+(f.label||AK.TYPES[f.type].label)+(f._manuel?' <span class="ak-m-el">kütüphane</span>':'')+'</div>'+
       '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div>'+
-      (f.note?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+f.note+'</div>':'')+
-      '</div></div>';
+      ((f.note||f._uiNot)?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+(f.note||f._uiNot)+'</div>':'')+
+      '</div>'+
+      (f._manuel?'<button class="ak-m-x" title="Karttan çıkar" onclick="AK.libCikar('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\')"><i class="fas fa-xmark"></i></button>':'')+
+      '</div>';
   }).join('');
   return '<div class="ak-matches">'+cards+'</div>';
 };
@@ -20467,7 +20599,10 @@ AK._colorsFromMerged = function(m, prev){
     var beds=AK.SIZES.map(function(b){return b[0];}); var padet=p.adet||{};
     var hasUser=beds.some(function(bk){ return padet[bk]!=='' && padet[bk]!=null && padet[bk]!==undefined; });
     var adet; if(hasUser){ adet=padet; } else if(col.adet){ adet={}; beds.forEach(function(bk){ if(col.adet[bk]!=null) adet[bk]=col.adet[bk]; }); } else { adet={}; }
-    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', model:col.model||null, po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice() };
+    // Kütüphaneden elle eklenen etiketler arşiv yeniden kurulunca kaybolmasın
+    var manuel=(p._manuel||[]).slice();
+    manuel.forEach(function(mf){ if(!files.some(function(x){ return x.name===mf.name; })) files.push(mf); });
+    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', model:col.model||null, po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice(), _manuel:manuel };
   });
 };
 AK.rebuildColors = function(){
@@ -20539,6 +20674,7 @@ AK.onZip = function(id, fileList){
     AK.rebuildColors();
     // Arşivler işlendi, model/PO/renk belli → şimdi özet tablodan adetleri al
     if(xls.length) AK.applySummaryFiles(xls);
+    setTimeout(function(){ AK.libArkaPlanTara(); }, 400);   // etiketleri kütüphaneye al
   })
   .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
@@ -20790,6 +20926,10 @@ AK.tag = function(id,name,type){
     var saveCode=function(renk){
       var m=AK.map(); var e={type:type}; if(renk) e.renk=renk;
       m.png[f.code]=e; AK.saveMap(m);
+      // Elle etiketlenen görsel de kütüphaneye girsin
+      try{ if(f.images&&f.images[0]) AK.libKaydet(f.code, type, renk, f.images[0], c.model); }catch(_){}
+      // Artık bu kod tanınıyor → eski arşivlerdeki aynı etiket de alınabilsin
+      try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 600); }catch(_){}
     };
     if(type==='dokuma' && f.images && f.images[0]){
       AK._labelTone(f.images[0]).then(saveCode).catch(function(){ saveCode(null); });
@@ -21343,6 +21483,159 @@ AK.clearRecords = function(){ if(!confirm('Tüm aksesuar kontrol kayıtları sil
 };
 
 // ---- Kod tablosu modalı ----
+// ---- Dokuma etiket kütüphanesi UI ----
+AK._libCid = null;
+AK.openLib = function(cid){
+  AK._libCid = cid || null;
+  AK.renderLib();
+  document.getElementById('akLibModal').classList.add('show');
+  // Taranmamış arşiv varsa sessizce alınır — kullanıcı hiçbir şeye basmasın
+  setTimeout(function(){ AK.libArkaPlanTara(); }, 80);
+};
+// Arşivlerdeki dokuma etiketlerini kütüphaneye al.
+// Önce ekranda yüklü olanlar (hızlı), sonra daha önce yüklenmiş arşivler
+// (IndexedDB'de duran ya da buluttan inen ZIP/RAR'lar) taranır.
+AK.libTara = function(sessiz, zorla){
+  if(AK._libTarayor) return Promise.resolve(); AK._libTarayor=true;
+  var btn=document.getElementById('akLibScanBtn');
+  var eskiBtn=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Taranıyor…'; }
+  var oncekiSayi=Object.keys(AK.lib()).length;
+  var isler=[];
+  var ekle=function(code,type,renk,url,model){
+    if(!code||!type||!url||type==='unknown'||type==='ignored') return;
+    isler.push(AK.libKaydet(code,type,renk,url,model));
+  };
+  // a) Şu an ekranda yüklü olanlar
+  if(AK._merged && AK._merged.shared) AK._merged.shared.forEach(function(s){ ekle(s.code,s.type,s.renk,s.images&&s.images[0],AK.state.model); });
+  (AK.state.colors||[]).forEach(function(c){ (c.files||[]).forEach(function(f){ ekle(f.code,f.type,f.renk,f.images&&f.images[0],c.model||AK.state.model); }); });
+
+  // b) Daha önce yüklenmiş arşivler — kayıtlardaki zipKeys üzerinden
+  var keys={};
+  AK._zipKeys.forEach(function(k){ keys[k]=keys[k]||{}; });
+  AK.recs().forEach(function(r){ (r.zipKeys||[]).forEach(function(k){ keys[k]=keys[k]||r.zipUrls||{}; }); });
+  // Daha önce taranan arşiv tekrar açılmasın (zorla=true ise hepsi yeniden)
+  var tarandi=AK._tarandi();
+  var kl=Object.keys(keys).filter(function(k){ return zorla || tarandi.indexOf(k)<0; });
+  var arsiv = !kl.length ? Promise.resolve() : AK.loadLibs().then(function(){
+    return kl.reduce(function(ch,k){ return ch.then(function(){
+      return AK._getArchiveFiles([k], keys[k]).then(function(files){
+        if(!files || !files[0]) return;
+        return AK._extractEntries(files[0]).then(function(entries){
+          return (entries||[]).reduce(function(c2,e){ return c2.then(function(){
+            if(!/\.(png|jpe?g)$/i.test(e.name||'')) return;
+            var cat=AK.categorize(e.name);
+            if(!cat || !cat.code || !cat.type || cat.type==='unknown') return;
+            return AK.libKaydet(cat.code, cat.type, cat.renk, AK._pngUrl(e.bytes, e.name));
+          }); }, Promise.resolve()).then(function(){ AK._tarandiEkle(k); });
+        });
+      }).catch(function(){});
+    }); }, Promise.resolve());
+  }).catch(function(){});
+
+  return Promise.all(isler).then(function(){ return arsiv; }).then(function(){
+    AK._libTarayor=false;
+    if(btn){ btn.disabled=false; btn.innerHTML=eskiBtn; }
+    var acik=document.getElementById('akLibModal');
+    if(acik && acik.classList.contains('show')) AK.renderLib();
+    var yeni=Object.keys(AK.lib()).length-oncekiSayi;
+    if(!sessiz && typeof toast==='function'){
+      toast(yeni>0 ? (yeni+' yeni dokuma etiketi kütüphaneye eklendi') : 'Arşivlerde yeni dokuma etiketi bulunamadı', yeni>0?'success':'info');
+    }
+    return yeni;
+  }).catch(function(){
+    AK._libTarayor=false;
+    if(btn){ btn.disabled=false; btn.innerHTML=eskiBtn; }
+    return 0;
+  });
+};
+AK.closeLib = function(){ document.getElementById('akLibModal').classList.remove('show'); AK._libCid=null; };
+AK.renderLib = function(){
+  var host=document.getElementById('akLibList'); if(!host) return;
+  var L=AK.lib();
+  var q=((document.getElementById('akLibSearch')||{}).value||'').toLocaleLowerCase('tr').trim();
+  var keys=Object.keys(L).sort(function(a,b){ return (L[b].ts||0)-(L[a].ts||0); });
+  var sayac=document.getElementById('akLibCount');
+  if(sayac) sayac.textContent = keys.length ? (keys.length+' etiket') : 'boş';
+  if(q){
+    keys=keys.filter(function(k){
+      var e=L[k];
+      return (k+' '+(e.renk||'')+' '+(e.model||'')).toLocaleLowerCase('tr').indexOf(q)>=0;
+    });
+  }
+  if(!keys.length){
+    host.innerHTML='<div class="ak-lib-bos"><i class="fas fa-tag"></i>'+
+      (Object.keys(L).length?'Aramaya uyan dokuma etiketi yok.':'Kütüphane boş — arşiv yükledikçe dokuma etiketleri buraya kendiliğinden düşer.')+'</div>';
+    return;
+  }
+  var eklenebilir = AK._libCid!=null;
+  host.innerHTML=keys.map(function(k){
+    var e=L[k];
+    var ton=(e.renk||'').toLocaleLowerCase('tr');
+    var tonCls = /siyah|black/.test(ton) ? 'siyah' : /beyaz|white|ekru|krem/.test(ton) ? 'beyaz' : '';
+    return '<div class="ak-lrow">'+
+      '<div class="ak-lrow-img"><img src="'+e.img+'" alt="'+AK._esc(k)+'"></div>'+
+      '<div class="ak-lrow-info">'+
+        '<div class="ak-lrow-t"><b>'+AK._esc(k)+'</b>'+
+          (e.renk?'<span class="ak-lrow-ton '+tonCls+'">'+AK._esc(e.renk)+'</span>':'')+'</div>'+
+        '<div class="ak-lrow-s">Dokuma (Marka Etiketi)'+(e.model?' · <em>'+AK._esc(e.model)+'</em>':'')+'</div>'+
+      '</div>'+
+      '<div class="ak-lrow-act">'+
+        (eklenebilir?'<button class="btn btn-sm btn-primary" onclick="AK.libEkle(\''+k+'\')"><i class="fas fa-plus"></i> Ekle</button>':'')+
+        '<button class="ak-lrow-x" onclick="AK.libSil(\''+k+'\')" title="Kütüphaneden sil"><i class="fas fa-trash"></i></button>'+
+      '</div></div>';
+  }).join('');
+};
+// Kütüphaneden renk kartına etiket ekle
+AK.libEkle = function(code){
+  var cid=AK._libCid; if(cid==null) return;
+  var L=AK.lib(), e=L[code]; if(!e) return;
+  var c=AK._c(cid); if(!c) return;
+  if(!c.files) c.files=[];
+  if(!c._manuel) c._manuel=[];
+  var nm='lib:'+code;
+  if(c.files.some(function(f){ return f.name===nm; })){ if(typeof toast==='function') toast('Bu etiket zaten ekli','info'); return; }
+  // _uiNot sadece ekranda görünür; föy PDF'ine "kütüphaneden eklendi" gibi
+  // bir not ASLA basılmaz — föy atölyeye gidiyor, orada işi yok.
+  var f={ name:nm, type:e.type, code:code, renk:e.renk||null, images:[e.img], _manuel:true,
+          _uiNot:'Kütüphaneden eklendi — bu arşivde gelmemişti.' };
+  c.files.push(f); c._manuel.push(f);
+  // Etiketin kendi rengini görselden doğrula (siyah / beyaz)
+  AK._labelTone(e.img).then(function(t){ if(t){ f.renk=t; AK.renderColors(); } }).catch(function(){});
+  AK.closeLib(); AK.renderColors();
+  if(typeof toast==='function') toast('Dokuma etiketi eklendi: '+code,'success');
+};
+// Elle eklenen etiketi karttan çıkar
+AK.libCikar = function(cid, name){
+  var c=AK._c(cid); if(!c) return;
+  c.files=(c.files||[]).filter(function(f){ return f.name!==name; });
+  c._manuel=(c._manuel||[]).filter(function(f){ return f.name!==name; });
+  AK.renderColors();
+};
+// Dışarıdan görsel yükleyip kütüphaneye kaydet
+AK.libYukle = function(){
+  var code=((document.getElementById('akLibCode')||{}).value||'').trim().toUpperCase();
+  var renk=((document.getElementById('akLibRenk')||{}).value||'').trim();
+  var fi=document.getElementById('akLibFile');
+  var file=fi&&fi.files&&fi.files[0];
+  if(!code) return alert('Kod yazın (ör. AULBW13729).');
+  if(!file) return alert('Görsel seçin.');
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    AK.libKaydet(code, 'dokuma', renk, ev.target.result).then(function(ok){
+      if(!ok){ alert('Görsel kaydedilemedi — dosya çok büyük olabilir. Daha küçük bir görsel deneyin.'); return; }
+      // Kod tablosuna da yaz ki bir daha sorulmasın
+      try{ var m=AK.map(); var en={type:'dokuma'}; if(renk) en.renk=renk; m.png[code]=en; AK.saveMap(m); }catch(_){}
+      document.getElementById('akLibCode').value='';
+      document.getElementById('akLibRenk').value='';
+      fi.value='';
+      AK.renderLib();
+      if(typeof toast==='function') toast('Dokuma etiketi kütüphaneye kaydedildi: '+code,'success');
+    });
+  };
+  rd.readAsDataURL(file);
+};
+
 AK.openCodeTable = function(){ AK.renderCodeTable(); document.getElementById('akCodeModal').classList.add('show'); };
 AK.closeCodeTable = function(){ document.getElementById('akCodeModal').classList.remove('show'); };
 AK.renderCodeTable = function(){
@@ -21360,6 +21653,8 @@ AK.addCode = function(){
   var m=AK.map(); m.png[code]={type:type}; if(renk) m.png[code].renk=renk; AK.saveMap(m);
   document.getElementById('akNewCode').value=''; document.getElementById('akNewRenk').value='';
   AK.renderCodeTable();
+  // Yeni kod tanındı → arşivlerdeki aynı görseli de kütüphaneye alalım
+  try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 400); }catch(_){}
 };
 AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); AK.renderCodeTable(); };
 
