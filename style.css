@@ -2379,7 +2379,15 @@ body::after{
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
   background-size:4px 4px,4px 4px; background-position:right 12px center,right 16px center; background-repeat:no-repeat; }
 .aks-hazir-ay option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
-@media (max-width:640px){ .aks-hazir-grup{ width:100%; } .aks-btn-hazir{ flex:1; justify-content:center; } }
+/* Telefonda buton yazısı kesiliyordu: buton esner, ay seçici kendi genişliğinde kalır */
+@media (max-width:640px){
+  .aks-hazir-grup{ width:100%; }
+  .aks-btn-hazir{ flex:1 1 auto; min-width:0; justify-content:center; white-space:nowrap; padding-left:10px; padding-right:10px; }
+  .aks-btn-hazir span{ overflow:hidden; text-overflow:ellipsis; }
+  /* Seçicinin en uzun seçeneği ("Bu ay + gelecek ay") butonu eziyordu */
+  .aks-hazir-ay{ flex:0 1 auto; min-width:0; max-width:108px; padding:0 22px 0 8px;
+    background-position:right 9px center,right 13px center; }
+}
 
 .aks-btn-danger{
   background:linear-gradient(135deg,var(--danger),color-mix(in srgb,var(--danger) 70%,#000));
@@ -2613,6 +2621,73 @@ body::after{
 .aks-row:hover .aks-td-sticky-left,
 .aks-row:hover .aks-td-sticky-right{
   background:var(--bg-card-hover);
+}
+
+/* ── Müşteri sekmeleri (Defacto / Mavi) ── */
+.aks-mus-bar{
+  display:flex;
+  align-items:flex-end;
+  gap:4px;
+  margin:18px 0 -1px;
+  padding:0 2px;
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.aks-mus-bar::-webkit-scrollbar{ display:none; }
+
+.aks-mus-tab{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 16px;
+  border:1px solid transparent;
+  border-bottom:none;
+  border-radius:10px 10px 0 0;
+  background:transparent;
+  color:var(--text-muted);
+  font-size:13px;
+  font-weight:600;
+  font-family:inherit;
+  white-space:nowrap;
+  cursor:pointer;
+  position:relative;
+  top:1px;
+  transition:background .16s ease, color .16s ease;
+}
+.aks-mus-tab:hover{ background:var(--glass); color:var(--text-main); }
+
+.aks-mus-tab em{
+  font-style:normal;
+  font-size:11px;
+  font-weight:700;
+  padding:2px 7px;
+  border-radius:999px;
+  background:var(--glass);
+  color:var(--text-muted);
+  transition:background .16s ease, color .16s ease;
+}
+
+.aks-mus-tab.aktif{
+  background:var(--bg-card-solid, var(--bg-card));
+  border-color:var(--border);
+  border-bottom:1px solid var(--bg-card-solid, var(--bg-card));
+  color:var(--text-main);
+  box-shadow:0 -2px 8px rgba(0,0,0,.05);
+}
+.aks-mus-tab.aktif::after{
+  content:'';
+  position:absolute;
+  left:12px; right:12px; top:0;
+  height:2px;
+  border-radius:2px;
+  background:var(--primary);
+}
+.aks-mus-tab.aktif em{ background:var(--primary); color:#fff; }
+
+@media (max-width:640px){
+  .aks-mus-bar{ margin-top:14px; }
+  .aks-mus-tab{ padding:8px 12px; font-size:12px; }
 }
 
 /* Müşteri rozeti — Defacto / Mavi aynı tabloda karıştığı için */

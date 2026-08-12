@@ -2835,6 +2835,9 @@ if(typeof Chart==='undefined'){
         </div>
       </div>
 
+      <!-- Müşteri sekmeleri — Excel'deki Defacto / Mavi sayfaları gibi -->
+      <div class="aks-mus-bar" id="aksMusBar"></div>
+
       <div class="aks-toolbar">
         <div class="aks-search-box">
           <i class="fas fa-search"></i>
@@ -5046,7 +5049,7 @@ function _aksTerminYM(termin){
 function aksTerminPdf(){
   try{
     if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF motoru yüklenemedi (internet gerekli)','error'); return; }
-    var list = getData('aksesuarlar')||[];
+    var list = _aksMusteriSuz(getData('aksesuarlar')||[]);   // seçili müşteri sekmesi
     if(!list.length){ toast('Kayıt yok','info'); return; }
     var now=new Date();
     var nowIdx = now.getFullYear()*12 + now.getMonth();
@@ -5136,10 +5139,11 @@ function _aksCikisVar(v){ return /[a-z0-9]/i.test((v==null?'':(''+v))); }
 function aksHazirlanacakPdf(){
   try{
     if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF motoru yüklenemedi (internet gerekli)','error'); return; }
-    var list=getData('aksesuarlar')||[];
+    var list=_aksMusteriSuz(getData('aksesuarlar')||[]);   // seçili müşteri sekmesi
     if(!list.length){ toast('Kayıt yok','info'); return; }
 
     var now=new Date();
+    var bugun=new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var nowIdx=now.getFullYear()*12+now.getMonth();
     var mod=aksHazirAy();
     var hedef = mod==='0' ? [nowIdx] : mod==='1' ? [nowIdx+1] : [nowIdx, nowIdx+1];
@@ -5154,7 +5158,13 @@ function aksHazirlanacakPdf(){
       var idx=ym.y*12+(ym.m-1);
       if(hedef.indexOf(idx)<0) return;
       if(_aksCikisVar(a.cikisDikim)){ cikmis++; return; }   // çıkmış — hazırlanacak listesinde yeri yok
-      sel.push({a:a, idx:idx, gun:ym.d||99});
+      // Tarihler tabloda karışık geliyor (03.08.2026 / 8/3/26) — hepsi tek
+      // biçime çevrilir, ayrıca termine kaç gün kaldığı hesaplanır.
+      var g=ym.d||1;
+      var tarih=new Date(ym.y, ym.m-1, g);
+      var kalan=Math.round((tarih-bugun)/86400000);
+      sel.push({a:a, idx:idx, gun:g, kalan:kalan,
+                terminMetin:('0'+g).slice(-2)+'.'+('0'+ym.m).slice(-2)+'.'+ym.y});
     });
     if(!sel.length){
       toast(baslikAy+' için hazırlanacak model yok'+(cikmis?(' ('+cikmis+' model zaten çıkmış)'):''),'info');
@@ -5168,98 +5178,194 @@ function aksHazirlanacakPdf(){
     // Sadece o müşteride takip edilen kalemlere bakılır.
     // Uzun listeler satırı taşırıp kelimeyi ortadan kesiyordu; ilk 4 kalem
     // yazılır, kalanı "+N" olarak toplanır.
+    var eksikler=function(a){
+      return _aksKalemleri(a).filter(function(k){ return !(+a[k]>0); })
+                             .map(function(k){ return AKS_KALEM_AD[k]||k; });
+    };
+    var eksikSayi=function(a){ return eksikler(a).length; };
     var eksikStr=function(a){
-      var e=_aksKalemleri(a).filter(function(k){ return !(+a[k]>0); })
-                            .map(function(k){ return AKS_KALEM_AD[k]||k; });
+      var e=eksikler(a);
       if(!e.length) return '';
-      return e.length>4 ? (e.slice(0,4).join(', ')+' +'+(e.length-4)) : e.join(', ');
+      return e.length>3 ? (e.slice(0,3).join(', ')+' +'+(e.length-3)) : e.join(', ');
     };
 
     var pdf=AK._newPdf();
-    var W=210, PH=297, mL=10, mR=10;
+    var W=210, PH=297, mL=12, mR=12, iw=W-mL-mR;   // iç genişlik 186
     var T=function(s,x,y,o){ pdf.text(AK._tr(s==null?'':(''+s)),x,y,o); };
+    var RENK={
+      koyu:[15,23,42], gri:[100,116,139], acikGri:[148,163,184],
+      cizgi:[226,232,240], zebra:[248,250,252],
+      basliktSiyah:[17,24,39], mor:[124,58,237],
+      kirmizi:[190,18,60], turuncu:[194,120,3], yesil:[21,128,61]
+    };
+    var C=function(f,r){ pdf['set'+(f==='f'?'Fill':f==='d'?'Draw':'Text')+'Color'](r[0],r[1],r[2]); };
+
     // Birden fazla müşteri varsa (Defacto + Mavi) müşteri sütunu da göster
     var musteriler={}; sel.forEach(function(s){ if(s.a.musteri) musteriler[s.a.musteri]=1; });
-    var musVar = Object.keys(musteriler).length>1;
+    var musAdlari=Object.keys(musteriler);
+    var musVar = musAdlari.length>1;
     var cols = musVar ? [
-      {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
-      {t:'Model Kodu',  x:mL+8,    w:38, a:'left'},
-      {t:'Musteri',     x:mL+46,   w:20, a:'left'},
-      {t:'Koli',        x:mL+66,   w:14, a:'left'},
-      {t:'Termin',      x:mL+80,   w:22, a:'left'},
-      {t:'Adet',        x:mL+102,  w:18, a:'right'},
-      {t:'Eksik Aksesuar', x:mL+120, w:70, a:'left'}
+      {t:'',            x:mL,     w:9,  a:'center'},   // hazırlandı kutusu
+      {t:'Model Kodu',  x:mL+9,   w:41, a:'left'},
+      {t:'Musteri',     x:mL+50,  w:17, a:'left'},
+      {t:'Koli',        x:mL+67,  w:11, a:'center'},
+      {t:'Termin',      x:mL+78,  w:22, a:'left'},
+      {t:'Kalan',       x:mL+100, w:16, a:'right'},
+      {t:'Adet',        x:mL+116, w:18, a:'right'},
+      {t:'Eksik Aksesuar', x:mL+134, w:52, a:'left'}
     ] : [
-      {t:'',            x:mL,      w:8,  a:'center'},   // hazırlandı kutusu
-      {t:'Model Kodu',  x:mL+8,    w:40, a:'left'},
-      {t:'Koli',        x:mL+48,   w:16, a:'left'},
-      {t:'Termin',      x:mL+64,   w:24, a:'left'},
-      {t:'Adet',        x:mL+88,   w:20, a:'right'},
-      {t:'Eksik Aksesuar', x:mL+108, w:82, a:'left'}
+      {t:'',            x:mL,     w:9,  a:'center'},
+      {t:'Model Kodu',  x:mL+9,   w:48, a:'left'},
+      {t:'Koli',        x:mL+57,  w:12, a:'center'},
+      {t:'Termin',      x:mL+69,  w:23, a:'left'},
+      {t:'Kalan',       x:mL+92,  w:17, a:'right'},
+      {t:'Adet',        x:mL+109, w:19, a:'right'},
+      {t:'Eksik Aksesuar', x:mL+128, w:58, a:'left'}
     ];
-    var tx=function(c){ return c.a==='right'? c.x+c.w-2 : c.a==='center'? c.x+c.w/2 : c.x+2; };
+    var tx=function(c){ return c.a==='right'? c.x+c.w-2.5 : c.a==='center'? c.x+c.w/2 : c.x+2.5; };
     var opt=function(c){ return c.a==='left'? undefined : {align:c.a}; };
     // Uzun model adları ("M1611360 KIRMIZI BEYAZ ÇİZGİLİ") sütunu taşırıyordu:
     // önce puntoyu küçült, yine sığmazsa sonunu kısalt.
-    var sigdir=function(s, c, y, punto){
-      var t=AK._tr(s==null?'':(''+s)), w=c.w-3, ps=punto;
+    var sigdir=function(s, c, y, punto, sx, sw){
+      var t=AK._tr(s==null?'':(''+s)), w=(sw!=null?sw:c.w)-4, ps=punto;
       while(ps>5.6 && pdf.getTextWidth(t)>w){ ps-=0.4; pdf.setFontSize(ps); }
       while(t.length>3 && pdf.getTextWidth(t)>w){ t=t.slice(0,-2)+'.'; }
-      pdf.text(t, tx(c), y, opt(c));
+      pdf.text(t, (sx!=null?sx:tx(c)), y, (sx!=null&&!c)?undefined:opt(c));
       pdf.setFontSize(punto);
     };
+    // Termine kaç gün kaldı → kısa etiket + renk
+    var kalanBilgi=function(k){
+      if(k<0)  return {t:Math.abs(k)+' g gecti', r:RENK.kirmizi, kalin:true};
+      if(k===0)return {t:'Bugun',                r:RENK.kirmizi, kalin:true};
+      if(k<=3) return {t:k+' gun',               r:RENK.turuncu, kalin:true};
+      if(k<=7) return {t:k+' gun',               r:RENK.turuncu, kalin:false};
+      return       {t:k+' gun',                  r:RENK.gri,     kalin:false};
+    };
+
+    var toplamAdet=sel.reduce(function(t,s){ return t+(parseInt(s.a.adet,10)||0); },0);
+    var eksikli=sel.filter(function(s){ return eksikStr(s.a); }).length;
+    var geciken=sel.filter(function(s){ return s.kalan<0; }).length;
+
+    // ── Üst başlık bandı ────────────────────────────────────────────────
+    function drawBaslik(){
+      C('f',RENK.basliktSiyah); pdf.rect(0,0,W,30,'F');
+      C('f',RENK.mor); pdf.rect(0,30,W,1.2,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(17);
+      T('HAZIRLANACAK MODELLER', mL, 15.5);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+      pdf.setTextColor(190,197,210);
+      var alt=baslikAy+' termini';
+      if(aksMusteri()) alt+='   |   '+aksMusteri();
+      T(alt, mL, 23);
+      pdf.setFontSize(8.5); pdf.setTextColor(150,160,178);
+      T('Liste tarihi', W-mR, 13, {align:'right'});
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+      T(now.toLocaleDateString('tr-TR'), W-mR, 19.5, {align:'right'});
+      pdf.setFont('helvetica','normal');
+    }
+
+    // ── Özet kutuları ───────────────────────────────────────────────────
+    function drawOzet(y){
+      var kutular=[
+        {b:'Model sayisi', d:''+sel.length,                              r:RENK.koyu},
+        {b:'Toplam adet',  d:toplamAdet.toLocaleString('tr-TR'),         r:RENK.koyu},
+        {b:'Eksigi olan',  d:eksikli+' model',                           r:eksikli?RENK.kirmizi:RENK.yesil},
+        {b:'Termini gecen',d:geciken+' model',                           r:geciken?RENK.kirmizi:RENK.yesil}
+      ];
+      var g=3, kw=(iw-g*(kutular.length-1))/kutular.length, kh=15;
+      kutular.forEach(function(k,i){
+        var x=mL+i*(kw+g);
+        C('f',[250,251,253]); C('d',RENK.cizgi); pdf.setLineWidth(0.25);
+        pdf.roundedRect(x,y,kw,kh,1.6,1.6,'FD');
+        C('t',RENK.acikGri); pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
+        T(k.b.toUpperCase(), x+4, y+5.6);
+        C('t',k.r); pdf.setFont('helvetica','bold'); pdf.setFontSize(11.5);
+        sigdir(k.d, null, y+12, 11.5, x+4, kw-4);
+        pdf.setFont('helvetica','normal');
+      });
+      return y+kh;
+    }
+
+    // ── Tablo başlığı ───────────────────────────────────────────────────
     function drawHeader(y){
-      pdf.setFillColor(30,41,59); pdf.rect(mL,y,W-mL-mR,8,'F');
-      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
-      cols.forEach(function(c){ T(c.t, tx(c), y+5.4, opt(c)); });
+      C('f',RENK.basliktSiyah); pdf.rect(mL,y,iw,8,'F');
+      pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.6);
+      cols.forEach(function(c){ if(c.t) T(c.t.toUpperCase(), tx(c), y+5.3, opt(c)); });
+      pdf.setFont('helvetica','normal');
       return y+8;
     }
 
-    // Başlık
-    pdf.setTextColor(15,23,42); pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
-    T('Hazirlanacak Modeller', mL, 16);
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(100,116,139);
-    T(baslikAy+' termini  ·  '+sel.length+' model  ·  '+now.toLocaleDateString('tr-TR'), mL, 22);
-    var toplamAdet=sel.reduce(function(t,s){ return t+(parseInt(s.a.adet,10)||0); },0);
-    var not='Cikis (Dikim) tarihi girilmis modeller listeye alinmadi'+(cikmis?(' ('+cikmis+' model)'):'')+'.';
-    T('Toplam '+toplamAdet.toLocaleString('tr-TR')+' adet  ·  '+not, mL, 27);
-
-    var y=drawHeader(32);
-    var rowH=7;
+    drawBaslik();
+    var y=drawOzet(38)+7;
+    y=drawHeader(y);
+    var rowH=7.6, altSinir=PH-16;
     pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
-    var sonIdx=null;
-    sel.forEach(function(s,i){
+    var sonIdx=null, z=0;
+    sel.forEach(function(s){
       // Ay değişince araya ayırıcı koy (bu ay + gelecek ay seçildiyse)
       if(hedef.length>1 && s.idx!==sonIdx){
-        if(y+12 > PH-12){ pdf.addPage(); y=drawHeader(16); }
-        sonIdx=s.idx;
-        pdf.setFillColor(226,232,240); pdf.rect(mL,y,W-mL-mR,6,'F');
-        pdf.setTextColor(30,41,59); pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5);
-        T(ayAd(s.idx)+' termini', mL+2, y+4.3);
-        pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
-        y+=6;
+        if(y+14 > altSinir){ pdf.addPage(); drawBaslik(); y=drawHeader(38); }
+        sonIdx=s.idx; z=0;
+        C('f',[241,245,249]); pdf.rect(mL,y,iw,6.5,'F');
+        C('f',RENK.mor); pdf.rect(mL,y,1.4,6.5,'F');
+        C('t',RENK.koyu); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
+        T(ayAd(s.idx).toUpperCase()+' TERMINI', mL+4.5, y+4.5);
+        pdf.setFont('helvetica','normal');
+        y+=6.5;
       }
-      if(y+rowH > PH-12){ pdf.addPage(); y=drawHeader(16); pdf.setFont('helvetica','normal'); pdf.setFontSize(8); }
-      if(i%2===1){ pdf.setFillColor(241,245,249); pdf.rect(mL,y,W-mL-mR,rowH,'F'); }
-      var a=s.a;
+      if(y+rowH > altSinir){ pdf.addPage(); drawBaslik(); y=drawHeader(38); z=0;
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(8); }
+      if(z%2===1){ C('f',RENK.zebra); pdf.rect(mL,y,iw,rowH,'F'); }
+      z++;
+      var a=s.a, ty=y+5.1;
+      // Termini geçmiş satırı sol kenardan işaretle
+      if(s.kalan<0){ C('f',RENK.kirmizi); pdf.rect(mL,y+0.4,1.1,rowH-0.8,'F'); }
       // hazırlandı kutusu — atölyede tik atılacak
-      pdf.setDrawColor(120,130,145); pdf.setLineWidth(0.3);
-      pdf.rect(cols[0].x+2.2, y+1.9, 3.2, 3.2);
-      pdf.setTextColor(15,23,42);
+      C('d',[148,163,184]); pdf.setLineWidth(0.3);
+      pdf.roundedRect(cols[0].x+2.7, y+2.1, 3.6, 3.6, 0.6, 0.6);
+
       var ci=1;
-      sigdir(a.modelKodu||'—', cols[ci], y+4.8, 8); ci++;
-      if(musVar){ pdf.setTextColor(71,85,105); sigdir(a.musteri||'—', cols[ci], y+4.8, 8);
-        pdf.setTextColor(15,23,42); ci++; }
-      sigdir(a.koliNo||'—', cols[ci], y+4.8, 8); ci++;
-      sigdir(a.termin||'—', cols[ci], y+4.8, 8); ci++;
-      T((parseInt(a.adet,10)||0).toLocaleString('tr-TR'), tx(cols[ci]), y+4.8, opt(cols[ci])); ci++;
-      var ek=eksikStr(a), cE=cols[ci];
-      if(ek){ pdf.setTextColor(190,18,60); sigdir(ek, cE, y+4.8, 7.2); pdf.setFontSize(8);
-      } else { pdf.setTextColor(22,163,74); pdf.setFont('helvetica','bold');
-        T('Tamam', tx(cE), y+4.8, opt(cE)); pdf.setFont('helvetica','normal'); }
-      pdf.setDrawColor(226,232,240); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
+      C('t',RENK.koyu); pdf.setFont('helvetica','bold'); pdf.setFontSize(8);
+      sigdir(a.modelKodu||'—', cols[ci], ty, 8); ci++;
+      pdf.setFont('helvetica','normal');
+      if(musVar){ C('t',RENK.gri); sigdir(a.musteri||'—', cols[ci], ty, 7.6); ci++; }
+      C('t',RENK.gri); sigdir(a.koliNo||'—', cols[ci], ty, 8); ci++;
+      C('t',RENK.koyu); sigdir(s.terminMetin, cols[ci], ty, 8); ci++;
+      var kb=kalanBilgi(s.kalan);
+      C('t',kb.r); if(kb.kalin) pdf.setFont('helvetica','bold');
+      sigdir(kb.t, cols[ci], ty, 7.4); pdf.setFont('helvetica','normal'); ci++;
+      var ad=parseInt(a.adet,10)||0;
+      C('t', ad?RENK.koyu:RENK.acikGri);
+      T(ad?ad.toLocaleString('tr-TR'):'—', tx(cols[ci]), ty, opt(cols[ci])); ci++;
+
+      // Eksik aksesuar: önce kırmızı adet rozeti, sonra kalemler
+      var cE=cols[ci], ek=eksikStr(a), n=eksikSayi(a);
+      if(n){
+        C('f',[254,226,232]); pdf.roundedRect(cE.x+2, y+1.9, 6.4, 4, 1, 1, 'F');
+        C('t',RENK.kirmizi); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.6);
+        T(''+n, cE.x+5.2, y+4.85, {align:'center'});
+        pdf.setFont('helvetica','normal');
+        C('t',[71,85,105]);
+        sigdir(ek, cE, ty, 6.8, cE.x+10, cE.w-11);
+      } else {
+        C('t',RENK.yesil); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.4);
+        T('TAMAM', cE.x+2.5, ty);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+      }
+      C('d',RENK.cizgi); pdf.setLineWidth(0.1); pdf.line(mL,y+rowH,W-mR,y+rowH);
       y+=rowH;
     });
+
+    // ── Alt bilgi: not + sayfa numarası ─────────────────────────────────
+    var not='Cikis (Dikim) tarihi girilmis modeller listeye alinmadi'+(cikmis?(' - '+cikmis+' model'):'')+'.';
+    var sayfa=pdf.internal.getNumberOfPages();
+    for(var s2=1;s2<=sayfa;s2++){
+      pdf.setPage(s2);
+      C('d',RENK.cizgi); pdf.setLineWidth(0.25); pdf.line(mL,PH-12,W-mR,PH-12);
+      C('t',RENK.acikGri); pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
+      T(not, mL, PH-8);
+      T('Sayfa '+s2+' / '+sayfa, W-mR, PH-8, {align:'right'});
+    }
 
     pdf.save('hazirlanacak-modeller.pdf');
     toast(sel.length+' model listelendi ✓'+(cikmis?(' · '+cikmis+' çıkmış model atlandı'):''),'success');
@@ -5353,8 +5459,37 @@ function updateAksesuarField(id, field, value){
   }
 }
 
+// ── Müşteri sekmeleri (Defacto / Mavi) — Excel'deki sayfa sekmeleri gibi ──
+function aksMusteri(){ return getConfig('aksMusteri','') || ''; }
+function aksSetMusteri(v){ setConfig('aksMusteri', v||''); renderAksesuarTable(); }
+// Kayıtlardaki müşteriler, en çok kayıttan aza doğru
+function _aksMusteriListesi(list){
+  const say={};
+  (list||[]).forEach(a=>{ const m=(a.musteri||'').trim(); if(m) say[m]=(say[m]||0)+1; });
+  return Object.keys(say).sort((x,y)=>say[y]-say[x]||x.localeCompare(y,'tr')).map(m=>({ad:m, n:say[m]}));
+}
+// Seçili sekmeye göre süz. Müşterisi olmayan (elle eklenen) kayıtlar
+// "Tümü"de görünür, bir müşteri seçiliyken gizlenmez ise kafa karıştırır —
+// onları da sadece "Tümü"de gösteriyoruz.
+function _aksMusteriSuz(list){
+  const m=aksMusteri(); if(!m) return list;
+  return list.filter(a=>(a.musteri||'')===m);
+}
+function renderAksesuarMusBar(){
+  const bar=document.getElementById('aksMusBar'); if(!bar) return;
+  const list=getData('aksesuarlar')||[];
+  const mus=_aksMusteriListesi(list);
+  // Tek müşteri (veya hiç) varsa sekmeye gerek yok
+  if(mus.length<2){ bar.innerHTML=''; bar.style.display='none'; if(aksMusteri()) setConfig('aksMusteri',''); return; }
+  bar.style.display='';
+  const akt=aksMusteri();
+  const kutu=(deger,ad,n)=>`<button class="aks-mus-tab${akt===deger?' aktif':''}" onclick="aksSetMusteri('${deger.replace(/'/g,"\\'")}')">
+      <span>${ad}</span><em>${n}</em></button>`;
+  bar.innerHTML = kutu('','Tümü',list.length) + mus.map(m=>kutu(m.ad,m.ad,m.n)).join('');
+}
 function renderAksesuarTable(){
-  let list = getData('aksesuarlar');
+  let list = _aksMusteriSuz(getData('aksesuarlar'));
+  renderAksesuarMusBar();
   const search = document.getElementById('aksesuarSearch')?.value.toLowerCase() || '';
 
   // Tamamlanmış = HEM Çıkış Dikim HEM Ütü Paket çıkışı dolu (nokta/boşluk değil).
@@ -5420,8 +5555,9 @@ function renderAksesuarTable(){
       return `<input type="number" value="${val}" data-id="${item.id}" data-field="${field}" onchange="updateAksesuarField(${item.id},'${field}',+this.value)" class="aks-input aks-input-number" min="0">`;
     };
 
-    // Birden fazla müşteri (Defacto/Mavi) karışabildiği için model yanında rozet
-    const mus = item.musteri ? `<span class="aks-mus" title="${item.musteri}">${item.musteri}</span>` : '';
+    // "Tümü" görünümünde Defacto/Mavi karıştığı için model altında rozet;
+    // tek müşteri seçiliyse sekmede zaten yazıyor, tekrarına gerek yok.
+    const mus = (!aksMusteri() && item.musteri) ? `<span class="aks-mus" title="${item.musteri}">${item.musteri}</span>` : '';
     // O müşteride olmayan kalemler sayaç yerine "—" gösterilir
     const kalem = _aksKalemleri(item);
     const renderKalem = (field) => kalem.indexOf(field)<0
@@ -5455,7 +5591,7 @@ function renderAksesuarTable(){
 }
 
 function exportAksesuarToExcel(){
-  const list = getData('aksesuarlar');
+  const list = _aksMusteriSuz(getData('aksesuarlar'));   // seçili müşteri sekmesi
   if(list.length === 0){
     toast('Dışa aktarılacak veri yok','error');
     return;
