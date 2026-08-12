@@ -107,7 +107,14 @@
       }).join('');
       sizesHtml += tbl('🔗 Beden Detayları',['Beden','CM','Adet'],rows3, d.total||null);
     }
-    if(d.cm || d.metre || d.adet){
+    // Kordon sadece metre olarak kesilmişse (faturada cm yoksa) metre gösterilir
+    var korMetre = (d.olcuTipi==='metre');
+    if(korMetre){
+      sizesHtml += tbl('🪢 Kordon Miktarı',['Alan','Değer'],
+        '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;font-weight:600;">Toplam Metre</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(d.metre||0)+' m</td></tr>',
+        null);
+    }
+    if(!korMetre && (d.cm || d.metre || d.adet)){
       var rows4 = '';
       if(d.cm)    rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">CM</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.cm+'</td></tr>';
       if(d.metre) rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">Metre</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.metre+'</td></tr>';
@@ -2027,7 +2034,7 @@ if(typeof Chart==='undefined'){
     <!-- ========== KORDON ========== -->
     <div class="page" id="page-kordon">
       <div class="section-header">
-        <div><h2>Kordon İrsaliyesi</h2><p>CM ve adet bazlı kordon sevki</p></div>
+        <div><h2>Kordon İrsaliyesi</h2><p>CM &amp; adet ya da sadece metre — faturada hangisi yazıyorsa</p></div>
         <button class="btn btn-primary" onclick="saveKordon()"><i class="fas fa-save"></i> Kaydet</button>
       </div>
       <div class="grid-auto">
@@ -2048,30 +2055,57 @@ if(typeof Chart==='undefined'){
           </div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="fas fa-bezier-curve"></i> Kordon Ölçüleri (CM &amp; Adet)</div>
-          <div class="table-wrap">
-            <table style="min-width:auto;">
-              <thead><tr><th>#</th><th>CM</th><th>Adet</th></tr></thead>
-              <tbody>
-                <tr><td style="color:var(--text-muted);font-size:12px;">1</td><td><input class="form-input" type="number" id="kor_1_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_1_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">2</td><td><input class="form-input" type="number" id="kor_2_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_2_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">3</td><td><input class="form-input" type="number" id="kor_3_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_3_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">4</td><td><input class="form-input" type="number" id="kor_4_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_4_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">5</td><td><input class="form-input" type="number" id="kor_5_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_5_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">6</td><td><input class="form-input" type="number" id="kor_6_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_6_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">7</td><td><input class="form-input" type="number" id="kor_7_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_7_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">8</td><td><input class="form-input" type="number" id="kor_8_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_8_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">9</td><td><input class="form-input" type="number" id="kor_9_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_9_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-                <tr><td style="color:var(--text-muted);font-size:12px;">10</td><td><input class="form-input" type="number" id="kor_10_cm" placeholder="CM" step="0.1" style="width:90px"></td><td><input class="form-input" type="number" id="kor_10_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
-              </tbody>
-            </table>
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span><i class="fas fa-bezier-curve"></i> Kordon Miktarı</span>
+            <span class="kor-mod" role="group" aria-label="Ölçü tipi">
+              <button type="button" class="kor-mod-b aktif" id="korModAdet" onclick="korSetMod('adet')" title="Kordon cm cm kesiliyor — her ölçüden kaç adet">
+                <i class="fas fa-ruler"></i> CM &amp; Adet</button>
+              <button type="button" class="kor-mod-b" id="korModMetre" onclick="korSetMod('metre')" title="Faturada cm yok, sadece toplam metre yazıyor">
+                <i class="fas fa-arrows-left-right"></i> Sadece Metre</button>
+            </span>
           </div>
-          <div style="text-align:right;font-weight:700;font-size:15px;color:var(--primary);margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">Toplam Adet: <span id="korToplam">0</span></div>
+
+          <div id="korPaneAdet">
+            <div class="table-wrap">
+              <table style="min-width:auto;">
+                <thead><tr><th>#</th><th>CM</th><th>Adet</th></tr></thead>
+                <tbody>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">1</td><td><input class="form-input" type="number" id="kor_1_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_1_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">2</td><td><input class="form-input" type="number" id="kor_2_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_2_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">3</td><td><input class="form-input" type="number" id="kor_3_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_3_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">4</td><td><input class="form-input" type="number" id="kor_4_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_4_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">5</td><td><input class="form-input" type="number" id="kor_5_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_5_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">6</td><td><input class="form-input" type="number" id="kor_6_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_6_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">7</td><td><input class="form-input" type="number" id="kor_7_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_7_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">8</td><td><input class="form-input" type="number" id="kor_8_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_8_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">9</td><td><input class="form-input" type="number" id="kor_9_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_9_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                  <tr><td style="color:var(--text-muted);font-size:12px;">10</td><td><input class="form-input" type="number" id="kor_10_cm" placeholder="CM" step="0.1" style="width:90px" oninput="korUpdateTotal()"></td><td><input class="form-input" type="number" id="kor_10_a" placeholder="0" style="width:90px" oninput="korUpdateTotal()"></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="korPaneMetre" style="display:none;">
+            <div class="kor-metre-kutu">
+              <label for="korMetre">Toplam Metre</label>
+              <div class="kor-metre-in">
+                <input class="form-input" type="number" id="korMetre" placeholder="0" step="0.1" min="0" oninput="korUpdateTotal()">
+                <span>m</span>
+              </div>
+              <p class="kor-metre-not"><i class="fas fa-circle-info"></i> Faturada cm ölçüsü yoksa buraya sadece toplam metreyi yaz. İrsaliyede de metre olarak çıkar.</p>
+            </div>
+          </div>
+
+          <div class="kor-toplam">
+            <span class="kor-toplam-l" id="korToplamLbl">Toplam Adet</span>
+            <span class="kor-toplam-v"><span id="korToplam">0</span><em id="korToplamBirim">adet</em></span>
+            <span class="kor-toplam-alt" id="korToplamAlt"></span>
+          </div>
         </div>
       </div>
       <div class="card" style="margin-top:14px;">
         <div class="card-title"><i class="fas fa-list"></i> Kordon Kayıtları (<span id="kordonCount">0</span>)</div>
-        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>Toplam Adet</th><th>İşlem</th></tr></thead><tbody id="kordonTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Renk</th><th>Miktar</th><th>İşlem</th></tr></thead><tbody id="kordonTable"></tbody></table></div>
         <div class="table-mobile" id="kordonMobile" style="display:none;"></div>
       </div>
     </div>
@@ -7306,10 +7340,14 @@ function showDetailUni(id,type){
   if(type==='dantel'){
     html += sec('fa-border-all','Dantel','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
   }
-  if(type==='kordon' && item.olcular && item.olcular.length){
+  if(type==='kordon' && korMetreMi(item)){
+    html += sec('fa-bezier-curve','Kordon','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
+  }
+  if(type==='kordon' && !korMetreMi(item) && item.olcular && item.olcular.length){
     html += sec('fa-bezier-curve','Kordon Ölçüleri', _n0(item.totalAdet||0)+' adet',
       `<div class="dt-chips">${item.olcular.map(o=>chip(o.cm+' cm', _n0(o.adet), 'adet')).join('')}</div>`);
-    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet');
+    const _m=korToplamMetre(item);
+    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet'+(_m>0?('  ·  ≈ '+(Math.round(_m*10)/10).toLocaleString('tr')+' m'):''));
   }
   if(type==='toptan' && item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
@@ -7377,13 +7415,20 @@ function editItemUni(id, type){
   showPage(page);
   setTimeout(()=>{
     _fillPageFromData(page, item);
-    if(type==='kordon' && item.olcular){
-      item.olcular.forEach((o,idx)=>{
+    if(type==='kordon'){
+      // Kayıt hangi ölçü tipiyle kesildiyse form o moda geçer
+      if(typeof korSetMod==='function') korSetMod(korMetreMi(item)?'metre':'adet', false);
+      for(let i=1;i<=10;i++){
+        const ec=document.getElementById('kor_'+i+'_cm');const ea=document.getElementById('kor_'+i+'_a');
+        if(ec) ec.value=''; if(ea) ea.value='';
+      }
+      (item.olcular||[]).forEach((o,idx)=>{
         const i=idx+1;
         const ec=document.getElementById('kor_'+i+'_cm');const ea=document.getElementById('kor_'+i+'_a');
         if(ec) ec.value = o.cm||'';
         if(ea) ea.value = o.adet||'';
       });
+      const km=document.getElementById('korMetre'); if(km) km.value = korMetreMi(item) ? (item.metre||'') : '';
       if(typeof korUpdateTotal==='function') korUpdateTotal();
     }
     if(type==='fermuar'){
@@ -7778,13 +7823,27 @@ function generatePDF(id, type, mode) {
     </div>`;
   }
 
-  if (type === 'kordon' && item.olcular && item.olcular.length) {
+  if (type === 'kordon' && korMetreMi(item)) {
+    html += `<div class="section-title">🪢 Kordon Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
+    <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
+      <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">METRE</div>
+      </div>
+      ${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div>
+        <div style="font-size:13px;color:#6b7280;font-weight:600;">RENK</div>
+      </div>`:''}
+    </div>`;
+  }
+  else if (type === 'kordon' && item.olcular && item.olcular.length) {
     html += `<div class="section-title">🪢 Kordon Ölçüleri${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
     html += `<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
     item.olcular.forEach(o => {
       html += `<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;
     });
-    html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}</div>`;
+    const _km=korToplamMetre(item);
+    html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}${_km>0?` &nbsp;·&nbsp; ≈ ${Math.round(_km*10)/10} m`:''}</div>`;
   }
 
   if (type === 'dantel') {
@@ -8135,9 +8194,61 @@ function refreshToptanList(){
 }
 
 // ==================== KORDON ====================
+// ── Kordon ölçü tipi ──
+// Kordon bazen cm cm kesilip adetle verilir, bazen faturada sadece toplam
+// metre yazar. İki giriş biçimi de destekleniyor; kayıtta olcuTipi tutulur
+// (eski kayıtlarda alan yok → cm & adet sayılır).
+function korOlcuTipi(){ const v=getConfig('korOlcuTipi','adet'); return v==='metre'?'metre':'adet'; }
+function korSetMod(tip, hatirlatma){
+  const metre = tip==='metre';
+  if(hatirlatma!==false) setConfig('korOlcuTipi', metre?'metre':'adet');
+  const pa=document.getElementById('korPaneAdet'), pm=document.getElementById('korPaneMetre');
+  if(pa) pa.style.display = metre?'none':'';
+  if(pm) pm.style.display = metre?'':'none';
+  const ba=document.getElementById('korModAdet'), bm=document.getElementById('korModMetre');
+  if(ba) ba.classList.toggle('aktif', !metre);
+  if(bm) bm.classList.toggle('aktif', metre);
+  korUpdateTotal();
+}
+// Bir kaydın metre mi adet mi olduğunu söyler
+function korMetreMi(item){ return !!item && item.olcuTipi==='metre'; }
+// Adet modunda cm × adet toplamı metreye çevrilir (bilgi amaçlı)
+function korToplamMetre(item){
+  if(korMetreMi(item)) return +(item.metre||0);
+  return (((item&&item.olcular)||[]).reduce((t,o)=>t+((+o.cm||0)*(+o.adet||0)),0))/100;
+}
+// Listelerde/PDF'te gösterilecek miktar metni: "1.250 adet" ya da "800 m"
+function korMiktar(item){
+  if(korMetreMi(item)){
+    const m=+(item.metre||0);
+    return (Math.round(m*10)/10).toLocaleString('tr')+' m';
+  }
+  return (+(item.totalAdet||0)).toLocaleString('tr')+' adet';
+}
 function korUpdateTotal(){
-  let t=0;for(let i=1;i<=10;i++){t+=+(document.getElementById('kor_'+i+'_a')?.value||0);}
-  const el=document.getElementById('korToplam');if(el)el.textContent=t;
+  const metre = document.getElementById('korModMetre')?.classList.contains('aktif');
+  const el=document.getElementById('korToplam');
+  const lbl=document.getElementById('korToplamLbl');
+  const bir=document.getElementById('korToplamBirim');
+  const alt=document.getElementById('korToplamAlt');
+  if(metre){
+    const m=+(document.getElementById('korMetre')?.value||0);
+    if(el) el.textContent=(Math.round(m*10)/10).toLocaleString('tr');
+    if(lbl) lbl.textContent='Toplam Metre';
+    if(bir) bir.textContent='m';
+    if(alt) alt.textContent='';
+    return;
+  }
+  let t=0, cmTop=0;
+  for(let i=1;i<=10;i++){
+    const a=+(document.getElementById('kor_'+i+'_a')?.value||0);
+    const c=+(document.getElementById('kor_'+i+'_cm')?.value||0);
+    t+=a; cmTop+=a*c;
+  }
+  if(el) el.textContent=t.toLocaleString('tr');
+  if(lbl) lbl.textContent='Toplam Adet';
+  if(bir) bir.textContent='adet';
+  if(alt) alt.textContent = cmTop>0 ? ('≈ '+(Math.round(cmTop/10)/10).toLocaleString('tr')+' m kordon') : '';
 }
 
 function saveKordon(){
@@ -8148,24 +8259,32 @@ function saveKordon(){
   const teslimAlan=document.getElementById('korTeslimAlan').value.trim();
   const renk=document.getElementById('korRenk').value.trim();
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
-  const olcular=[];let total=0;
-  for(let i=1;i<=10;i++){
-    const cm=+(document.getElementById('kor_'+i+'_cm')?.value||0);
-    const adet=+(document.getElementById('kor_'+i+'_a')?.value||0);
-    if(adet>0){olcular.push({cm:cm||0,adet});total+=adet;}
+  const metreModu = document.getElementById('korModMetre')?.classList.contains('aktif');
+  const olcular=[];let total=0;let metre=0;
+  if(metreModu){
+    metre=+(document.getElementById('korMetre')?.value||0);
+    if(!(metre>0))return toast('Toplam metre girin','error');
+  }else{
+    for(let i=1;i<=10;i++){
+      const cm=+(document.getElementById('kor_'+i+'_cm')?.value||0);
+      const adet=+(document.getElementById('kor_'+i+'_a')?.value||0);
+      if(adet>0){olcular.push({cm:cm||0,adet});total+=adet;}
+    }
+    if(!total)return toast('En az bir ölçü için adet girin','error');
   }
-  if(!total)return toast('En az bir ölçü için adet girin','error');
+  const olcuTipi = metreModu?'metre':'adet';
   const termin=document.getElementById('korTermin').value;const aciklama=document.getElementById('korAciklama').value.trim();
-  if(_saveUniIfEditing('kordon', {model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,olcular,totalAdet:total})) return;
+  if(_saveUniIfEditing('kordon', {model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,olcular,totalAdet:total,olcuTipi,metre})) return;
   const no=getNextNo();
-  const item={id:Date.now(),no:'KOR-'+String(no).padStart(3,'0'),type:'kordon',model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,olcular,totalAdet:total,durum:'bekliyor',createdAt:new Date().toISOString()};
+  const item={id:Date.now(),no:'KOR-'+String(no).padStart(3,'0'),type:'kordon',model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,olcular,totalAdet:total,olcuTipi,metre,durum:'bekliyor',createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'kordon');
   const list=getData('kordonlar');list.unshift(item);setData('kordonlar',list);incNextNo();
   _uploadNfPhotosInBackground(item.id,'kordon');
   ['korModel','korTarih','korAtolye','korTeslimEden','korTeslimAlan','korRenk','korTermin','korAciklama'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   _syncAtolyeLabel('korAtolye');
   for(let i=1;i<=10;i++){const c=document.getElementById('kor_'+i+'_cm');const a=document.getElementById('kor_'+i+'_a');if(c)c.value='';if(a)a.value='';}
-  const el=document.getElementById('korToplam');if(el)el.textContent='0';
+  const km=document.getElementById('korMetre'); if(km) km.value='';
+  korUpdateTotal();
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('korTarih');if(dt)dt.value=today;
   _subListPage.kordon=1;toast('Kordon irsaliyesi kaydedildi: '+item.no);refreshHome();refreshKordonList();
 }
@@ -8186,8 +8305,8 @@ function refreshKordonList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.kordon,PAGE_SIZE);
   _subListPage.kordon=page;
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${i.totalAdet||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${i.totalAdet||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">🎨 ${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${korMiktar(i)}</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${korMiktar(i)}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">🎨 ${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('kordonPagination',tbody,page,totalPages,total,start,end,'goToKordonPage');
 }
 
@@ -11092,7 +11211,7 @@ function refreshPage(page){
   else if(page==='dugme')refreshDugmeList();
   else if(page==='toptan')refreshToptanList();
   else if(page==='satenaskilik')refreshSatenaskilikList();
-  else if(page==='kordon')refreshKordonList();
+  else if(page==='kordon'){ refreshKordonList(); try{ korSetMod(korOlcuTipi(), false); }catch(e){} }
   else if(page==='dantel')refreshDantelList();
   else if(page==='reports'){renderAllReports();}
   else if(page==='geridonusum')renderRecycleBin();
@@ -11407,11 +11526,12 @@ function updateSelDash(){
     html+='</div></div>';
   }
 
-  // ── KORDON — cm ölçü ölçü (it.olcular[{cm,adet}]) ──
+  // ── KORDON — cm ölçü ölçü (it.olcular[{cm,adet}]) + sadece metre kesilenler ──
   if(kordonItems.length>0){
     const cmTotals={};
-    let grand=0;
+    let grand=0, metreTop=0;
     kordonItems.forEach(it=>{
+      if(korMetreMi(it)){ metreTop+=+it.metre||0; return; }
       (it.olcular||[]).forEach(o=>{
         const cm=String(o.cm||'-');
         const adet=+o.adet||0;
@@ -11419,13 +11539,20 @@ function updateSelDash(){
         grand+=adet;
       });
     });
-    html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-kordon">🪢</span> Kordon Ölçüleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
-    html+='<div class="sd-size-grid">';
-    Object.entries(cmTotals).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).forEach(([cm,adet])=>{
-      html+=`<div class="sd-size-card"><div class="sd-size-name">${cm} cm</div><div class="sd-size-value">${adet.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
-    });
-    html+='</div></div>';
+    const cmVar=Object.keys(cmTotals).length>0;
+    if(cmVar || metreTop>0){
+      html+='<div class="sd-section">';
+      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-kordon">🪢</span> Kordon'
+        +(cmVar?' Ölçüleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span>':'')+'</div>';
+      html+='<div class="sd-size-grid">';
+      Object.entries(cmTotals).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).forEach(([cm,adet])=>{
+        html+=`<div class="sd-size-card"><div class="sd-size-name">${cm} cm</div><div class="sd-size-value">${adet.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
+      });
+      if(metreTop>0){
+        html+=`<div class="sd-size-card"><div class="sd-size-name">Metreyle</div><div class="sd-size-value">${(Math.round(metreTop*10)/10).toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
+      }
+      html+='</div></div>';
+    }
   }
 
   // ── DANTEL ──
@@ -12158,7 +12285,8 @@ function buildShareText(item, type) {
   if (type === 'lastik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.cm||0} cm × ${item.metre||0} m\n`; }
   if (type === 'dugme') text += `\n🔘 ${item.adet||0} adet\n`;
   if (type === 'satenaskilik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.metre||0} m\n`; }
-  if (type === 'kordon' && item.olcular) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Ölçüler:\n`+item.olcular.map(o=>`  • ${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `📊 Toplam: *${item.totalAdet||0} adet*\n`; }
+  if (type === 'kordon' && korMetreMi(item)) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Toplam: *${korMiktar(item)}*\n`; }
+  else if (type === 'kordon' && item.olcular) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Ölçüler:\n`+item.olcular.map(o=>`  • ${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `📊 Toplam: *${item.totalAdet||0} adet*\n`; }
   if (type === 'dantel') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `🕸️ ${item.metre||0} m\n`; }
   if (item.teslimEden) text += `\n👤 Teslim Eden: ${item.teslimEden}`;
   if (item.teslimAlan) text += `\n👤 Teslim Alan: ${item.teslimAlan}`;
@@ -12322,7 +12450,11 @@ function bulkShareWhatsApp() {
       if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
       text += `📏 Metre: *${item.metre||0} m*\n`;
     }
-    if (type === 'kordon' && item.olcular) {
+    if (type === 'kordon' && korMetreMi(item)) {
+      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
+      text += `🪢 *${korMiktar(item)}*\n`;
+    }
+    else if (type === 'kordon' && item.olcular) {
       if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
       text += `🪢 Ölçüler:\n` + item.olcular.map(o=>`   • ${o.cm} cm: *${o.adet} adet*`).join('\n') + `\n`;
       text += `   Σ Toplam: *${item.totalAdet||0} adet*\n`;
@@ -12453,7 +12585,11 @@ function _singleItemPdfHtml(item, type){
     h+=`<div class="st">🕸️ Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     h+=`<div style="display:grid;grid-template-columns:1fr ${item.renk?'1fr':''};gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
-  if(type==='kordon'&&item.olcular&&item.olcular.length){
+  if(type==='kordon'&&korMetreMi(item)){
+    h+=`<div class="st">🪢 Kordon Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+    h+=`<div class="tr2">Toplam Metre: ${item.metre||0} m</div>`;
+  }
+  else if(type==='kordon'&&item.olcular&&item.olcular.length){
     h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     h+=`<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
     item.olcular.forEach(o=>{h+=`<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;});
@@ -16941,7 +17077,7 @@ const IRS_TYPES = [
   {p:'dugme',        ad:'Düğme',         ic:'fa-circle-dot',     d:'çap · adet'},
   {p:'toptan',       ad:'Toptan',        ic:'fa-boxes-stacked',  d:'toplu sipariş'},
   {p:'satenaskilik', ad:'Saten Askılık', ic:'fa-layer-group',    d:'metre'},
-  {p:'kordon',       ad:'Kordon',        ic:'fa-bezier-curve',   d:'ölçü · adet'},
+  {p:'kordon',       ad:'Kordon',        ic:'fa-bezier-curve',   d:'adet · metre'},
   {p:'dantel',       ad:'Dantel',        ic:'fa-border-all',     d:'metre'}
 ];
 function _irsBarHtml(aktif){

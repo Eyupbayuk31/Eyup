@@ -10457,28 +10457,107 @@ input:focus, select:focus, textarea:focus {
   color: var(--primary-light) !important;
 }
 
-/* ── Total counter ── */
-#page-kordon #korToplam {
-  font-family: var(--font-display-studio) !important;
-  font-size: 22px !important;
-  font-weight: 900 !important;
-  color: var(--primary-light) !important;
+/* ── Ölçü tipi seçici: CM & Adet / Sadece Metre ── */
+.kor-mod{
+  display:inline-flex;
+  padding:3px;
+  gap:2px;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--bg-input, var(--glass));
 }
-#page-kordon .card > div[style*="text-align:right"] {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 12px 14px !important;
-  margin: 12px -2px -2px !important;
-  background: color-mix(in oklab, var(--primary) 6%, var(--bg-input)) !important;
-  border-radius: 0 0 14px 14px !important;
-  border-top: 1px solid rgba(255,255,255,0.07) !important;
-  font-family: var(--font-display-studio) !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.6px !important;
-  color: var(--text-muted) !important;
+.kor-mod-b{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 13px;
+  border:0; border-radius:8px;
+  background:transparent;
+  color:var(--text-muted);
+  font-family:inherit; font-size:11.5px; font-weight:700;
+  letter-spacing:.2px; white-space:nowrap; cursor:pointer;
+  text-transform:none;
+  transition:background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+.kor-mod-b i{ font-size:11px; opacity:.85; }
+.kor-mod-b:hover{ color:var(--text-main); }
+.kor-mod-b.aktif{
+  background:var(--primary);
+  color:var(--on-primary,#fff);
+  box-shadow:0 3px 10px -3px var(--primary-glow, rgba(124,58,237,.55));
+}
+
+/* ── Sadece metre girişi ── */
+.kor-metre-kutu{
+  padding:22px 18px 18px;
+  text-align:center;
+}
+.kor-metre-kutu label{
+  display:block;
+  font-size:11px; font-weight:700; letter-spacing:.7px;
+  text-transform:uppercase; color:var(--text-muted);
+  margin-bottom:12px;
+}
+.kor-metre-in{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.kor-metre-in input{
+  width:190px; max-width:100%;
+  text-align:center;
+  font-size:26px !important; font-weight:800 !important;
+  padding:12px 10px !important;
+  font-family:var(--font-display-studio, inherit);
+}
+.kor-metre-in span{
+  font-size:16px; font-weight:800; color:var(--primary);
+  letter-spacing:.5px;
+}
+.kor-metre-not{
+  font-size:11px; color:var(--text-muted); line-height:1.55;
+  margin:14px auto 0; max-width:340px;
+}
+.kor-metre-not i{ color:var(--primary); margin-right:4px; }
+
+/* ── Total counter ── */
+.kor-toplam{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:12px 14px;
+  margin:12px -2px -2px;
+  background:color-mix(in oklab, var(--primary) 6%, var(--bg-input));
+  border-radius:0 0 14px 14px;
+  border-top:1px solid rgba(255,255,255,0.07);
+}
+.kor-toplam-l{
+  font-family:var(--font-display-studio, inherit);
+  font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.6px;
+  color:var(--text-muted);
+}
+.kor-toplam-v{
+  margin-left:auto;
+  display:inline-flex; align-items:baseline; gap:5px;
+}
+#page-kordon #korToplam{
+  font-family:var(--font-display-studio) !important;
+  font-size:22px !important;
+  font-weight:900 !important;
+  color:var(--primary-light) !important;
+}
+.kor-toplam-v em{
+  font-style:normal; font-size:12px; font-weight:700;
+  color:var(--text-muted); letter-spacing:.4px;
+}
+/* adet modunda cm×adet karşılığı — bilgi amaçlı */
+.kor-toplam-alt{
+  flex-basis:100%;
+  text-align:right;
+  font-size:11px; font-weight:600;
+  color:var(--text-muted); opacity:.8;
+}
+.kor-toplam-alt:empty{ display:none; }
+
+@media (max-width:640px){
+  .kor-mod{ width:100%; }
+  .kor-mod-b{ flex:1; justify-content:center; padding:8px 8px; font-size:11px; }
+  .kor-metre-in input{ width:150px; font-size:22px !important; }
 }
 
 /* ── Kayıtlar table (bottom) — scoped ── */
