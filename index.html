@@ -443,6 +443,7 @@
       'ak_records_v2',       // Aksesuar Kontrol kayitlari (id'li dizi) — cihazlar arasi senkron
       'ak_codemap_v2',       // Aksesuar Kontrol kod tablosu — array-of-one formatinda
       'ak_labels_v2',        // Aksesuar Kontrol dokuma etiket kutuphanesi (kod → gorsel) — array-of-one
+      'ak_gelen_v1',         // Gelen numune kunyeleri (gorsel IndexedDB'de kalir) — array-of-one
       'ak_ziplinks_v2',      // Aksesuar Kontrol kaynak arsiv GitHub linkleri — array-of-one (baska PC'den regen)
       'deleted_ids'          // TOMBSTONE: kalici silinen id'ler — offline cihazlar geri diriltmesin
     ];
@@ -3769,6 +3770,23 @@ if(typeof Chart==='undefined'){
         </div>
       </div>
 
+      <!-- Gelen numune yöntemi: kağıda bant (eski, varsayılan) ya da kamerayla foto -->
+      <div class="ak-gmod-bar">
+        <div class="ak-gmod-l">
+          <i class="fas fa-images"></i>
+          <div>
+            <b>Gelen numune</b>
+            <span id="akGmodAciklama">Föyde kesik çizgili kutu çıkar, numuneyi kağıda yapıştırırsınız.</span>
+          </div>
+        </div>
+        <div class="ak-gmod" role="group" aria-label="Gelen numune yöntemi">
+          <button type="button" class="ak-gmod-b aktif" id="akGmodYapistir" onclick="AK.setGelenMod('yapistir')">
+            <i class="fas fa-paperclip"></i> Kağıda yapıştır</button>
+          <button type="button" class="ak-gmod-b" id="akGmodFoto" onclick="AK.setGelenMod('foto')">
+            <i class="fas fa-camera"></i> Kamerayla çek <em>yeni</em></button>
+        </div>
+      </div>
+
       <div class="ak-card">
         <div class="ak-step"><span class="ak-n">1</span> Model · Atölye · Aşama</div>
         <div class="ak-grid3">
@@ -3820,6 +3838,64 @@ if(typeof Chart==='undefined'){
     </div>
 
     <!-- Dokuma etiket kütüphanesi: arşivde gelmeyen dokumayı kayıtlı görselden ekle -->
+    <!-- Gelen numune kamerası: etiketin kenarlarını bulup düzleştirerek kırpar -->
+    <div class="modal-overlay akc-overlay" id="akcModal">
+      <div class="akc">
+        <div class="akc-head">
+          <div class="akc-h-t"><i class="fas fa-camera"></i> <span id="akcBaslik">Gelen Numune</span></div>
+          <button class="akc-x" onclick="AKC.kapat()" aria-label="Kapat">&times;</button>
+        </div>
+
+        <!-- 1. adım: kamera -->
+        <div class="akc-step" id="akcStepCam">
+          <div class="akc-stage">
+            <video id="akcVideo" playsinline muted autoplay></video>
+            <canvas id="akcOverlay"></canvas>
+            <div class="akc-durum" id="akcDurum">Kamera açılıyor…</div>
+          </div>
+          <div class="akc-bar">
+            <label class="akc-oto">
+              <input type="checkbox" id="akcOto" checked onchange="AKC.otoDegisti()">
+              <span>Sabit tutunca kendi çeksin</span>
+            </label>
+            <button class="akc-shutter" id="akcShutter" onclick="AKC.cek()" aria-label="Çek"><span></span></button>
+            <label class="akc-dosya" title="Kamera yerine galeriden seç">
+              <i class="fas fa-image"></i>
+              <input type="file" accept="image/*" onchange="AKC.dosyadan(this)">
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. adım: köşeleri düzelt -->
+        <div class="akc-step" id="akcStepKose" style="display:none;">
+          <div class="akc-stage akc-stage-kose">
+            <canvas id="akcKoseCv"></canvas>
+          </div>
+          <p class="akc-ip"><i class="fas fa-hand-pointer"></i> Köşeler yanlışsa parmakla/fareyle çekiştir.</p>
+          <div class="akc-bar akc-bar-2">
+            <button class="btn btn-secondary btn-sm" onclick="AKC.geri()"><i class="fas fa-rotate-left"></i> Tekrar çek</button>
+            <button class="btn btn-secondary btn-sm" onclick="AKC.koseSifirla()"><i class="fas fa-expand"></i> Tüm kare</button>
+            <button class="btn btn-primary btn-sm" onclick="AKC.kirp()"><i class="fas fa-crop-simple"></i> Kırp</button>
+          </div>
+        </div>
+
+        <!-- 3. adım: sonuç + karşılaştırma -->
+        <div class="akc-step" id="akcStepSonuc" style="display:none;">
+          <div class="akc-kars">
+            <figure><div class="akc-img" id="akcSys"></div><figcaption>SİSTEMDEKİ · arşivden</figcaption></figure>
+            <figure><div class="akc-img" id="akcYeni"></div><figcaption>GELEN · çekildi</figcaption></figure>
+          </div>
+          <div class="akc-verdict" id="akcVerdict"></div>
+          <input id="akcNot" class="form-input akc-not" placeholder="Not (ops.) — ör. renk tonu farklı, punto küçük…" autocomplete="off">
+          <div class="akc-bar akc-bar-2">
+            <button class="btn btn-secondary btn-sm" onclick="AKC.geri()"><i class="fas fa-rotate-left"></i> Tekrar çek</button>
+            <button class="btn btn-sm akc-red" onclick="AKC.kaydet(false)"><i class="fas fa-circle-xmark"></i> Uygun Değil</button>
+            <button class="btn btn-sm akc-ok" onclick="AKC.kaydet(true)"><i class="fas fa-circle-check"></i> Uygun</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay" id="akLibModal">
       <div class="modal ak-lib-modal">
         <div class="modal-header">
@@ -20501,7 +20577,7 @@ AK.processEntries = function(entries){
 AK.state = { model:'', asama:'dikim', atolye:'', colors:[] };
 AK._cid = 1;
 AK.touch = function(){ AK.state.model = (document.getElementById('akModel')||{}).value || ''; AK.state.atolye = (document.getElementById('akAtolye')||{}).value || ''; };
-AK.onOpen = function(){ AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords();
+AK.onOpen = function(){ AK._gelenModSenkron(); AK.renderAsamaInfo(); if(!AK.state.colors.length) AK.addColor(); AK.renderColors(); AK.renderRecords();
   setTimeout(function(){ AK.libArkaPlanTara(); }, 1200); };   // etiket kütüphanesini sessizce güncelle
 
 AK.setAsama = function(a){ AK.state.asama=a;
@@ -20613,6 +20689,7 @@ AK.renderColors = function(){
       '</div>'+
     '</div>';
   }).join('');
+  try{ AK._gelenKucukleriDoldur(); }catch(_){}
 };
 AK.setField = function(id,f,v){ var c=AK._c(id); if(c){ c[f]=v; } };
 // Renk elle değişince dokuma etiket seçimi (açık→beyaz, koyu→siyah) yeniden
@@ -20646,6 +20723,7 @@ AK.matchesHtml = function(c){
       ((f.note||f._uiNot)?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+(f.note||f._uiNot)+'</div>':'')+
       '</div>'+
       (f._manuel?'<button class="ak-m-x" title="Karttan çıkar" onclick="AK.libCikar('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\')"><i class="fas fa-xmark"></i></button>':'')+
+      AK.gelenHtml(c, f.type)+
       '</div>';
   }).join('');
   return '<div class="ak-matches">'+cards+'</div>';
@@ -21196,7 +21274,38 @@ AK._renderColorPage = function(pdf, c){
   // YAPIŞTIRILACAĞI kesikli kutu → sistemdeki ile gelen yan yana kanıt olur.
   // Yıkama kendi sayfasında büyük basılır; yapıştırma kutusu altına gelir.
   var LEFTW=106, GAP=6, RIGHTW=cw-LEFTW-GAP;
-  function pasteBox(x,yy,w,h){
+  // Foto modunda numune çekilmişse kesik çizgili kutu yerine fotoğrafın kendisi
+  // basılır; çekilmemişse ya da eski yöntemdeyse kutu aynen kalır.
+  function pasteBox(x,yy,w,h,tip){
+    var foto=null, meta=null;
+    if(tip && typeof AK.gelenMod==='function' && AK.gelenMod()==='foto'){
+      var g=AK.gelenFor(c, tip);
+      for(var i=0;i<g.length;i++){
+        var u=AK._gelenBellek[g[i].id];
+        if(u){ foto=u; meta=g[i]; if(g[i].onay===true) break; }   // onaylı varsa onu tercih et
+      }
+    }
+    if(foto){
+      var pr=null; try{ pr=pdf.getImageProperties(foto); }catch(e){ pr=null; }
+      var renk = meta && meta.onay===true ? [16,140,90] : meta && meta.onay===false ? [200,50,50] : [150,158,172];
+      pdf.setDrawColor(renk[0],renk[1],renk[2]); pdf.setLineWidth(0.5);
+      try{ pdf.roundedRect(x,yy,w,h,2.5,2.5); }catch(_){ pdf.rect(x,yy,w,h); }
+      if(pr){
+        var iw=w-4, ih=iw*pr.height/pr.width, mx=h-9;
+        if(ih>mx){ ih=mx; iw=ih*pr.width/pr.height; }
+        try{ pdf.addImage(foto,'JPEG',x+(w-iw)/2,yy+2,iw,ih,undefined,'FAST'); }catch(e){}
+        pdf.setTextColor(renk[0],renk[1],renk[2]); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.6);
+        var dm = meta && meta.onay===true ? 'GELEN NUMUNE · UYGUN'
+               : meta && meta.onay===false ? 'GELEN NUMUNE · UYGUN DEĞİL' : 'GELEN NUMUNE';
+        T(dm, x+w/2, yy+h-3.6, {align:'center'});
+        if(meta && meta.not){
+          pdf.setFont('helvetica','italic'); pdf.setFontSize(6);
+          T(String(meta.not).slice(0,58), x+w/2, yy+h-1.2, {align:'center'});
+        }
+      }
+      pdf.setFont('helvetica','normal');
+      return;
+    }
     try{ pdf.setLineDashPattern([1.6,1.4],0); }catch(_){ }
     pdf.setDrawColor(150,158,172); pdf.setLineWidth(0.4);
     try{ pdf.roundedRect(x,yy,w,h,2.5,2.5); }catch(_){ pdf.rect(x,yy,w,h); }
@@ -21219,7 +21328,10 @@ AK._renderColorPage = function(pdf, c){
     if(!big){
       // kolon başlıkları
       pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.8);
-      T('SİSTEMDEKİ (arşivden)', M+SYSIND, y+2.2); T('GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
+      var _gv = (typeof AK.gelenMod==='function' && AK.gelenMod()==='foto')
+                && AK.gelenFor(c, f.type).some(function(x){ return !!AK._gelenBellek[x.id]; });
+      T('SİSTEMDEKİ (arşivden)', M+SYSIND, y+2.2);
+      T(_gv?'GELEN — fotoğrafı çekildi':'GELEN — kontrol için yapıştırın', M+LEFTW+GAP, y+2.2); y+=4.2;
     }
     f.images.forEach(function(url,ii){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
@@ -21238,7 +21350,7 @@ AK._renderColorPage = function(pdf, c){
         // böylece gelen numune kutusuna bir tık yakın durur.
         var xoff=M+Math.min(Math.max(LEFTW-w,0),SYSIND);
         pdf.addImage(url,'PNG',xoff,y,w,h,undefined,'FAST');
-        if(ii===0){ pasteBox(M+LEFTW+GAP, y, RIGHTW, Math.max(h,22)); }
+        if(ii===0){ pasteBox(M+LEFTW+GAP, y, RIGHTW, Math.max(h,22), f.type); }
         y+=h+3;
       }
     });
@@ -21261,7 +21373,7 @@ AK._openDb = function(){ return new Promise(function(res,rej){ if(AK._db){ res(A
   rq.onupgradeneeded=function(){ var db=rq.result;
     if(!db.objectStoreNames.contains('pdfs')) db.createObjectStore('pdfs');
     if(!db.objectStoreNames.contains('zips')) db.createObjectStore('zips');
-    if(!db.objectStoreNames.contains('gelen')) db.createObjectStore('gelen'); };  // (kullanılmıyor — sürüm düşürmemek için duruyor)
+    if(!db.objectStoreNames.contains('gelen')) db.createObjectStore('gelen'); };  // gelen numune fotoğrafları
   rq.onsuccess=function(){ AK._db=rq.result; res(AK._db); };
   rq.onerror=function(){ rej(rq.error); }; }); };
 AK._idbPut = function(st,key,val){ return AK._openDb().then(function(db){ return new Promise(function(res,rej){ var tx=db.transaction(st,'readwrite'); tx.objectStore(st).put(val,key); tx.oncomplete=res; tx.onerror=function(){ rej(tx.error); }; }); }).catch(function(e){ console.warn('[AK] idb yazılamadı',e); }); };
@@ -21424,6 +21536,13 @@ AK.generateAll = function(mode){
   if(!AK.state.model){ alert('Önce Model Kodu girin (veya dosya yükleyin).'); return; }
   var withFiles=AK.state.colors.filter(function(c){return c.files&&c.files.length;});
   if(!withFiles.length){ alert('Kaydedilecek/oluşturulacak renk yok — arşiv yükleyin.'); return; }
+  // Föy senkron çiziliyor: gelen numune görselleri önce belleğe alınmalı
+  if(AK.gelenMod()==='foto' && !AK._gelenYuklendi){
+    AK._gelenYuklendi=true;
+    return Promise.all(withFiles.map(function(c){ return AK.gelenHazir(c); }))
+      .catch(function(){})
+      .then(function(){ AK._gelenYuklendi=false; AK.generateAll(mode); });
+  }
   if(mode!=='save'){
     var pdf; try{ pdf=AK.buildAllPdf(); }catch(e){ alert('PDF üretilemedi: '+(e&&e.message||e)); return; }
     var fname=((AK.state.model||'foy')+'_TUM_RENKLER').replace(/[^\w.\-]+/g,'_')+'.pdf';
@@ -21453,6 +21572,12 @@ AK.generate = function(id, mode){
   var c=AK._c(id); if(!c) return;
   if(!AK.state.model){ alert('Önce Model Kodu girin.'); return; }
   if(!c.files){ alert('Önce bu renk için ZIP yükleyin.'); return; }
+  // Föy senkron çiziliyor: gelen numune görselleri önce belleğe alınmalı
+  if(AK.gelenMod()==='foto' && !AK._gelenYuklendi){
+    AK._gelenYuklendi=true;
+    return AK.gelenHazir(c).then(function(){ AK._gelenYuklendi=false; AK.generate(id, mode); })
+                           .catch(function(){ AK._gelenYuklendi=false; AK.generate(id, mode); });
+  }
   var order=AK.STAGE_ORDER[AK.state.asama];
   var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
   if(!have.length){ alert('Bu aşamaya ait aksesuar bulunamadı. Bilinmeyen dosyaları etiketleyin.'); return; }
@@ -21772,6 +21897,128 @@ AK.libYukle = function(){
   rd.readAsDataURL(file);
 };
 
+/* ═══════════════════════════════════════════════════════════════════
+   GELEN NUMUNE — yöntem seçimi
+   Varsayılan ESKİ yol: föyde kesik çizgili kutu, numune kağıda yapıştırılır.
+   Yeni yol seçilirse: kamerayla çekilir, kenarları bulunup düzleştirilir,
+   föye o fotoğraf basılır. Yeni yol tam oturana kadar eskisi duruyor.
+   ═══════════════════════════════════════════════════════════════════ */
+// Aksesuar kartının altındaki gelen numune şeridi — sadece foto modunda
+AK.gelenHtml = function(c, tip){
+  if(AK.gelenMod()!=='foto' || !AK.TYPES[tip]) return '';
+  var list=AK.gelenFor(c, tip);
+  var buton='<button type="button" class="ak-gn-add" onclick="AKC.ac('+c.id+',\''+tip+'\')" title="Gelen numuneyi kameraya göster">'+
+      '<i class="fas fa-camera"></i><span>'+(list.length?'Ekle':'Numuneyi çek')+'</span></button>';
+  if(!list.length) return '<div class="ak-gn ak-gn-bos">'+buton+'</div>';
+  var kucukler=list.map(function(x){
+    var dr = x.onay===true?'ok':x.onay===false?'no':'';
+    return '<button type="button" class="ak-gn-th '+dr+'" data-gid="'+x.id+'" '+
+      'onclick="AK.gelenSil(AK._c('+c.id+'),\''+tip+'\',\''+x.id+'\')" title="Kaldırmak için tıkla">'+
+      '<img alt="gelen">'+
+      (dr?'<i class="fas '+(dr==='ok'?'fa-circle-check':'fa-circle-xmark')+'"></i>':'')+
+      '</button>';
+  }).join('');
+  var red=list.filter(function(x){return x.onay===false;}).length;
+  var onayli=list.filter(function(x){return x.onay===true;}).length;
+  var rozet = red ? '<span class="ak-gn-rz no">Uygun değil</span>'
+            : onayli ? '<span class="ak-gn-rz ok">Kontrol edildi</span>'
+            : '<span class="ak-gn-rz bek">Onay bekliyor</span>';
+  return '<div class="ak-gn">'+
+    '<div class="ak-gn-h"><i class="fas fa-images"></i> Gelen numune '+rozet+'</div>'+
+    '<div class="ak-gn-row">'+kucukler+buton+'</div>'+
+  '</div>';
+};
+// Küçük görseller IndexedDB'den asenkron gelir (dataURL HTML'e gömülmesin)
+AK._gelenKucukleriDoldur = function(){
+  document.querySelectorAll('.ak-gn-th[data-gid]').forEach(function(btn){
+    var img=btn.querySelector('img'); if(!img || img.src) return;
+    AK.gelenGorsel({id:btn.getAttribute('data-gid')}).then(function(u){ if(u) img.src=u; });
+  });
+};
+AK.gelenMod = function(){ return getConfig('akGelenMod','yapistir')==='foto' ? 'foto' : 'yapistir'; };
+AK.setGelenMod = function(mod){
+  setConfig('akGelenMod', mod==='foto'?'foto':'yapistir');
+  AK._gelenModSenkron();
+  AK.renderColors();
+  if(typeof toast==='function'){
+    toast(mod==='foto' ? 'Gelen numune artık kamerayla çekilecek' : 'Gelen numune kağıda yapıştırılacak (eski yöntem)','info');
+  }
+};
+AK._gelenModSenkron = function(){
+  var foto = AK.gelenMod()==='foto';
+  var by=document.getElementById('akGmodYapistir'), bf=document.getElementById('akGmodFoto');
+  if(by) by.classList.toggle('aktif', !foto);
+  if(bf) bf.classList.toggle('aktif', foto);
+  var a=document.getElementById('akGmodAciklama');
+  if(a) a.textContent = foto
+    ? 'Kamerayla çekilir, kenarları bulunup düzleştirilir, föye fotoğraf basılır.'
+    : 'Föyde kesik çizgili kutu çıkar, numuneyi kağıda yapıştırırsınız.';
+};
+
+/* ── Gelen numune deposu ──
+   Görsel IndexedDB'de ('gelen' store) — büyük olduğu için buluta gitmez.
+   Künye (kim, ne zaman, onay, ton) localStorage'da ve bulut senkronunda.
+   Anahtar model+renk+tip → renk kartları yeniden kurulunca kaybolmaz.        */
+AK.LS_GELEN='ak_gelen_v1';
+AK._gelenBellek = {};           // id → dataURL (bu oturumda okunanlar)
+AK.gelenMap = function(){
+  var raw=AK._get(AK.LS_GELEN);
+  var o=(Array.isArray(raw)&&raw[0]&&raw[0].items)?raw[0].items:(raw&&!Array.isArray(raw)?raw:{});
+  return o||{};
+};
+AK.saveGelenMap = function(M){ AK._set(AK.LS_GELEN, [{id:'ak_gelen', items:M||{}}]); };
+AK._gelenKey = function(c, tip){
+  var m=(c&&c.model)||AK.state.model||'';
+  var r=(c&&c.renk)||'';
+  // Türkçe küçültmede I→ı olduğu için "I6399AX" ile "i6399ax" ayrı anahtar
+  // olurdu; önce İ/I/ı/i hepsini "i"ye indiriyoruz.
+  return (m+'|'+r+'|'+tip).replace(/[İIıi]/g,'i').toLocaleLowerCase('tr').replace(/\s+/g,' ').trim();
+};
+AK.gelenFor = function(c, tip){
+  var M=AK.gelenMap(), k=AK._gelenKey(c,tip), a=M[k];
+  return Array.isArray(a)?a:[];
+};
+AK.gelenGorsel = function(meta){
+  if(!meta||!meta.id) return Promise.resolve(null);
+  if(AK._gelenBellek[meta.id]) return Promise.resolve(AK._gelenBellek[meta.id]);
+  return AK._idbGet('gelen', meta.id).then(function(u){
+    if(u) AK._gelenBellek[meta.id]=u;
+    return u||null;
+  }).catch(function(){ return null; });
+};
+// Föy basılmadan önce görselleri belleğe al (PDF senkron çiziyor)
+AK.gelenHazir = function(c){
+  var isler=[];
+  Object.keys(AK.TYPES).forEach(function(tip){
+    AK.gelenFor(c,tip).forEach(function(g){ isler.push(AK.gelenGorsel(g)); });
+  });
+  return Promise.all(isler).catch(function(){});
+};
+AK.gelenEkle = function(c, tip, dataUrl, ek){
+  var id='g'+Date.now()+Math.floor(Math.random()*9999);
+  var M=AK.gelenMap(), k=AK._gelenKey(c,tip);
+  if(!Array.isArray(M[k])) M[k]=[];
+  var meta={ id:id, tip:tip, ts:Date.now(), by:(typeof currentUser==='function'?(currentUser()||{}).ad:'')||AK._kim(),
+             onay:(ek&&ek.onay), not:(ek&&ek.not)||'', ton:(ek&&ek.ton)||'' };
+  M[k].push(meta);
+  if(M[k].length>4) M[k]=M[k].slice(-4);   // renk+tip başına en fazla 4 numune
+  AK._gelenBellek[id]=dataUrl;
+  AK.saveGelenMap(M);
+  return AK._idbPut('gelen', id, dataUrl).then(function(){ return meta; });
+};
+AK.gelenSil = function(c, tip, gid){
+  var M=AK.gelenMap(), k=AK._gelenKey(c,tip);
+  M[k]=(M[k]||[]).filter(function(x){ return x.id!==gid; });
+  if(!M[k].length) delete M[k];
+  AK.saveGelenMap(M);
+  delete AK._gelenBellek[gid];
+  AK._idbDel('gelen', gid);
+  AK.renderColors();
+};
+AK._kim = function(){
+  try{ var u=JSON.parse(localStorage.getItem('irsaliye_current_user')||'null'); return (u&&(u.ad||u.kullanici))||''; }catch(e){ return ''; }
+};
+
 AK.openCodeTable = function(){ AK.renderCodeTable(); document.getElementById('akCodeModal').classList.add('show'); };
 AK.closeCodeTable = function(){ document.getElementById('akCodeModal').classList.remove('show'); };
 AK.renderCodeTable = function(){
@@ -21793,6 +22040,495 @@ AK.addCode = function(){
   try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 400); }catch(_){}
 };
 AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); AK.renderCodeTable(); };
+
+/* ═══════════════════════════════════════════════════════════════════
+   AKC — GELEN NUMUNE KAMERASI
+   Etiketi kameraya göster; kenarları bulunur, eğri tutsan bile
+   perspektifi düzeltilip tarayıcıdan çıkmış gibi kırpılır.
+   Hiçbir dış kütüphane yok — küçültülmüş kareler üstünde kendi
+   görüntü işlememiz çalışır, internetsiz de çalışır.
+   ═══════════════════════════════════════════════════════════════════ */
+var AKC = {};
+AKC.ANALIZ_W   = 260;     // analiz için küçültülen kare genişliği (hız)
+AKC.CIKTI_W    = 760;     // kırpılmış görselin en fazla genişliği
+AKC.KALITE     = 0.82;    // jpeg kalitesi
+AKC.SABIT_KARE = 6;       // kaç karedir aynı yerde → otomatik çek
+AKC.SABIT_TOL  = 0.022;   // köşe oynama toleransı (kare genişliğine oranla)
+
+AKC._st = null;           // MediaStream
+AKC._raf = null;
+AKC._cid = null; AKC._tip = null;
+AKC._quad = null;         // canlı bulunan dörtgen (analiz ölçeğinde)
+AKC._sabit = 0;
+AKC._kare = null;         // çekilen tam çözünürlüklü kare (canvas)
+AKC._kose = null;         // düzeltme ekranındaki köşeler (kare piksel)
+AKC._kirpUrl = null;
+AKC._ton = null;
+AKC._suruklenen = -1;
+
+// ── küçük yardımcılar ──
+AKC._el = function(id){ return document.getElementById(id); };
+AKC._goster = function(ad){
+  ['Cam','Kose','Sonuc'].forEach(function(s){
+    var e=AKC._el('akcStep'+s); if(e) e.style.display = (s===ad)?'':'none';
+  });
+};
+
+/* ── 1) Kareyi analiz et: en büyük açık/koyu bloğu bul, 4 köşesini çıkar ──
+   Etiket masaya/karton üstüne konur; parlaklık olarak zeminden ayrışır.
+   Otsu ile ikiye böl → en büyük bağlı bileşen → dış bükey uçlardan 4 köşe. */
+AKC._otsu = function(gri, n){
+  var h=new Uint32Array(256), i;
+  for(i=0;i<n;i++) h[gri[i]]++;
+  var top=0, agirlik=0; for(i=0;i<256;i++) top+=h[i]*i;
+  var arkaA=0, arkaTop=0, enIyi=0, esik=128;
+  for(i=0;i<256;i++){
+    arkaA+=h[i]; if(!arkaA) continue;
+    var onA=n-arkaA; if(!onA) break;
+    arkaTop+=i*h[i];
+    var mA=arkaTop/arkaA, mB=(top-arkaTop)/onA;
+    var v=arkaA*onA*(mA-mB)*(mA-mB);
+    if(v>enIyi){ enIyi=v; esik=i; }
+  }
+  return esik;
+};
+// En büyük bağlı bileşen (4 komşu, yığınla — özyineleme yok)
+AKC._enBuyukBlok = function(mask, w, h){
+  var etiket=new Int32Array(w*h), su=0, enIyi=null, yigin=new Int32Array(w*h);
+  for(var p=0;p<w*h;p++){
+    if(!mask[p] || etiket[p]) continue;
+    su++; var uc=0; yigin[uc++]=p; etiket[p]=su;
+    var say=0, minx=w, maxx=-1, miny=h, maxy=-1, pikseller=[];
+    while(uc){
+      var q=yigin[--uc], qx=q%w, qy=(q-qx)/w;
+      say++; pikseller.push(q);
+      if(qx<minx)minx=qx; if(qx>maxx)maxx=qx; if(qy<miny)miny=qy; if(qy>maxy)maxy=qy;
+      if(qx>0   && mask[q-1] && !etiket[q-1]){ etiket[q-1]=su; yigin[uc++]=q-1; }
+      if(qx<w-1 && mask[q+1] && !etiket[q+1]){ etiket[q+1]=su; yigin[uc++]=q+1; }
+      if(qy>0   && mask[q-w] && !etiket[q-w]){ etiket[q-w]=su; yigin[uc++]=q-w; }
+      if(qy<h-1 && mask[q+w] && !etiket[q+w]){ etiket[q+w]=su; yigin[uc++]=q+w; }
+    }
+    if(!enIyi || say>enIyi.say) enIyi={say:say, px:pikseller, minx:minx, maxx:maxx, miny:miny, maxy:maxy};
+  }
+  return enIyi;
+};
+// Blobun 4 köşesi: x+y, x-y uç noktaları (perspektifli dikdörtgen için yeterli)
+AKC._koseler = function(blok, w){
+  var enAzTop=1e9, enCokTop=-1e9, enAzFark=1e9, enCokFark=-1e9;
+  var sol=null, sag=null, ust=null, alt=null;
+  for(var i=0;i<blok.px.length;i++){
+    var q=blok.px[i], x=q%w, y=(q-x)/w;
+    var t=x+y, f=x-y;
+    if(t<enAzTop){ enAzTop=t; ust=[x,y]; }
+    if(t>enCokTop){ enCokTop=t; alt=[x,y]; }
+    if(f<enAzFark){ enAzFark=f; sol=[x,y]; }
+    if(f>enCokFark){ enCokFark=f; sag=[x,y]; }
+  }
+  // sol üst, sağ üst, sağ alt, sol alt
+  return [ust, sag, alt, sol];
+};
+AKC._alan = function(q){
+  return Math.abs(
+    (q[0][0]*q[1][1]-q[1][0]*q[0][1]) + (q[1][0]*q[2][1]-q[2][0]*q[1][1]) +
+    (q[2][0]*q[3][1]-q[3][0]*q[2][1]) + (q[3][0]*q[0][1]-q[0][0]*q[3][1])
+  )/2;
+};
+AKC._dortgenGecerli = function(q, w, h, blok){
+  if(!q || q.some(function(p){ return !p; })) return false;
+  var alan=AKC._alan(q);
+  var oran=alan/(w*h);
+  if(oran<0.022 || oran>0.94) return false;                    // çok küçük / tüm kare
+  var kenar=[0,1,2,3].map(function(i){
+    var a=q[i], b=q[(i+1)%4];
+    return Math.hypot(a[0]-b[0], a[1]-b[1]);
+  });
+  if(Math.min.apply(null,kenar) < Math.max(w,h)*0.045) return false;  // yamuk/çizgi
+  // Doluluk: gerçek etiket dörtgeni doldurur; dağınık gürültü doldurmaz.
+  // Küçük etiketi elemeden gürültüyü eler.
+  if(blok && alan>0 && (blok.say/alan) < 0.62) return false;
+  return true;
+};
+AKC._bul = function(cv){
+  var w=cv.width, h=cv.height, ctx=cv.getContext('2d');
+  var d=ctx.getImageData(0,0,w,h).data, n=w*h;
+  var gri=new Uint8Array(n);
+  for(var i=0,j=0;i<n;i++,j+=4) gri[i]=(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114)|0;
+  var esik=AKC._otsu(gri,n);
+  // Etiket açık da olabilir koyu da: iki maskeyi de dene, büyük ve makul olanı seç
+  var aday=null;
+  [true,false].forEach(function(acik){
+    var mask=new Uint8Array(n);
+    for(var p=0;p<n;p++) mask[p] = acik ? (gri[p]>esik?1:0) : (gri[p]<=esik?1:0);
+    // kenara yapışan zemini ele: kenardan taşan blok muhtemelen masa
+    var blok=AKC._enBuyukBlok(mask,w,h);
+    if(!blok) return;
+    var kenarda = (blok.minx<=1 && blok.maxx>=w-2 && blok.miny<=1 && blok.maxy>=h-2);
+    if(kenarda) return;
+    var q=AKC._koseler(blok,w);
+    if(!AKC._dortgenGecerli(q,w,h,blok)) return;
+    if(!aday || blok.say>aday.say) aday={q:q, say:blok.say};
+  });
+  return aday?aday.q:null;
+};
+
+/* ── 2) Perspektif düzeltme (homografi) ──
+   Kaynak dörtgenden hedef dikdörtgene ters eşleme + çift doğrusal örnekleme. */
+AKC._homografi = function(src, dst){
+  // 8 bilinmeyenli lineer sistem, Gauss eleme
+  var A=[], b=[];
+  for(var i=0;i<4;i++){
+    var x=src[i][0], y=src[i][1], u=dst[i][0], v=dst[i][1];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]); b.push(u);
+    A.push([0,0,0,x,y,1,-v*x,-v*y]); b.push(v);
+  }
+  for(var c=0;c<8;c++){
+    var piv=c;
+    for(var r=c+1;r<8;r++) if(Math.abs(A[r][c])>Math.abs(A[piv][c])) piv=r;
+    if(Math.abs(A[piv][c])<1e-9) return null;
+    var t=A[c]; A[c]=A[piv]; A[piv]=t;
+    var tb=b[c]; b[c]=b[piv]; b[piv]=tb;
+    for(var r2=0;r2<8;r2++){
+      if(r2===c) continue;
+      var f=A[r2][c]/A[c][c]; if(!f) continue;
+      for(var k=c;k<8;k++) A[r2][k]-=f*A[c][k];
+      b[r2]-=f*b[c];
+    }
+  }
+  var hh=[]; for(var m=0;m<8;m++) hh.push(b[m]/A[m][m]);
+  hh.push(1);
+  return hh;
+};
+AKC._tersHomografi = function(H){
+  var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7],i=H[8];
+  var A=e*i-f*h, B=-(d*i-f*g), C=d*h-e*g;
+  var det=a*A+b*B+c*C; if(Math.abs(det)<1e-12) return null;
+  var D=-(b*i-c*h), E=a*i-c*g, F=-(a*h-b*g);
+  var G=b*f-c*e, Hh=-(a*f-c*d), I=a*e-b*d;
+  return [A/det,D/det,G/det, B/det,E/det,Hh/det, C/det,F/det,I/det];
+};
+AKC._duzlestir = function(kaynakCv, kose, hedefW, hedefH){
+  var out=document.createElement('canvas'); out.width=hedefW; out.height=hedefH;
+  var octx=out.getContext('2d');
+  var H=AKC._homografi(kose, [[0,0],[hedefW-1,0],[hedefW-1,hedefH-1],[0,hedefH-1]]);
+  if(!H){ octx.drawImage(kaynakCv,0,0,hedefW,hedefH); return out; }
+  var Hi=AKC._tersHomografi(H);
+  if(!Hi){ octx.drawImage(kaynakCv,0,0,hedefW,hedefH); return out; }
+  var sctx=kaynakCv.getContext('2d');
+  var sw=kaynakCv.width, sh=kaynakCv.height;
+  var sd=sctx.getImageData(0,0,sw,sh).data;
+  var od=octx.createImageData(hedefW,hedefH), o=od.data;
+  for(var y=0;y<hedefH;y++){
+    for(var x=0;x<hedefW;x++){
+      var dw=Hi[6]*x+Hi[7]*y+Hi[8];
+      var sx=(Hi[0]*x+Hi[1]*y+Hi[2])/dw, sy=(Hi[3]*x+Hi[4]*y+Hi[5])/dw;
+      var oi=(y*hedefW+x)*4;
+      if(sx<0||sy<0||sx>sw-1||sy>sh-1){ o[oi]=255;o[oi+1]=255;o[oi+2]=255;o[oi+3]=255; continue; }
+      var x0=sx|0, y0=sy|0, x1=Math.min(x0+1,sw-1), y1=Math.min(y0+1,sh-1);
+      var fx=sx-x0, fy=sy-y0;
+      for(var ch=0;ch<3;ch++){
+        var p00=sd[(y0*sw+x0)*4+ch], p10=sd[(y0*sw+x1)*4+ch];
+        var p01=sd[(y1*sw+x0)*4+ch], p11=sd[(y1*sw+x1)*4+ch];
+        o[oi+ch]=(p00*(1-fx)*(1-fy)+p10*fx*(1-fy)+p01*(1-fx)*fy+p11*fx*fy)|0;
+      }
+      o[oi+3]=255;
+    }
+  }
+  octx.putImageData(od,0,0);
+  return out;
+};
+
+/* ── 3) Renk dengesi ──
+   Atölye ışığı sarıdır; ekru bir dokuma krem çıkar. En parlak %10'u beyaz
+   kabul edip kanalları ölçekleriz. Kazanç sınırlı ki siyah etiket patlamasın. */
+AKC._beyazDenge = function(cv){
+  var ctx=cv.getContext('2d'), w=cv.width, h=cv.height;
+  var im=ctx.getImageData(0,0,w,h), d=im.data, n=w*h;
+  var lum=new Uint8Array(n);
+  for(var i=0,j=0;i<n;i++,j+=4) lum[i]=(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114)|0;
+  var hist=new Uint32Array(256); for(i=0;i<n;i++) hist[lum[i]]++;
+  var hedef=Math.max(1,Math.floor(n*0.10)), top=0, esik=255;
+  for(i=255;i>=0;i--){ top+=hist[i]; if(top>=hedef){ esik=i; break; } }
+  if(esik<60) return cv;                      // ortam çok karanlık — dokunma
+  var sr=0,sg=0,sb=0,c=0;
+  for(i=0,j=0;i<n;i++,j+=4){ if(lum[i]>=esik){ sr+=d[j]; sg+=d[j+1]; sb+=d[j+2]; c++; } }
+  if(!c) return cv;
+  var mr=sr/c, mg=sg/c, mb=sb/c, ort=(mr+mg+mb)/3;
+  var kis=function(v){ return Math.max(0.72, Math.min(1.45, v)); };
+  var gr=kis(ort/(mr||1)), gg=kis(ort/(mg||1)), gb=kis(ort/(mb||1));
+  // hafif parlaklık normalizasyonu: beyaz gerçekten beyaz olsun
+  var pg=Math.max(1, Math.min(1.35, 238/(ort||1)));
+  for(i=0,j=0;i<n;i++,j+=4){
+    d[j]  =Math.min(255, d[j]  *gr*pg);
+    d[j+1]=Math.min(255, d[j+1]*gg*pg);
+    d[j+2]=Math.min(255, d[j+2]*gb*pg);
+  }
+  ctx.putImageData(im,0,0);
+  return cv;
+};
+
+/* ── 4) Ekran akışı ── */
+AKC.ac = function(cid, tip){
+  AKC._cid=cid; AKC._tip=tip; AKC._quad=null; AKC._sabit=0; AKC._kirpUrl=null; AKC._ton=null;
+  var c=AK._c(cid);
+  var b=AKC._el('akcBaslik');
+  if(b) b.textContent=((AK.TYPES[tip]&&AK.TYPES[tip].label)||tip)+((c&&c.renk)?(' · '+c.renk):'');
+  var n=AKC._el('akcNot'); if(n) n.value='';
+  AKC._goster('Cam');
+  AKC._el('akcModal').classList.add('show');
+  AKC._kameraAc();
+};
+AKC._kameraAc = function(){
+  var v=AKC._el('akcVideo'), du=AKC._el('akcDurum');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    if(du) du.textContent='Bu cihazda kamera açılamıyor — aşağıdaki resim tuşundan seçebilirsin.';
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false})
+  .then(function(st){
+    AKC._st=st; v.srcObject=st;
+    v.play().catch(function(){});
+    if(du) du.textContent='Etiketi düz bir zemine koy, kameraya göster';
+    AKC._dongu();
+  })
+  .catch(function(e){
+    if(du) du.textContent = /NotAllowed|Permission/i.test(e&&e.name||'')
+      ? 'Kamera izni verilmedi. Tarayıcı ayarından izin ver ya da resim tuşundan seç.'
+      : 'Kamera açılamadı — resim tuşundan galeriden seçebilirsin.';
+  });
+};
+AKC._dongu = function(){
+  var v=AKC._el('akcVideo'), ov=AKC._el('akcOverlay'), du=AKC._el('akcDurum');
+  if(!v || !AKC._el('akcModal').classList.contains('show')) return;
+  var son=0;
+  var kucuk=document.createElement('canvas');
+  function adim(t){
+    AKC._raf=requestAnimationFrame(adim);
+    if(!AKC._el('akcModal').classList.contains('show')) return;
+    if(t-son < 90) return; son=t;
+    var vw=v.videoWidth, vh=v.videoHeight;
+    if(!vw||!vh) return;
+    if(ov.width!==vw||ov.height!==vh){ ov.width=vw; ov.height=vh; }
+    var aw=AKC.ANALIZ_W, ah=Math.round(aw*vh/vw);
+    kucuk.width=aw; kucuk.height=ah;
+    kucuk.getContext('2d').drawImage(v,0,0,aw,ah);
+    var q=null;
+    try{ q=AKC._bul(kucuk); }catch(e){ q=null; }
+    var octx=ov.getContext('2d');
+    octx.clearRect(0,0,ov.width,ov.height);
+    if(q){
+      var olc=vw/aw;
+      var buyuk=q.map(function(p){ return [p[0]*olc, p[1]*olc]; });
+      // sabit mi?
+      if(AKC._quad){
+        var fark=0;
+        for(var i=0;i<4;i++) fark=Math.max(fark, Math.hypot(buyuk[i][0]-AKC._quad[i][0], buyuk[i][1]-AKC._quad[i][1]));
+        if(fark < vw*AKC.SABIT_TOL) AKC._sabit++; else AKC._sabit=0;
+      }
+      AKC._quad=buyuk;
+      var hazir=AKC._sabit>=AKC.SABIT_KARE;
+      octx.strokeStyle = hazir ? '#22c55e' : '#a78bfa';
+      octx.lineWidth = Math.max(3, vw*0.006);
+      octx.setLineDash(hazir?[]:[vw*0.02, vw*0.014]);
+      octx.beginPath();
+      octx.moveTo(buyuk[0][0],buyuk[0][1]);
+      for(var k=1;k<4;k++) octx.lineTo(buyuk[k][0],buyuk[k][1]);
+      octx.closePath(); octx.stroke();
+      octx.setLineDash([]);
+      octx.fillStyle = hazir ? 'rgba(34,197,94,.14)' : 'rgba(167,139,250,.10)';
+      octx.fill();
+      if(du) du.textContent = hazir ? 'Etiket bulundu — çekiliyor…' : 'Etiket bulundu, sabit tut';
+      if(hazir && AKC._el('akcOto').checked){ AKC._sabit=-999; setTimeout(AKC.cek,120); }
+    }else{
+      AKC._quad=null; AKC._sabit=0;
+      if(du) du.textContent='Etiketi kadraja al — düz ve kontrast bir zemin iyi olur';
+    }
+  }
+  cancelAnimationFrame(AKC._raf);
+  AKC._raf=requestAnimationFrame(adim);
+};
+AKC.otoDegisti = function(){ AKC._sabit=0; };
+AKC.cek = function(){
+  var v=AKC._el('akcVideo');
+  if(!v || !v.videoWidth){ if(typeof toast==='function') toast('Kamera hazır değil','error'); return; }
+  var cv=document.createElement('canvas');
+  cv.width=v.videoWidth; cv.height=v.videoHeight;
+  cv.getContext('2d').drawImage(v,0,0);
+  AKC._kareAl(cv, AKC._quad);
+};
+AKC.dosyadan = function(input){
+  var f=input&&input.files&&input.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(e){
+    var im=new Image();
+    im.onload=function(){
+      var mw=1600, w=im.width, h=im.height;
+      if(w>mw){ h=Math.round(h*mw/w); w=mw; }
+      var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(im,0,0,w,h);
+      var kucuk=document.createElement('canvas');
+      var aw=AKC.ANALIZ_W, ah=Math.round(aw*h/w);
+      kucuk.width=aw; kucuk.height=ah;
+      kucuk.getContext('2d').drawImage(cv,0,0,aw,ah);
+      var q=null; try{ q=AKC._bul(kucuk); }catch(_){ }
+      var olc=w/aw;
+      AKC._kareAl(cv, q?q.map(function(p){ return [p[0]*olc,p[1]*olc]; }):null);
+    };
+    im.src=e.target.result;
+  };
+  rd.readAsDataURL(f);
+  input.value='';
+};
+AKC._kareAl = function(cv, quad){
+  AKC._kare=cv;
+  AKC._kose = quad ? quad.map(function(p){ return [p[0],p[1]]; })
+                   : [[cv.width*0.12,cv.height*0.18],[cv.width*0.88,cv.height*0.18],
+                      [cv.width*0.88,cv.height*0.82],[cv.width*0.12,cv.height*0.82]];
+  AKC._kamerayiDurdur();
+  AKC._goster('Kose');
+  AKC._koseCiz();
+};
+AKC.koseSifirla = function(){
+  var cv=AKC._kare; if(!cv) return;
+  AKC._kose=[[2,2],[cv.width-3,2],[cv.width-3,cv.height-3],[2,cv.height-3]];
+  AKC._koseCiz();
+};
+AKC._koseCiz = function(){
+  var cv=AKC._kare, c=AKC._el('akcKoseCv'); if(!cv||!c) return;
+  var maxW=Math.min(720, (c.parentElement.clientWidth||640));
+  var olc=Math.min(1, maxW/cv.width);
+  c.width=Math.round(cv.width*olc); c.height=Math.round(cv.height*olc);
+  c._olc=olc;
+  var x=c.getContext('2d');
+  x.drawImage(cv,0,0,c.width,c.height);
+  x.strokeStyle='#22c55e'; x.lineWidth=3;
+  x.beginPath();
+  x.moveTo(AKC._kose[0][0]*olc, AKC._kose[0][1]*olc);
+  for(var i=1;i<4;i++) x.lineTo(AKC._kose[i][0]*olc, AKC._kose[i][1]*olc);
+  x.closePath(); x.stroke();
+  x.fillStyle='rgba(34,197,94,.12)'; x.fill();
+  for(var k=0;k<4;k++){
+    x.beginPath(); x.arc(AKC._kose[k][0]*olc, AKC._kose[k][1]*olc, 11, 0, Math.PI*2);
+    x.fillStyle='#22c55e'; x.fill();
+    x.strokeStyle='#fff'; x.lineWidth=2.5; x.stroke();
+  }
+  if(!c._baglandi){
+    c._baglandi=true;
+    var yer=function(ev){
+      var r=c.getBoundingClientRect();
+      var t=ev.touches&&ev.touches[0];
+      var px=(t?t.clientX:ev.clientX)-r.left, py=(t?t.clientY:ev.clientY)-r.top;
+      return [px*(c.width/r.width)/c._olc, py*(c.height/r.height)/c._olc];
+    };
+    var bas=function(ev){
+      var p=yer(ev), en=1e9, idx=-1;
+      for(var i=0;i<4;i++){
+        var d=Math.hypot(AKC._kose[i][0]-p[0], AKC._kose[i][1]-p[1]);
+        if(d<en){ en=d; idx=i; }
+      }
+      if(en < AKC._kare.width*0.10){ AKC._suruklenen=idx; ev.preventDefault(); }
+    };
+    var oynat=function(ev){
+      if(AKC._suruklenen<0) return;
+      var p=yer(ev);
+      AKC._kose[AKC._suruklenen]=[Math.max(0,Math.min(AKC._kare.width, p[0])),
+                                  Math.max(0,Math.min(AKC._kare.height,p[1]))];
+      AKC._koseCiz(); ev.preventDefault();
+    };
+    var birak=function(){ AKC._suruklenen=-1; };
+    c.addEventListener('mousedown',bas); c.addEventListener('touchstart',bas,{passive:false});
+    window.addEventListener('mousemove',oynat); c.addEventListener('touchmove',oynat,{passive:false});
+    window.addEventListener('mouseup',birak); c.addEventListener('touchend',birak);
+  }
+};
+AKC.kirp = function(){
+  var cv=AKC._kare, k=AKC._kose; if(!cv||!k) return;
+  // hedef boyut: kenar uzunluklarının ortalamasından en-boy oranı
+  var ust=Math.hypot(k[1][0]-k[0][0], k[1][1]-k[0][1]);
+  var alt=Math.hypot(k[2][0]-k[3][0], k[2][1]-k[3][1]);
+  var sol=Math.hypot(k[3][0]-k[0][0], k[3][1]-k[0][1]);
+  var sag=Math.hypot(k[2][0]-k[1][0], k[2][1]-k[1][1]);
+  var w=Math.max(ust,alt), h=Math.max(sol,sag);
+  if(!(w>4&&h>4)){ if(typeof toast==='function') toast('Kırpma alanı çok küçük','error'); return; }
+  var hw=Math.min(AKC.CIKTI_W, Math.round(w));
+  var hh=Math.max(24, Math.round(hw*h/w));
+  var out=AKC._duzlestir(cv, k, hw, hh);
+  AKC._beyazDenge(out);
+  AKC._kirpUrl=out.toDataURL('image/jpeg', AKC.KALITE);
+  AKC._sonucGoster();
+};
+AKC._sonucGoster = function(){
+  AKC._goster('Sonuc');
+  var c=AK._c(AKC._cid);
+  var f=((c&&c.files)||[]).filter(function(x){ return x.type===AKC._tip; })[0];
+  var sys=AKC._el('akcSys');
+  if(sys) sys.innerHTML = (f&&f.images&&f.images[0])
+    ? '<img src="'+f.images[0]+'" alt="sistem">'
+    : '<div class="akc-yok"><i class="fas fa-circle-question"></i> Arşivde bu etiket yok</div>';
+  var yeni=AKC._el('akcYeni');
+  if(yeni) yeni.innerHTML='<img src="'+AKC._kirpUrl+'" alt="gelen">';
+  // Ton kontrolü — beyaz/ekru/krem hepsi BEYAZ sayılır
+  var v=AKC._el('akcVerdict');
+  if(v) v.className='akc-verdict bekle', v.innerHTML='<i class="fas fa-spinner fa-spin"></i> Etiket rengi ölçülüyor…';
+  AK._labelTone(AKC._kirpUrl).then(function(ton){
+    AKC._ton = ton==='Siyah' ? 'siyah' : ton==='Beyaz' ? 'beyaz' : '';
+    if(!v) return;
+    if(!AKC._ton){ v.className='akc-verdict bekle'; v.innerHTML='<i class="fas fa-circle-question"></i> Etiket rengi net ölçülemedi — gözle karşılaştır.'; return; }
+    var okunan = AKC._ton==='siyah' ? 'SİYAH' : 'BEYAZ';
+    var bekleniyor = AKC._beklenenTon();
+    if(!bekleniyor){
+      v.className='akc-verdict bekle';
+      v.innerHTML='<i class="fas fa-eye"></i> Gelen etiket <b>'+okunan+'</b>. Sistemde karşılaştıracak dokuma yok.';
+      return;
+    }
+    var bAd = bekleniyor==='siyah' ? 'SİYAH' : 'BEYAZ';
+    if(bekleniyor===AKC._ton){
+      v.className='akc-verdict ok';
+      v.innerHTML='<i class="fas fa-circle-check"></i> Renk tutuyor — gelen <b>'+okunan+'</b>, olması gereken <b>'+bAd+'</b>.';
+    }else{
+      v.className='akc-verdict no';
+      v.innerHTML='<i class="fas fa-triangle-exclamation"></i> <b>RENK TUTMUYOR!</b> Gelen etiket <b>'+okunan+'</b>, olması gereken <b>'+bAd+'</b>.';
+    }
+  }).catch(function(){});
+};
+// Bu renk kartında o tipte olması gereken etiket tonu (beyaz/ekru/krem → beyaz)
+AKC._beklenenTon = function(){
+  var c=AK._c(AKC._cid); if(!c) return '';
+  var f=((c.files)||[]).filter(function(x){ return x.type===AKC._tip; })[0];
+  if(f){
+    var t=AK._etiketTonu(f);
+    if(t) return t==='black'?'siyah':'beyaz';
+    var lr=(f.renk||'').toLocaleLowerCase('tr');
+    if(/siyah|black/.test(lr)) return 'siyah';
+    if(/beyaz|white|ekru|ecru|krem|bej/.test(lr)) return 'beyaz';
+  }
+  return '';
+};
+AKC.geri = function(){
+  AKC._kirpUrl=null; AKC._sabit=0; AKC._quad=null;
+  AKC._goster('Cam');
+  AKC._kameraAc();
+};
+AKC.kaydet = function(uygun){
+  if(!AKC._kirpUrl) return;
+  var c=AK._c(AKC._cid); if(!c) return;
+  var not=(AKC._el('akcNot')||{}).value||'';
+  AK.gelenEkle(c, AKC._tip, AKC._kirpUrl, {onay:!!uygun, not:not.trim(), ton:AKC._ton||''}).then(function(){
+    AKC.kapat();
+    AK.renderColors();
+    if(typeof toast==='function') toast(uygun?'Numune uygun kaydedildi':'Numune UYGUN DEĞİL kaydedildi', uygun?'success':'error');
+  });
+};
+AKC._kamerayiDurdur = function(){
+  cancelAnimationFrame(AKC._raf); AKC._raf=null;
+  if(AKC._st){ try{ AKC._st.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} AKC._st=null; }
+  var v=AKC._el('akcVideo'); if(v) v.srcObject=null;
+};
+AKC.kapat = function(){
+  AKC._kamerayiDurdur();
+  var m=AKC._el('akcModal'); if(m) m.classList.remove('show');
+  AKC._kare=null; AKC._kose=null; AKC._kirpUrl=null;
+};
+window.AKC = AKC;
 
 })();
 </script>
