@@ -7893,6 +7893,143 @@ body::after{
 
 #loginOverlay .blob { display: none !important; }
 
+/* ══════════════ DOKUMA İPLİKLERİ ══════════════
+   Atölye kimliği: ekranda yavaşça süzülen ince iplikler. Sadece transform
+   ile hareket eder, telefonu yormaz.                                      */
+.lg-threads{ position:absolute; inset:-20% -10%; z-index:-1; pointer-events:none; overflow:hidden; }
+.lg-threads span{
+  position:absolute; top:-30%; height:160%; width:1.5px;
+  background:linear-gradient(180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--primary-light,#a78bfa) 55%, transparent) 20%,
+    color-mix(in srgb, #ddd6fe 85%, transparent) 50%,
+    color-mix(in srgb, var(--primary-light,#a78bfa) 55%, transparent) 80%,
+    transparent 100%);
+  opacity:0; transform-origin:top center;
+  animation:lgIplik linear infinite;
+  box-shadow:0 0 10px color-mix(in srgb, var(--primary-light,#a78bfa) 45%, transparent);
+}
+.lg-threads span:nth-child(1){ left:12%; animation-duration:19s; animation-delay:-2s;  }
+.lg-threads span:nth-child(2){ left:27%; animation-duration:26s; animation-delay:-9s;  }
+.lg-threads span:nth-child(3){ left:44%; animation-duration:22s; animation-delay:-14s; }
+.lg-threads span:nth-child(4){ left:61%; animation-duration:30s; animation-delay:-5s;  }
+.lg-threads span:nth-child(5){ left:78%; animation-duration:24s; animation-delay:-18s; }
+.lg-threads span:nth-child(6){ left:91%; animation-duration:28s; animation-delay:-11s; }
+@keyframes lgIplik{
+  0%   { transform:translateY(-14%) rotate(9deg)  scaleY(.85); opacity:0; }
+  18%  { opacity:.5; }
+  50%  { transform:translateY(4%)   rotate(11deg) scaleY(1);   opacity:.62; }
+  82%  { opacity:.42; }
+  100% { transform:translateY(16%)  rotate(9deg)  scaleY(.9);  opacity:0; }
+}
+
+/* Gradyanlarda bantlaşma olmasın diye çok ince bir doku */
+.lg-noise{
+  position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:.35;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.055'/></svg>");
+  mix-blend-mode:overlay;
+}
+
+/* ══════════════ SOL MARKA PANELİ ══════════════ */
+.lg-hero{
+  display:none;                       /* dar ekranda yok */
+  position:relative; z-index:2;
+  width:min(430px, 38vw);
+  padding-right:56px;
+  animation:lgHeroIn 1s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes lgHeroIn{ from{opacity:0; transform:translateX(-24px);} to{opacity:1; transform:none;} }
+
+.lg-mark{ width:74px; height:74px; margin-bottom:26px; }
+.lg-mark svg{ width:100%; height:100%; overflow:visible; }
+.lgm-kutu{
+  stroke:color-mix(in srgb, var(--primary-light,#a78bfa) 55%, transparent);
+  stroke-width:2; fill:color-mix(in srgb, var(--primary) 12%, transparent);
+  stroke-dasharray:210; stroke-dashoffset:210;
+  animation:lgCiz 1.1s cubic-bezier(.6,.05,.2,1) .15s forwards;
+}
+.lgm-ip{
+  stroke:var(--primary-light,#a78bfa); stroke-width:2.6;
+  stroke-dasharray:38; stroke-dashoffset:38;
+  animation:lgCiz .55s cubic-bezier(.5,0,.2,1) forwards, lgIpParla 4.5s ease-in-out infinite;
+  filter:drop-shadow(0 0 5px color-mix(in srgb, var(--primary) 55%, transparent));
+}
+.lgm-y1{ animation-delay:.55s, 1.6s; }
+.lgm-d1{ animation-delay:.68s, 1.75s; stroke:color-mix(in srgb,#c4b5fd 92%,transparent); }
+.lgm-y2{ animation-delay:.81s, 1.9s; }
+.lgm-d2{ animation-delay:.94s, 2.05s; stroke:color-mix(in srgb,#c4b5fd 92%,transparent); }
+.lgm-y3{ animation-delay:1.07s, 2.2s; }
+.lgm-d3{ animation-delay:1.2s, 2.35s; stroke:color-mix(in srgb,#c4b5fd 92%,transparent); }
+@keyframes lgCiz{ to{ stroke-dashoffset:0; } }
+@keyframes lgIpParla{ 0%,100%{opacity:.78;} 50%{opacity:1;} }
+
+.lg-hero-t{
+  font-family:var(--font-serif,'Instrument Serif',Georgia,serif);
+  font-size:clamp(40px,4vw,54px); line-height:1.02; font-weight:400;
+  margin:0 0 12px; letter-spacing:-.01em;
+}
+.lg-hero-t span{ color:var(--text-main,#f1f0f5); }
+.lg-hero-t em{
+  font-style:italic;
+  background:linear-gradient(120deg, var(--primary-light,#a78bfa), #e9d5ff 55%, var(--primary,#7c3aed));
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+}
+.lg-hero-s{
+  font-size:15px; line-height:1.6; color:var(--text-muted,#c4b5fd);
+  margin:0 0 30px; max-width:34ch;
+}
+.lg-hero-l{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:13px; }
+.lg-hero-l li{
+  display:flex; align-items:center; gap:12px;
+  font-size:13.5px; color:color-mix(in srgb, var(--text-muted,#c4b5fd) 85%, transparent);
+  opacity:0; animation:lgSatir .7s cubic-bezier(.22,1,.36,1) forwards;
+  animation-delay:calc(.5s + var(--g) * .13s);
+}
+.lg-hero-l li i{
+  width:30px; height:30px; flex:0 0 auto; border-radius:9px;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:12px; color:var(--primary-light,#a78bfa);
+  background:color-mix(in srgb, var(--primary) 13%, transparent);
+  border:1px solid color-mix(in srgb, var(--primary) 26%, transparent);
+}
+@keyframes lgSatir{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+
+@media (min-width:1024px){
+  #loginOverlay{ gap:0; }
+  .lg-hero{ display:block; }
+  /* Marka solda duruyor — kartta tekrar etmesin, karşılama yazısı kalsın */
+  #loginCard h1{ display:none; }
+  #loginCard .brand{ margin-bottom:16px; }
+  #loginCard .subtitle{
+    font-size:15px; font-weight:600;
+    color:var(--text-main,#f1f0f5);
+  }
+}
+@media (max-height:660px){ .lg-hero-l{ display:none; } }
+
+/* Giriş ekranı açıkken alt menü ve yuvarlak butonlar görünmesin */
+body:has(#loginOverlay:not([style*="display:none"]):not([style*="display: none"])) .fab,
+body:has(#loginOverlay:not([style*="display:none"]):not([style*="display: none"])) .gs-fab,
+body:has(#loginOverlay:not([style*="display:none"]):not([style*="display: none"])) .bottom-nav,
+body:has(#loginOverlay:not([style*="display:none"]):not([style*="display: none"])) .v8-fab-menu{
+  display:none !important;
+}
+
+/* Hareket azaltma tercihi: her şey yerinde dursun */
+@media (prefers-reduced-motion:reduce){
+  .lg-threads, .lg-mesh{ animation:none !important; }
+  .lg-threads span{ animation:none !important; opacity:.35; }
+  .lgm-kutu, .lgm-ip{ animation:none !important; stroke-dashoffset:0 !important; }
+  .lg-hero, .lg-hero-l li,
+  #loginCard, #loginCard .brand, #loginCard .lg-rule, #loginCard .lg-tabs,
+  #loginCard #loginForm, #loginCard .lg-foot{
+    animation:none !important; opacity:1 !important; transform:none !important;
+  }
+  #loginCard::before{ animation:none !important; }
+  #loginCard .login-btn::before{ animation:none !important; }
+}
+
 /* ──────────────── ÜST CHIP'LER ──────────────── */
 #loginTopBrand, #loginClock {
   position: fixed; top: 22px; z-index: 3;
@@ -7941,18 +8078,52 @@ body::after{
   from { opacity: 0; transform: translateY(20px) scale(0.98); }
   to   { opacity: 1; transform: none; }
 }
+/* Kenarda yavaşça dönen ışık — kart canlı dursun */
 #loginCard::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--primary-light) 55%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 0%, transparent) 30%,
-    color-mix(in srgb, var(--primary) 0%, transparent) 70%,
-    color-mix(in srgb, var(--primary) 38%, transparent) 100%);
+  background: conic-gradient(from var(--lgAci, 0deg),
+    transparent 0deg,
+    color-mix(in srgb, var(--primary-light) 70%, transparent) 42deg,
+    color-mix(in srgb, #e9d5ff 55%, transparent) 66deg,
+    transparent 108deg,
+    transparent 220deg,
+    color-mix(in srgb, var(--primary) 45%, transparent) 268deg,
+    transparent 320deg);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
   pointer-events: none;
+  animation: lgKenar 7s linear infinite;
 }
+@property --lgAci { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+@keyframes lgKenar { to { --lgAci: 360deg; } }
+/* @property desteklemeyen tarayıcıda hafif bir nefes alma kalsın */
+@supports not (background: conic-gradient(from var(--x,0deg), red, blue)) {
+  #loginCard::before{
+    background:linear-gradient(135deg,
+      color-mix(in srgb, var(--primary-light) 55%, transparent) 0%,
+      transparent 30%, transparent 70%,
+      color-mix(in srgb, var(--primary) 38%, transparent) 100%);
+    animation:none;
+  }
+}
+
+/* Kart içeriği sırayla gelsin */
+#loginCard .brand,
+#loginCard .lg-rule,
+#loginCard .lg-tabs,
+#loginCard #loginForm,
+#loginCard .lg-foot{
+  opacity:0; animation:lgIcerik .62s cubic-bezier(.22,1,.36,1) forwards;
+}
+#loginCard .brand    { animation-delay:.12s; }
+#loginCard .lg-rule  { animation-delay:.20s; }
+#loginCard .lg-tabs  { animation-delay:.27s; }
+#loginCard #loginForm{ animation-delay:.34s; }
+#loginCard .lg-foot  { animation-delay:.44s; }
+@keyframes lgIcerik{ from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;} }
+/* Sekme değişince form yeniden animasyona girmesin */
+#loginCard #registerForm{ animation:none; opacity:1; }
 
 /* Üst rozet */
 .lg-badge {
@@ -8355,7 +8526,14 @@ body::after{
     0 6px 16px -4px color-mix(in srgb, var(--primary) 50%, transparent),
     inset 0 1px 0 rgba(255,255,255,0.25);
 }
-#loginCard .login-btn:hover::before { transform: translateX(100%); }
+/* Fareyle üstüne gelinmese de arada bir parlasın — buton canlı dursun */
+#loginCard .login-btn::before { animation: lgSweep 6s cubic-bezier(.4,0,.2,1) 2.4s infinite; }
+@keyframes lgSweep{
+  0%   { transform:translateX(-100%); }
+  16%  { transform:translateX(100%); }
+  100% { transform:translateX(100%); }
+}
+#loginCard .login-btn:hover::before { animation:none; transform: translateX(100%); }
 #loginCard .login-btn:hover .arrow { transform: translateX(4px); }
 #loginCard .login-btn:active { transform: translateY(0); }
 #loginCard .login-btn:disabled,
