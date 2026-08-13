@@ -113,6 +113,24 @@
     font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
   }
 
+  /* dokununca fırlayan sürpriz */
+  .surpriz{
+    position:fixed; z-index:6; pointer-events:none;
+    width:120px; height:auto;
+    border-radius:14px;
+    border:3px solid #ff7fb2;
+    box-shadow:0 14px 40px rgba(0,0,0,.6), 0 0 0 6px rgba(255,127,178,.18);
+    animation:firla 1.35s cubic-bezier(.2,.9,.3,1) forwards;
+    transform-origin:center;
+  }
+  @keyframes firla{
+    0%  {transform:translate(-50%,-50%) scale(.15) rotate(var(--r0,-25deg)); opacity:0;}
+    18% {transform:translate(-50%,-50%) scale(1.18) rotate(var(--r1,8deg));  opacity:1;}
+    32% {transform:translate(-50%,-50%) scale(.98) rotate(var(--r2,-5deg));  opacity:1;}
+    70% {transform:translate(calc(-50% + var(--sx,0px)), calc(-50% + var(--sy,-40px))) scale(1) rotate(var(--r2,-5deg)); opacity:1;}
+    100%{transform:translate(calc(-50% + var(--sx2,0px)), calc(-50% + var(--sy2,-140px))) scale(.75) rotate(var(--r3,20deg)); opacity:0;}
+  }
+
   /* dokununca patlayan kalpler */
   .patlak{
     position:fixed; z-index:5; pointer-events:none;
@@ -128,7 +146,9 @@
   @media (prefers-reduced-motion:reduce){
     .kalp,.buyukKalp,.vurgu,.kart,.patlak{animation:none !important;}
     .kalp{opacity:.5;}
+    .surpriz{animation-duration:2s;}
   }
+  @media (max-width:420px){ .surpriz{ width:104px; } }
 </style>
 </head>
 <body>
@@ -206,11 +226,36 @@
       })(i);
     }
   }
-  window.addEventListener('pointerdown', function(ev){ patlat(ev.clientX, ev.clientY); });
+  // Dokununca sürpriz resim de fırlasın
+  var onYukle = new Image(); onYukle.src = 'surpriz.jpg';   // ilk dokunuşta beklemesin
+  function surpriz(x, y){
+    var im = document.createElement('img');
+    im.className = 'surpriz';
+    im.src = 'surpriz.jpg';
+    im.alt = '';
+    im.style.left = x + 'px';
+    im.style.top  = y + 'px';
+    im.style.setProperty('--r0', rastgele(-40,-10) + 'deg');
+    im.style.setProperty('--r1', rastgele(4,14) + 'deg');
+    im.style.setProperty('--r2', rastgele(-9,-2) + 'deg');
+    im.style.setProperty('--r3', rastgele(12,34) + 'deg');
+    im.style.setProperty('--sx',  rastgele(-24,24) + 'px');
+    im.style.setProperty('--sy',  rastgele(-60,-28) + 'px');
+    im.style.setProperty('--sx2', rastgele(-70,70) + 'px');
+    im.style.setProperty('--sy2', rastgele(-190,-120) + 'px');
+    document.body.appendChild(im);
+    setTimeout(function(){ im.remove(); }, 1500);
+  }
+
+  window.addEventListener('pointerdown', function(ev){
+    patlat(ev.clientX, ev.clientY);
+    surpriz(ev.clientX, ev.clientY);
+  });
 
   // Açılışta ortadan bir selam
   setTimeout(function(){
     patlat(window.innerWidth/2, window.innerHeight*0.42);
+    surpriz(window.innerWidth/2, window.innerHeight*0.42);
   }, 1200);
 })();
 </script>
