@@ -3853,16 +3853,24 @@ if(typeof Chart==='undefined'){
             <canvas id="akcOverlay"></canvas>
             <div class="akc-durum" id="akcDurum">Kamera açılıyor…</div>
           </div>
+          <div class="akc-zoomwrap">
+            <i class="fas fa-magnifying-glass-minus"></i>
+            <input type="range" id="akcZoom" style="display:none;" oninput="AKC.zoomDegisti(this)" aria-label="Yakınlaştır">
+            <i class="fas fa-magnifying-glass-plus"></i>
+          </div>
           <div class="akc-bar">
             <label class="akc-oto">
               <input type="checkbox" id="akcOto" checked onchange="AKC.otoDegisti()">
-              <span>Sabit tutunca kendi çeksin</span>
+              <span>Otomatik çek</span>
             </label>
             <button class="akc-shutter" id="akcShutter" onclick="AKC.cek()" aria-label="Çek"><span></span></button>
-            <label class="akc-dosya" title="Kamera yerine galeriden seç">
-              <i class="fas fa-image"></i>
-              <input type="file" accept="image/*" onchange="AKC.dosyadan(this)">
-            </label>
+            <div class="akc-sag">
+              <button type="button" class="akc-ikon" id="akcFener" style="display:none;" onclick="AKC.fenerAcKapa()" title="Işık"><i class="fas fa-bolt"></i></button>
+              <label class="akc-ikon akc-dosya" title="Kamera yerine galeriden seç">
+                <i class="fas fa-image"></i>
+                <input type="file" accept="image/*" onchange="AKC.dosyadan(this)">
+              </label>
+            </div>
           </div>
         </div>
 
@@ -22073,23 +22081,29 @@ AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); 
    görüntü işlememiz çalışır, internetsiz de çalışır.
    ═══════════════════════════════════════════════════════════════════ */
 var AKC = {};
-AKC.ANALIZ_W   = 260;     // analiz için küçültülen kare genişliği (hız)
-AKC.CIKTI_W    = 640;     // kırpılmış görselin en fazla genişliği
-AKC.KALITE     = 0.74;    // jpeg kalitesi
-AKC.MAX_BYTE   = 150000;  // ~110 KB üstü kayıt buluta ağır gelir, küçültülür
-AKC.SABIT_KARE = 6;       // kaç karedir aynı yerde → otomatik çek
-AKC.SABIT_TOL  = 0.022;   // köşe oynama toleransı (kare genişliğine oranla)
+AKC.ANALIZ_W   = 300;     // analiz için küçültülen kare genişliği (hız)
+AKC.CIKTI_W    = 900;     // kırpılmış görselin en fazla genişliği
+AKC.KALITE     = 0.86;    // jpeg kalitesi (yüksek çözünürlükte netlik için)
+AKC.MAX_BYTE   = 190000;  // ~140 KB üstü kayıt buluta ağır gelir, küçültülür
+AKC.SABIT_KARE = 5;       // kaç karedir aynı yerde → otomatik çek
+AKC.SABIT_TOL  = 0.025;   // köşe oynama toleransı (kare genişliğine oranla)
+AKC.NET_ESIK   = 55;      // Laplace varyansı — altındaysa görüntü bulanık
+AKC.PARLAMA    = 0.16;    // kırpma alanının %16'sı yanmışsa parlama var
 
 AKC._st = null;           // MediaStream
+AKC._track = null;
+AKC._ic = null;           // ImageCapture (tam çözünürlük fotoğraf)
 AKC._raf = null;
 AKC._cid = null; AKC._tip = null;
-AKC._quad = null;         // canlı bulunan dörtgen (analiz ölçeğinde)
+AKC._quad = null;         // canlı bulunan dörtgen (video pikseli)
 AKC._sabit = 0;
 AKC._kare = null;         // çekilen tam çözünürlüklü kare (canvas)
 AKC._kose = null;         // düzeltme ekranındaki köşeler (kare piksel)
 AKC._kirpUrl = null;
 AKC._ton = null;
 AKC._suruklenen = -1;
+AKC._fener = false;
+AKC._mesgul = false;
 
 // ── küçük yardımcılar ──
 AKC._el = function(id){ return document.getElementById(id); };
@@ -22098,48 +22112,63 @@ AKC._goster = function(ad){
     var e=AKC._el('akcStep'+s); if(e) e.style.display = (s===ad)?'':'none';
   });
 };
+/* Kılavuz çerçeve — ORANSAL tutulur (0..1). Böylece önizleme karesi ile
+   tam çözünürlüklü fotoğrafın en-boy oranı farklı olsa bile aynı yeri
+   gösterir. Etiket bu çerçeveye getirilir; arama SADECE burada yapılır,
+   böylece föyün üstündeki koyu kutular, yazılar, tablolar hiç karışmaz. */
+AKC.KLV = {x:0.10, y:0.30, w:0.80, h:0.40};
+AKC._kilavuzPx = function(w,h){
+  return [Math.round(AKC.KLV.x*w), Math.round(AKC.KLV.y*h),
+          Math.round(AKC.KLV.w*w), Math.round(AKC.KLV.h*h)];
+};
 
-/* ── 1) Kareyi analiz et: en büyük açık/koyu bloğu bul, 4 köşesini çıkar ──
-   Etiket masaya/karton üstüne konur; parlaklık olarak zeminden ayrışır.
-   Otsu ile ikiye böl → en büyük bağlı bileşen → dış bükey uçlardan 4 köşe. */
-AKC._otsu = function(gri, n){
-  var h=new Uint32Array(256), i;
-  for(i=0;i<n;i++) h[gri[i]]++;
-  var top=0, agirlik=0; for(i=0;i<256;i++) top+=h[i]*i;
-  var arkaA=0, arkaTop=0, enIyi=0, esik=128;
+/* ── Otsu eşikleme ── */
+AKC._otsuHist = function(hist, n){
+  var i, top=0, arkaA=0, arkaTop=0, enIyi=0, esik=128;
+  for(i=0;i<256;i++) top+=hist[i]*i;
   for(i=0;i<256;i++){
-    arkaA+=h[i]; if(!arkaA) continue;
+    arkaA+=hist[i]; if(!arkaA) continue;
     var onA=n-arkaA; if(!onA) break;
-    arkaTop+=i*h[i];
+    arkaTop+=i*hist[i];
     var mA=arkaTop/arkaA, mB=(top-arkaTop)/onA;
     var v=arkaA*onA*(mA-mB)*(mA-mB);
     if(v>enIyi){ enIyi=v; esik=i; }
   }
   return esik;
 };
-// Bağlı bileşenler (4 komşu, yığınla — özyineleme yok).
-// icSart=true ise kadraj kenarına değen bloklar elenir: masa, föy kağıdı ve
-// zemin hep kenardan taşar; etiket ise kadrajın ortasında durur. "Kağıdın
-// tamamını seçti" sorununu bu çözüyor.
-AKC._bloklar = function(mask, w, h, icSart){
-  var etiket=new Int32Array(w*h), su=0, enIyi=null, disBlok=null, yigin=new Int32Array(w*h);
-  for(var p=0;p<w*h;p++){
-    if(!mask[p] || etiket[p]) continue;
-    su++; var uc=0; yigin[uc++]=p; etiket[p]=su;
-    var say=0, minx=w, maxx=-1, miny=h, maxy=-1, pikseller=[];
-    while(uc){
-      var q=yigin[--uc], qx=q%w, qy=(q-qx)/w;
-      say++; pikseller.push(q);
-      if(qx<minx)minx=qx; if(qx>maxx)maxx=qx; if(qy<miny)miny=qy; if(qy>maxy)maxy=qy;
-      if(qx>0   && mask[q-1] && !etiket[q-1]){ etiket[q-1]=su; yigin[uc++]=q-1; }
-      if(qx<w-1 && mask[q+1] && !etiket[q+1]){ etiket[q+1]=su; yigin[uc++]=q+1; }
-      if(qy>0   && mask[q-w] && !etiket[q-w]){ etiket[q-w]=su; yigin[uc++]=q-w; }
-      if(qy<h-1 && mask[q+w] && !etiket[q+w]){ etiket[q+w]=su; yigin[uc++]=q+w; }
+AKC._otsu = function(gri, n){
+  var h=new Uint32Array(256);
+  for(var i=0;i<n;i++) h[gri[i]]++;
+  return AKC._otsuHist(h, n);
+};
+
+/* ── Bağlı bileşenler (4 komşu, yığınla) ──
+   Sadece [bx,by,bw,bh] bölgesinde çalışır. Bölge kenarına değen bloklar
+   elenir: kadrajı dolduran kağıt/masa ve çerçeveden taşan yazılar aday olmaz. */
+AKC._bloklar = function(mask, w, h, bx, by, bw, bh){
+  var etiket=new Int32Array(w*h), su=0, enIyi=null, disBlok=null;
+  var yigin=new Int32Array(bw*bh+8);
+  var x2=bx+bw-1, y2=by+bh-1;
+  for(var yy=by; yy<=y2; yy++){
+    for(var xx=bx; xx<=x2; xx++){
+      var p=yy*w+xx;
+      if(!mask[p] || etiket[p]) continue;
+      su++; var uc=0; yigin[uc++]=p; etiket[p]=su;
+      var say=0, minx=w, maxx=-1, miny=h, maxy=-1, pikseller=[];
+      while(uc){
+        var q=yigin[--uc], qx=q%w, qy=(q-qx)/w;
+        say++; pikseller.push(q);
+        if(qx<minx)minx=qx; if(qx>maxx)maxx=qx; if(qy<miny)miny=qy; if(qy>maxy)maxy=qy;
+        if(qx>bx && mask[q-1] && !etiket[q-1]){ etiket[q-1]=su; yigin[uc++]=q-1; }
+        if(qx<x2 && mask[q+1] && !etiket[q+1]){ etiket[q+1]=su; yigin[uc++]=q+1; }
+        if(qy>by && mask[q-w] && !etiket[q-w]){ etiket[q-w]=su; yigin[uc++]=q-w; }
+        if(qy<y2 && mask[q+w] && !etiket[q+w]){ etiket[q+w]=su; yigin[uc++]=q+w; }
+      }
+      var b={say:say, px:pikseller, minx:minx, maxx:maxx, miny:miny, maxy:maxy};
+      var kenarda = (minx<=bx+1 || maxx>=x2-1 || miny<=by+1 || maxy>=y2-1);
+      if(kenarda){ if(!disBlok || say>disBlok.say) disBlok=b; continue; }
+      if(!enIyi || say>enIyi.say) enIyi=b;
     }
-    var b={say:say, px:pikseller, minx:minx, maxx:maxx, miny:miny, maxy:maxy};
-    var kenarda = (minx<=1 || maxx>=w-2 || miny<=1 || maxy>=h-2);
-    if(kenarda){ if(!disBlok || say>disBlok.say) disBlok=b; continue; }
-    if(!enIyi || say>enIyi.say) enIyi=b;
   }
   return {ic:enIyi, dis:disBlok};
 };
@@ -22155,8 +22184,7 @@ AKC._koseler = function(blok, w){
     if(f<enAzFark){ enAzFark=f; sol=[x,y]; }
     if(f>enCokFark){ enCokFark=f; sag=[x,y]; }
   }
-  // sol üst, sağ üst, sağ alt, sol alt
-  return [ust, sag, alt, sol];
+  return [ust, sag, alt, sol];   // sol üst, sağ üst, sağ alt, sol alt
 };
 AKC._alan = function(q){
   return Math.abs(
@@ -22164,86 +22192,124 @@ AKC._alan = function(q){
     (q[2][0]*q[3][1]-q[3][0]*q[2][1]) + (q[3][0]*q[0][1]-q[0][0]*q[3][1])
   )/2;
 };
-AKC._dortgenGecerli = function(q, w, h, blok){
+AKC._dortgenGecerli = function(q, bw, bh, blok){
   if(!q || q.some(function(p){ return !p; })) return false;
   var alan=AKC._alan(q);
-  var oran=alan/(w*h);
-  if(oran<0.022 || oran>0.72) return false;                    // çok küçük / neredeyse tüm kare
+  var oran=alan/(bw*bh);
+  if(oran<0.05 || oran>0.96) return false;       // çerçevenin çok küçük parçası / hepsi
   var kenar=[0,1,2,3].map(function(i){
     var a=q[i], b=q[(i+1)%4];
     return Math.hypot(a[0]-b[0], a[1]-b[1]);
   });
   var enUzun=Math.max.apply(null,kenar), enKisa=Math.min.apply(null,kenar);
-  // Üçgene dönmüş dörtgen: iki köşe üst üste binmiş demektir, kırpma bozuk çıkar
-  if(enKisa < enUzun*0.14) return false;
-  // Karşılıklı kenarlar birbirine yakın olmalı (dikdörtgen, rastgele çokgen değil)
+  if(enKisa < enUzun*0.14) return false;                                     // üçgene dönmüş
   if(Math.min(kenar[0],kenar[2])/Math.max(kenar[0],kenar[2]) < 0.45) return false;
   if(Math.min(kenar[1],kenar[3])/Math.max(kenar[1],kenar[3]) < 0.45) return false;
-  // Doluluk: gerçek etiket dörtgeni doldurur; dağınık gürültü doldurmaz.
-  if(blok && alan>0 && (blok.say/alan) < 0.72) return false;
+  if(blok && alan>0 && (blok.say/alan) < 0.72) return false;                 // doluluk
   return true;
 };
-// Verilen piksel kümesi üstünde Otsu eşiği (alt bölge için)
-AKC._otsuAlt = function(gri, idx){
-  var h=new Uint32Array(256), i, n=idx.length;
-  for(i=0;i<n;i++) h[gri[idx[i]]]++;
-  var top=0, arkaA=0, arkaTop=0, enIyi=0, esik=128;
-  for(i=0;i<256;i++) top+=h[i]*i;
-  for(i=0;i<256;i++){
-    arkaA+=h[i]; if(!arkaA) continue;
-    var onA=n-arkaA; if(!onA) break;
-    arkaTop+=i*h[i];
-    var mA=arkaTop/arkaA, mB=(top-arkaTop)/onA;
-    var v=arkaA*onA*(mA-mB)*(mA-mB);
-    if(v>enIyi){ enIyi=v; esik=i; }
-  }
-  return esik;
-};
-AKC._bul = function(cv){
+/* Etiketi kılavuz çerçeve İÇİNDE ara.
+   cv: analiz karesi, klv: [x,y,w,h] analiz pikselinde çerçeve. */
+AKC._bul = function(cv, klv){
   var w=cv.width, h=cv.height, ctx=cv.getContext('2d');
   var d=ctx.getImageData(0,0,w,h).data, n=w*h;
   var gri=new Uint8Array(n);
   for(var i=0,j=0;i<n;i++,j+=4) gri[i]=(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114)|0;
 
-  function dene(esik, sinirla){
-    var aday=null, disBlok=null;
+  var bx=Math.max(0,klv[0]), by=Math.max(0,klv[1]);
+  var bw=Math.min(w-bx,klv[2]), bh=Math.min(h-by,klv[3]);
+  if(bw<12||bh<12) return null;
+
+  // Eşik SADECE çerçeve içindeki piksellerden hesaplanır
+  var hist=new Uint32Array(256), say=0;
+  for(var yy=by; yy<by+bh; yy++)
+    for(var xx=bx; xx<bx+bw; xx++){ hist[gri[yy*w+xx]]++; say++; }
+  var esik=AKC._otsuHist(hist, say);
+
+  function dene(es){
+    var aday=null;
     [true,false].forEach(function(acik){
       var mask=new Uint8Array(n);
-      for(var p=0;p<n;p++){
-        if(sinirla && !sinirla[p]) continue;
-        mask[p] = acik ? (gri[p]>esik?1:0) : (gri[p]<=esik?1:0);
-      }
-      var r=AKC._bloklar(mask,w,h,true);
-      if(r.dis && (!disBlok || r.dis.say>disBlok.say)) disBlok=r.dis;
+      for(var y2=by; y2<by+bh; y2++)
+        for(var x2=bx; x2<bx+bw; x2++){
+          var p=y2*w+x2;
+          mask[p] = acik ? (gri[p]>es?1:0) : (gri[p]<=es?1:0);
+        }
+      var r=AKC._bloklar(mask,w,h,bx,by,bw,bh);
       if(!r.ic) return;
       var q=AKC._koseler(r.ic,w);
-      if(!AKC._dortgenGecerli(q,w,h,r.ic)) return;
-      if(!aday || r.ic.say>aday.say) aday={q:q, say:r.ic.say};
+      if(!AKC._dortgenGecerli(q,bw,bh,r.ic)) return;
+      // Çerçevenin ortasına yakın ve büyük olan tercih edilir
+      var cx=(q[0][0]+q[1][0]+q[2][0]+q[3][0])/4, cy=(q[0][1]+q[1][1]+q[2][1]+q[3][1])/4;
+      var uzak=Math.hypot(cx-(bx+bw/2), cy-(by+bh/2))/Math.hypot(bw,bh);
+      var puan=r.ic.say*(1-uzak);
+      if(!aday || puan>aday.puan) aday={q:q, puan:puan};
     });
-    return {aday:aday, dis:disBlok};
+    return aday;
   }
-
-  // 1. geçiş: tüm kare
-  var g1=dene(AKC._otsu(gri,n), null);
-  if(g1.aday) return g1.aday.q;
-
-  // 2. geçiş: kadrajı dolduran şeyin (föy kağıdı / masa) İÇİNDE ara.
-  // "Beyaz kağıdın üstündeki açık gri etiket" ancak böyle bulunur — eşik
-  // sadece kağıdın pikselleriyle yeniden hesaplanır.
-  var dis=g1.dis;
-  if(dis && dis.say>n*0.25 && dis.say<n*0.99){
-    var icinde=new Uint8Array(n);
-    for(var k=0;k<dis.px.length;k++) icinde[dis.px[k]]=1;
-    var g2=dene(AKC._otsuAlt(gri, dis.px), icinde);
-    if(g2.aday) return g2.aday.q;
+  // Föyün üstünde kumaş etiket: kağıt ~235, etiket ~205, yazılar ~40.
+  // Tek eşik yazıyı ayırır, etiketi ayıramaz. Bu yüzden aydınlık sınıfın
+  // (kağıt + etiket) kendi içinde ikinci bir eşiği, koyu sınıfın da ayrıca
+  // bir eşiği hesaplanır — etiket ancak böyle kağıttan ayrışır.
+  function altEsik(altMi){
+    var h2=new Uint32Array(256), n2=0;
+    for(var v=0; v<256; v++){
+      if(altMi ? (v<=esik) : (v>esik)){ h2[v]=hist[v]; n2+=hist[v]; }
+    }
+    return n2>50 ? AKC._otsuHist(h2, n2) : -1;
+  }
+  var adaylar=[esik, altEsik(false), altEsik(true),
+               Math.max(4,esik-16), Math.min(251,esik+16)];
+  for(var ai=0; ai<adaylar.length; ai++){
+    if(adaylar[ai]<0) continue;
+    var a=dene(adaylar[ai]);
+    if(a) return a.q;
   }
   return null;
 };
 
-/* ── 2) Perspektif düzeltme (homografi) ──
-   Kaynak dörtgenden hedef dikdörtgene ters eşleme + çift doğrusal örnekleme. */
+/* ── Netlik (Laplace varyansı) ── bulanık kareyi çekmeyelim */
+AKC._netlik = function(cv, klv){
+  var w=cv.width, h=cv.height;
+  var d=cv.getContext('2d').getImageData(0,0,w,h).data;
+  var bx=Math.max(1,klv[0]), by=Math.max(1,klv[1]);
+  var x2=Math.min(w-2,klv[0]+klv[2]), y2=Math.min(h-2,klv[1]+klv[3]);
+  var top=0, kar=0, n=0;
+  for(var y=by; y<y2; y+=2){
+    for(var x=bx; x<x2; x+=2){
+      var i=(y*w+x)*4;
+      var c =d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;
+      var iu=((y-1)*w+x)*4, ia=((y+1)*w+x)*4, is=(y*w+x-1)*4, ig=(y*w+x+1)*4;
+      var lap = (d[iu]*0.299+d[iu+1]*0.587+d[iu+2]*0.114)
+              + (d[ia]*0.299+d[ia+1]*0.587+d[ia+2]*0.114)
+              + (d[is]*0.299+d[is+1]*0.587+d[is+2]*0.114)
+              + (d[ig]*0.299+d[ig+1]*0.587+d[ig+2]*0.114) - 4*c;
+      top+=lap; kar+=lap*lap; n++;
+    }
+  }
+  if(!n) return 0;
+  var ort=top/n;
+  return (kar/n) - ort*ort;
+};
+/* ── Parlama: yanmış (255'e dayanmış) piksel oranı ── */
+AKC._parlama = function(cv, klv){
+  var w=cv.width, h=cv.height;
+  var d=cv.getContext('2d').getImageData(0,0,w,h).data;
+  var bx=Math.max(0,klv[0]), by=Math.max(0,klv[1]);
+  var x2=Math.min(w,klv[0]+klv[2]), y2=Math.min(h,klv[1]+klv[3]);
+  var yanik=0, n=0;
+  for(var y=by; y<y2; y+=2){
+    for(var x=bx; x<x2; x+=2){
+      var i=(y*w+x)*4;
+      if(d[i]>=250 && d[i+1]>=250 && d[i+2]>=250) yanik++;
+      n++;
+    }
+  }
+  return n?yanik/n:0;
+};
+
+/* ── Perspektif düzeltme (homografi) ── */
 AKC._homografi = function(src, dst){
-  // 8 bilinmeyenli lineer sistem, Gauss eleme
   var A=[], b=[];
   for(var i=0;i<4;i++){
     var x=src[i][0], y=src[i][1], u=dst[i][0], v=dst[i][1];
@@ -22306,26 +22372,25 @@ AKC._duzlestir = function(kaynakCv, kose, hedefW, hedefH){
   return out;
 };
 
-/* ── 3) Renk dengesi ──
-   Atölye ışığı sarıdır; ekru bir dokuma krem çıkar. En parlak %10'u beyaz
-   kabul edip kanalları ölçekleriz. Kazanç sınırlı ki siyah etiket patlamasın. */
-AKC._beyazDenge = function(cv){
+/* ── Renk/kontrast düzeltme ──
+   Beyaz ışıkta çalışılıyor; agresif renk oynaması yok. Sadece gölgeyi
+   toparlayan hafif bir seviye düzeltmesi ve nötrleme yapılır. */
+AKC._duzelt = function(cv){
   var ctx=cv.getContext('2d'), w=cv.width, h=cv.height;
   var im=ctx.getImageData(0,0,w,h), d=im.data, n=w*h;
   var lum=new Uint8Array(n);
   for(var i=0,j=0;i<n;i++,j+=4) lum[i]=(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114)|0;
   var hist=new Uint32Array(256); for(i=0;i<n;i++) hist[lum[i]]++;
-  var hedef=Math.max(1,Math.floor(n*0.10)), top=0, esik=255;
-  for(i=255;i>=0;i--){ top+=hist[i]; if(top>=hedef){ esik=i; break; } }
-  if(esik<60) return cv;                      // ortam çok karanlık — dokunma
+  var hedef=Math.max(1,Math.floor(n*0.08)), top=0, ustEsik=255;
+  for(i=255;i>=0;i--){ top+=hist[i]; if(top>=hedef){ ustEsik=i; break; } }
+  if(ustEsik<50) return cv;                       // çok karanlık — dokunma
   var sr=0,sg=0,sb=0,c=0;
-  for(i=0,j=0;i<n;i++,j+=4){ if(lum[i]>=esik){ sr+=d[j]; sg+=d[j+1]; sb+=d[j+2]; c++; } }
+  for(i=0,j=0;i<n;i++,j+=4){ if(lum[i]>=ustEsik){ sr+=d[j]; sg+=d[j+1]; sb+=d[j+2]; c++; } }
   if(!c) return cv;
   var mr=sr/c, mg=sg/c, mb=sb/c, ort=(mr+mg+mb)/3;
-  var kis=function(v){ return Math.max(0.72, Math.min(1.45, v)); };
+  var kis=function(v){ return Math.max(0.85, Math.min(1.18, v)); };   // hafif
   var gr=kis(ort/(mr||1)), gg=kis(ort/(mg||1)), gb=kis(ort/(mb||1));
-  // hafif parlaklık normalizasyonu: beyaz gerçekten beyaz olsun
-  var pg=Math.max(1, Math.min(1.35, 238/(ort||1)));
+  var pg=Math.max(1, Math.min(1.22, 240/(ort||1)));
   for(i=0,j=0;i<n;i++,j+=4){
     d[j]  =Math.min(255, d[j]  *gr*pg);
     d[j+1]=Math.min(255, d[j+1]*gg*pg);
@@ -22335,9 +22400,14 @@ AKC._beyazDenge = function(cv){
   return cv;
 };
 
-/* ── 4) Ekran akışı ── */
+/* ── Ekran akışı ── */
 AKC.ac = function(cid, tip){
-  AKC._cid=cid; AKC._tip=tip; AKC._quad=null; AKC._sabit=0; AKC._kirpUrl=null; AKC._ton=null;
+  if(!AK.gelenVarMi(tip)){
+    if(typeof toast==='function') toast('Yıkama talimatı numunesi kağıda yapıştırılır','info');
+    return;
+  }
+  AKC._cid=cid; AKC._tip=tip; AKC._quad=null; AKC._sabit=0; AKC._kirpUrl=null;
+  AKC._ton=null; AKC._mesgul=false; AKC._fener=false;
   var c=AK._c(cid);
   var b=AKC._el('akcBaslik');
   if(b) b.textContent=((AK.TYPES[tip]&&AK.TYPES[tip].label)||tip)+((c&&c.renk)?(' · '+c.renk):'');
@@ -22352,11 +22422,19 @@ AKC._kameraAc = function(){
     if(du) du.textContent='Bu cihazda kamera açılamıyor — aşağıdaki resim tuşundan seçebilirsin.';
     return;
   }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false})
+  // Mümkün olan en yüksek çözünürlük + sürekli netleme istenir
+  var istek={ video:{ facingMode:{ideal:'environment'},
+                      width:{ideal:3840}, height:{ideal:2160},
+                      frameRate:{ideal:30} }, audio:false };
+  navigator.mediaDevices.getUserMedia(istek)
+  .catch(function(){ return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false}); })
+  .catch(function(){ return navigator.mediaDevices.getUserMedia({video:true,audio:false}); })
   .then(function(st){
     AKC._st=st; v.srcObject=st;
     v.play().catch(function(){});
-    if(du) du.textContent='Etiketi düz bir zemine koy, kameraya göster';
+    AKC._track = st.getVideoTracks()[0] || null;
+    AKC._yetenekleriUygula();
+    if(du) du.textContent='Etiketi çerçeveye getir';
     AKC._dongu();
   })
   .catch(function(e){
@@ -22364,6 +22442,39 @@ AKC._kameraAc = function(){
       ? 'Kamera izni verilmedi. Tarayıcı ayarından izin ver ya da resim tuşundan seç.'
       : 'Kamera açılamadı — resim tuşundan galeriden seçebilirsin.';
   });
+};
+// Sürekli netleme, fener ve yakınlaştırma — cihaz destekliyorsa
+AKC._yetenekleriUygula = function(){
+  var t=AKC._track; if(!t) return;
+  var cap={}; try{ cap = t.getCapabilities ? (t.getCapabilities()||{}) : {}; }catch(e){ cap={}; }
+  var ileri=[];
+  if(cap.focusMode && cap.focusMode.indexOf('continuous')>=0) ileri.push({focusMode:'continuous'});
+  if(cap.exposureMode && cap.exposureMode.indexOf('continuous')>=0) ileri.push({exposureMode:'continuous'});
+  if(cap.whiteBalanceMode && cap.whiteBalanceMode.indexOf('continuous')>=0) ileri.push({whiteBalanceMode:'continuous'});
+  if(ileri.length){ try{ t.applyConstraints({advanced:ileri}); }catch(e){} }
+  // Tam çözünürlüklü fotoğraf: önizleme karesi yerine sensörün kendi karesi
+  try{ if(window.ImageCapture) AKC._ic=new ImageCapture(t); }catch(e){ AKC._ic=null; }
+  // Fener düğmesi sadece destekleniyorsa görünür
+  var fb=AKC._el('akcFener');
+  if(fb) fb.style.display = (cap.torch ? '' : 'none');
+  // Yakınlaştırma
+  var zs=AKC._el('akcZoom');
+  if(zs){
+    if(cap.zoom && cap.zoom.max>cap.zoom.min){
+      zs.style.display=''; zs.min=cap.zoom.min; zs.max=Math.min(cap.zoom.max, cap.zoom.min+4);
+      zs.step=(cap.zoom.step||0.1); zs.value=t.getSettings().zoom||cap.zoom.min;
+    }else zs.style.display='none';
+  }
+};
+AKC.zoomDegisti = function(el){
+  if(!AKC._track) return;
+  try{ AKC._track.applyConstraints({advanced:[{zoom:+el.value}]}); }catch(e){}
+};
+AKC.fenerAcKapa = function(){
+  if(!AKC._track) return;
+  AKC._fener=!AKC._fener;
+  try{ AKC._track.applyConstraints({advanced:[{torch:AKC._fener}]}); }catch(e){}
+  var fb=AKC._el('akcFener'); if(fb) fb.classList.toggle('acik', AKC._fener);
 };
 AKC._dongu = function(){
   var v=AKC._el('akcVideo'), ov=AKC._el('akcOverlay'), du=AKC._el('akcDurum');
@@ -22373,65 +22484,114 @@ AKC._dongu = function(){
   function adim(t){
     AKC._raf=requestAnimationFrame(adim);
     if(!AKC._el('akcModal').classList.contains('show')) return;
-    if(t-son < 90) return; son=t;
+    if(AKC._mesgul) return;
+    if(t-son < 100) return; son=t;
     var vw=v.videoWidth, vh=v.videoHeight;
     if(!vw||!vh) return;
     if(ov.width!==vw||ov.height!==vh){ ov.width=vw; ov.height=vh; }
     var aw=AKC.ANALIZ_W, ah=Math.round(aw*vh/vw);
     kucuk.width=aw; kucuk.height=ah;
     kucuk.getContext('2d').drawImage(v,0,0,aw,ah);
+    var klvA=AKC._kilavuzPx(aw,ah);
+    var klvV=AKC._kilavuzPx(vw,vh);
+
+    var net=AKC._netlik(kucuk, klvA);
+    var parla=AKC._parlama(kucuk, klvA);
     var q=null;
-    try{ q=AKC._bul(kucuk); }catch(e){ q=null; }
+    try{ q=AKC._bul(kucuk, klvA); }catch(e){ q=null; }
+
     var octx=ov.getContext('2d');
     octx.clearRect(0,0,ov.width,ov.height);
-    // Kılavuz çerçeve — etiket bulunamazsa buraya hizalayıp çekilir,
-    // böylece hiçbir zaman saçma bir kırpma çıkmaz.
-    if(!q){
-      var kv=AKC._kilavuz(vw,vh);
-      octx.strokeStyle='rgba(255,255,255,.85)'; octx.lineWidth=Math.max(2,vw*0.004);
-      octx.setLineDash([vw*0.03, vw*0.022]);
-      octx.strokeRect(kv[0],kv[1],kv[2],kv[3]);
-      octx.setLineDash([]);
-    }
+    // Kılavuz çerçeve her zaman çizilir — arama sadece burada yapılıyor
+    octx.save();
+    octx.fillStyle='rgba(0,0,0,.34)';
+    octx.fillRect(0,0,vw,vh);
+    octx.clearRect(klvV[0],klvV[1],klvV[2],klvV[3]);
+    octx.strokeStyle='rgba(255,255,255,.9)'; octx.lineWidth=Math.max(2,vw*0.003);
+    octx.setLineDash([vw*0.025, vw*0.018]);
+    octx.strokeRect(klvV[0],klvV[1],klvV[2],klvV[3]);
+    octx.setLineDash([]);
+    octx.restore();
+
+    var bulanik = net < AKC.NET_ESIK;
+    var parlamaVar = parla > AKC.PARLAMA;
+
     if(q){
       var olc=vw/aw;
       var buyuk=q.map(function(p){ return [p[0]*olc, p[1]*olc]; });
-      // sabit mi?
       if(AKC._quad){
         var fark=0;
         for(var i=0;i<4;i++) fark=Math.max(fark, Math.hypot(buyuk[i][0]-AKC._quad[i][0], buyuk[i][1]-AKC._quad[i][1]));
         if(fark < vw*AKC.SABIT_TOL) AKC._sabit++; else AKC._sabit=0;
       }
       AKC._quad=buyuk;
-      var hazir=AKC._sabit>=AKC.SABIT_KARE;
+      var hazir = AKC._sabit>=AKC.SABIT_KARE && !bulanik && !parlamaVar;
       octx.strokeStyle = hazir ? '#22c55e' : '#a78bfa';
-      octx.lineWidth = Math.max(3, vw*0.006);
-      octx.setLineDash(hazir?[]:[vw*0.02, vw*0.014]);
+      octx.lineWidth = Math.max(3, vw*0.005);
       octx.beginPath();
       octx.moveTo(buyuk[0][0],buyuk[0][1]);
       for(var k=1;k<4;k++) octx.lineTo(buyuk[k][0],buyuk[k][1]);
       octx.closePath(); octx.stroke();
-      octx.setLineDash([]);
-      octx.fillStyle = hazir ? 'rgba(34,197,94,.14)' : 'rgba(167,139,250,.10)';
+      octx.fillStyle = hazir ? 'rgba(34,197,94,.16)' : 'rgba(167,139,250,.10)';
       octx.fill();
-      if(du) du.textContent = hazir ? 'Etiket bulundu — çekiliyor…' : 'Etiket bulundu, sabit tut';
-      if(hazir && AKC._el('akcOto').checked){ AKC._sabit=-999; setTimeout(AKC.cek,120); }
+      if(du) du.textContent = bulanik ? 'Netleşmesini bekle…'
+                            : parlamaVar ? 'Parlama var — açıyı biraz değiştir'
+                            : hazir ? 'Etiket bulundu — çekiliyor…' : 'Etiket bulundu, sabit tut';
+      if(hazir && AKC._el('akcOto').checked){ AKC._sabit=-999; AKC.cek(); }
     }else{
       AKC._quad=null; AKC._sabit=0;
-      if(du) du.textContent='Etiketi çerçeveye getir — bulamazsam çerçeveyi kırparım';
+      if(du) du.textContent = bulanik ? 'Netleşmesini bekle…'
+                            : parlamaVar ? 'Parlama var — açıyı biraz değiştir'
+                            : 'Etiketi çerçeveye getir — bulamazsam çerçeveyi kırparım';
     }
   }
   cancelAnimationFrame(AKC._raf);
   AKC._raf=requestAnimationFrame(adim);
 };
 AKC.otoDegisti = function(){ AKC._sabit=0; };
+
+/* Çekim: mümkünse ImageCapture ile SENSÖRÜN tam çözünürlüklü karesi alınır
+   (önizleme karesi düşük çözünürlüklü olabiliyor). Kılavuz çerçeve oransal
+   tutulduğu için farklı en-boy oranında da doğru yere denk gelir. */
 AKC.cek = function(){
+  if(AKC._mesgul) return;
   var v=AKC._el('akcVideo');
   if(!v || !v.videoWidth){ if(typeof toast==='function') toast('Kamera hazır değil','error'); return; }
-  var cv=document.createElement('canvas');
-  cv.width=v.videoWidth; cv.height=v.videoHeight;
-  cv.getContext('2d').drawImage(v,0,0);
-  AKC._kareAl(cv, AKC._quad);
+  AKC._mesgul=true;
+  var du=AKC._el('akcDurum'); if(du) du.textContent='Çekiliyor…';
+  var onizQuad = AKC._quad ? AKC._quad.map(function(p){ return [p[0]/v.videoWidth, p[1]/v.videoHeight]; }) : null;
+
+  var bitir=function(cv){
+    AKC._mesgul=false;
+    var quad = onizQuad ? onizQuad.map(function(p){ return [p[0]*cv.width, p[1]*cv.height]; }) : null;
+    // Tam çözünürlükte köşeleri bir kez daha, hassas olarak ara
+    try{
+      var aw=Math.min(560, cv.width), ah=Math.round(aw*cv.height/cv.width);
+      var k=document.createElement('canvas'); k.width=aw; k.height=ah;
+      k.getContext('2d').drawImage(cv,0,0,aw,ah);
+      var q2=AKC._bul(k, AKC._kilavuzPx(aw,ah));
+      if(q2){ var o=cv.width/aw; quad=q2.map(function(p){ return [p[0]*o, p[1]*o]; }); }
+    }catch(e){}
+    AKC._kareAl(cv, quad);
+  };
+  var yedek=function(){
+    var cv=document.createElement('canvas');
+    cv.width=v.videoWidth; cv.height=v.videoHeight;
+    cv.getContext('2d').drawImage(v,0,0);
+    bitir(cv);
+  };
+  if(AKC._ic && AKC._ic.takePhoto){
+    AKC._ic.takePhoto()
+      .then(function(blob){ return createImageBitmap(blob); })
+      .then(function(bm){
+        var cv=document.createElement('canvas');
+        cv.width=bm.width; cv.height=bm.height;
+        cv.getContext('2d').drawImage(bm,0,0);
+        try{ bm.close(); }catch(e){}
+        bitir(cv);
+      })
+      .catch(yedek);
+  }else yedek();
 };
 AKC.dosyadan = function(input){
   var f=input&&input.files&&input.files[0]; if(!f) return;
@@ -22439,15 +22599,14 @@ AKC.dosyadan = function(input){
   rd.onload=function(e){
     var im=new Image();
     im.onload=function(){
-      var mw=1600, w=im.width, h=im.height;
+      var mw=2400, w=im.width, h=im.height;
       if(w>mw){ h=Math.round(h*mw/w); w=mw; }
       var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
       cv.getContext('2d').drawImage(im,0,0,w,h);
-      var kucuk=document.createElement('canvas');
-      var aw=AKC.ANALIZ_W, ah=Math.round(aw*h/w);
-      kucuk.width=aw; kucuk.height=ah;
+      var aw=Math.min(560,w), ah=Math.round(aw*h/w);
+      var kucuk=document.createElement('canvas'); kucuk.width=aw; kucuk.height=ah;
       kucuk.getContext('2d').drawImage(cv,0,0,aw,ah);
-      var q=null; try{ q=AKC._bul(kucuk); }catch(_){ }
+      var q=null; try{ q=AKC._bul(kucuk, AKC._kilavuzPx(aw,ah)); }catch(_){ }
       var olc=w/aw;
       AKC._kareAl(cv, q?q.map(function(p){ return [p[0]*olc,p[1]*olc]; }):null);
     };
@@ -22456,18 +22615,13 @@ AKC.dosyadan = function(input){
   rd.readAsDataURL(f);
   input.value='';
 };
-// Kadrajın ortasındaki kılavuz dikdörtgen [x,y,w,h] — etiket oranına yakın
-AKC._kilavuz = function(w,h){
-  var kw=w*0.74, kh=Math.min(h*0.62, kw*0.42);
-  return [(w-kw)/2, (h-kh)/2, kw, kh];
-};
 AKC._kareAl = function(cv, quad){
   AKC._kare=cv;
   if(quad){
     AKC._kose = quad.map(function(p){ return [p[0],p[1]]; });
   }else{
-    // Etiket bulunamadı → kılavuz çerçeve kırpılır (kullanıcı köşeleri düzeltebilir)
-    var kv=AKC._kilavuz(cv.width, cv.height);
+    // Etiket bulunamadı → kılavuz çerçeve kırpılır (köşeler elle düzeltilebilir)
+    var kv=AKC._kilavuzPx(cv.width, cv.height);
     AKC._kose = [[kv[0],kv[1]],[kv[0]+kv[2],kv[1]],[kv[0]+kv[2],kv[1]+kv[3]],[kv[0],kv[1]+kv[3]]];
   }
   AKC._kamerayiDurdur();
@@ -22476,12 +22630,13 @@ AKC._kareAl = function(cv, quad){
 };
 AKC.koseSifirla = function(){
   var cv=AKC._kare; if(!cv) return;
-  AKC._kose=[[2,2],[cv.width-3,2],[cv.width-3,cv.height-3],[2,cv.height-3]];
+  var kv=AKC._kilavuzPx(cv.width, cv.height);
+  AKC._kose=[[kv[0],kv[1]],[kv[0]+kv[2],kv[1]],[kv[0]+kv[2],kv[1]+kv[3]],[kv[0],kv[1]+kv[3]]];
   AKC._koseCiz();
 };
 AKC._koseCiz = function(){
   var cv=AKC._kare, c=AKC._el('akcKoseCv'); if(!cv||!c) return;
-  var maxW=Math.min(720, (c.parentElement.clientWidth||640));
+  var maxW=Math.min(760, (c.parentElement.clientWidth||640));
   var olc=Math.min(1, maxW/cv.width);
   c.width=Math.round(cv.width*olc); c.height=Math.round(cv.height*olc);
   c._olc=olc;
@@ -22512,7 +22667,7 @@ AKC._koseCiz = function(){
         var d=Math.hypot(AKC._kose[i][0]-p[0], AKC._kose[i][1]-p[1]);
         if(d<en){ en=d; idx=i; }
       }
-      if(en < AKC._kare.width*0.10){ AKC._suruklenen=idx; ev.preventDefault(); }
+      if(en < AKC._kare.width*0.12){ AKC._suruklenen=idx; ev.preventDefault(); }
     };
     var oynat=function(ev){
       if(AKC._suruklenen<0) return;
@@ -22529,7 +22684,6 @@ AKC._koseCiz = function(){
 };
 AKC.kirp = function(){
   var cv=AKC._kare, k=AKC._kose; if(!cv||!k) return;
-  // hedef boyut: kenar uzunluklarının ortalamasından en-boy oranı
   var ust=Math.hypot(k[1][0]-k[0][0], k[1][1]-k[0][1]);
   var alt=Math.hypot(k[2][0]-k[3][0], k[2][1]-k[3][1]);
   var sol=Math.hypot(k[3][0]-k[0][0], k[3][1]-k[0][1]);
@@ -22539,16 +22693,16 @@ AKC.kirp = function(){
   var hw=Math.min(AKC.CIKTI_W, Math.round(w));
   var hh=Math.max(24, Math.round(hw*h/w));
   var out=AKC._duzlestir(cv, k, hw, hh);
-  AKC._beyazDenge(out);
+  AKC._duzelt(out);
   // Numune buluta gidiyor (telefonda çekip PC'den yazdırabilmek için):
   // sınırı aşarsa önce kalite, sonra boyut düşürülür.
   var url=out.toDataURL('image/jpeg', AKC.KALITE);
   var kal=AKC.KALITE, gen=hw;
-  while(url.length>AKC.MAX_BYTE && kal>0.42){
-    kal-=0.08; url=out.toDataURL('image/jpeg', kal);
+  while(url.length>AKC.MAX_BYTE && kal>0.5){
+    kal-=0.07; url=out.toDataURL('image/jpeg', kal);
   }
-  while(url.length>AKC.MAX_BYTE && gen>320){
-    gen=Math.round(gen*0.8);
+  while(url.length>AKC.MAX_BYTE && gen>380){
+    gen=Math.round(gen*0.85);
     var kk=document.createElement('canvas'); kk.width=gen; kk.height=Math.max(20,Math.round(gen*hh/hw));
     kk.getContext('2d').drawImage(out,0,0,kk.width,kk.height);
     url=kk.toDataURL('image/jpeg', kal);
@@ -22566,9 +22720,8 @@ AKC._sonucGoster = function(){
     : '<div class="akc-yok"><i class="fas fa-circle-question"></i> Arşivde bu etiket yok</div>';
   var yeni=AKC._el('akcYeni');
   if(yeni) yeni.innerHTML='<img src="'+AKC._kirpUrl+'" alt="gelen">';
-  // Ton kontrolü — beyaz/ekru/krem hepsi BEYAZ sayılır
   var v=AKC._el('akcVerdict');
-  if(v) v.className='akc-verdict bekle', v.innerHTML='<i class="fas fa-spinner fa-spin"></i> Etiket rengi ölçülüyor…';
+  if(v){ v.className='akc-verdict bekle'; v.innerHTML='<i class="fas fa-spinner fa-spin"></i> Etiket rengi ölçülüyor…'; }
   AK._labelTone(AKC._kirpUrl).then(function(ton){
     AKC._ton = ton==='Siyah' ? 'siyah' : ton==='Beyaz' ? 'beyaz' : '';
     if(!v) return;
@@ -22604,7 +22757,7 @@ AKC._beklenenTon = function(){
   return '';
 };
 AKC.geri = function(){
-  AKC._kirpUrl=null; AKC._sabit=0; AKC._quad=null;
+  AKC._kirpUrl=null; AKC._sabit=0; AKC._quad=null; AKC._mesgul=false;
   AKC._goster('Cam');
   AKC._kameraAc();
 };
@@ -22620,13 +22773,17 @@ AKC.kaydet = function(uygun){
 };
 AKC._kamerayiDurdur = function(){
   cancelAnimationFrame(AKC._raf); AKC._raf=null;
+  if(AKC._fener && AKC._track){ try{ AKC._track.applyConstraints({advanced:[{torch:false}]}); }catch(e){} }
+  AKC._fener=false;
+  var fb=AKC._el('akcFener'); if(fb) fb.classList.remove('acik');
   if(AKC._st){ try{ AKC._st.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} AKC._st=null; }
+  AKC._track=null; AKC._ic=null;
   var v=AKC._el('akcVideo'); if(v) v.srcObject=null;
 };
 AKC.kapat = function(){
   AKC._kamerayiDurdur();
   var m=AKC._el('akcModal'); if(m) m.classList.remove('show');
-  AKC._kare=null; AKC._kose=null; AKC._kirpUrl=null;
+  AKC._kare=null; AKC._kose=null; AKC._kirpUrl=null; AKC._mesgul=false;
 };
 window.AKC = AKC;
 
