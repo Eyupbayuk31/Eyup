@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gamze ❤️</title>
+<meta name="theme-color" content="#2b0d22">
+<meta name="description" content="Gamze'ye">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❤️</text></svg>">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:Georgia,'Times New Roman',serif;
+    background:
+      radial-gradient(120% 80% at 50% 0%, #6d1f4b 0%, transparent 60%),
+      radial-gradient(100% 70% at 20% 100%, #4a1236 0%, transparent 55%),
+      radial-gradient(90% 60% at 85% 85%, #7a2350 0%, transparent 50%),
+      linear-gradient(180deg, #2b0d22 0%, #1a0715 100%);
+    background-attachment:fixed;
+    color:#ffeef6;
+    min-height:100dvh;
+    display:flex; align-items:center; justify-content:center;
+    padding:26px 20px calc(26px + env(safe-area-inset-bottom));
+    overflow:hidden; position:relative;
+    cursor:default;
+  }
+
+  /* ── arka planda süzülen kalpler ── */
+  .gokyuzu{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+  .kalp{
+    position:absolute; bottom:-8vh;
+    font-size:20px; line-height:1;
+    opacity:0; will-change:transform,opacity;
+    animation:yuksel linear forwards;
+    filter:drop-shadow(0 0 6px rgba(255,120,180,.5));
+  }
+  @keyframes yuksel{
+    0%   {transform:translate3d(0,0,0) scale(.6) rotate(0deg);   opacity:0;}
+    12%  {opacity:.85;}
+    80%  {opacity:.7;}
+    100% {transform:translate3d(var(--kay,0px),-112vh,0) scale(1.05) rotate(var(--don,20deg)); opacity:0;}
+  }
+
+  /* ── ortadaki kart ── */
+  .kart{
+    position:relative; z-index:2;
+    width:min(560px,100%);
+    text-align:center;
+    padding:44px 30px 40px;
+    border-radius:28px;
+    background:linear-gradient(165deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    border:1px solid rgba(255,190,220,.22);
+    box-shadow:0 30px 80px -30px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.14);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    animation:gir 1.1s cubic-bezier(.2,.8,.25,1) both;
+  }
+  @keyframes gir{ from{opacity:0; transform:translateY(26px) scale(.96);} to{opacity:1; transform:none;} }
+
+  .buyukKalp{
+    width:96px; height:96px; margin:0 auto 24px; display:block;
+    animation:atis 1.7s ease-in-out infinite;
+    filter:drop-shadow(0 10px 26px rgba(255,60,120,.5));
+  }
+  @keyframes atis{
+    0%,100%{transform:scale(1);}
+    14%{transform:scale(1.16);}
+    28%{transform:scale(1);}
+    42%{transform:scale(1.1);}
+    58%{transform:scale(1);}
+  }
+
+  .ad{
+    font-size:clamp(44px,13vw,72px);
+    font-weight:400; letter-spacing:.02em;
+    line-height:1.05;
+    background:linear-gradient(180deg,#fff 0%,#ffc2dc 70%,#ff8fb8 100%);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+    text-shadow:0 0 40px rgba(255,140,190,.25);
+    margin-bottom:6px;
+  }
+  .virgul{ color:#ff9dc4; -webkit-text-fill-color:#ff9dc4; }
+
+  .cizgi{
+    width:64px; height:2px; margin:18px auto 20px;
+    background:linear-gradient(90deg,transparent,#ff9dc4,transparent);
+    border-radius:2px;
+  }
+
+  .soz{
+    font-size:clamp(19px,5.2vw,26px);
+    line-height:1.65; font-weight:400;
+    color:#ffe3ef;
+  }
+  .soz b{ font-weight:700; color:#fff; }
+  .vurgu{
+    display:inline-block;
+    color:#ff7fb2; font-weight:700;
+    animation:parla 2.6s ease-in-out infinite;
+  }
+  @keyframes parla{ 0%,100%{opacity:1;} 50%{opacity:.68;} }
+
+  .alt{
+    margin-top:26px;
+    font-size:12.5px; letter-spacing:.28em; text-transform:uppercase;
+    color:rgba(255,205,228,.55);
+    font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  .ipucu{
+    margin-top:10px; font-size:11.5px; letter-spacing:.08em;
+    color:rgba(255,205,228,.38);
+    font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+
+  /* dokununca patlayan kalpler */
+  .patlak{
+    position:fixed; z-index:5; pointer-events:none;
+    font-size:20px; line-height:1;
+    animation:patla .95s ease-out forwards;
+    filter:drop-shadow(0 0 8px rgba(255,120,180,.65));
+  }
+  @keyframes patla{
+    0%{transform:translate(-50%,-50%) scale(.3); opacity:1;}
+    100%{transform:translate(calc(-50% + var(--px)), calc(-50% + var(--py))) scale(1.15); opacity:0;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .kalp,.buyukKalp,.vurgu,.kart,.patlak{animation:none !important;}
+    .kalp{opacity:.5;}
+  }
+</style>
+</head>
+<body>
+  <div class="gokyuzu" id="gokyuzu" aria-hidden="true"></div>
+
+  <main class="kart">
+    <svg class="buyukKalp" viewBox="0 0 32 29" role="img" aria-label="kalp">
+      <defs>
+        <linearGradient id="kg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stop-color="#ff9ec4"/>
+          <stop offset="55%" stop-color="#ff5c94"/>
+          <stop offset="100%" stop-color="#e01f63"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#kg)" d="M16 28.7S1.4 19.9 1.4 10.2C1.4 5.1 5.4 1.3 10.2 1.3c3 0 5 1.6 5.8 3.2.8-1.6 2.8-3.2 5.8-3.2 4.8 0 8.8 3.8 8.8 8.9 0 9.7-14.6 18.5-14.6 18.5z"/>
+      <path fill="rgba(255,255,255,.35)" d="M8.6 5.2c-2.2.6-3.7 2.5-3.9 4.7-.1.7.4 1.3 1.1 1.3.6 0 1-.4 1.1-1 .2-1.4 1.1-2.5 2.4-2.9.6-.2.9-.8.7-1.4-.2-.5-.8-.8-1.4-.7z"/>
+    </svg>
+
+    <h1 class="ad">Gamze<span class="virgul">,</span></h1>
+
+    <div class="cizgi"></div>
+
+    <p class="soz">
+      Eyüp seni <span class="vurgu">çok</span> seviyor.<br>
+      <b>Çok çok çok.</b>
+    </p>
+
+    <p class="alt">Her zaman ❤</p>
+    <p class="ipucu">ekrana dokun</p>
+  </main>
+
+<script>
+(function(){
+  var KALPLER = ['❤️','💖','💕','💗','🩷','💘','💞'];
+  var gok = document.getElementById('gokyuzu');
+  var az = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function rastgele(a,b){ return a + Math.random()*(b-a); }
+
+  // Sürekli yükselen kalpler
+  function kalpSal(){
+    var e = document.createElement('span');
+    e.className = 'kalp';
+    e.textContent = KALPLER[(Math.random()*KALPLER.length)|0];
+    e.style.left = rastgele(-2, 98) + 'vw';
+    e.style.fontSize = rastgele(14, 34) + 'px';
+    e.style.animationDuration = rastgele(9, 17) + 's';
+    e.style.setProperty('--kay', rastgele(-90, 90) + 'px');
+    e.style.setProperty('--don', rastgele(-45, 45) + 'deg');
+    gok.appendChild(e);
+    setTimeout(function(){ e.remove(); }, 18000);
+  }
+  if(!az){
+    for(var i=0;i<10;i++) setTimeout(kalpSal, i*450);
+    setInterval(kalpSal, 900);
+  }
+
+  // Dokununca kalp patlasın
+  function patlat(x, y){
+    if(az) return;
+    for(var i=0;i<10;i++){
+      (function(i){
+        var e = document.createElement('span');
+        e.className = 'patlak';
+        e.textContent = KALPLER[(Math.random()*KALPLER.length)|0];
+        e.style.left = x + 'px';
+        e.style.top  = y + 'px';
+        var aci = (Math.PI*2/10)*i + rastgele(-0.3,0.3);
+        var uzak = rastgele(55, 130);
+        e.style.setProperty('--px', Math.cos(aci)*uzak + 'px');
+        e.style.setProperty('--py', Math.sin(aci)*uzak + 'px');
+        e.style.fontSize = rastgele(14, 26) + 'px';
+        document.body.appendChild(e);
+        setTimeout(function(){ e.remove(); }, 1000);
+      })(i);
+    }
+  }
+  window.addEventListener('pointerdown', function(ev){ patlat(ev.clientX, ev.clientY); });
+
+  // Açılışta ortadan bir selam
+  setTimeout(function(){
+    patlat(window.innerWidth/2, window.innerHeight*0.42);
+  }, 1200);
+})();
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@
       "data": false
     }
   },
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- index.html style.css vercel.json manifest.webmanifest sw.js icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- index.html style.css vercel.json manifest.webmanifest sw.js icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png gamze/index.html",
   "headers": [
     {
       "source": "/(.*)",

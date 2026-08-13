@@ -35,7 +35,15 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(istek)
         .then(y => { const kopya = y.clone(); caches.open(CACHE).then(c => c.put(istek, kopya)); return y; })
-        .catch(() => caches.match(istek).then(y => y || (cssMi ? undefined : caches.match('/index.html'))))
+        .catch(() => caches.match(istek).then(y => {
+          if (y) return y;
+          if (cssMi) return undefined;
+          // Uygulama dışı sayfalar (ör. /gamze) çevrimdışıyken uygulama
+          // kabuğuna düşmesin — alakasız bir ekran açılıyor.
+          if (url.pathname.replace(/\/+$/, '') !== '' && !url.pathname.endsWith('/index.html')
+              && !/^\/(#|$)/.test(url.pathname)) return undefined;
+          return caches.match('/index.html');
+        }))
     );
     return;
   }
