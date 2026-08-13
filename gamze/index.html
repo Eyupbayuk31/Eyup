@@ -227,12 +227,17 @@
     }
   }
   // Dokununca sürpriz resim de fırlasın
-  var onYukle = new Image(); onYukle.src = 'surpriz.jpg';   // ilk dokunuşta beklemesin
+  // NOT: sayfa /gamze olarak aciliyor (sonda / yok). Goreli yol kok dizine
+  // cozuluyordu (/surpriz.jpg) ve resim gelmiyordu — mutlak yol sart.
+  var RESIM = '/gamze/surpriz.jpg';
+  var onYukle = new Image(); onYukle.src = RESIM;   // ilk dokunuşta beklemesin
   function surpriz(x, y){
     var im = document.createElement('img');
     im.className = 'surpriz';
-    im.src = 'surpriz.jpg';
+    im.src = RESIM;
     im.alt = '';
+    // Resim gelmezse çerçevesi tek başına çizgi gibi görünüyordu — hiç kalmasın
+    im.onerror = function(){ im.remove(); };
     im.style.left = x + 'px';
     im.style.top  = y + 'px';
     im.style.setProperty('--r0', rastgele(-40,-10) + 'deg');

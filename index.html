@@ -18109,9 +18109,35 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   <!-- Legacy blobs (JS compat — gizli) -->
   <div class="blob b1" hidden></div><div class="blob b2" hidden></div><div class="blob b3" hidden></div>
 
-  <!-- Atmosfer: ambient mesh + ince grid -->
+  <!-- Atmosfer: ambient mesh + ince grid + dokuma iplikleri -->
   <div class="lg-mesh" aria-hidden="true"></div>
   <div class="lg-grid" aria-hidden="true"></div>
+  <div class="lg-threads" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <div class="lg-noise" aria-hidden="true"></div>
+
+  <!-- Sol taraf: marka (geniş ekranda görünür) -->
+  <aside class="lg-hero" aria-hidden="true">
+    <div class="lg-mark">
+      <svg viewBox="0 0 64 64" fill="none" stroke-linecap="round">
+        <rect class="lgm-kutu" x="6" y="6" width="52" height="52" rx="15"/>
+        <path class="lgm-ip lgm-y1" d="M14 24 H50"/>
+        <path class="lgm-ip lgm-y2" d="M14 32 H50"/>
+        <path class="lgm-ip lgm-y3" d="M14 40 H50"/>
+        <path class="lgm-ip lgm-d1" d="M24 14 V50"/>
+        <path class="lgm-ip lgm-d2" d="M32 14 V50"/>
+        <path class="lgm-ip lgm-d3" d="M40 14 V50"/>
+      </svg>
+    </div>
+    <h2 class="lg-hero-t"><span>İrsaliye</span> <em>Pro</em></h2>
+    <p class="lg-hero-s">Atölyeye çıkan her şey tek yerde</p>
+    <ul class="lg-hero-l">
+      <li style="--g:1"><i class="fas fa-file-lines"></i> İrsaliye · fermuar · kordon · tela</li>
+      <li style="--g:2"><i class="fas fa-clipboard-check"></i> Aksesuar kontrol föyü</li>
+      <li style="--g:3"><i class="fas fa-cloud"></i> Her cihazda aynı kayıt</li>
+    </ul>
+  </aside>
 
   <!-- Sağ üst saat chip -->
   <div id="loginClock" aria-label="Saat">
