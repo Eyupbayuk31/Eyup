@@ -21278,7 +21278,7 @@ AK._renderColorPage = function(pdf, c){
   // basılır; çekilmemişse ya da eski yöntemdeyse kutu aynen kalır.
   function pasteBox(x,yy,w,h,tip){
     var foto=null, meta=null;
-    if(tip && typeof AK.gelenMod==='function' && AK.gelenMod()==='foto'){
+    if(tip && AK.gelenVarMi(tip) && typeof AK.gelenMod==='function' && AK.gelenMod()==='foto'){
       var g=AK.gelenFor(c, tip);
       for(var i=0;i<g.length;i++){
         var u=AK._gelenBellek[g[i].id];
@@ -21903,9 +21903,14 @@ AK.libYukle = function(){
    Yeni yol seçilirse: kamerayla çekilir, kenarları bulunup düzleştirilir,
    föye o fotoğraf basılır. Yeni yol tam oturana kadar eskisi duruyor.
    ═══════════════════════════════════════════════════════════════════ */
+// Yıkama talimatı fotoğrafla kontrol edilmez: hata en çok yıkamada çıkıyor ve
+// yenisinin gelmesi uzun sürüyor, o yüzden numunesi her zaman kağıda yapıştırılır.
+AK.GELEN_HARIC = ['yikama'];
+AK.gelenVarMi = function(tip){ return AK.GELEN_HARIC.indexOf(tip)<0; };
+
 // Aksesuar kartının altındaki gelen numune şeridi — sadece foto modunda
 AK.gelenHtml = function(c, tip){
-  if(AK.gelenMod()!=='foto' || !AK.TYPES[tip]) return '';
+  if(AK.gelenMod()!=='foto' || !AK.TYPES[tip] || !AK.gelenVarMi(tip)) return '';
   var list=AK.gelenFor(c, tip);
   var buton='<button type="button" class="ak-gn-add" onclick="AKC.ac('+c.id+',\''+tip+'\')" title="Gelen numuneyi kameraya göster">'+
       '<i class="fas fa-camera"></i><span>'+(list.length?'Ekle':'Numuneyi çek')+'</span></button>';
@@ -21956,17 +21961,26 @@ AK._gelenModSenkron = function(){
 };
 
 /* ── Gelen numune deposu ──
-   Görsel IndexedDB'de ('gelen' store) — büyük olduğu için buluta gitmez.
-   Künye (kim, ne zaman, onay, ton) localStorage'da ve bulut senkronunda.
+   Telefonda çekilen numune PC'de yazdırılabilsin diye görsel de buluta gider.
+   Bu yüzden id'li DİZİ olarak tutulur: her numune ayrı kayıt = ayrı bulut
+   dokümanı (tek dokümana yığılsa boyut sınırına takılırdı).
    Anahtar model+renk+tip → renk kartları yeniden kurulunca kaybolmaz.        */
 AK.LS_GELEN='ak_gelen_v1';
-AK._gelenBellek = {};           // id → dataURL (bu oturumda okunanlar)
-AK.gelenMap = function(){
+AK.GELEN_MAX_KEY=2;    // aynı model+renk+tip için en fazla kaç numune
+AK.GELEN_MAX=24;       // toplamda kaç numune saklanır (en eskisi düşer)
+AK._gelenBellek = {};  // id → dataURL (föy senkron çizdiği için hızlı erişim)
+AK.gelenList = function(){
   var raw=AK._get(AK.LS_GELEN);
+  if(Array.isArray(raw) && (!raw.length || !raw[0] || !raw[0].items)) return raw;
+  // eski biçim (tek doküman + map) → diziye çevir
   var o=(Array.isArray(raw)&&raw[0]&&raw[0].items)?raw[0].items:(raw&&!Array.isArray(raw)?raw:{});
-  return o||{};
+  var out=[];
+  Object.keys(o||{}).forEach(function(k){
+    (o[k]||[]).forEach(function(g){ out.push(Object.assign({key:k}, g)); });
+  });
+  return out;
 };
-AK.saveGelenMap = function(M){ AK._set(AK.LS_GELEN, [{id:'ak_gelen', items:M||{}}]); };
+AK.saveGelenList = function(L){ AK._set(AK.LS_GELEN, L||[]); };
 AK._gelenKey = function(c, tip){
   var m=(c&&c.model)||AK.state.model||'';
   var r=(c&&c.renk)||'';
@@ -21975,12 +21989,16 @@ AK._gelenKey = function(c, tip){
   return (m+'|'+r+'|'+tip).replace(/[İIıi]/g,'i').toLocaleLowerCase('tr').replace(/\s+/g,' ').trim();
 };
 AK.gelenFor = function(c, tip){
-  var M=AK.gelenMap(), k=AK._gelenKey(c,tip), a=M[k];
-  return Array.isArray(a)?a:[];
+  if(!AK.gelenVarMi(tip)) return [];
+  var k=AK._gelenKey(c,tip);
+  return AK.gelenList().filter(function(g){ return g.key===k; })
+                       .sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
 };
 AK.gelenGorsel = function(meta){
-  if(!meta||!meta.id) return Promise.resolve(null);
+  if(!meta) return Promise.resolve(null);
+  if(meta.img){ AK._gelenBellek[meta.id]=meta.img; return Promise.resolve(meta.img); }
   if(AK._gelenBellek[meta.id]) return Promise.resolve(AK._gelenBellek[meta.id]);
+  // eski sürümde görsel IndexedDB'deydi — hâlâ oradan okunabilsin
   return AK._idbGet('gelen', meta.id).then(function(u){
     if(u) AK._gelenBellek[meta.id]=u;
     return u||null;
@@ -21996,23 +22014,29 @@ AK.gelenHazir = function(c){
 };
 AK.gelenEkle = function(c, tip, dataUrl, ek){
   var id='g'+Date.now()+Math.floor(Math.random()*9999);
-  var M=AK.gelenMap(), k=AK._gelenKey(c,tip);
-  if(!Array.isArray(M[k])) M[k]=[];
-  var meta={ id:id, tip:tip, ts:Date.now(), by:(typeof currentUser==='function'?(currentUser()||{}).ad:'')||AK._kim(),
-             onay:(ek&&ek.onay), not:(ek&&ek.not)||'', ton:(ek&&ek.ton)||'' };
-  M[k].push(meta);
-  if(M[k].length>4) M[k]=M[k].slice(-4);   // renk+tip başına en fazla 4 numune
+  var k=AK._gelenKey(c,tip);
+  var kayit={ id:id, key:k, tip:tip, model:(c&&c.model)||AK.state.model||'', renk:(c&&c.renk)||'',
+              ts:Date.now(), by:AK._kim(), onay:(ek&&ek.onay), not:(ek&&ek.not)||'',
+              ton:(ek&&ek.ton)||'', img:dataUrl };
+  var L=AK.gelenList();
+  L.push(kayit);
+  // aynı anahtarda fazlası düşsün
+  var ayni=L.filter(function(g){ return g.key===k; }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  while(ayni.length>AK.GELEN_MAX_KEY){
+    var at=ayni.shift();
+    L=L.filter(function(g){ return g.id!==at.id; });
+  }
+  // toplam sınır — en eski numune düşer
+  L.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  while(L.length>AK.GELEN_MAX) L.shift();
   AK._gelenBellek[id]=dataUrl;
-  AK.saveGelenMap(M);
-  return AK._idbPut('gelen', id, dataUrl).then(function(){ return meta; });
+  AK.saveGelenList(L);
+  return Promise.resolve(kayit);
 };
 AK.gelenSil = function(c, tip, gid){
-  var M=AK.gelenMap(), k=AK._gelenKey(c,tip);
-  M[k]=(M[k]||[]).filter(function(x){ return x.id!==gid; });
-  if(!M[k].length) delete M[k];
-  AK.saveGelenMap(M);
+  AK.saveGelenList(AK.gelenList().filter(function(g){ return g.id!==gid; }));
   delete AK._gelenBellek[gid];
-  AK._idbDel('gelen', gid);
+  try{ AK._idbDel('gelen', gid); }catch(e){}
   AK.renderColors();
 };
 AK._kim = function(){
@@ -22050,8 +22074,9 @@ AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); 
    ═══════════════════════════════════════════════════════════════════ */
 var AKC = {};
 AKC.ANALIZ_W   = 260;     // analiz için küçültülen kare genişliği (hız)
-AKC.CIKTI_W    = 760;     // kırpılmış görselin en fazla genişliği
-AKC.KALITE     = 0.82;    // jpeg kalitesi
+AKC.CIKTI_W    = 640;     // kırpılmış görselin en fazla genişliği
+AKC.KALITE     = 0.74;    // jpeg kalitesi
+AKC.MAX_BYTE   = 150000;  // ~110 KB üstü kayıt buluta ağır gelir, küçültülür
 AKC.SABIT_KARE = 6;       // kaç karedir aynı yerde → otomatik çek
 AKC.SABIT_TOL  = 0.022;   // köşe oynama toleransı (kare genişliğine oranla)
 
@@ -22092,9 +22117,12 @@ AKC._otsu = function(gri, n){
   }
   return esik;
 };
-// En büyük bağlı bileşen (4 komşu, yığınla — özyineleme yok)
-AKC._enBuyukBlok = function(mask, w, h){
-  var etiket=new Int32Array(w*h), su=0, enIyi=null, yigin=new Int32Array(w*h);
+// Bağlı bileşenler (4 komşu, yığınla — özyineleme yok).
+// icSart=true ise kadraj kenarına değen bloklar elenir: masa, föy kağıdı ve
+// zemin hep kenardan taşar; etiket ise kadrajın ortasında durur. "Kağıdın
+// tamamını seçti" sorununu bu çözüyor.
+AKC._bloklar = function(mask, w, h, icSart){
+  var etiket=new Int32Array(w*h), su=0, enIyi=null, disBlok=null, yigin=new Int32Array(w*h);
   for(var p=0;p<w*h;p++){
     if(!mask[p] || etiket[p]) continue;
     su++; var uc=0; yigin[uc++]=p; etiket[p]=su;
@@ -22108,9 +22136,12 @@ AKC._enBuyukBlok = function(mask, w, h){
       if(qy>0   && mask[q-w] && !etiket[q-w]){ etiket[q-w]=su; yigin[uc++]=q-w; }
       if(qy<h-1 && mask[q+w] && !etiket[q+w]){ etiket[q+w]=su; yigin[uc++]=q+w; }
     }
-    if(!enIyi || say>enIyi.say) enIyi={say:say, px:pikseller, minx:minx, maxx:maxx, miny:miny, maxy:maxy};
+    var b={say:say, px:pikseller, minx:minx, maxx:maxx, miny:miny, maxy:maxy};
+    var kenarda = (minx<=1 || maxx>=w-2 || miny<=1 || maxy>=h-2);
+    if(kenarda){ if(!disBlok || say>disBlok.say) disBlok=b; continue; }
+    if(!enIyi || say>enIyi.say) enIyi=b;
   }
-  return enIyi;
+  return {ic:enIyi, dis:disBlok};
 };
 // Blobun 4 köşesi: x+y, x-y uç noktaları (perspektifli dikdörtgen için yeterli)
 AKC._koseler = function(blok, w){
@@ -22137,38 +22168,76 @@ AKC._dortgenGecerli = function(q, w, h, blok){
   if(!q || q.some(function(p){ return !p; })) return false;
   var alan=AKC._alan(q);
   var oran=alan/(w*h);
-  if(oran<0.022 || oran>0.94) return false;                    // çok küçük / tüm kare
+  if(oran<0.022 || oran>0.72) return false;                    // çok küçük / neredeyse tüm kare
   var kenar=[0,1,2,3].map(function(i){
     var a=q[i], b=q[(i+1)%4];
     return Math.hypot(a[0]-b[0], a[1]-b[1]);
   });
-  if(Math.min.apply(null,kenar) < Math.max(w,h)*0.045) return false;  // yamuk/çizgi
+  var enUzun=Math.max.apply(null,kenar), enKisa=Math.min.apply(null,kenar);
+  // Üçgene dönmüş dörtgen: iki köşe üst üste binmiş demektir, kırpma bozuk çıkar
+  if(enKisa < enUzun*0.14) return false;
+  // Karşılıklı kenarlar birbirine yakın olmalı (dikdörtgen, rastgele çokgen değil)
+  if(Math.min(kenar[0],kenar[2])/Math.max(kenar[0],kenar[2]) < 0.45) return false;
+  if(Math.min(kenar[1],kenar[3])/Math.max(kenar[1],kenar[3]) < 0.45) return false;
   // Doluluk: gerçek etiket dörtgeni doldurur; dağınık gürültü doldurmaz.
-  // Küçük etiketi elemeden gürültüyü eler.
-  if(blok && alan>0 && (blok.say/alan) < 0.62) return false;
+  if(blok && alan>0 && (blok.say/alan) < 0.72) return false;
   return true;
+};
+// Verilen piksel kümesi üstünde Otsu eşiği (alt bölge için)
+AKC._otsuAlt = function(gri, idx){
+  var h=new Uint32Array(256), i, n=idx.length;
+  for(i=0;i<n;i++) h[gri[idx[i]]]++;
+  var top=0, arkaA=0, arkaTop=0, enIyi=0, esik=128;
+  for(i=0;i<256;i++) top+=h[i]*i;
+  for(i=0;i<256;i++){
+    arkaA+=h[i]; if(!arkaA) continue;
+    var onA=n-arkaA; if(!onA) break;
+    arkaTop+=i*h[i];
+    var mA=arkaTop/arkaA, mB=(top-arkaTop)/onA;
+    var v=arkaA*onA*(mA-mB)*(mA-mB);
+    if(v>enIyi){ enIyi=v; esik=i; }
+  }
+  return esik;
 };
 AKC._bul = function(cv){
   var w=cv.width, h=cv.height, ctx=cv.getContext('2d');
   var d=ctx.getImageData(0,0,w,h).data, n=w*h;
   var gri=new Uint8Array(n);
   for(var i=0,j=0;i<n;i++,j+=4) gri[i]=(d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114)|0;
-  var esik=AKC._otsu(gri,n);
-  // Etiket açık da olabilir koyu da: iki maskeyi de dene, büyük ve makul olanı seç
-  var aday=null;
-  [true,false].forEach(function(acik){
-    var mask=new Uint8Array(n);
-    for(var p=0;p<n;p++) mask[p] = acik ? (gri[p]>esik?1:0) : (gri[p]<=esik?1:0);
-    // kenara yapışan zemini ele: kenardan taşan blok muhtemelen masa
-    var blok=AKC._enBuyukBlok(mask,w,h);
-    if(!blok) return;
-    var kenarda = (blok.minx<=1 && blok.maxx>=w-2 && blok.miny<=1 && blok.maxy>=h-2);
-    if(kenarda) return;
-    var q=AKC._koseler(blok,w);
-    if(!AKC._dortgenGecerli(q,w,h,blok)) return;
-    if(!aday || blok.say>aday.say) aday={q:q, say:blok.say};
-  });
-  return aday?aday.q:null;
+
+  function dene(esik, sinirla){
+    var aday=null, disBlok=null;
+    [true,false].forEach(function(acik){
+      var mask=new Uint8Array(n);
+      for(var p=0;p<n;p++){
+        if(sinirla && !sinirla[p]) continue;
+        mask[p] = acik ? (gri[p]>esik?1:0) : (gri[p]<=esik?1:0);
+      }
+      var r=AKC._bloklar(mask,w,h,true);
+      if(r.dis && (!disBlok || r.dis.say>disBlok.say)) disBlok=r.dis;
+      if(!r.ic) return;
+      var q=AKC._koseler(r.ic,w);
+      if(!AKC._dortgenGecerli(q,w,h,r.ic)) return;
+      if(!aday || r.ic.say>aday.say) aday={q:q, say:r.ic.say};
+    });
+    return {aday:aday, dis:disBlok};
+  }
+
+  // 1. geçiş: tüm kare
+  var g1=dene(AKC._otsu(gri,n), null);
+  if(g1.aday) return g1.aday.q;
+
+  // 2. geçiş: kadrajı dolduran şeyin (föy kağıdı / masa) İÇİNDE ara.
+  // "Beyaz kağıdın üstündeki açık gri etiket" ancak böyle bulunur — eşik
+  // sadece kağıdın pikselleriyle yeniden hesaplanır.
+  var dis=g1.dis;
+  if(dis && dis.say>n*0.25 && dis.say<n*0.99){
+    var icinde=new Uint8Array(n);
+    for(var k=0;k<dis.px.length;k++) icinde[dis.px[k]]=1;
+    var g2=dene(AKC._otsuAlt(gri, dis.px), icinde);
+    if(g2.aday) return g2.aday.q;
+  }
+  return null;
 };
 
 /* ── 2) Perspektif düzeltme (homografi) ──
@@ -22315,6 +22384,15 @@ AKC._dongu = function(){
     try{ q=AKC._bul(kucuk); }catch(e){ q=null; }
     var octx=ov.getContext('2d');
     octx.clearRect(0,0,ov.width,ov.height);
+    // Kılavuz çerçeve — etiket bulunamazsa buraya hizalayıp çekilir,
+    // böylece hiçbir zaman saçma bir kırpma çıkmaz.
+    if(!q){
+      var kv=AKC._kilavuz(vw,vh);
+      octx.strokeStyle='rgba(255,255,255,.85)'; octx.lineWidth=Math.max(2,vw*0.004);
+      octx.setLineDash([vw*0.03, vw*0.022]);
+      octx.strokeRect(kv[0],kv[1],kv[2],kv[3]);
+      octx.setLineDash([]);
+    }
     if(q){
       var olc=vw/aw;
       var buyuk=q.map(function(p){ return [p[0]*olc, p[1]*olc]; });
@@ -22340,7 +22418,7 @@ AKC._dongu = function(){
       if(hazir && AKC._el('akcOto').checked){ AKC._sabit=-999; setTimeout(AKC.cek,120); }
     }else{
       AKC._quad=null; AKC._sabit=0;
-      if(du) du.textContent='Etiketi kadraja al — düz ve kontrast bir zemin iyi olur';
+      if(du) du.textContent='Etiketi çerçeveye getir — bulamazsam çerçeveyi kırparım';
     }
   }
   cancelAnimationFrame(AKC._raf);
@@ -22378,11 +22456,20 @@ AKC.dosyadan = function(input){
   rd.readAsDataURL(f);
   input.value='';
 };
+// Kadrajın ortasındaki kılavuz dikdörtgen [x,y,w,h] — etiket oranına yakın
+AKC._kilavuz = function(w,h){
+  var kw=w*0.74, kh=Math.min(h*0.62, kw*0.42);
+  return [(w-kw)/2, (h-kh)/2, kw, kh];
+};
 AKC._kareAl = function(cv, quad){
   AKC._kare=cv;
-  AKC._kose = quad ? quad.map(function(p){ return [p[0],p[1]]; })
-                   : [[cv.width*0.12,cv.height*0.18],[cv.width*0.88,cv.height*0.18],
-                      [cv.width*0.88,cv.height*0.82],[cv.width*0.12,cv.height*0.82]];
+  if(quad){
+    AKC._kose = quad.map(function(p){ return [p[0],p[1]]; });
+  }else{
+    // Etiket bulunamadı → kılavuz çerçeve kırpılır (kullanıcı köşeleri düzeltebilir)
+    var kv=AKC._kilavuz(cv.width, cv.height);
+    AKC._kose = [[kv[0],kv[1]],[kv[0]+kv[2],kv[1]],[kv[0]+kv[2],kv[1]+kv[3]],[kv[0],kv[1]+kv[3]]];
+  }
   AKC._kamerayiDurdur();
   AKC._goster('Kose');
   AKC._koseCiz();
@@ -22453,7 +22540,20 @@ AKC.kirp = function(){
   var hh=Math.max(24, Math.round(hw*h/w));
   var out=AKC._duzlestir(cv, k, hw, hh);
   AKC._beyazDenge(out);
-  AKC._kirpUrl=out.toDataURL('image/jpeg', AKC.KALITE);
+  // Numune buluta gidiyor (telefonda çekip PC'den yazdırabilmek için):
+  // sınırı aşarsa önce kalite, sonra boyut düşürülür.
+  var url=out.toDataURL('image/jpeg', AKC.KALITE);
+  var kal=AKC.KALITE, gen=hw;
+  while(url.length>AKC.MAX_BYTE && kal>0.42){
+    kal-=0.08; url=out.toDataURL('image/jpeg', kal);
+  }
+  while(url.length>AKC.MAX_BYTE && gen>320){
+    gen=Math.round(gen*0.8);
+    var kk=document.createElement('canvas'); kk.width=gen; kk.height=Math.max(20,Math.round(gen*hh/hw));
+    kk.getContext('2d').drawImage(out,0,0,kk.width,kk.height);
+    url=kk.toDataURL('image/jpeg', kal);
+  }
+  AKC._kirpUrl=url;
   AKC._sonucGoster();
 };
 AKC._sonucGoster = function(){
