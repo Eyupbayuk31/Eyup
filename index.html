@@ -13837,6 +13837,13 @@ function deleteUser(idx){
   if(!confirm(target.username + ' silinsin mi?')) return;
   users.splice(idx,1);
   authSaveUsers(users);
+  // TOMBSTONE — yoksa silinen kullanıcı geri geliyordu.
+  // Kullanıcıların sayısal id'si yok; bulut kimliği itemId()'de
+  // 'u_'+kucuk_harf_kullanici_adi olarak üretiliyor. Silme yalnızca bu
+  // cihazda uygulanınca, kullanıcının hâlâ listesinde durduğu başka bir
+  // cihaz (çoğu zaman silinen kişinin kendi telefonu) açılışta onu
+  // "bulutta yok, bende var" sayıp geri itiyordu.
+  try{ _addTombstones(['u_' + String(target.username).toLowerCase()]); }catch(_){}
   renderUserList();
   toast('Kullanıcı silindi','info');
 }
@@ -18368,10 +18375,23 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
   window.authSaveUsers = saveUsers;
   // ─────────────────────────────────────────────────────────
 
+  // Hesabı silinmiş kullanıcı kendi cihazında açık kalmasın. Bulut senkronu
+  // kullanıcı listesini güncelleyince burada yakalanır. Liste boşsa /
+  // okunamadıysa dokunmuyoruz — herkesi dışarı atmayalım.
+  function hesapDuruyorMu(){
+    try{
+      const kim = localStorage.getItem(LAST_USER_KEY);
+      if(!kim) return true;
+      const raw = JSON.parse(localStorage.getItem(USERS_KEY) || 'null');
+      if(!Array.isArray(raw) || !raw.length) return true;
+      return raw.some(u => u && String(u.username).toLowerCase() === String(kim).toLowerCase());
+    }catch(e){ return true; }
+  }
   function isAuthed(){
     try {
       const flag = (localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY)) === '1';
       if(!flag) return false;
+      if(!hesapDuruyorMu()){ clearAuth(); return false; }
       // Hareketsizlik zaman aşımı: son etkinlikten 20 dk geçtiyse oturum düşer
       const exp = parseInt(localStorage.getItem(AUTH_EXP_KEY) || '0', 10);
       if(exp && Date.now() > exp){
