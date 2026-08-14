@@ -7947,8 +7947,9 @@ function generatePDF(id, type, mode) {
     item.olcular.forEach(o => {
       html += `<tr><td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;
     });
-    const _km=korToplamMetre(item);
-    html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}${_km>0?` &nbsp;·&nbsp; ≈ ${Math.round(_km*10)/10} m`:''}</div>`;
+    // Yazdirma/PDF ciktisinda metre karsiligi YAZILMAZ — olcu (cm & adet)
+    // modunda irsaliyede sadece adet gorunsun.
+    html += `</tbody></table><div class="total-row">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
 
   if (type === 'dantel') {
