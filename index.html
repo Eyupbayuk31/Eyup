@@ -21337,22 +21337,28 @@ AK._renderColorPage = function(pdf, c){
   // ---- ÇIKIŞ ATÖLYESİ ----
   // Föy atölyeye gidiyor; hangi atölyenin işi olduğu uzaktan okunmalı.
   // Sayfanın ortasında, geniş bir bant hâlinde basılır.
-  if(AK.state.atolye){
-    var abH=15;
-    need(abH+4);
-    pdf.setFillColor(240,243,249); pdf.setDrawColor(198,206,222); pdf.setLineWidth(0.4);
-    pdf.rect(M, y, cw, abH, 'FD');
-    pdf.setFillColor.apply(pdf,ACC); pdf.rect(M, y, 2.2, abH, 'F');
-    pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
-    T('ÇIKIŞ ATÖLYESİ', M+cw/2, y+5, {align:'center'});
+  // Atölye seçilmemişse bant yine basılır — elle yazmak için boş satır bırakır
+  // (kullanıcı atölye adını föyün ortasına elle yazıyordu).
+  var _atolye = (AK.state.atolye||'').trim();
+  var abH=18;
+  need(abH+4);
+  pdf.setFillColor(240,243,249); pdf.setDrawColor(198,206,222); pdf.setLineWidth(0.4);
+  pdf.rect(M, y, cw, abH, 'FD');
+  pdf.setFillColor.apply(pdf,ACC); pdf.rect(M, y, 2.6, abH, 'F');
+  pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
+  T('ÇIKIŞ ATÖLYESİ', M+cw/2, y+5.4, {align:'center'});
+  if(_atolye){
     pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold');
-    // Uzun atölye adı banda sığsın
-    var _ad=AK._tr(AK.state.atolye), _ps=17;
+    var _ad=AK._tr(_atolye), _ps=21;              // uzaktan okunsun
     pdf.setFontSize(_ps);
-    while(_ps>9 && pdf.getTextWidth(_ad) > cw-12){ _ps-=0.5; pdf.setFontSize(_ps); }
-    pdf.text(_ad, M+cw/2, y+12.2, {align:'center'});
-    y+=abH+5;
+    while(_ps>10 && pdf.getTextWidth(_ad) > cw-14){ _ps-=0.5; pdf.setFontSize(_ps); }
+    pdf.text(_ad, M+cw/2, y+14, {align:'center'});
+  }else{
+    // Elle yazmak için çizgi
+    pdf.setDrawColor(170,180,198); pdf.setLineWidth(0.4);
+    pdf.line(M+cw*0.22, y+13.6, M+cw*0.78, y+13.6);
   }
+  y+=abH+5;
   // ---- adet dökümü ----
   var beds=AK._foySizes(c); // sadece adedi olan bedenler (XXS/3XL yoksa yazma)
   var tot=beds.reduce(function(s,b){return s+(parseInt(c.adet[b[0]],10)||0);},0);
