@@ -21259,7 +21259,7 @@ AK.tag = function(id,name,type){
 // ================= FÖY + PDF =================
 AK.buildFoyHtml = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
-  var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
+  var files=(c.files||[]).filter(function(f){ return !AK.gizliMi(f) && order.indexOf(f.type)>=0; });
   files.sort(function(a,b){ return order.indexOf(a.type)-order.indexOf(b.type); });
   var foyBeds=AK._foySizes(c);
   var tot=foyBeds.reduce(function(s,b){ return s+(parseInt(c.adet[b[0]],10)||0); },0);
@@ -21331,9 +21331,28 @@ AK._renderColorPage = function(pdf, c){
   T((c.renk||'—'), M, y+2);
   var asamaLbl = AK.state.asama==='dikim'?'Dikim':'Ütü Paket';
   pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
-  T('Aksesuar Kontrol Föyü · '+asamaLbl+(AK.state.atolye?(' · '+AK.state.atolye):''), W-M, y+2, {align:'right'});
+  T('Aksesuar Kontrol Föyü · '+asamaLbl, W-M, y+2, {align:'right'});
   y+=6;
   line(); y+=5;
+  // ---- ÇIKIŞ ATÖLYESİ ----
+  // Föy atölyeye gidiyor; hangi atölyenin işi olduğu uzaktan okunmalı.
+  // Sayfanın ortasında, geniş bir bant hâlinde basılır.
+  if(AK.state.atolye){
+    var abH=15;
+    need(abH+4);
+    pdf.setFillColor(240,243,249); pdf.setDrawColor(198,206,222); pdf.setLineWidth(0.4);
+    pdf.rect(M, y, cw, abH, 'FD');
+    pdf.setFillColor.apply(pdf,ACC); pdf.rect(M, y, 2.2, abH, 'F');
+    pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
+    T('ÇIKIŞ ATÖLYESİ', M+cw/2, y+5, {align:'center'});
+    pdf.setTextColor.apply(pdf,INK); pdf.setFont('helvetica','bold');
+    // Uzun atölye adı banda sığsın
+    var _ad=AK._tr(AK.state.atolye), _ps=17;
+    pdf.setFontSize(_ps);
+    while(_ps>9 && pdf.getTextWidth(_ad) > cw-12){ _ps-=0.5; pdf.setFontSize(_ps); }
+    pdf.text(_ad, M+cw/2, y+12.2, {align:'center'});
+    y+=abH+5;
+  }
   // ---- adet dökümü ----
   var beds=AK._foySizes(c); // sadece adedi olan bedenler (XXS/3XL yoksa yazma)
   var tot=beds.reduce(function(s,b){return s+(parseInt(c.adet[b[0]],10)||0);},0);
@@ -21609,13 +21628,25 @@ AK._recBlob = function(r){
         if(r.po) c.po=r.po;
         if(r.model) c.model=r.model;   // kayıttaki model korunsun (yeniden basımda aynı çıksın)
         if(r.toptan) c.toptan=r.toptan;
+        // Föyden çıkarılan etiketler yeniden basımda da çıkmasın (2. bilgisayardan
+        // yazdırınca geri geliyordu — arşiv sıfırdan okunduğu için).
+        if(r.gizliler && r.gizliler.length){
+          c._gizliler=r.gizliler.slice();
+          (c.files||[]).forEach(function(ff){ if(r.gizliler.indexOf(ff.name)>=0) ff._gizli=true; });
+        }
         var st={model:AK.state.model, asama:AK.state.asama, atolye:AK.state.atolye};
         // Aşama: üstte SEÇİLİ olan aşama öncelikli (kullanıcı Ütü Paket seçtiyse
         // kayıttan Ütü Paket föyü çıksın); yoksa kaydın son aşaması.
         var useAsama = st.asama || r.asama || 'dikim';
         AK.state.model=r.model||st.model; AK.state.asama=useAsama; AK.state.atolye=r.atolye||'';
-        try{ var pdf=AK.buildPdf(c); return pdf.output('blob'); }
-        finally{ AK.state.model=st.model; AK.state.asama=st.asama; AK.state.atolye=st.atolye; }
+        // Gelen numune fotoğrafları PDF'e senkron çiziliyor: önce belleğe al.
+        // Yoksa kaydı başka bilgisayardan bastığında fotoğraf yerine kesik
+        // çizgili kutu çıkıyordu.
+        var _geri=function(){ AK.state.model=st.model; AK.state.asama=st.asama; AK.state.atolye=st.atolye; };
+        return AK.gelenHazir(c).catch(function(){}).then(function(){
+          try{ var pdf=AK.buildPdf(c); return pdf.output('blob'); }
+          finally{ _geri(); }
+        }, function(){ _geri(); return null; });
       });
     });
   }
@@ -21638,8 +21669,9 @@ AK.generateAll = function(mode){
   if(!AK.state.model){ alert('Önce Model Kodu girin (veya dosya yükleyin).'); return; }
   var withFiles=AK.state.colors.filter(function(c){return c.files&&c.files.length;});
   if(!withFiles.length){ alert('Kaydedilecek/oluşturulacak renk yok — arşiv yükleyin.'); return; }
-  // Föy senkron çiziliyor: gelen numune görselleri önce belleğe alınmalı
-  if(AK.gelenMod()==='foto' && !AK._gelenYuklendi){
+  // Föy senkron çiziliyor: gelen numune görselleri önce belleğe alınmalı.
+  // 'save' modunda PDF çizilmiyor — beklemeye gerek yok.
+  if(mode!=='save' && AK.gelenMod()==='foto' && !AK._gelenYuklendi){
     AK._gelenYuklendi=true;
     return Promise.all(withFiles.map(function(c){ return AK.gelenHazir(c); }))
       .catch(function(){})
@@ -21652,7 +21684,7 @@ AK.generateAll = function(mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk varsa güncellenir
-  withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null) }, 300); });
+  withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice() }, 300); });
   if(typeof toast==='function') toast(mode==='save'?(withFiles.length+' renk kaydedildi ✓'):(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓'),'success');
 };
 
@@ -21674,15 +21706,16 @@ AK.generate = function(id, mode){
   var c=AK._c(id); if(!c) return;
   if(!AK.state.model){ alert('Önce Model Kodu girin.'); return; }
   if(!c.files){ alert('Önce bu renk için ZIP yükleyin.'); return; }
-  // Föy senkron çiziliyor: gelen numune görselleri önce belleğe alınmalı
-  if(AK.gelenMod()==='foto' && !AK._gelenYuklendi){
+  // Föy senkron çiziliyor: gelen numune görselleri önce belleğe alınmalı.
+  // 'save' modunda PDF çizilmiyor — beklemeye gerek yok.
+  if(mode!=='save' && AK.gelenMod()==='foto' && !AK._gelenYuklendi){
     AK._gelenYuklendi=true;
     return AK.gelenHazir(c).then(function(){ AK._gelenYuklendi=false; AK.generate(id, mode); })
                            .catch(function(){ AK._gelenYuklendi=false; AK.generate(id, mode); });
   }
   var order=AK.STAGE_ORDER[AK.state.asama];
-  var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
-  if(!have.length){ alert('Bu aşamaya ait aksesuar bulunamadı. Bilinmeyen dosyaları etiketleyin.'); return; }
+  var have=(c.files||[]).filter(function(f){ return !AK.gizliMi(f) && order.indexOf(f.type)>=0; });
+  if(!have.length){ alert('Bu aşamaya ait aksesuar bulunamadı. Bilinmeyen dosyaları etiketleyin (ya da föyden çıkardıklarınızı geri alın).'); return; }
   var cMdl=c.model||AK.state.model;   // rengin kendi barkodundaki model öncelikli
   var fname=((cMdl||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf';
   // 'save' modunda PDF açılmaz/yazdırılmaz — sadece kayıt oluşturulur (arşiv buluta gider).
@@ -21693,7 +21726,7 @@ AK.generate = function(id, mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
-  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), types:have.map(function(f){return f.type;}) }, 200);
+  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice(), types:have.map(function(f){return f.type;}) }, 200);
   if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi ✓ (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓'),'success');
 };
 
