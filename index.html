@@ -20677,9 +20677,30 @@ AK._colorHex = function(renk){
   for(var k in map){ if(r.indexOf(k)>=0) return map[k]; }
   return null;
 };
+// Föyden çıkarılmış (gizlenmiş) aksesuar. Arşivde bir modelin hem beyaz hem
+// siyah dokuması gelebiliyor; hangisi takılacaksa diğeri föye basılmasın diye
+// karttan çıkarılabiliyor. Silinmiyor — tek tıkla geri alınıyor.
+AK.gizliMi = function(f){ return !!(f && f._gizli); };
+AK.foydenCikar = function(cid, name){
+  var c=AK._c(cid); if(!c) return;
+  var f=(c.files||[]).filter(function(x){ return x.name===name; })[0]; if(!f) return;
+  f._gizli = true;
+  if(!Array.isArray(c._gizliler)) c._gizliler=[];
+  if(c._gizliler.indexOf(name)<0) c._gizliler.push(name);
+  AK.renderColors();
+  if(typeof toast==='function') toast(((f.label||(AK.TYPES[f.type]&&AK.TYPES[f.type].label))||'Etiket')+' föyden çıkarıldı','info');
+};
+AK.foyeAl = function(cid, name){
+  var c=AK._c(cid); if(!c) return;
+  var f=(c.files||[]).filter(function(x){ return x.name===name; })[0]; if(!f) return;
+  delete f._gizli;
+  c._gizliler=(c._gizliler||[]).filter(function(n){ return n!==name; });
+  AK.renderColors();
+  if(typeof toast==='function') toast('Föye geri eklendi','success');
+};
 AK._missingFor = function(c){
   var order=AK.STAGE_ORDER[AK.state.asama];
-  var have=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
+  var have=(c.files||[]).filter(function(f){ return !AK.gizliMi(f) && order.indexOf(f.type)>=0; });
   var haveT={}; have.forEach(function(f){ haveT[f.type]=true; if(f.full){ haveT.icbarkod=true; haveT.yikama=true; } }); // birleşik hem barkod hem yıkama sayılır
   return order.filter(function(t){ return AK.TYPES[t].req && !haveT[t]; }).map(function(t){ return AK.TYPES[t].label; });
 };
@@ -20780,13 +20801,27 @@ AK.matchesHtml = function(c){
         '<select class="form-input ak-m-tag" onchange="AK.tag('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\',this.value)"><option value="">— tipini seç —</option>'+opts+'<option value="__ignore">Yoksay</option></select>'+
         '</div></div>';
     }
+    var _ad=f.name.replace(/'/g,"\\'");
+    // Föyden çıkarılmış: soluk gösterilir, tek tıkla geri alınır
+    if(AK.gizliMi(f)){
+      return '<div class="ak-match ak-m-gizli" title="Föye basılmıyor">'+
+        '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas '+(ICON[f.type]||'fa-file')+'"></i></span><img src="'+(f.images[0]||'')+'"></div>'+
+        '<div class="ak-m-meta"><div class="ak-m-type">'+(f.label||AK.TYPES[f.type].label)+' <span class="ak-m-cikti">föyde yok</span></div>'+
+        '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.code||'')+'</div>'+
+        '<button class="ak-m-geri" onclick="AK.foyeAl('+c.id+',\''+_ad+'\')" title="Föye geri ekle">'+
+          '<i class="fas fa-rotate-left"></i> Geri al</button>'+
+        '</div>'+
+      '</div>';
+    }
     return '<div class="ak-match'+(f._manuel?' ak-m-manuel':'')+'">'+
       '<div class="ak-m-img"><span class="ak-m-ico"><i class="fas '+(ICON[f.type]||'fa-file')+'"></i></span><img src="'+(f.images[0]||'')+'"></div>'+
       '<div class="ak-m-meta"><div class="ak-m-type">'+(f.label||AK.TYPES[f.type].label)+(f._manuel?' <span class="ak-m-el">kütüphane</span>':'')+'</div>'+
       '<div class="ak-m-sub">'+(f.renk?f.renk+' · ':'')+(f.images.length>1?f.images.length+' sayfa · ':'')+(f.code||'')+'</div>'+
       ((f.note||f._uiNot)?'<div style="font-size:10px;color:var(--warning);font-weight:600;margin-top:4px;line-height:1.3;">» '+(f.note||f._uiNot)+'</div>':'')+
       '</div>'+
-      (f._manuel?'<button class="ak-m-x" title="Karttan çıkar" onclick="AK.libCikar('+c.id+',\''+f.name.replace(/'/g,"\\'")+'\')"><i class="fas fa-xmark"></i></button>':'')+
+      (f._manuel
+        ? '<button class="ak-m-x" title="Karttan çıkar" onclick="AK.libCikar('+c.id+',\''+_ad+'\')"><i class="fas fa-xmark"></i></button>'
+        : '<button class="ak-m-x" title="Föyden çıkar — bu etiket basılmasın" onclick="AK.foydenCikar('+c.id+',\''+_ad+'\')"><i class="fas fa-xmark"></i></button>')+
       AK.gelenHtml(c, f.type)+
       '</div>';
   }).join('');
@@ -20880,7 +20915,10 @@ AK._colorsFromMerged = function(m, prev){
     // Kütüphaneden elle eklenen etiketler arşiv yeniden kurulunca kaybolmasın
     var manuel=(p._manuel||[]).slice();
     manuel.forEach(function(mf){ if(!files.some(function(x){ return x.name===mf.name; })) files.push(mf); });
-    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', model:col.model||null, po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice(), _manuel:manuel };
+    // Föyden çıkarılanlar da korunsun (arşiv yeniden okununca geri gelmesin)
+    var gizliler=(p._gizliler||[]).slice();
+    if(gizliler.length) files.forEach(function(ff){ if(gizliler.indexOf(ff.name)>=0) ff._gizli=true; });
+    return { id:p.id||(AK._cid++), code:col.code||null, renk:effRenk||'', model:col.model||null, po:p.po||m.detected.po||'', adet:adet, files:files, zipNames:AK._zipNames.slice(), _manuel:manuel, _gizliler:gizliler };
   });
 };
 AK.rebuildColors = function(){
@@ -21267,7 +21305,7 @@ AK._tr = function(s){ return (''+(s==null?'':s)).replace(/[İıŞşĞğ]/g, func
 AK._CAP = { dokuma:20, icbarkod:66, yikama:62, fiyat:70, susKarti:64, kartArka:64, lisansKarti:64, lisansEtiketi:26 };
 AK._renderColorPage = function(pdf, c){
   var order=AK.STAGE_ORDER[AK.state.asama];
-  var files=(c.files||[]).filter(function(f){ return order.indexOf(f.type)>=0; });
+  var files=(c.files||[]).filter(function(f){ return !AK.gizliMi(f) && order.indexOf(f.type)>=0; });
   files.sort(function(a,b){ return order.indexOf(a.type)-order.indexOf(b.type); });
   var W=210,H=297,M=12, y=M, cw=W-2*M;
   var ACC=[63,63,176], INK=[22,34,59], MUT=[100,110,130];
