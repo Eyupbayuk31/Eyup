@@ -15033,8 +15033,35 @@ body:has(#akcModal.show) .v8-fab-menu{ display:none !important; }
   border:1px solid color-mix(in srgb, var(--primary) 32%, transparent);border-radius:999px;padding:1px 6px;margin-left:5px;vertical-align:middle;}
 .ak-m-x{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;cursor:pointer;
   border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);font-size:11px;line-height:1;
-  display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
+  display:flex;align-items:center;justify-content:center;transition:all .15s ease;
+  opacity:0;}
+.ak-match:hover .ak-m-x, .ak-m-x:focus-visible{ opacity:1; }
+@media (hover:none){ .ak-m-x{ opacity:1; } }
 .ak-m-x:hover{color:var(--danger);border-color:var(--danger);}
+
+/* Föyden çıkarılmış etiket — silinmedi, tek tıkla geri gelir */
+.ak-m-gizli{
+  opacity:.5; filter:grayscale(.75);
+  border-style:dashed !important;
+  transition:opacity .15s ease, filter .15s ease;
+}
+.ak-m-gizli:hover{ opacity:.78; filter:grayscale(.35); }
+.ak-m-cikti{
+  font-size:9.5px; font-weight:700; letter-spacing:.3px;
+  padding:1px 6px; border-radius:999px; margin-left:5px; vertical-align:middle;
+  background:color-mix(in srgb, var(--danger) 16%, transparent);
+  border:1px solid color-mix(in srgb, var(--danger) 34%, transparent);
+  color:var(--danger);
+}
+.ak-m-geri{
+  display:inline-flex; align-items:center; gap:5px; margin-top:8px;
+  padding:5px 10px; border-radius:8px; cursor:pointer;
+  border:1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  background:color-mix(in srgb, var(--primary) 12%, transparent);
+  color:var(--primary); font-family:inherit; font-size:10.5px; font-weight:700;
+  transition:background .15s ease;
+}
+.ak-m-geri:hover{ background:color-mix(in srgb, var(--primary) 22%, transparent); }
 
 /* Kütüphane modali — kendi içinde kayar, .modal'ın overflow:hidden'ına takılmaz */
 .ak-lib-modal{
