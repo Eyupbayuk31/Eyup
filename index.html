@@ -2121,8 +2121,7 @@ if(typeof Chart==='undefined'){
           <div class="kor-toplam">
             <span class="kor-toplam-l" id="korToplamLbl">Toplam Adet</span>
             <span class="kor-toplam-v"><span id="korToplam">0</span><em id="korToplamBirim">adet</em></span>
-            <span class="kor-toplam-alt" id="korToplamAlt"></span>
-          </div>
+                  </div>
         </div>
       </div>
       <div class="card" style="margin-top:14px;">
@@ -7451,8 +7450,7 @@ function showDetailUni(id,type){
   if(type==='kordon' && !korMetreMi(item) && item.olcular && item.olcular.length){
     html += sec('fa-bezier-curve','Kordon Ölçüleri', _n0(item.totalAdet||0)+' adet',
       `<div class="dt-chips">${item.olcular.map(o=>chip(o.cm+' cm', _n0(o.adet), 'adet')).join('')}</div>`);
-    const _m=korToplamMetre(item);
-    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet'+(_m>0?('  ·  ≈ '+(Math.round(_m*10)/10).toLocaleString('tr')+' m'):''));
+    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet');
   }
   if(type==='toptan' && item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
@@ -8318,11 +8316,6 @@ function korSetMod(tip, hatirlatma){
 }
 // Bir kaydın metre mi adet mi olduğunu söyler
 function korMetreMi(item){ return !!item && item.olcuTipi==='metre'; }
-// Adet modunda cm × adet toplamı metreye çevrilir (bilgi amaçlı)
-function korToplamMetre(item){
-  if(korMetreMi(item)) return +(item.metre||0);
-  return (((item&&item.olcular)||[]).reduce((t,o)=>t+((+o.cm||0)*(+o.adet||0)),0))/100;
-}
 // Listelerde/PDF'te gösterilecek miktar metni: "1.250 adet" ya da "800 m"
 function korMiktar(item){
   if(korMetreMi(item)){
@@ -8336,25 +8329,20 @@ function korUpdateTotal(){
   const el=document.getElementById('korToplam');
   const lbl=document.getElementById('korToplamLbl');
   const bir=document.getElementById('korToplamBirim');
-  const alt=document.getElementById('korToplamAlt');
   if(metre){
     const m=+(document.getElementById('korMetre')?.value||0);
     if(el) el.textContent=(Math.round(m*10)/10).toLocaleString('tr');
     if(lbl) lbl.textContent='Toplam Metre';
     if(bir) bir.textContent='m';
-    if(alt) alt.textContent='';
     return;
   }
-  let t=0, cmTop=0;
+  let t=0;
   for(let i=1;i<=10;i++){
-    const a=+(document.getElementById('kor_'+i+'_a')?.value||0);
-    const c=+(document.getElementById('kor_'+i+'_cm')?.value||0);
-    t+=a; cmTop+=a*c;
+    t+=+(document.getElementById('kor_'+i+'_a')?.value||0);
   }
   if(el) el.textContent=t.toLocaleString('tr');
   if(lbl) lbl.textContent='Toplam Adet';
   if(bir) bir.textContent='adet';
-  if(alt) alt.textContent = cmTop>0 ? ('≈ '+(Math.round(cmTop/10)/10).toLocaleString('tr')+' m kordon') : '';
 }
 
 function saveKordon(){
