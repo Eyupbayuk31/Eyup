@@ -13566,6 +13566,18 @@ window.uygulamayiYenile = async function(){
   // Önbellek zaten silindi; adrese damga eklemeye gerek yok (adres temiz kalsın)
   location.reload();
 };
+// F5 / Ctrl+R de aynı yenilemeyi yapsın. Tarayıcının kendi yenilemesi
+// önbelleği temizlemez ve bekleyen yeni sürümü devreye almaz; kullanıcı
+// F5'e basıp "güncelleme gelmedi" derdi. Ctrl+Shift+R'ye karışmıyoruz.
+document.addEventListener('keydown', function(e){
+  var k=(e.key||'').toLowerCase();
+  var f5   = (e.key==='F5' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey);
+  var ctrR = ((e.ctrlKey||e.metaKey) && k==='r' && !e.shiftKey && !e.altKey);
+  if(!f5 && !ctrR) return;
+  e.preventDefault(); e.stopPropagation();
+  try{ window.uygulamayiYenile(); }catch(_){ location.reload(); }
+}, true);
+
 // Yeni sürüm hazır olduğunda düğmede küçük bir nokta yansın
 window._yeniSurumVar = function(){
   var n=document.getElementById('tbYenileNokta'); if(n) n.hidden=false;
