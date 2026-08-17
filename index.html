@@ -13537,32 +13537,43 @@ registerSW();
       kayıt, ayar gibi veriler localStorage/IndexedDB'de, onlara dokunulmaz),
    3) sayfayı yeniden yükler.
    Böylece hem güncelleme anında gelir hem de takılan ekran düzelir.        */
+// Hiçbir adım sonsuza kadar bekletmesin: verilen süre dolunca yola devam.
+function _yenileSure(sozVer, ms){
+  return Promise.race([
+    Promise.resolve().then(sozVer).catch(function(){}),
+    new Promise(function(r){ setTimeout(r, ms); })
+  ]).catch(function(){});
+}
+window._yenileniyor = false;
 window.uygulamayiYenile = async function(){
+  if(window._yenileniyor) return;          // zaten yeniliyor
+  window._yenileniyor = true;
   var btn = document.getElementById('tbYenile');
-  if(btn){ if(btn.dataset.calisiyor==='1') return; btn.dataset.calisiyor='1'; btn.classList.add('donuyor'); }
+  if(btn){ btn.dataset.calisiyor='1'; btn.classList.add('donuyor'); }
+  // GÜVENLİK AĞI: aşağıdaki adımların herhangi biri takılırsa (ağ yavaş,
+  // servis çalışanı cevap vermiyor) yine de 5 saniye içinde yeniden yükle.
+  // Bu olmadan PWA'da F5 hiç tepki vermiyor gibi görünüyordu.
+  var bekci = setTimeout(function(){ try{ location.reload(); }catch(_){} }, 5000);
   try{ if(typeof toast==='function') toast('Yenileniyor…','info'); }catch(_){}
   // Bekleyen yazmalar varsa buluta gitsin (kaybolmasın)
-  try{
-    if(window._fsInflight && window._fsInflight.size){
-      await Promise.race([ Promise.allSettled(Array.from(window._fsInflight)),
-                           new Promise(function(r){ setTimeout(r, 2500); }) ]);
-    }
-  }catch(_){}
-  try{
-    if('serviceWorker' in navigator){
-      var reg = await navigator.serviceWorker.getRegistration();
-      if(reg){
-        try{ await reg.update(); }catch(_){}
-        if(reg.waiting){ try{ reg.waiting.postMessage('skipWaiting'); }catch(_){} }
-      }
-    }
-  }catch(_){}
-  try{
-    if(window.caches && caches.keys){
-      var adlar = await caches.keys();
-      await Promise.all(adlar.map(function(a){ return caches.delete(a); }));
-    }
-  }catch(_){}
+  if(window._fsInflight && window._fsInflight.size){
+    await _yenileSure(function(){ return Promise.allSettled(Array.from(window._fsInflight)); }, 2500);
+  }
+  // Bekleyen yeni sürümü devreye al
+  await _yenileSure(async function(){
+    if(!('serviceWorker' in navigator)) return;
+    var reg = await navigator.serviceWorker.getRegistration();
+    if(!reg) return;
+    await _yenileSure(function(){ return reg.update(); }, 1800);
+    if(reg.waiting){ try{ reg.waiting.postMessage('skipWaiting'); }catch(_){} }
+  }, 2200);
+  // Uygulama kabuğu önbelleğini temizle (veriler localStorage/IndexedDB'de, dokunulmuyor)
+  await _yenileSure(async function(){
+    if(!window.caches || !caches.keys) return;
+    var adlar = await caches.keys();
+    await Promise.all(adlar.map(function(a){ return caches.delete(a); }));
+  }, 2000);
+  clearTimeout(bekci);
   // Önbellek zaten silindi; adrese damga eklemeye gerek yok (adres temiz kalsın)
   location.reload();
 };
