@@ -1467,6 +1467,13 @@ if(typeof Chart==='undefined'){
         <span class="tb-search-ph">Model, irsaliye veya menü ara…</span>
         <span class="tb-search-kbd">Ctrl K</span>
       </button>
+      <!-- Masaüstüne kurulan PWA'da tarayıcının yenile tuşu yok; güncelleme
+           gelince ya da ekran takılınca buradan yenilenir. -->
+      <button type="button" class="tb-yenile" id="tbYenile" onclick="uygulamayiYenile()"
+              title="Sayfayı yenile — güncellemeyi al, takılan ekranı düzelt">
+        <i class="fas fa-rotate"></i>
+        <span class="tb-yenile-nokta" id="tbYenileNokta" hidden></span>
+      </button>
       <div style="position:relative;">
         <div class="notif-bell" onclick="toggleNotifPanel()">
           <i class="fas fa-bell"></i>
@@ -13503,6 +13510,7 @@ function registerSW() {
         if(!y) return;
         y.addEventListener('statechange', function(){
           if(y.state === 'installed' && navigator.serviceWorker.controller){
+            try{ if(typeof window._yeniSurumVar==='function') window._yeniSurumVar(); }catch(_){}
             try{ reg.waiting && reg.waiting.postMessage('skipWaiting'); }catch(_){}
           }
         });
@@ -13521,6 +13529,50 @@ function registerSW() {
   });
 }
 registerSW();
+
+/* ══════════════ UYGULAMAYI YENİLE ══════════════
+   Masaüstüne kurulan PWA'da tarayıcının yenile tuşu yok. Bu düğme:
+   1) bekleyen yeni sürüm varsa onu devreye alır,
+   2) uygulama kabuğu önbelleğini temizler (SADECE dosyalar — irsaliye,
+      kayıt, ayar gibi veriler localStorage/IndexedDB'de, onlara dokunulmaz),
+   3) sayfayı yeniden yükler.
+   Böylece hem güncelleme anında gelir hem de takılan ekran düzelir.        */
+window.uygulamayiYenile = async function(){
+  var btn = document.getElementById('tbYenile');
+  if(btn){ if(btn.dataset.calisiyor==='1') return; btn.dataset.calisiyor='1'; btn.classList.add('donuyor'); }
+  try{ if(typeof toast==='function') toast('Yenileniyor…','info'); }catch(_){}
+  // Bekleyen yazmalar varsa buluta gitsin (kaybolmasın)
+  try{
+    if(window._fsInflight && window._fsInflight.size){
+      await Promise.race([ Promise.allSettled(Array.from(window._fsInflight)),
+                           new Promise(function(r){ setTimeout(r, 2500); }) ]);
+    }
+  }catch(_){}
+  try{
+    if('serviceWorker' in navigator){
+      var reg = await navigator.serviceWorker.getRegistration();
+      if(reg){
+        try{ await reg.update(); }catch(_){}
+        if(reg.waiting){ try{ reg.waiting.postMessage('skipWaiting'); }catch(_){} }
+      }
+    }
+  }catch(_){}
+  try{
+    if(window.caches && caches.keys){
+      var adlar = await caches.keys();
+      await Promise.all(adlar.map(function(a){ return caches.delete(a); }));
+    }
+  }catch(_){}
+  // Önbellek zaten silindi; adrese damga eklemeye gerek yok (adres temiz kalsın)
+  location.reload();
+};
+// Yeni sürüm hazır olduğunda düğmede küçük bir nokta yansın
+window._yeniSurumVar = function(){
+  var n=document.getElementById('tbYenileNokta'); if(n) n.hidden=false;
+  var b=document.getElementById('tbYenile');
+  if(b) b.title='Yeni sürüm hazır — yenile';
+};
+
 
 // --- Online/Offline detection ---
 function updateOnlineStatus() {
