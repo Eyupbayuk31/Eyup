@@ -4842,6 +4842,20 @@ tr:hover .table-actions-more{
 .notif-bell{position:relative;cursor:pointer;width:40px;height:40px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;color:var(--text-main);font-size:16px;transition:all 0.2s;}
 .notif-bell:hover{background:var(--primary);color:var(--on-primary,#fff);border-color:var(--primary);}
 .notif-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;animation:notifPulse 2s infinite;}
+
+/* Yenile — masaüstü PWA'da tarayıcının yenile tuşu olmadığı için */
+.tb-yenile{position:relative;cursor:pointer;width:40px;height:40px;padding:0;
+  border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;color:var(--text-main);font-size:15px;
+  transition:all .2s;flex:0 0 auto;}
+.tb-yenile:hover{background:var(--primary);color:var(--on-primary,#fff);border-color:var(--primary);}
+.tb-yenile:active{transform:scale(.94);}
+.tb-yenile.donuyor i{animation:tbDon .8s linear infinite;}
+@keyframes tbDon{to{transform:rotate(360deg);}}
+/* Yeni sürüm hazır → küçük yeşil nokta */
+.tb-yenile-nokta{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;
+  background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.85);animation:notifPulse 2s infinite;}
+@media (max-width:640px){ .tb-yenile{width:38px;height:38px;font-size:14px;} }
 @keyframes notifPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 .notif-panel{display:none;position:absolute;top:50px;right:0;width:340px;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:90;max-height:400px;overflow-y:auto;animation:modalIn 0.25s;}
 .notif-panel.show{display:block;}
