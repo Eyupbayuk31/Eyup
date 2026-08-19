@@ -15836,13 +15836,37 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
    sadece TEK fark ele alınır: kordonda beden yok, satırlar yalnız
    cm bazlı olduğu için tablo bir sütun eksik.
    ============================================================ */
-.kt-rowhead, .kt-row{ grid-template-columns:90px 1fr 95px 95px 105px 85px 95px 118px; }
-.kt-addrow-grid{ grid-template-columns:130px 1fr 180px auto; }
+/* CM & Beden modeli fermuarla aynı 9 sütunu kullanır (varsayılan .ft-row).
+   Ham kordon (metre) modelinde beden/cm yok — 7 sütun. */
+.km-rowhead, .km-row{ grid-template-columns:1fr 110px 105px 115px 95px 105px 118px; }
+.kt-addrow-adet{ grid-template-columns:118px 96px 1fr 170px auto; }
+.kt-addrow-metre{ grid-template-columns:1fr 190px auto; }
 @media(max-width:760px){
-  .kt-addrow-grid{ grid-template-columns:1fr 1fr; }
-  .kt-rowhead{ display:none; }
-  .kt-row{ grid-template-columns:1fr 1fr; }
+  .kt-addrow-adet, .kt-addrow-metre{ grid-template-columns:1fr 1fr; }
+  .km-rowhead{ display:none; }
+  .km-row{ grid-template-columns:1fr 1fr; }
 }
+
+/* Ölçü tipi rozeti — kartta ve model detayında */
+.kt-birim-rozet{
+  display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px;
+  color:var(--primary); background:color-mix(in srgb, var(--primary) 12%, transparent);
+  border:1px solid color-mix(in srgb, var(--primary) 26%, var(--border));
+}
+.kt-birim-rozet.metre{
+  color:var(--warning, #f59e0b); background:color-mix(in srgb, var(--warning, #f59e0b) 12%, transparent);
+  border-color:color-mix(in srgb, var(--warning, #f59e0b) 30%, var(--border));
+}
+.kt-birim-rozet i{ font-size:9px; opacity:.9; }
+
+/* Ölçü tipi seçimi kilitliyken (satır girilmiş model) */
+.kor-mod.kilitli{ opacity:.6; }
+.kor-mod.kilitli .kor-mod-b{ cursor:not-allowed; }
+
+/* KPI değerinde ikinci birim: "930 + 1.250 m" */
+.ft-kpi-val em{ font-size:12.5px; font-style:normal; font-weight:700; color:var(--text-muted); margin-left:4px; }
 
 /* ── Takip satırı düzenleme (Fermuar + Kordon ortak) ──
    Satır, ızgara düzeninden çıkıp kendi form düzenine geçer; hangi satırın
