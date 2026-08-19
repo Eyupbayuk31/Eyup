@@ -14003,19 +14003,60 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 /* ═══════════════════════════════════════════════════════════════
    FERMUAR TAKİP (STOK) — tamamı tema-token tabanlı
    ═══════════════════════════════════════════════════════════════ */
-#page-fermuar-takip .ft-toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; font-size:12.5px; font-weight:600; color:var(--text-muted); }
-#page-fermuar-takip .ft-toggle input{ position:absolute; opacity:0; width:0; height:0; }
-.ft-toggle-track{ width:38px; height:21px; border-radius:999px; background:var(--bg-input); border:1px solid var(--border); position:relative; transition:background .2s, border-color .2s; flex-shrink:0; }
-.ft-toggle-dot{ position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--text-dim); transition:transform .22s cubic-bezier(.4,0,.2,1), background .2s; }
+/* ── Anahtar (switch) ──────────────────────────────────────────────
+   ÖNEMLİ: Bu iki kural eskiden #page-fermuar-takip'e bağlıydı; bileşen
+   başka bir sayfada kullanılınca (Kordon Takip) yerleşim uygulanmıyor,
+   ham işaret kutusu görünüyor ve etiket anahtarın altında kalıyordu.
+   Artık sayfadan bağımsız — nereye konursa aynı çalışır. */
+.ft-toggle{
+  display:inline-flex; align-items:center; gap:9px; cursor:pointer; user-select:none;
+  font-size:12.5px; font-weight:700; color:var(--text-muted); line-height:1;
+  padding:6px 11px 6px 8px; border-radius:10px; border:1px solid transparent;
+  transition:background .18s, border-color .18s, color .18s;
+}
+.ft-toggle input{ position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+.ft-toggle:hover{ background:color-mix(in srgb, var(--text-dim) 9%, transparent); color:var(--text-dim); }
+.ft-toggle-track{ width:40px; height:22px; border-radius:999px; background:var(--bg-input); border:1px solid var(--border); position:relative; transition:background .2s, border-color .2s; flex-shrink:0; }
+.ft-toggle-dot{ position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--text-dim); transition:transform .22s cubic-bezier(.4,0,.2,1), background .2s, box-shadow .2s; }
 .ft-toggle input:checked + .ft-toggle-track{ background:color-mix(in srgb, var(--primary) 30%, var(--bg-input)); border-color:var(--primary); }
-.ft-toggle input:checked + .ft-toggle-track .ft-toggle-dot{ transform:translateX(17px); background:var(--primary); box-shadow:0 0 8px var(--primary-glow); }
+.ft-toggle input:checked + .ft-toggle-track .ft-toggle-dot{ transform:translateX(18px); background:var(--primary); box-shadow:0 0 8px var(--primary-glow); }
+.ft-toggle-lbl{ white-space:nowrap; }
+/* Durum rozeti: açık mı kapalı mı, okumadan anlaşılsın */
+.ft-toggle-durum{
+  font-size:9px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+  padding:3px 7px; border-radius:999px; white-space:nowrap;
+  background:color-mix(in srgb, var(--text-dim) 15%, transparent); color:var(--text-muted);
+  transition:background .2s, color .2s;
+}
+.ft-toggle-durum::after{ content:'KAPALI'; }
+.ft-toggle input:checked ~ .ft-toggle-lbl{ color:var(--primary); }
+.ft-toggle input:checked ~ .ft-toggle-durum{ background:color-mix(in srgb, var(--primary) 20%, transparent); color:var(--primary); }
+.ft-toggle input:checked ~ .ft-toggle-durum::after{ content:'AÇIK'; }
+.ft-toggle:has(input:checked){ background:color-mix(in srgb, var(--primary) 8%, transparent); border-color:color-mix(in srgb, var(--primary) 22%, transparent); }
+/* Klavyeyle gezenler için görünür odak halkası (fare kullanınca çıkmaz) */
+.ft-toggle:has(input:focus-visible){ border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
 
-/* Sayfa başlığı + araç çubuğu (Fermuar Takip) */
+/* Sayfa başlığı + araç çubuğu (Fermuar / Kordon Takip) */
 .ft-page-header{ align-items:center; gap:16px; }
 .ft-page-badge{ width:42px; height:42px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); box-shadow:0 8px 20px -8px var(--primary-glow); }
 .ft-toolbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-.ft-toolbar-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:5px 8px; border:1px solid var(--border); border-radius:12px; background:color-mix(in srgb, var(--text-dim) 4%, transparent); }
-.ft-toolbar-group .ft-toggle{ margin:0 4px 0 2px; }
+.ft-toolbar-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:5px 6px; border:1px solid var(--border); border-radius:12px; background:color-mix(in srgb, var(--text-dim) 4%, transparent); }
+.ft-toolbar-group .ft-toggle{ margin:0 2px 0 0; }
+/* Yenile düğmesindeki "yeni veri var" noktası */
+.ft-refresh-dot{
+  position:absolute; top:-5px; right:-5px; width:12px; height:12px; border-radius:50%;
+  background:var(--warning, #f59e0b); border:2px solid var(--bg-card);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--warning, #f59e0b) 40%, transparent);
+  animation:ftDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes ftDotPulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.22); opacity:.75; } }
+@media(prefers-reduced-motion:reduce){ .ft-refresh-dot{ animation:none; } }
+@media(max-width:640px){
+  .ft-toolbar{ width:100%; }
+  .ft-toolbar-group{ width:100%; justify-content:space-between; }
+  .ft-toolbar > .btn{ width:100%; justify-content:center; }
+  .ft-toggle{ flex:1 1 100%; justify-content:flex-start; }
+}
 
 /* Arama satırı + canlı sayım çipi */
 .ft-view-tabs{ display:flex; gap:8px; margin-top:14px; }
@@ -15802,3 +15843,46 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
   .kt-rowhead{ display:none; }
   .kt-row{ grid-template-columns:1fr 1fr; }
 }
+
+/* ── Takip satırı düzenleme (Fermuar + Kordon ortak) ──
+   Satır, ızgara düzeninden çıkıp kendi form düzenine geçer; hangi satırın
+   düzenlendiği soldaki renkli şeritten belli olur. */
+.tk-edit{
+  padding:12px 10px;
+  background:color-mix(in srgb, var(--primary) 7%, transparent);
+  border-left:3px solid var(--primary);
+  border-radius:0 10px 10px 0;
+}
+.tk-edit-form{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+/* NOT: genel form kuralı `input[type="number"]` (0-1-1) olduğu için tek
+   sınıfla genişlik veremiyoruz — kasten iki sınıflı seçici kullanılıyor.
+   min-height de ezilmezse kutular 44px kalıp forma sığmıyor. */
+.tk-edit .tk-in{ margin:0; width:auto; height:38px; min-height:38px; padding:8px 12px; font-size:12.5px; }
+.tk-edit .tk-in-beden{ flex:0 0 126px; width:126px; }
+.tk-edit .tk-in-cm{ flex:0 0 92px; width:92px; }
+.tk-edit .tk-in-renk{ flex:1 1 130px; min-width:110px; }
+.tk-edit .tk-in-sip{ flex:0 0 126px; width:126px; }
+.tk-edit-acts{ display:flex; gap:6px; margin-left:auto; flex-shrink:0; }
+.tk-edit-not{
+  font-size:11px; color:var(--text-muted); margin-top:9px; line-height:1.5;
+}
+.tk-edit-not i{ color:var(--primary); margin-right:5px; }
+.tk-edit-not b{ color:var(--text-dim); font-variant-numeric:tabular-nums; }
+@media(max-width:760px){
+  .tk-edit .tk-in-beden,.tk-edit .tk-in-cm,.tk-edit .tk-in-sip{ flex:1 1 calc(50% - 4px); width:auto; }
+  .tk-edit .tk-in-renk{ flex-basis:100%; }
+  .tk-edit-acts{ width:100%; margin-left:0; }
+  .tk-edit-acts .btn{ flex:1; justify-content:center; }
+}
+
+/* Teslimat modalı: "Tamamı geldi" hızlı doldurma */
+.ft-rc-hizli{
+  display:inline-flex; align-items:center; gap:7px; margin:2px 0 12px;
+  padding:7px 13px; border-radius:999px; cursor:pointer;
+  font-size:11.5px; font-weight:700;
+  color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);
+  border:1px dashed color-mix(in srgb, var(--primary) 40%, var(--border));
+  transition:background .18s, border-color .18s, transform .12s;
+}
+.ft-rc-hizli:hover{ background:color-mix(in srgb, var(--primary) 18%, transparent); border-style:solid; }
+.ft-rc-hizli:active{ transform:scale(.97); }
