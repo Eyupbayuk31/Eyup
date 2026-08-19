@@ -6590,6 +6590,8 @@ function ftGeneratePdf(){
   const models=_ftAll().filter(m=>seciliIds.includes(m.id)).sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
 
   let sectionsHtml='', tSip=0,tGel=0,tEksik=0,kalemSayisi=0;
+  const tekModel = models.length===1;
+  let tekKunye='', tekMeta='';
   models.forEach(m=>{
     let sizes=_ftSizesSorted(m); // zaten cm cm sıralı
     const allRows=sizes.map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z), stok:_ftStok(z)}));
@@ -6602,6 +6604,10 @@ function ftGeneratePdf(){
     const mSip=allRows.reduce((s,r)=>s+r.siparis,0), mGel=allRows.reduce((s,r)=>s+r.gelen,0), mEksik=allRows.reduce((s,r)=>s+r.eksik,0);
     tSip+=mSip; tGel+=mGel; tEksik+=mEksik;
     const hiddenCount = allRows.length - rows.length;
+    if(tekModel){
+      tekKunye = `<span class="hd-model">${esc(m.modelKodu)}</span>`;
+      tekMeta = `${m.renk?('Renk: '+esc(m.renk)+' · '):''}${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}${hiddenCount>0?(' · '+hiddenCount+' beden tam geldi (gizlendi)'):''}`;
+    }
     const trRows=rows.map((r,i)=>`<tr${r.eksik>0?' class="mis"':''}>
       <td>${i+1}</td><td>${esc(r.beden)}</td><td><b>${r.cm!=null?r.cm+' cm':'—'}</b></td><td>${esc(r.renk)}</td>
       <td class="num">${r.siparis.toLocaleString('tr')}</td>
@@ -6609,11 +6615,13 @@ function ftGeneratePdf(){
       <td class="num${r.eksik>0?' bad':''}">${r.eksik>0?r.eksik.toLocaleString('tr'):'—'}</td>
       <td class="num">${r.stok.toLocaleString('tr')}</td>
     </tr>`).join('');
+    // Tek model seçildiyse künye sayfa başlığına taşınır — aynı bilgiyi
+    // iki blokta tekrarlamak hem yer yiyor hem gereksiz.
     sectionsHtml+=`<div class="msec">
-      <div class="msec-hd"><span class="msec-model">${esc(m.modelKodu)}</span>
+      ${tekModel?'':`<div class="msec-hd"><span class="msec-model">${esc(m.modelKodu)}</span>
         <span class="msec-meta">${m.renk?('Renk: '+esc(m.renk)+' · '):''}${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}${hiddenCount>0?(' · '+hiddenCount+' beden tam geldi (gizlendi)'):''}</span>
         <span class="msec-tot">Sipariş <b>${mSip.toLocaleString('tr')}</b> · Eksik <b>${mEksik.toLocaleString('tr')}</b></span>
-      </div>
+      </div>`}
       <table><thead><tr><th>#</th><th>Beden</th><th>CM</th><th>Renk</th><th style="text-align:right;">Sipariş</th><th style="text-align:right;">Gelen</th><th style="text-align:right;">EKSİK</th><th style="text-align:right;">Eldeki</th></tr></thead>
       <tbody>${trRows}</tbody></table>
     </div>`;
@@ -6639,9 +6647,14 @@ function ftGeneratePdf(){
   .sum b{display:block;font-size:18px;font-weight:800;color:#7c3aed;}
   .sum.mis b{color:#dc2626;}
   .sum span{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;font-weight:700;}
-  .msec{margin-bottom:22px;page-break-inside:avoid;}
+  .msec{margin-bottom:22px;}
   .msec-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 10px;background:#f3f0ff;border-radius:8px 8px 0 0;border:1px solid #ddd6fe;border-bottom:none;}
   .msec-model{font-size:15px;font-weight:800;color:#5b21b6;}
+  .hd-model{display:inline-block;margin-left:6px;padding:2px 10px;border-radius:6px;background:#ede9fe;border:1px solid #ddd6fe;color:#5b21b6;font-size:17px;font-weight:800;vertical-align:2px;}
+  .sum.tek{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .sum.tek div{padding:7px 10px;display:flex;align-items:baseline;justify-content:center;gap:7px;}
+  .sum.tek b{display:inline;font-size:16px;}
+  .sum.tek span{font-size:9px;}
   .msec-meta{font-size:10px;color:#6b7280;flex:1;}
   .msec-tot{font-size:11px;color:#dc2626;font-weight:700;}
   table{width:100%;border-collapse:collapse;}
@@ -6653,7 +6666,31 @@ function ftGeneratePdf(){
   tr.mis td{background:#fef2f2;}
   .ft{margin-top:20px;padding-top:10px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:9px;color:#9ca3af;}
   .note{margin-top:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;font-size:10.5px;color:#92400e;}
-  @media print{ .no-print{display:none !important;} body{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }
+  /* Baskida @page zaten 12mm bosluk biraktigi icin ekran dolgusu kalkar —
+     yoksa cift kenar boslugu olusuyor, icerik bosuna 2. sayfaya tasiyordu. */
+  @media print{
+    .no-print{display:none !important;}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0;max-width:none;}
+    .hd{margin-bottom:12px;padding-bottom:9px;}
+    .hd h1{font-size:17px;}
+    .sum{margin-bottom:13px;gap:8px;}
+    .sum div{padding:7px;}
+    .sum b{font-size:16px;}
+    .msec{margin-bottom:13px;}
+    .msec:last-of-type{margin-bottom:0;}
+    .msec-hd{padding:6px 9px;}
+    th{padding:5px 8px;}
+    td{padding:4px 8px;}
+    /* Uzun bir model listesi sayfaya sigmiyorsa TABLO bolunsun. Eskiden
+       bolumun tamamina "bolme" deniyordu; sigmayinca komple sonraki sayfaya
+       atliyor, 1. sayfa bombos kaliyordu (tek modelde bile 2-3 sayfa). */
+    .msec{ break-inside:auto; page-break-inside:auto; }
+    tr{ break-inside:avoid; page-break-inside:avoid; }
+    thead{ display:table-header-group; }   /* sutun basliklari her sayfada */
+    .msec-hd{ break-after:avoid; page-break-after:avoid; }
+    .ft{margin-top:11px;padding-top:7px;}
+    .note{margin-top:10px;padding:8px;}
+  }
   .no-print{position:fixed;top:10px;right:10px;z-index:999;display:flex;gap:8px;}
   .no-print button{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;}
 </style></head><body>
@@ -6663,13 +6700,13 @@ function ftGeneratePdf(){
   <button style="background:#6b7280;" onclick="window.close()">✕ Kapat</button>
 </div>
 <div class="hd">
-  <div><h1>🔗 Fermuar Eksik Listesi</h1><p>İrsaliye Pro — Eyüp · Model bazlı sipariş/teslimat durumu</p></div>
-  <div class="mt"><b>${models.length} model · ${kalemSayisi} kalem</b>${tarihStr}</div>
+  <div><h1>🔗 Fermuar Eksik Listesi${tekModel?(' '+tekKunye):''}</h1><p>${tekModel?('İrsaliye Pro — Eyüp · '+tekMeta):'İrsaliye Pro — Eyüp · Model bazlı sipariş/teslimat durumu'}</p></div>
+  <div class="mt"><b>${tekModel ? (kalemSayisi+' kalem') : (models.length+' model · '+kalemSayisi+' kalem')}</b>${tarihStr}</div>
 </div>
-<div class="sum">
-  <div><b>${tSip.toLocaleString('tr')}</b><span>Toplam Sipariş</span></div>
-  <div><b>${tGel.toLocaleString('tr')}</b><span>Toplam Gelen</span></div>
-  <div class="mis"><b>${tEksik.toLocaleString('tr')}</b><span>Toplam Eksik</span></div>
+<div class="sum${tekModel?' tek':''}">
+  <div><b>${tSip.toLocaleString('tr')}</b><span>${tekModel?'Sipariş':'Toplam Sipariş'}</span></div>
+  <div><b>${tGel.toLocaleString('tr')}</b><span>${tekModel?'Gelen':'Toplam Gelen'}</span></div>
+  <div class="mis"><b>${tEksik.toLocaleString('tr')}</b><span>${tekModel?'Eksik':'Toplam Eksik'}</span></div>
 </div>
 ${sectionsHtml}
 ${tEksik>0?`<div class="note">⚠️ Kırmızı satırlar eksik teslimatları gösterir. Toplam <b>${tEksik.toLocaleString('tr')} adet</b> fermuar bekleniyor.</div>`:''}
@@ -7434,6 +7471,8 @@ function ktGeneratePdf(){
   const models=_ktAll().filter(m=>seciliIds.includes(m.id)).sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
 
   let sectionsHtml='', tSip={adet:0,metre:0}, tGel={adet:0,metre:0}, tEksik={adet:0,metre:0}, kalemSayisi=0;
+  const tekModel = models.length===1;
+  let tekKunye='', tekMeta='';
   models.forEach(m=>{
     const mm=_ktMetreMi(m), BR=mm?'m':'adet';
     const S=v=>_ktSayi(v, mm);
@@ -7446,6 +7485,10 @@ function ktGeneratePdf(){
     const K=mm?'metre':'adet';
     tSip[K]+=mSip; tGel[K]+=mGel; tEksik[K]+=mEksik;
     const hiddenCount = allRows.length - rows.length;
+    if(tekModel){
+      tekKunye = `<span class="hd-model">${esc(m.modelKodu)}</span><span class="msec-birim">${mm?'HAM KORDON · METRE':'CM & BEDEN · ADET'}</span>`;
+      tekMeta = `${m.renk?('Renk: '+esc(m.renk)+' · '):''}${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}${hiddenCount>0?(' · '+hiddenCount+' satır tam geldi (gizlendi)'):''}`;
+    }
     const trRows=rows.map((r,i)=>`<tr${r.eksik>0?' class="mis"':''}>
       <td>${i+1}</td>${mm?'':`<td>${esc(r.beden)||'—'}</td><td><b>${r.cm!=null?r.cm+' cm':'—'}</b></td>`}<td${mm?' style="font-weight:700;"':''}>${esc(r.renk)}</td>
       <td class="num">${S(r.siparis)}</td>
@@ -7453,12 +7496,14 @@ function ktGeneratePdf(){
       <td class="num${r.eksik>0?' bad':''}">${r.eksik>0?S(r.eksik):'—'}</td>
       <td class="num">${S(r.stok)}</td>
     </tr>`).join('');
+    // Tek model seçildiyse künye sayfa başlığına taşınır — aynı bilgiyi
+    // iki blokta tekrarlamak hem yer yiyor hem gereksiz.
     sectionsHtml+=`<div class="msec">
-      <div class="msec-hd"><span class="msec-model">${esc(m.modelKodu)}</span>
+      ${tekModel?'':`<div class="msec-hd"><span class="msec-model">${esc(m.modelKodu)}</span>
         <span class="msec-birim">${mm?'HAM KORDON · METRE':'CM & BEDEN · ADET'}</span>
         <span class="msec-meta">${m.renk?('Renk: '+esc(m.renk)+' · '):''}${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}${hiddenCount>0?(' · '+hiddenCount+' satır tam geldi (gizlendi)'):''}</span>
         <span class="msec-tot">Sipariş <b>${S(mSip)} ${BR}</b> · Eksik <b>${S(mEksik)} ${BR}</b></span>
-      </div>
+      </div>`}
       <table><thead><tr><th>#</th>${mm?'':'<th>Beden</th><th>CM</th>'}<th>Renk</th><th style="text-align:right;">Sipariş (${BR})</th><th style="text-align:right;">Gelen</th><th style="text-align:right;">EKSİK</th><th style="text-align:right;">Eldeki</th></tr></thead>
       <tbody>${trRows}</tbody></table>
     </div>`;
@@ -7490,9 +7535,14 @@ function ktGeneratePdf(){
   .sum b{display:block;font-size:18px;font-weight:800;color:#7c3aed;}
   .sum.mis b{color:#dc2626;}
   .sum span{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;font-weight:700;}
-  .msec{margin-bottom:22px;page-break-inside:avoid;}
+  .msec{margin-bottom:22px;}
   .msec-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 10px;background:#f3f0ff;border-radius:8px 8px 0 0;border:1px solid #ddd6fe;border-bottom:none;}
   .msec-model{font-size:15px;font-weight:800;color:#5b21b6;}
+  .hd-model{display:inline-block;margin-left:6px;padding:2px 10px;border-radius:6px;background:#ede9fe;border:1px solid #ddd6fe;color:#5b21b6;font-size:17px;font-weight:800;vertical-align:2px;}
+  .sum.tek{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .sum.tek div{padding:7px 10px;display:flex;align-items:baseline;justify-content:center;gap:7px;}
+  .sum.tek b{display:inline;font-size:16px;}
+  .sum.tek span{font-size:9px;}
   .msec-birim{font-size:8.5px;font-weight:800;letter-spacing:.5px;color:#5b21b6;background:#ede9fe;border:1px solid #ddd6fe;border-radius:999px;padding:2px 8px;}
   .msec-meta{font-size:10px;color:#6b7280;flex:1;}
   .msec-tot{font-size:11px;color:#dc2626;font-weight:700;}
@@ -7505,7 +7555,31 @@ function ktGeneratePdf(){
   tr.mis td{background:#fef2f2;}
   .ft{margin-top:20px;padding-top:10px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:9px;color:#9ca3af;}
   .note{margin-top:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;font-size:10.5px;color:#92400e;}
-  @media print{ .no-print{display:none !important;} body{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }
+  /* Baskida @page zaten 12mm bosluk biraktigi icin ekran dolgusu kalkar —
+     yoksa cift kenar boslugu olusuyor, icerik bosuna 2. sayfaya tasiyordu. */
+  @media print{
+    .no-print{display:none !important;}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0;max-width:none;}
+    .hd{margin-bottom:12px;padding-bottom:9px;}
+    .hd h1{font-size:17px;}
+    .sum{margin-bottom:13px;gap:8px;}
+    .sum div{padding:7px;}
+    .sum b{font-size:16px;}
+    .msec{margin-bottom:13px;}
+    .msec:last-of-type{margin-bottom:0;}
+    .msec-hd{padding:6px 9px;}
+    th{padding:5px 8px;}
+    td{padding:4px 8px;}
+    /* Uzun bir model listesi sayfaya sigmiyorsa TABLO bolunsun. Eskiden
+       bolumun tamamina "bolme" deniyordu; sigmayinca komple sonraki sayfaya
+       atliyor, 1. sayfa bombos kaliyordu (tek modelde bile 2-3 sayfa). */
+    .msec{ break-inside:auto; page-break-inside:auto; }
+    tr{ break-inside:avoid; page-break-inside:avoid; }
+    thead{ display:table-header-group; }   /* sutun basliklari her sayfada */
+    .msec-hd{ break-after:avoid; page-break-after:avoid; }
+    .ft{margin-top:11px;padding-top:7px;}
+    .note{margin-top:10px;padding:8px;}
+  }
   .no-print{position:fixed;top:10px;right:10px;z-index:999;display:flex;gap:8px;}
   .no-print button{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;}
 </style></head><body>
@@ -7515,13 +7589,13 @@ function ktGeneratePdf(){
   <button style="background:#6b7280;" onclick="window.close()">✕ Kapat</button>
 </div>
 <div class="hd">
-  <div><h1>🪢 Kordon Eksik Listesi</h1><p>İrsaliye Pro — Eyüp · Model bazlı sipariş/teslimat durumu</p></div>
-  <div class="mt"><b>${models.length} model · ${kalemSayisi} kalem</b>${tarihStr}</div>
+  <div><h1>🪢 Kordon Eksik Listesi${tekModel?(' '+tekKunye):''}</h1><p>${tekModel?('İrsaliye Pro — Eyüp · '+tekMeta):'İrsaliye Pro — Eyüp · Model bazlı sipariş/teslimat durumu'}</p></div>
+  <div class="mt"><b>${tekModel ? (kalemSayisi+' kalem') : (models.length+' model · '+kalemSayisi+' kalem')}</b>${tarihStr}</div>
 </div>
-<div class="sum">
-  <div><b>${_ozet(tSip)}</b><span>Toplam Sipariş</span></div>
-  <div><b>${_ozet(tGel)}</b><span>Toplam Gelen</span></div>
-  <div class="mis"><b>${_ozet(tEksik)}</b><span>Toplam Eksik</span></div>
+<div class="sum${tekModel?' tek':''}">
+  <div><b>${_ozet(tSip)}</b><span>${tekModel?'Sipariş':'Toplam Sipariş'}</span></div>
+  <div><b>${_ozet(tGel)}</b><span>${tekModel?'Gelen':'Toplam Gelen'}</span></div>
+  <div class="mis"><b>${_ozet(tEksik)}</b><span>${tekModel?'Eksik':'Toplam Eksik'}</span></div>
 </div>
 ${sectionsHtml}
 ${(tEksik.adet>0||tEksik.metre>0)?`<div class="note">⚠️ Kırmızı satırlar eksik teslimatları gösterir. Toplam <b>${_ozet(tEksik)}</b> kordon bekleniyor.</div>`:''}
@@ -8882,15 +8956,25 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const imgWidth = pageWidth;
     const imgHeight = canvas.height * imgWidth / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+
+    // Kıl payı taşma (ör. 311mm içerik / 297mm sayfa) eskiden neredeyse boş
+    // bir 2. sayfa açıyordu. Bu kadar taşmada içeriği azıcık küçültüp tek
+    // sayfaya sığdırıyoruz — matbaadaki "sığdırarak yazdır" gibi.
+    const TASMA_PAYI = 1.10;   // %10'a kadar
+    if (imgHeight > pageHeight && imgHeight <= pageHeight * TASMA_PAYI) {
+      const h = pageHeight;
+      const w = imgWidth * (pageHeight / imgHeight);
+      pdf.addImage(imgData, 'JPEG', (pageWidth - w) / 2, 0, w, h);
+      pdf.save(filename);
+      toast('PDF indirildi 📥', 'success');
+      return;
+    }
+
+    // Gerçekten uzun içerik: sayfa sayısı yuvarlama gürültüsünden etkilenmesin
+    const sayfaSayisi = Math.max(1, Math.ceil((imgHeight - 0.5) / pageHeight));
+    for (let i = 0; i < sayfaSayisi; i++) {
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, -i * pageHeight, imgWidth, imgHeight);
     }
     pdf.save(filename);
     toast('PDF indirildi 📥', 'success');
