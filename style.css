@@ -15788,3 +15788,17 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
 }
 .ios-ip-x:hover{ color:var(--text-main); background:var(--glass); }
 @media (min-width:640px){ #iosInstallHint{ left:auto; right:20px; max-width:380px; } }
+
+/* ============================================================
+   KORDON TAKİP — Fermuar Takip ile birebir aynı görsel dil.
+   Bütün kart/KPI/modal stilleri .ft-* sınıflarından gelir; burada
+   sadece TEK fark ele alınır: kordonda beden yok, satırlar yalnız
+   cm bazlı olduğu için tablo bir sütun eksik.
+   ============================================================ */
+.kt-rowhead, .kt-row{ grid-template-columns:90px 1fr 95px 95px 105px 85px 95px 118px; }
+.kt-addrow-grid{ grid-template-columns:130px 1fr 180px auto; }
+@media(max-width:760px){
+  .kt-addrow-grid{ grid-template-columns:1fr 1fr; }
+  .kt-rowhead{ display:none; }
+  .kt-row{ grid-template-columns:1fr 1fr; }
+}
