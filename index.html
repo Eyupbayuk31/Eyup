@@ -19744,15 +19744,109 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
       </div>
     </div>
 
+    <!-- Yardım & bilgi -->
+    <button type="button" class="lg-yardim-ac" id="lgYardimAc" onclick="lgBilgiAc()">
+      <i class="fas fa-circle-question"></i> Yardım &amp; Destek
+    </button>
+
     <!-- Alt çubuk: marka + meta -->
     <div class="footer-note">
       <span class="fn-l">EYÜP <em>YBR</em></span>
       <span class="fn-r">Bulut senkron <span class="fn-dot"></span></span>
     </div>
   </div>
+
+  <!-- ========== YARDIM & BİLGİ PANELİ ========== -->
+  <div id="lgBilgi" onclick="if(event.target===this)lgBilgiKapat()" aria-hidden="true">
+    <div class="lgb-kart" role="dialog" aria-modal="true" aria-labelledby="lgbBaslik">
+      <button type="button" class="lgb-x" onclick="lgBilgiKapat()" aria-label="Kapat">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <div class="lgb-ust">
+        <span class="lgb-ikon"><i class="fas fa-headset"></i></span>
+        <div>
+          <h3 id="lgbBaslik">Yardım ve Destek</h3>
+          <p>Soru, sorun veya yeni özellik talebi için bana yaz</p>
+        </div>
+      </div>
+
+      <a class="lgb-mail" href="mailto:eyup91k@gmail.com">
+        <i class="fas fa-envelope"></i>
+        <span>eyup91k@gmail.com</span>
+        <i class="fas fa-arrow-up-right-from-square lgb-mail-ok"></i>
+      </a>
+      <button type="button" class="lgb-kopyala" onclick="lgMailKopyala(this)">
+        <i class="fas fa-copy"></i> <span>Adresi kopyala</span>
+      </button>
+
+      <div class="lgb-ayrac"></div>
+
+      <ul class="lgb-notlar">
+        <li class="uyari">
+          <i class="fas fa-shield-halved"></i>
+          <div><b>Hackleme girişimlerine karşı önlem alınmıştır.</b>
+          Sistemdeki tüm hareketler kullanıcı, cihaz ve saat bilgisiyle kayıt altına alınır.
+          Yetkisiz erişim denemeleri tespit edilir ve yasal işlem başlatılır.</div>
+        </li>
+        <li>
+          <i class="fas fa-code"></i>
+          <div>Bu uygulama <b>Eyüp Bayuk</b> tarafından kodlanmıştır. Tüm hakları saklıdır.</div>
+        </li>
+        <li class="tehlike">
+          <i class="fas fa-triangle-exclamation"></i>
+          <div><b>Bu yazılım satılık değildir.</b> Size satıldıysa <b>dolandırıldınız</b> —
+          lütfen yukarıdaki adresten bildirin.</div>
+        </li>
+      </ul>
+
+      <div class="lgb-alt">İrsaliye Pro · eyupybr.com</div>
+    </div>
+  </div>
 </div>
 
 <script>
+// ── Giriş ekranı: Yardım & Destek paneli ──
+window.lgBilgiAc = function(){
+  var el=document.getElementById('lgBilgi'); if(!el) return;
+  el.classList.add('acik'); el.setAttribute('aria-hidden','false');
+  setTimeout(function(){ var x=document.querySelector('#lgBilgi .lgb-x'); if(x) x.focus(); }, 60);
+};
+window.lgBilgiKapat = function(){
+  var el=document.getElementById('lgBilgi'); if(!el) return;
+  el.classList.remove('acik'); el.setAttribute('aria-hidden','true');
+  var b=document.getElementById('lgYardimAc'); if(b) b.focus();
+};
+window.lgMailKopyala = function(btn){
+  var adres='eyup91k@gmail.com';
+  var bitir=function(ok){
+    if(!btn) return;
+    var yazi=btn.querySelector('span'), ikon=btn.querySelector('i');
+    var eskiYazi=yazi?yazi.textContent:'', eskiIkon=ikon?ikon.className:'';
+    if(yazi) yazi.textContent = ok ? 'Kopyalandı' : adres;
+    if(ikon) ikon.className = ok ? 'fas fa-check' : 'fas fa-copy';
+    btn.classList.toggle('oldu', !!ok);
+    setTimeout(function(){
+      if(yazi) yazi.textContent=eskiYazi; if(ikon) ikon.className=eskiIkon;
+      btn.classList.remove('oldu');
+    }, 1800);
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(adres).then(function(){ bitir(true); }, function(){ bitir(false); });
+      return;
+    }
+  }catch(_){}
+  // Pano yoksa adresi düğmede göster, kullanıcı elle alsın
+  bitir(false);
+};
+// Esc ile kapansın
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Escape') return;
+  var el=document.getElementById('lgBilgi');
+  if(el && el.classList.contains('acik')){ e.stopPropagation(); lgBilgiKapat(); }
+}, true);
+
 (function(){
   'use strict';
   const AUTH_KEY = 'irsaliye_auth_v1';
