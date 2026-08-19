@@ -459,7 +459,7 @@
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
       'atolyeler','stoklar','stokHareketler','recycleBin',
-      'irsaliye_users','aksesuarlar','waybillTemplates','fermuarTakip','telaKontrol',
+      'irsaliye_users','aksesuarlar','waybillTemplates','fermuarTakip','kordonTakip','telaKontrol',
       'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
       'app_settings',        // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
       'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
@@ -1084,6 +1084,7 @@
           // her zamanki gibi tazelenir (liste arka planda guncel tutulur).
           const listEl = document.getElementById('page-list');
           const ftEl   = document.getElementById('page-fermuar-takip');
+          const ktEl   = document.getElementById('page-kordon-takip');
           if(listEl && listEl.classList.contains('active')){
             window._listRefreshPending = true;
             try { if(typeof window._markListRefreshPending === 'function') window._markListRefreshPending(); } catch(e){}
@@ -1094,6 +1095,9 @@
             // Fermuar Takip acikken ayni sebeple otomatik yeniden cizmeyiz —
             // model detay modali acik olabilir, form doldurulmus olabilir.
             try { if(typeof window._markFtRefreshPending === 'function') window._markFtRefreshPending(); } catch(e){}
+          } else if(ktEl && ktEl.classList.contains('active') && key==='kordonTakip'){
+            // Kordon Takip acikken de ayni sebeple otomatik cizmeyiz.
+            try { if(typeof window._markKtRefreshPending === 'function') window._markKtRefreshPending(); } catch(e){}
           } else {
             refreshUI();
           }
@@ -1422,6 +1426,7 @@ if(typeof Chart==='undefined'){
         <a href="javascript:void(0)" data-page="stok" onclick="showPage('stok')"><i class="fas fa-triangle-exclamation"></i><span>Genel Stok</span></a>
         <a href="javascript:void(0)" data-page="aksesuar" onclick="showPage('aksesuar')"><i class="fas fa-tags"></i><span>Aksesuar Takip</span></a>
         <a href="javascript:void(0)" data-page="fermuar-takip" onclick="showPage('fermuar-takip')"><i class="fas fa-link"></i><span>Fermuar Takip</span></a>
+        <a href="javascript:void(0)" data-page="kordon-takip" onclick="showPage('kordon-takip')"><i class="fas fa-bezier-curve"></i><span>Kordon Takip</span></a>
         <a href="javascript:void(0)" data-page="tela-kontrol" onclick="showPage('tela-kontrol')"><i class="fas fa-layer-group"></i><span>Tela Kontrol</span></a>
       </div>
     </div>
@@ -2069,8 +2074,14 @@ if(typeof Chart==='undefined'){
       <div class="grid-auto">
         <div class="card">
           <div class="card-title"><i class="fas fa-info-circle"></i> Sevk Bilgileri</div>
+          <div id="korStockMode" class="f-stock-mode"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
-            <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="korModel" placeholder="Örn: KOR-001"></div>
+            <div class="form-group" style="position:relative;"><label>Model Kodu *</label>
+              <div class="f-ac-wrap">
+                <input class="form-input" id="korModel" placeholder="Örn: KOR-001" autocomplete="off">
+                <div class="f-ac" id="korModelAc"></div>
+              </div>
+            </div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="korTarih" type="date"></div>
             <div class="form-group" style="grid-column:span 2;"><label>Atölye *</label>
               <select class="form-input" id="korAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
@@ -2348,6 +2359,150 @@ if(typeof Chart==='undefined'){
         <div style="display:flex;gap:10px;margin-top:8px;">
           <button class="btn btn-primary" style="flex:1;" onclick="ftSaveReceive()"><i class="fas fa-check"></i> Teslimatı Kaydet</button>
           <button class="btn btn-secondary" onclick="ftCloseReceiveModal()">İptal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== KORDON TAKİP (STOK) ==========
+         Fermuar Takip ile birebir aynı sistem; tek fark kordonda beden yok,
+         satırlar sadece cm bazlı. Görsel dil .ft-* sınıflarından gelir. -->
+    <div class="page" id="page-kordon-takip">
+      <div class="section-header ft-page-header">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span class="ft-page-badge"><i class="fas fa-bezier-curve"></i></span>
+          <div>
+            <h2 style="display:flex;align-items:center;gap:0;">Kordon Takip</h2>
+            <p>Model → tedarikçi/termin → cm cm satın alma/gelen. İrsaliye kesince otomatik düşer.</p>
+          </div>
+        </div>
+        <div class="ft-toolbar">
+          <div class="ft-toolbar-group">
+            <label class="ft-toggle" title="Açıkken, takipte kayıtlı olmayan kordon için irsaliye kesilemez ve kesince stok düşer">
+              <input type="checkbox" id="ktStockControl" onchange="ktToggleStockControl(this.checked)">
+              <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
+              <span class="ft-toggle-lbl">Stok kontrolü</span>
+            </label>
+            <button class="btn btn-secondary" id="ktRefreshBtn" onclick="ktManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="ktRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
+            <button class="btn btn-secondary" onclick="ktOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik</button>
+          </div>
+          <button class="btn btn-primary" onclick="ktOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Model</button>
+        </div>
+      </div>
+
+      <div class="ft-kpis" id="ktKpis"></div>
+
+      <div class="ft-view-tabs">
+        <button class="btn btn-sm rep-tab-btn active" id="ktTabActive" onclick="ktSetViewTab('active',this)"><i class="fas fa-list-check"></i> Aktif</button>
+        <button class="btn btn-sm rep-tab-btn" id="ktTabDone" onclick="ktSetViewTab('done',this)"><i class="fas fa-check-double"></i> Tamamlananlar</button>
+      </div>
+
+      <div class="ft-search-row">
+        <div class="ft-search-box">
+          <i class="fas fa-search"></i>
+          <input class="form-input" id="ktSearch" placeholder="Model, renk veya tedarikçi ara..." autocomplete="off" oninput="renderKordonTakip()">
+        </div>
+        <span class="ft-count-chip" id="ktCount">0 model</span>
+      </div>
+
+      <div class="ft-grid" id="ktGrid"></div>
+    </div>
+
+    <!-- Modal: Yeni / Düzenle Kordon Modeli -->
+    <div class="modal-overlay" id="ktOrderModal" onclick="if(event.target===this)ktCloseOrderModal()">
+      <div class="modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h3 style="font-weight:700;font-size:17px;" id="ktOrderTitle"><i class="fas fa-cart-plus" style="color:var(--primary);margin-right:7px;"></i>Yeni Kordon Modeli</h3>
+          <button onclick="ktCloseOrderModal()" class="ft-x"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+          <div class="form-group"><label>Model Kodu *</label><input class="form-input" id="ktModel" placeholder="Örn: KOR-001" autocomplete="off"></div>
+          <div class="form-group"><label>Renk</label><input class="form-input" id="ktRenk" placeholder="Örn: Siyah" autocomplete="off"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+          <div class="form-group"><label>Tedarikçi</label><input class="form-input" id="ktTedarikci" placeholder="Örn: EMR Tekstil" autocomplete="off"></div>
+          <div class="form-group"><label>Termin</label><input class="form-input" type="date" id="ktTermin" autocomplete="off"></div>
+        </div>
+        <div class="ft-hint"><i class="fas fa-circle-info"></i> Önce modeli açın; cm cm ölçüleri ve satın alma adetlerini sonraki ekranda (model detayında) gireceksiniz.</div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="ktSaveOrder()"><i class="fas fa-save"></i> Kaydet ve Devam Et</button>
+          <button class="btn btn-secondary" onclick="ktCloseOrderModal()">İptal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Kordon Model Detay — cm cm satırlar -->
+    <div class="modal-overlay" id="ktDetailModal" onclick="if(event.target===this)ktCloseDetailModal()">
+      <div class="modal ft-detail-modal">
+        <div class="ft-detail-head">
+          <div class="ft-detail-head-l">
+            <div class="ft-detail-model" id="ktDetailModel">—</div>
+            <div class="ft-detail-meta" id="ktDetailMeta"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
+            <button onclick="ktCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+
+        <div class="ft-detail-kpis" id="ktDetailKpis"></div>
+
+        <div class="ft-addrow">
+          <div class="ft-addrow-title"><i class="fas fa-ruler"></i> Yeni CM Ölçüsü Ekle</div>
+          <div class="ft-addrow-grid kt-addrow-grid">
+            <input class="form-input" type="number" id="ktRowCm" placeholder="CM *" min="0" step="0.1" autocomplete="off">
+            <input class="form-input" id="ktRowRenk" placeholder="Renk" autocomplete="off">
+            <input class="form-input" type="number" id="ktRowSiparis" placeholder="Satın Alma Adeti *" min="0" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ktAddSizeRow();}">
+            <button class="btn btn-primary" onclick="ktAddSizeRow()"><i class="fas fa-plus"></i> Ekle</button>
+          </div>
+        </div>
+
+        <div class="ft-rows" id="ktDetailRows"></div>
+      </div>
+    </div>
+
+    <!-- Modal: Kordon PDF / Eksik Listesi -->
+    <div class="modal-overlay" id="ktPdfModal" onclick="if(event.target===this)ktClosePdfModal()">
+      <div class="modal ft-pdf-modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-file-pdf" style="color:var(--primary);margin-right:7px;"></i>PDF / Eksik Listesi</h3>
+          <button onclick="ktClosePdfModal()" class="ft-x"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="ft-hint" style="margin-bottom:12px;"><i class="fas fa-circle-info"></i> Model seçin — hangi cm ölçüsünden kaç adet <b>eksik</b> (gelmesi gereken) kaldığını gösteren, tedarikçiye gönderilebilir bir liste oluşturulur.</div>
+        <div style="position:relative;margin-bottom:10px;">
+          <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+          <input class="form-input" id="ktPdfSearch" placeholder="Model veya tedarikçi ara..." autocomplete="off" oninput="ktPdfFilterModels()" style="padding-left:34px;">
+        </div>
+        <div class="ft-pdf-toolbar">
+          <span class="ft-pdf-summary" id="ktPdfSummary"><b id="ktPdfCount">0</b> model seçili · <b id="ktPdfEksikTotal">0</b> eksik</span>
+          <button class="ft-pdf-chip primary" onclick="ktPdfSelectOnlyMissing()" title="Yalnızca eksiği olanları seç"><i class="fas fa-filter"></i> Sadece eksik</button>
+          <button class="ft-pdf-chip" onclick="ktPdfSelectAll(true)" title="Tümünü seç"><i class="fas fa-check-double"></i> Tümü</button>
+          <button class="ft-pdf-chip" onclick="ktPdfSelectAll(false)" title="Seçimi temizle"><i class="fas fa-rotate-left"></i> Temizle</button>
+          <button class="ft-pdf-chip" id="ktPdfOnlyMissChip" onclick="ktPdfToggleOnlyMissing()" title="PDF çıktısında sadece eksiği olan satırları göster"><i class="fas fa-eye"></i> Çıktı: sadece eksik</button>
+        </div>
+        <div id="ktPdfModelList" class="ft-pdf-list"></div>
+        <div id="ktPdfEmpty" class="rep-empty-mini" style="display:none;">Aramanızla eşleşen model yok.</div>
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <button class="btn btn-primary" style="flex:1;" id="ktPdfGenBtn" onclick="ktGeneratePdf()"><i class="fas fa-file-pdf"></i> <span id="ktPdfGenLabel">PDF Oluştur</span></button>
+          <button class="btn btn-secondary" onclick="ktClosePdfModal()">İptal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Kordon Teslimat Gir -->
+    <div class="modal-overlay" id="ktReceiveModal" onclick="if(event.target===this)ktCloseReceiveModal()">
+      <div class="modal" style="max-width:420px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-truck-ramp-box" style="color:var(--primary);margin-right:7px;"></i>Teslimat Gir</h3>
+          <button onclick="ktCloseReceiveModal()" class="ft-x"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="ft-receive-ctx" id="ktReceiveCtx"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
+          <div class="form-group"><label>Gelen Adet *</label><input class="form-input" type="number" id="ktReceiveAdet" placeholder="Örn: 500" min="1" autocomplete="off"></div>
+          <div class="form-group"><label>Tarih</label><input class="form-input" type="date" id="ktReceiveTarih"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="ktSaveReceive()"><i class="fas fa-check"></i> Teslimatı Kaydet</button>
+          <button class="btn btn-secondary" onclick="ktCloseReceiveModal()">İptal</button>
         </div>
       </div>
     </div>
@@ -4182,7 +4337,7 @@ function groupFermuarBedenByCm(beden){
 window.groupFermuarBedenByCm = groupFermuarBedenByCm;
 
 // ==================== NAVIGATION ====================
-const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',akskontrol:'Aksesuar Kontrol',model:'Model Kartı','fermuar-takip':'Fermuar Takip','tela-kontrol':'Tela Kontrol',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
+const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',akskontrol:'Aksesuar Kontrol',model:'Model Kartı','fermuar-takip':'Fermuar Takip','kordon-takip':'Kordon Takip','tela-kontrol':'Tela Kontrol',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
 const bottomNavPages=['home','new','list','aksesuar','settings'];
 
 // Sayfa değişirken açık modal/panelleri kapat — yoksa modal yeni sayfanın
@@ -4226,6 +4381,7 @@ function showPage(page){
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
 
   if(page==='fermuar'){ try{ ftRenderStockMode(); }catch(_){} }
+  if(page==='kordon'){ try{ ktRenderStockMode(); }catch(_){} }
   if(page==='new'){ try{ nRenderSerbestMode(); _malOraniGoster(); }catch(_){} }
   if(page==='model'){ try{ MK.ciz(); setTimeout(function(){ var i=document.getElementById('mkInput'); if(i&&!i.value) i.focus(); }, 120); }catch(_){} }
   if(page==='akskontrol'){ try{ if(window.AK) AK.onOpen(); }catch(_){} }
@@ -6646,6 +6802,701 @@ function ftToggleStockMode(){
   ftRenderStockMode();
 }
 
+// ==================== KORDON TAKİP (STOK) ====================
+// Fermuar Takip ile BİREBİR aynı sistem — tek fark: kordonda beden yok,
+// ölçü birimi sadece cm. Bu yüzden saf hesap yardımcıları (_ftGelen,
+// _ftStok, _ftIsCompleted, _ftRenkHex …) olduğu gibi yeniden kullanılır;
+// burada yalnızca kendi deposunu ('kordonTakip') ve kendi ekranını
+// (kt* id'leri) yöneten katman yazılır.
+//
+// Veri: getData('kordonTakip') →
+//   [{id, modelKodu, renk, tedarikci, termin, createdAt,
+//     sizes:[{id, cm, renk, siparisAdet,
+//             teslimatlar:[{id,tarih,adet}], kullanimlar:[{id,tarih,adet,no}]}]}]
+// Stok birimi = model + cm (senaryo: "KOR-001 / 142cm").
+function _ktAll(){ return getData('kordonTakip') || []; }
+
+// Stok kontrolü (fermuardan bağımsız — ayrı ayarlanır)
+function ktStockControlOn(){ return getConfig('ktStockControl', false) === true; }
+function ktToggleStockControl(on){ setConfig('ktStockControl', !!on); toast(on?'Kordon stok kontrolü açıldı':'Kordon stok kontrolü kapatıldı', on?'success':'info'); }
+
+// Tüm modeller içinde model+cm ile ölçü satırı bul → {model, size}
+function _ktFindSize(model, cm){
+  const nm=_ftNormModel(model), ncm=_ftNum(cm);
+  for(const m of _ktAll()){
+    const sz=(m.sizes||[]).find(z=>_ftNum(z.cm)===ncm);
+    if(sz && _ftNormModel(m.modelKodu)===nm) return {model:m, size:sz};
+  }
+  return null;
+}
+
+// ── Manuel Yenile (Fermuar Takip'teki mantığın aynısı) ──
+window._ktRefreshPending = window._ktRefreshPending || false;
+window._markKtRefreshPending = function(){
+  window._ktRefreshPending = true;
+  const dot = document.getElementById('ktRefreshDot');
+  if(dot) dot.style.display = 'inline-block';
+  const btn = document.getElementById('ktRefreshBtn');
+  if(btn) btn.title = 'Yeni veri var — güncellemek için tıklayın';
+};
+function ktManualRefresh(){
+  window._ktRefreshPending = false;
+  const dot = document.getElementById('ktRefreshDot');
+  if(dot) dot.style.display = 'none';
+  const btn = document.getElementById('ktRefreshBtn');
+  if(btn) btn.title = '';
+  renderKordonTakip();
+  try{
+    if(_ktCurrentDetailId!=null && document.getElementById('ktDetailModal').classList.contains('show')){
+      ktRenderDetail();
+    }
+  }catch(_){}
+  if(typeof toast==='function') toast('Kordon Takip güncellendi','success');
+}
+
+function ktToggleDone(id, val){
+  let list=_ktAll();
+  const m=list.find(x=>x.id===id); if(!m) return;
+  m.tamamlandi=val;
+  if(typeof _ftStamp==='function') _ftStamp(m);
+  setData('kordonTakip', list);
+  renderKordonTakip();
+  if(typeof toast==='function') toast(val?'Model tamamlandı olarak işaretlendi':'Model tekrar aktif listede','success');
+}
+let _ktViewTab='active';
+function ktSetViewTab(tab, btn){
+  _ktViewTab=tab;
+  document.querySelectorAll('#page-kordon-takip .ft-view-tabs .rep-tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderKordonTakip();
+}
+
+function renderKordonTakip(){
+  const tg=document.getElementById('ktStockControl'); if(tg) tg.checked=ktStockControlOn();
+
+  const all=_ktAll();
+  const activeModels=all.filter(m=>!_ftIsCompleted(m));
+  const doneModels=all.filter(m=>_ftIsCompleted(m));
+  const tabModels = _ktViewTab==='done' ? doneModels : activeModels;
+  const doneBtn=document.getElementById('ktTabDone'), activeBtn=document.getElementById('ktTabActive');
+  if(activeBtn) activeBtn.innerHTML='<i class="fas fa-list-check"></i> Aktif ('+activeModels.length.toLocaleString('tr')+')';
+  if(doneBtn) doneBtn.innerHTML='<i class="fas fa-check-double"></i> Tamamlananlar ('+doneModels.length.toLocaleString('tr')+')';
+
+  const q=(document.getElementById('ktSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const list = q ? tabModels.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr').includes(q)) : tabModels.slice();
+  list.sort((a,b)=>_ftModelBekleyen(b)-_ftModelBekleyen(a) || (b.createdAt||'').localeCompare(a.createdAt||''));
+
+  let tSip=0,tGel=0,tStok=0,tBek=0;
+  tabModels.forEach(m=>{ tSip+=_ftModelSip(m); tGel+=_ftModelGelen(m); tStok+=_ftModelStok(m); tBek+=_ftModelBekleyen(m); });
+  const kpi=document.getElementById('ktKpis');
+  if(kpi){
+    kpi.innerHTML=[
+      ['fa-layer-group', tabModels.length.toLocaleString('tr'), _ktViewTab==='done'?'Tamamlanan Model':'Aktif Model', 'p'],
+      ['fa-truck-ramp-box', tGel.toLocaleString('tr'), 'Toplam Gelen', 'g'],
+      ['fa-warehouse', tStok.toLocaleString('tr'), 'Eldeki Stok', 's'],
+      ['fa-hourglass-half', tBek.toLocaleString('tr'), 'Bekleyen Sipariş', 'a'],
+    ].map(x=>`<div class="ft-kpi ft-kpi-${x[3]}"><div class="ft-kpi-ic"><i class="fas ${x[0]}"></i></div><div class="ft-kpi-body"><div class="ft-kpi-val">${x[1]}</div><div class="ft-kpi-lbl">${x[2]}</div></div></div>`).join('');
+  }
+
+  const grid=document.getElementById('ktGrid');
+  if(!grid) return;
+  const countEl=document.getElementById('ktCount');
+  if(countEl){
+    const n=q ? list.length : tabModels.length;
+    countEl.textContent = n.toLocaleString('tr')+' model'+(q?' ('+esc(q)+')':'');
+    countEl.classList.toggle('on', n>0);
+  }
+  if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-bezier-curve"></i><p>Henüz kordon modeli yok. <b>Yeni Model</b> ile ekleyin: model kodu, tedarikçi, termin girin — sonra cm cm satın alma adetlerini o modelin içinde girersiniz.</p></div>'; return; }
+  if(!tabModels.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-check-double"></i><p>'+(_ktViewTab==='done'?'Henüz tamamlanan model yok.':'Aktif model yok — hepsi tamamlanmış.')+'</p></div>'; return; }
+  if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
+
+  grid.innerHTML=list.map(m=>{
+    const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
+    const pct = sip>0 ? Math.min(100, Math.round(gel/sip*100)) : (gel>0?100:0);
+    const sizeCount=(m.sizes||[]).length;
+    let durum, dCls;
+    const done=_ftIsCompleted(m);
+    if(!sizeCount){ durum='Ölçü girilmedi'; dCls='wait'; }
+    else if(done){ durum='Tamamlandı'; dCls='ok'; }
+    else if(sip>0 && gel>=sip && stok>0){ durum='Stokta · hazır'; dCls='ready'; }
+    else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
+    else { durum='Bekliyor'; dCls='wait'; }
+    const terminCls=_ftTerminCls(m.termin);
+    return `<div class="ft-card ft-card-${dCls}" onclick="ktOpenDetailModal(${m.id})">
+      <div class="ft-card-head">
+        <div class="ft-card-id">
+          <span class="ft-model">${esc(m.modelKodu)||'—'}</span>
+          <span class="ft-sub">${m.tedarikci?('<i class="fas fa-truck-field"></i> '+esc(m.tedarikci)):'<i class="fas fa-truck-field" style="opacity:.35"></i> Tedarikçi yok'}</span>
+        </div>
+        <span class="ft-badge ft-badge-${dCls}">${durum}</span>
+      </div>
+
+      <div class="ft-card-meta">
+        ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
+        <div class="ft-card-termin ${terminCls}">
+          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(m.termin):'—'}${terminCls?' · GECİKTİ':''}
+        </div>
+      </div>
+
+      <div class="ft-stock ${stok<=0&&sizeCount?'ft-stock-zero':(sip>0&&stok<sip*0.15?'ft-stock-low':'')}">
+        <div class="ft-stock-num">${stok.toLocaleString('tr')}</div>
+        <div class="ft-stock-lbl">Eldeki Stok (adet)</div>
+      </div>
+
+      <div class="ft-prog ft-prog-${dCls}"><div class="ft-prog-fill" style="width:${pct}%"></div></div>
+      <div class="ft-mini">
+        <div><span>Sipariş</span><b>${sip.toLocaleString('tr')}</b></div>
+        <div><span>Gelen</span><b class="pos">${gel.toLocaleString('tr')}</b></div>
+        <div><span>Bekleyen</span><b>${bek>0?'<span class="bad">'+bek.toLocaleString('tr')+'</span>':bek.toLocaleString('tr')}</b></div>
+        <div><span>Ölçü</span><b>${sizeCount}</b></div>
+      </div>
+
+      <div class="ft-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-sm btn-primary" onclick="ktOpenDetailModal(${m.id})"><i class="fas fa-list"></i> Detay / CM Gir</button>
+        ${done
+          ? `<button class="btn btn-sm btn-secondary" onclick="ktToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
+          : `<button class="btn btn-sm btn-secondary" onclick="ktToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
+        <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="ktDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Yeni Model ──
+let _ktEditModelId=null;
+function ktOpenOrderModal(){
+  _ktEditModelId=null;
+  document.getElementById('ktOrderTitle').innerHTML='<i class="fas fa-cart-plus" style="color:var(--primary);margin-right:7px;"></i>Yeni Kordon Modeli';
+  ['ktModel','ktRenk','ktTedarikci','ktTermin'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ktOrderModal').classList.add('show');
+  setTimeout(()=>document.getElementById('ktModel').focus(),80);
+}
+function ktEditModelMeta(id){
+  id = id || _ktCurrentDetailId;
+  const m=_ktAll().find(x=>x.id===id); if(!m) return;
+  _ktEditModelId=id;
+  document.getElementById('ktOrderTitle').innerHTML='<i class="fas fa-pen" style="color:var(--primary);margin-right:7px;"></i>Model Bilgilerini Düzenle';
+  document.getElementById('ktModel').value=m.modelKodu||'';
+  document.getElementById('ktRenk').value=m.renk||'';
+  document.getElementById('ktTedarikci').value=m.tedarikci||'';
+  document.getElementById('ktTermin').value=m.termin||'';
+  document.getElementById('ktOrderModal').classList.add('show');
+}
+function ktCloseOrderModal(){ document.getElementById('ktOrderModal').classList.remove('show'); }
+function ktSaveOrder(){
+  const model=document.getElementById('ktModel').value.trim();
+  const renk=document.getElementById('ktRenk').value.trim();
+  const tedarikci=document.getElementById('ktTedarikci').value.trim();
+  const termin=document.getElementById('ktTermin').value;
+  if(!model){ toast('Model kodu gerekli','error'); return; }
+  let list=_ktAll();
+  if(_ktEditModelId){
+    const idx=list.findIndex(x=>x.id===_ktEditModelId); if(idx<0) return;
+    const dup=list.find(x=>x.id!==_ktEditModelId && _ftNormModel(x.modelKodu)===_ftNormModel(model));
+    if(dup){ toast('Bu model kodu zaten var: '+model,'error'); return; }
+    list[idx]=_ftStamp({...list[idx], modelKodu:model, renk, tedarikci, termin});
+    setData('kordonTakip',list);
+    ktCloseOrderModal();
+    toast('Model bilgileri güncellendi','success');
+    if(_ktCurrentDetailId===_ktEditModelId) ktRenderDetail(); else renderKordonTakip();
+  } else {
+    if(list.find(x=>_ftNormModel(x.modelKodu)===_ftNormModel(model))){ toast('Bu model kodu zaten var: '+model+' — üzerine tıklayıp devam edin','error'); return; }
+    let copySizes=[];
+    const src=_ftFindCopySource(model, list);
+    if(src && confirm(src.modelKodu+' modelinin cm dağılımı ('+(src.sizes||[]).length+' satır) bu yeni model için kopyalansın mı?\n\n(CM/renk kopyalanır, satın alma adetlerini kendiniz gireceksiniz.)')){
+      copySizes = (src.sizes||[]).map((z,i)=>({id:Date.now()+i+Math.floor(Math.random()*100000), cm:z.cm, renk:z.renk, siparisAdet:0, teslimatlar:[], kullanimlar:[]}));
+    }
+    const newId=Date.now();
+    list.unshift(_ftStamp({id:newId, modelKodu:model, renk, tedarikci, termin, sizes:copySizes, createdAt:new Date().toISOString()}));
+    setData('kordonTakip',list);
+    ktCloseOrderModal();
+    toast(copySizes.length ? ('Model eklendi — '+copySizes.length+' ölçü '+src.modelKodu+"'ten kopyalandı") : 'Model eklendi — şimdi cm cm ölçü girin','success');
+    renderKordonTakip();
+    ktOpenDetailModal(newId);
+  }
+}
+function ktDeleteModel(id){
+  const all=_ktAll();
+  const m=all.find(x=>x.id===id); if(!m) return;
+  if(!confirm((m.modelKodu||'')+' modelini silmek istiyor musunuz? Tüm ölçüler ve geçmişi de silinir.')) return;
+  const next = all.filter(x=>x.id!==id);
+  // Fermuar'daki ile aynı atomik silme: veri + tombstone TEK Firestore batch'inde
+  try { localStorage.setItem('kordonTakip', JSON.stringify(next)); } catch(e){}
+  (async function(){
+    try {
+      await window.syncDeleteWithTombstone('kordonTakip', [id], [id]);
+      if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('ok');
+    } catch(err){
+      console.warn('[kt] atomik silme err:', err);
+      try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('err', 'kordon silinemedi: '+(err&&err.message||err)); }catch(_){}
+      try{ if(typeof toast==='function') toast('⚠️ Buluta yazılamadı, tekrar denemek için Yenile','error'); }catch(_){}
+    }
+  })();
+  renderKordonTakip(); toast('Model silindi','info');
+}
+
+// ── Model Detay — cm cm satırlar ──
+let _ktCurrentDetailId=null;
+function ktOpenDetailModal(id){
+  _ktCurrentDetailId=id;
+  ktRenderDetail();
+  document.getElementById('ktDetailModal').classList.add('show');
+  setTimeout(()=>{ const el=document.getElementById('ktRowCm'); if(el) el.focus(); },100);
+}
+function ktCloseDetailModal(){
+  document.getElementById('ktDetailModal').classList.remove('show');
+  _ktCurrentDetailId=null;
+  renderKordonTakip();
+}
+function ktRenderDetail(){
+  const m=_ktAll().find(x=>x.id===_ktCurrentDetailId);
+  if(!m){ ktCloseDetailModal(); return; }
+
+  document.getElementById('ktDetailModel').textContent = m.modelKodu||'—';
+  const terminCls=_ftTerminCls(m.termin);
+  document.getElementById('ktDetailMeta').innerHTML =
+    (m.renk?`<span><i class="fas fa-palette"></i> ${esc(m.renk)}</span>`:'')+
+    `<span><i class="fas fa-truck-field"></i> ${m.tedarikci?esc(m.tedarikci):'Tedarikçi girilmedi'}</span>`+
+    `<span class="${terminCls}"><i class="fas fa-calendar-day"></i> ${m.termin?esc(m.termin):'Termin girilmedi'}${terminCls?' · GECİKTİ':''}</span>`;
+  var _rr=document.getElementById('ktRowRenk'); if(_rr){ _rr.placeholder=m.renk?('Renk ('+m.renk+')'):'Renk'; }
+
+  const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
+  document.getElementById('ktDetailKpis').innerHTML=[
+    ['fa-cart-shopping', sip.toLocaleString('tr'), 'Toplam Sipariş'],
+    ['fa-truck-ramp-box', gel.toLocaleString('tr'), 'Toplam Gelen'],
+    ['fa-warehouse', stok.toLocaleString('tr'), 'Eldeki Stok'],
+    ['fa-hourglass-half', bek.toLocaleString('tr'), 'Bekleyen'],
+  ].map(x=>`<div class="ft-dkpi"><i class="fas ${x[0]}"></i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
+
+  const sizes=_ftSizesSorted(m);
+  const host=document.getElementById('ktDetailRows');
+  if(!sizes.length){
+    host.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Henüz ölçü yok. Yukarıdaki formla ekleyin — <b>küçükten büyüğe cm sırasına</b> göre listelenir.</p></div>';
+    return;
+  }
+  host.innerHTML = `<div class="ft-rowhead kt-rowhead">
+      <span>CM</span><span>Renk</span><span>Sipariş</span><span>Gelen</span><span>Kullanılan</span><span>Eksik</span><span>Stok</span><span></span>
+    </div>` + sizes.map(z=>{
+    const zg=_ftGelen(z), zk=_ftKullanilan(z), zs=_ftStok(z), zb=_ftBekleyen(z);
+    const stokCls = zs<=0 ? 'zero' : ((+z.siparisAdet||0)>0 && zs < (+z.siparisAdet)*0.15 ? 'low' : '');
+    return `<div class="ft-rowwrap">
+      <div class="ft-row kt-row">
+        <span class="ft-row-cm">${z.cm!=null?z.cm+' cm':'—'}</span>
+        <span>${z.renk?esc(z.renk):'—'}</span>
+        <span>${(+z.siparisAdet||0).toLocaleString('tr')}</span>
+        <span class="pos">${zg.toLocaleString('tr')}</span>
+        <span class="neg">${zk.toLocaleString('tr')}</span>
+        <span class="${zb>0?'bad':''}">${zb>0?zb.toLocaleString('tr'):'—'}</span>
+        <span class="ft-row-stok ${stokCls}">${zs.toLocaleString('tr')}</span>
+        <span class="ft-row-acts">
+          <button class="btn btn-xs btn-primary" onclick="ktOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
+          <button class="btn btn-xs btn-secondary" onclick="ktToggleHistory(${z.id})" title="Geçmiş"><i class="fas fa-clock-rotate-left"></i></button>
+          <button class="btn btn-xs btn-danger" onclick="ktDeleteSizeRow(${m.id},${z.id})" title="Sil"><i class="fas fa-trash"></i></button>
+        </span>
+      </div>
+      <div class="ft-row-hist" id="ktHist-${z.id}" style="display:none;">${_ktHistoryHtml(m.id, z)}</div>
+    </div>`;
+  }).join('');
+}
+function _ktHistoryHtml(modelId, z){
+  const rows=[];
+  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi',kind:'t',eid:t.id}));
+  (z.kullanimlar||[]).forEach(k=>rows.push({t:k.tarih,ic:'fa-scissors',cls:'neg',txt:'−'+(+k.adet||0)+' kullanıldı'+(k.no?(' ('+k.no+')'):''),kind:'k',eid:k.id}));
+  rows.sort((a,b)=>(b.t||'').localeCompare(a.t||''));
+  if(!rows.length) return '<div class="ft-hist-empty">Henüz hareket yok.</div>';
+  return '<div class="ft-hist-list">'+rows.map(r=>
+    `<div class="ft-hist-row"><i class="fas ${r.ic} ${r.cls}"></i><span class="ft-hist-txt ${r.cls}">${r.txt}</span><span class="ft-hist-date">${r.t?_ftFmtDate(r.t):''}</span>`+
+    `<button class="ft-hist-del" onclick="ktDeleteHist(${modelId},${z.id},'${r.kind}',${r.eid})" title="Bu hareketi sil (yanlış giriş)"><i class="fas fa-times"></i></button></div>`
+  ).join('')+'</div>';
+}
+function ktDeleteHist(modelId, sizeId, kind, entryId){
+  let list=_ktAll(); const midx=list.findIndex(x=>x.id===modelId); if(midx<0) return;
+  const sizes=list[midx].sizes||[]; const z=sizes.find(s=>s.id===sizeId); if(!z) return;
+  const arrName = kind==='t' ? 'teslimatlar' : 'kullanimlar';
+  const entry=(z[arrName]||[]).find(e=>e.id===entryId); if(!entry) return;
+  const lbl = kind==='t' ? ('+'+(+entry.adet||0)+' geldi') : ('−'+(+entry.adet||0)+' kullanıldı'+(entry.no?(' ('+entry.no+')'):''));
+  if(!confirm('"'+lbl+'" hareketini silmek istiyor musunuz?\n\nStok/gelen değerleri otomatik yeniden hesaplanır.')) return;
+  z[arrName]=(z[arrName]||[]).filter(e=>e.id!==entryId);
+  _ftStamp(list[midx]);
+  setData('kordonTakip',list);
+  ktRenderDetail();
+  try{ const el=document.getElementById('ktHist-'+sizeId); if(el) el.style.display='block'; }catch(_){}
+  toast('Hareket silindi: '+lbl,'info');
+}
+function ktToggleHistory(sizeId){ const el=document.getElementById('ktHist-'+sizeId); if(el) el.style.display = el.style.display==='none'?'block':'none'; }
+
+function ktAddSizeRow(){
+  const m=_ktAll().find(x=>x.id===_ktCurrentDetailId); if(!m) return;
+  const cm=document.getElementById('ktRowCm').value.trim();
+  const renk=document.getElementById('ktRowRenk').value.trim() || (m.renk||'');
+  const siparis=+document.getElementById('ktRowSiparis').value||0;
+  if(cm===''){ toast('Uzunluk (cm) gerekli','error'); return; }
+  if(siparis<=0){ toast('Satın alma adeti gerekli','error'); return; }
+  if((m.sizes||[]).some(z=>_ftNum(z.cm)===_ftNum(cm))){ toast('Bu cm zaten eklenmiş: '+cm+'cm — satırdan düzenleyin','error'); return; }
+
+  let list=_ktAll(); const idx=list.findIndex(x=>x.id===m.id); if(idx<0) return;
+  list[idx].sizes = list[idx].sizes || [];
+  list[idx].sizes.push({id:Date.now()+Math.floor(Math.random()*1000), cm, renk, siparisAdet:siparis, teslimatlar:[], kullanimlar:[]});
+  _ftStamp(list[idx]);
+  setData('kordonTakip',list);
+
+  document.getElementById('ktRowCm').value='';
+  document.getElementById('ktRowSiparis').value='';
+  ktRenderDetail();
+  toast(cm+'cm eklendi','success');
+  setTimeout(()=>{ const el=document.getElementById('ktRowCm'); if(el) el.focus(); },50);
+}
+function ktDeleteSizeRow(modelId, sizeId){
+  if(!confirm('Bu ölçüyü silmek istiyor musunuz? Teslimat/kullanım geçmişi de silinir.')) return;
+  let list=_ktAll(); const idx=list.findIndex(x=>x.id===modelId); if(idx<0) return;
+  list[idx].sizes=(list[idx].sizes||[]).filter(z=>z.id!==sizeId);
+  _ftStamp(list[idx]);
+  setData('kordonTakip',list);
+  ktRenderDetail(); toast('Ölçü silindi','info');
+}
+
+// ── Teslimat Gir ──
+let _ktReceiveCtx=null;
+function ktOpenReceiveModal(modelId, sizeId){
+  const m=_ktAll().find(x=>x.id===modelId); if(!m) return;
+  const z=(m.sizes||[]).find(x=>x.id===sizeId); if(!z) return;
+  _ktReceiveCtx={modelId, sizeId};
+  document.getElementById('ktReceiveCtx').innerHTML=`<div class="ft-rc-model">${esc(m.modelKodu)} · ${z.cm!=null?z.cm+' cm':''}${z.renk?(' · '+esc(z.renk)):''}</div>
+    <div class="ft-rc-stats"><span>Sipariş <b>${(+z.siparisAdet||0).toLocaleString('tr')}</b></span><span>Gelen <b>${_ftGelen(z).toLocaleString('tr')}</b></span><span>Bekleyen <b>${_ftBekleyen(z).toLocaleString('tr')}</b></span></div>`;
+  document.getElementById('ktReceiveAdet').value='';
+  document.getElementById('ktReceiveTarih').value=new Date().toISOString().slice(0,10);
+  document.getElementById('ktReceiveModal').classList.add('show');
+  setTimeout(()=>document.getElementById('ktReceiveAdet').focus(),80);
+}
+function ktCloseReceiveModal(){ document.getElementById('ktReceiveModal').classList.remove('show'); }
+function ktSaveReceive(){
+  const adet=+document.getElementById('ktReceiveAdet').value||0;
+  const tarih=document.getElementById('ktReceiveTarih').value||new Date().toISOString().slice(0,10);
+  if(adet<=0){ toast('Gelen adet girin','error'); return; }
+  if(!_ktReceiveCtx) return;
+  let list=_ktAll(); const midx=list.findIndex(x=>x.id===_ktReceiveCtx.modelId); if(midx<0) return;
+  const sizes=list[midx].sizes||[]; const zidx=sizes.findIndex(z=>z.id===_ktReceiveCtx.sizeId); if(zidx<0) return;
+  sizes[zidx].teslimatlar=sizes[zidx].teslimatlar||[];
+  sizes[zidx].teslimatlar.push({id:Date.now(), tarih, adet});
+  list[midx].sizes=sizes;
+  _ftStamp(list[midx]);
+  setData('kordonTakip',list);
+  ktCloseReceiveModal();
+  if(_ktCurrentDetailId===_ktReceiveCtx.modelId) ktRenderDetail();
+  toast('Teslimat kaydedildi: +'+adet+' adet','success');
+}
+
+// ── PDF / EKSİK LİSTESİ ──
+function ktPdfUpdateSummary(){
+  const host=document.getElementById('ktPdfModelList'); if(!host) return;
+  const rows=[...host.querySelectorAll('.ft-pdf-row')];
+  let count=0, eksikSum=0;
+  rows.forEach(row=>{
+    const chk=row.querySelector('.ft-pdf-chk');
+    if(chk && chk.checked){ count++; eksikSum+=+(row.dataset.eksik||0); }
+    row.classList.toggle('sel', !!(chk&&chk.checked));
+  });
+  const cEl=document.getElementById('ktPdfCount'); if(cEl) cEl.textContent=count.toLocaleString('tr');
+  const eEl=document.getElementById('ktPdfEksikTotal'); if(eEl) eEl.textContent=eksikSum.toLocaleString('tr');
+  const lbl=document.getElementById('ktPdfGenLabel');
+  if(lbl) lbl.textContent = count>0 ? ('PDF Oluştur ('+count+')') : 'PDF Oluştur';
+}
+function ktOpenPdfModal(){
+  const all=_ktAll();
+  if(!all.length){ toast('Önce kordon modeli ekleyin','error'); return; }
+  const host=document.getElementById('ktPdfModelList');
+  host.innerHTML=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||'')).map(m=>{
+    const eksik=_ftModelBekleyen(m), stok=_ftModelStok(m), n=(m.sizes||[]).length;
+    const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr');
+    return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
+      <input type="checkbox" class="ft-pdf-chk" value="${m.id}" onchange="ktPdfUpdateSummary()">
+      <span class="ft-pdf-check"></span>
+      <span class="ft-pdf-info">
+        <span class="ft-pdf-model">${esc(m.modelKodu)}</span>
+        <span class="ft-pdf-meta">${m.renk?(esc(m.renk)+' · '):''}${n} ölçü · stok ${stok.toLocaleString('tr')}${m.tedarikci?(' · '+esc(m.tedarikci)):''}</span>
+      </span>
+      ${eksik>0?`<span class="ft-pdf-eksik">${eksik.toLocaleString('tr')} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
+    </label>`;
+  }).join('');
+  const searchInp=document.getElementById('ktPdfSearch');
+  if(searchInp) searchInp.value='';
+  const emptyEl=document.getElementById('ktPdfEmpty');
+  if(emptyEl) emptyEl.style.display='none';
+  ktPdfRenderOnlyMissingChip();
+  ktPdfUpdateSummary();
+  document.getElementById('ktPdfModal').classList.add('show');
+  setTimeout(()=>{ if(searchInp) searchInp.focus(); },80);
+}
+function ktClosePdfModal(){ document.getElementById('ktPdfModal').classList.remove('show'); }
+function ktPdfSelectAll(on){
+  document.querySelectorAll('#ktPdfModelList .ft-pdf-row').forEach(row=>{
+    if(row.style.display==='none') return;
+    const chk=row.querySelector('.ft-pdf-chk');
+    if(chk) chk.checked=on;
+  });
+  ktPdfUpdateSummary();
+}
+function ktPdfSelectOnlyMissing(){
+  document.querySelectorAll('#ktPdfModelList .ft-pdf-row').forEach(row=>{
+    if(row.style.display==='none') return;
+    const chk=row.querySelector('.ft-pdf-chk');
+    if(!chk) return;
+    chk.checked = (+row.dataset.eksik||0) > 0;
+  });
+  ktPdfUpdateSummary();
+}
+window._ktPdfOnlyMissing = false;
+function ktPdfToggleOnlyMissing(){
+  window._ktPdfOnlyMissing = !window._ktPdfOnlyMissing;
+  ktPdfRenderOnlyMissingChip();
+}
+function ktPdfRenderOnlyMissingChip(forceChecked){
+  if(forceChecked===true) window._ktPdfOnlyMissing = true;
+  const chip=document.getElementById('ktPdfOnlyMissChip');
+  if(chip) chip.classList.toggle('active', !!window._ktPdfOnlyMissing);
+}
+function ktPdfFilterModels(){
+  const q=(document.getElementById('ktPdfSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const rows=document.querySelectorAll('#ktPdfModelList .ft-pdf-row');
+  let anyVisible=false;
+  rows.forEach(row=>{
+    const match = !q || (row.dataset.search||'').includes(q);
+    row.style.display = match ? '' : 'none';
+    if(match) anyVisible=true;
+  });
+  const emptyEl=document.getElementById('ktPdfEmpty');
+  if(emptyEl) emptyEl.style.display = (rows.length && !anyVisible) ? 'block' : 'none';
+}
+
+function ktGeneratePdf(){
+  const seciliIds=[...document.querySelectorAll('#ktPdfModelList .ft-pdf-chk:checked')].map(c=>+c.value);
+  if(!seciliIds.length){ toast('En az bir model seçin','error'); return; }
+  const onlyMissing=window._ktPdfOnlyMissing!==false;
+  const models=_ktAll().filter(m=>seciliIds.includes(m.id)).sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
+
+  let sectionsHtml='', tSip=0,tGel=0,tEksik=0,kalemSayisi=0;
+  models.forEach(m=>{
+    let sizes=_ftSizesSorted(m);
+    const allRows=sizes.map(z=>({cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z), stok:_ftStok(z)}));
+    let rows = onlyMissing ? allRows.filter(r=>r.eksik>0) : allRows;
+    if(!rows.length) return;
+    kalemSayisi+=rows.length;
+    const mSip=allRows.reduce((s,r)=>s+r.siparis,0), mGel=allRows.reduce((s,r)=>s+r.gelen,0), mEksik=allRows.reduce((s,r)=>s+r.eksik,0);
+    tSip+=mSip; tGel+=mGel; tEksik+=mEksik;
+    const hiddenCount = allRows.length - rows.length;
+    const trRows=rows.map((r,i)=>`<tr${r.eksik>0?' class="mis"':''}>
+      <td>${i+1}</td><td><b>${r.cm!=null?r.cm+' cm':'—'}</b></td><td>${esc(r.renk)}</td>
+      <td class="num">${r.siparis.toLocaleString('tr')}</td>
+      <td class="num ok">${r.gelen.toLocaleString('tr')}</td>
+      <td class="num${r.eksik>0?' bad':''}">${r.eksik>0?r.eksik.toLocaleString('tr'):'—'}</td>
+      <td class="num">${r.stok.toLocaleString('tr')}</td>
+    </tr>`).join('');
+    sectionsHtml+=`<div class="msec">
+      <div class="msec-hd"><span class="msec-model">${esc(m.modelKodu)}</span>
+        <span class="msec-meta">${m.renk?('Renk: '+esc(m.renk)+' · '):''}${m.tedarikci?('Tedarikçi: '+esc(m.tedarikci)+' · '):''}${m.termin?('Termin: '+esc(m.termin)):'Termin: —'}${hiddenCount>0?(' · '+hiddenCount+' ölçü tam geldi (gizlendi)'):''}</span>
+        <span class="msec-tot">Sipariş <b>${mSip.toLocaleString('tr')}</b> · Eksik <b>${mEksik.toLocaleString('tr')}</b></span>
+      </div>
+      <table><thead><tr><th>#</th><th>CM</th><th>Renk</th><th style="text-align:right;">Sipariş</th><th style="text-align:right;">Gelen</th><th style="text-align:right;">EKSİK</th><th style="text-align:right;">Eldeki</th></tr></thead>
+      <tbody>${trRows}</tbody></table>
+    </div>`;
+  });
+
+  if(!sectionsHtml){ toast('Seçimde gösterilecek kayıt yok — "Sadece eksiği olanlar" kapatın','error'); return; }
+
+  const now=new Date();
+  const tarihStr=now.toLocaleDateString('tr-TR')+' '+now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Kordon Eksik Listesi — ${tarihStr}</title>
+<style>
+  @page{ size:A4; margin:12mm; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;color:#1a1a2e;padding:24px;max-width:820px;margin:0 auto;font-size:12px;}
+  .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #7c3aed;padding-bottom:12px;margin-bottom:16px;}
+  .hd h1{font-size:20px;font-weight:800;color:#7c3aed;}
+  .hd p{font-size:10px;color:#6b7280;margin-top:3px;}
+  .hd .mt{text-align:right;font-size:10px;color:#6b7280;}
+  .hd .mt b{display:block;font-size:13px;color:#1a1a2e;}
+  .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+  .sum div{background:#f8f7fc;border:1px solid #e5e7eb;border-radius:8px;padding:10px;text-align:center;}
+  .sum b{display:block;font-size:18px;font-weight:800;color:#7c3aed;}
+  .sum.mis b{color:#dc2626;}
+  .sum span{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;font-weight:700;}
+  .msec{margin-bottom:22px;page-break-inside:avoid;}
+  .msec-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 10px;background:#f3f0ff;border-radius:8px 8px 0 0;border:1px solid #ddd6fe;border-bottom:none;}
+  .msec-model{font-size:15px;font-weight:800;color:#5b21b6;}
+  .msec-meta{font-size:10px;color:#6b7280;flex:1;}
+  .msec-tot{font-size:11px;color:#dc2626;font-weight:700;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#faf9ff;color:#5b21b6;font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;padding:7px 8px;text-align:left;border-bottom:2px solid #7c3aed;}
+  td{padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:11px;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+  td.ok{color:#059669;}
+  td.bad{color:#dc2626;font-weight:800;}
+  tr.mis td{background:#fef2f2;}
+  .ft{margin-top:20px;padding-top:10px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:9px;color:#9ca3af;}
+  .note{margin-top:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;font-size:10.5px;color:#92400e;}
+  @media print{ .no-print{display:none !important;} body{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }
+  .no-print{position:fixed;top:10px;right:10px;z-index:999;display:flex;gap:8px;}
+  .no-print button{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;}
+</style></head><body>
+<div class="no-print" id="ktPdfControls">
+  <button style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.body,'Kordon_Eksik_Listesi.pdf',document.getElementById('ktPdfControls'))">📥 PDF İndir</button>
+  <button style="background:#7c3aed;" onclick="window.print()">🖨️ Yazdır</button>
+  <button style="background:#6b7280;" onclick="window.close()">✕ Kapat</button>
+</div>
+<div class="hd">
+  <div><h1>🪢 Kordon Eksik Listesi</h1><p>İrsaliye Pro — Eyüp · Model bazlı sipariş/teslimat durumu</p></div>
+  <div class="mt"><b>${models.length} model · ${kalemSayisi} kalem</b>${tarihStr}</div>
+</div>
+<div class="sum">
+  <div><b>${tSip.toLocaleString('tr')}</b><span>Toplam Sipariş</span></div>
+  <div><b>${tGel.toLocaleString('tr')}</b><span>Toplam Gelen</span></div>
+  <div class="mis"><b>${tEksik.toLocaleString('tr')}</b><span>Toplam Eksik</span></div>
+</div>
+${sectionsHtml}
+${tEksik>0?`<div class="note">⚠️ Kırmızı satırlar eksik teslimatları gösterir. Toplam <b>${tEksik.toLocaleString('tr')} adet</b> kordon bekleniyor.</div>`:''}
+<div class="ft"><span>İrsaliye Pro — Eyüp</span><span>Oluşturma: ${tarihStr}</span></div>
+</body></html>`;
+
+  const w=_openHtmlWindow(html,'width=900,height=800');
+  if(!w){ toast('Popup engellendi — izin verin','error'); return; }
+  ktClosePdfModal();
+  toast('Eksik listesi hazırlandı 📄','success');
+}
+
+// ── İRSALİYE ENTEGRASYONU ──
+// Kordon irsaliyesi kaydedilmeden ÖNCE. Sadece "CM & Adet" modunda anlamlı;
+// "Sadece Metre" modunda eşleşecek cm ölçüsü olmadığı için kontrol atlanır.
+// olcular: [{cm, adet}]  → saveKordon'un ürettiği dizi.
+window.ktValidateBeforeCut = function(model, olcular){
+  if(!ktStockControlOn()) return {ok:true};
+  const missing=[], low=[];
+  (olcular||[]).forEach(o=>{
+    const adet=+o.adet||0; if(adet<=0) return;
+    const found=_ktFindSize(model, o.cm);
+    if(!found){ missing.push((model||'?')+' / '+(o.cm!=null?o.cm+'cm':'?')); return; }
+    if(_ftStok(found.size) < adet){ low.push({lbl:(model||'?')+' / '+(o.cm+'cm'), stok:_ftStok(found.size), ist:adet}); }
+  });
+  if(missing.length){
+    toast('Takipte kayıtlı olmayan kordon: '+missing.join(', ')+' — önce Kordon Takip\'e ekleyin','error');
+    return {ok:false};
+  }
+  if(low.length){
+    const msg='Eldeki stok yetersiz:\n'+low.map(x=>'• '+x.lbl+' — elde '+x.stok+', istenen '+x.ist).join('\n')+'\n\nYine de kesip stoğu eksiye düşürmek istiyor musunuz?';
+    if(typeof confirm==='function' && !confirm(msg)) return {ok:false};
+  }
+  return {ok:true};
+};
+// İrsaliye kaydedildikten SONRA → eşleşen model+cm stoğundan düşer.
+window.ktConsumeForCut = function(model, olcular, no){
+  if(!ktStockControlOn()) return;
+  let list=_ktAll(); let changed=false;
+  const today=new Date().toISOString().slice(0,10);
+  (olcular||[]).forEach(o=>{
+    const adet=+o.adet||0; if(adet<=0) return;
+    const found=_ktFindSize(model, o.cm);
+    if(!found) return;
+    const midx=list.findIndex(x=>x.id===found.model.id); if(midx<0) return;
+    const sizes=list[midx].sizes||[]; const zidx=sizes.findIndex(z=>z.id===found.size.id); if(zidx<0) return;
+    sizes[zidx].kullanimlar=sizes[zidx].kullanimlar||[];
+    sizes[zidx].kullanimlar.push({id:Date.now()+Math.floor(Math.random()*1000), tarih:today, adet, no:no||''});
+    list[midx].sizes=sizes;
+    _ftStamp(list[midx]);
+    changed=true;
+  });
+  if(changed){ setData('kordonTakip',list); }
+};
+
+// ── Kordon İrsaliyesi: Takip'ten model seçme (autocomplete) ──
+// Seçilince renk/termin dolar ve cm satırları eldeki stok ile doldurulur.
+let _ktAcHover=false;
+function ktRenderModelAc(q){
+  const box=document.getElementById('korModelAc'); if(!box) return;
+  const all=_ktAll();
+  const active = all.filter(m=>!_ftIsCompleted(m));
+  const query=(q||'').trim().toLocaleLowerCase('tr');
+  const list = query ? active.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')).toLocaleLowerCase('tr').includes(query)) : active.slice();
+  list.sort((a,b)=>_ftNormModel(a.modelKodu).localeCompare(_ftNormModel(b.modelKodu),'tr'));
+  if(!all.length){
+    box.innerHTML='<div class="f-ac-empty"><i class="fas fa-circle-info"></i> Kordon Takip\'te model yok — serbest yazabilir veya önce Takip\'e ekleyebilirsiniz.</div>';
+    box.style.display='block'; return;
+  }
+  if(!list.length){
+    const msg = query ? ('"'+esc(query)+'" ile eşleşen aktif model yok.') : 'Aktif (tamamlanmamış) model yok — serbest yazabilirsiniz.';
+    box.innerHTML='<div class="f-ac-empty"><i class="fas fa-search"></i> '+msg+'</div>';
+    box.style.display='block'; return;
+  }
+  box.innerHTML=list.slice(0,12).map(m=>{
+    const n=(m.sizes||[]).length;
+    const stok=_ftModelStok(m);
+    return '<div class="f-ac-item" onmousedown="event.preventDefault();ktPickModel('+(m.id)+')" onmouseenter="_ktAcHover=true" onmouseleave="_ktAcHover=false">'+
+      '<i class="fas fa-bezier-curve" style="color:var(--primary);width:16px;text-align:center;flex-shrink:0;"></i>'+
+      '<span style="min-width:0;flex:1;">'+
+        '<span class="f-ac-model">'+esc(m.modelKodu||'—')+'</span>'+
+        '<span class="f-ac-sub">'+(m.tedarikci?esc(m.tedarikci):'Tedarikçi yok')+' · '+n+' cm · stok '+stok.toLocaleString('tr')+'</span>'+
+      '</span>'+
+    '</div>';
+  }).join('');
+  box.style.display='block';
+}
+function ktCloseModelAc(){
+  const box=document.getElementById('korModelAc'); if(box){ box.style.display='none'; box.innerHTML=''; }
+  _ktAcHover=false;
+}
+function ktPickModel(id){
+  const m=_ktAll().find(x=>x.id===id); if(!m){ ktCloseModelAc(); return; }
+  const modelEl=document.getElementById('korModel'); if(modelEl) modelEl.value=m.modelKodu||'';
+  const renkEl=document.getElementById('korRenk');
+  const ilkRenk = m.renk || (m.sizes||[]).map(z=>z.renk).find(r=>r&&r.trim());
+  if(renkEl && ilkRenk && !renkEl.value.trim()) renkEl.value=ilkRenk;
+  const termEl=document.getElementById('korTermin');
+  if(termEl && m.termin && !termEl.value) termEl.value=m.termin;
+  // Model seçilince CM & Adet moduna geç — takip cm bazlı çalışır
+  try{ if(typeof korSetMod==='function') korSetMod('adet'); }catch(_){}
+  // Önce 10 satırı temizle
+  for(let i=1;i<=10;i++){
+    const ec=document.getElementById('kor_'+i+'_cm'); const ea=document.getElementById('kor_'+i+'_a');
+    if(ec) ec.value=''; if(ea) ea.value='';
+  }
+  // Sadece eldeki stoğu (>0) olan ölçüleri, küçükten büyüğe doldur
+  let filled=0, skipped=0, tasan=0;
+  _ftSizesSorted(m).forEach(z=>{
+    const stok=_ftStok(z);
+    if(stok<=0){ skipped++; return; }
+    if(filled>=10){ tasan++; return; }        // formda 10 satır var
+    const i=filled+1;
+    const ec=document.getElementById('kor_'+i+'_cm'); const ea=document.getElementById('kor_'+i+'_a');
+    if(ec) ec.value=(z.cm!=null?z.cm:'');
+    if(ea) ea.value=stok;
+    filled++;
+  });
+  try{ korUpdateTotal(); }catch(_){}
+  ktCloseModelAc();
+  let msg=m.modelKodu+' seçildi · '+filled+' ölçü dolduruldu';
+  if(skipped) msg+=' ('+skipped+' stoksuz atlandı)';
+  if(tasan) msg+=' ('+tasan+' ölçü sığmadı — 10 satır sınırı)';
+  toast(msg, filled?'success':'info');
+}
+
+// Stok kontrolü mod çipi (Kordon İrsaliyesi sayfasında görünür)
+function ktRenderStockMode(){
+  const host=document.getElementById('korStockMode'); if(!host) return;
+  const on=ktStockControlOn();
+  host.innerHTML='<span class="f-stock-chip '+(on?'on':'off')+'">'+
+      '<i class="fas '+(on?'fa-shield-halved':'fa-feather')+'"></i> '+
+      (on?'Stok kontrolü AÇIK · Takip\'te olmayan model engellenir, stoğu düşer'
+         :'✦ Özel irsaliye · Takip\'te olmasa da kesilir, stok düşmez')+
+    '</span>'+
+    '<button class="btn btn-sm btn-secondary" onclick="ktToggleStockMode()">'+
+      '<i class="fas '+(on?'fa-toggle-off':'fa-toggle-on')+'"></i> '+(on?'Kapat (özel)':'Aç (kontrol)')+
+    '</button>';
+}
+function ktToggleStockMode(){
+  ktToggleStockControl(!ktStockControlOn());
+  ktRenderStockMode();
+}
+
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
 function incNextNo(){setConfig('nextIrsaliyeNo',getNextNo()+1);updateBadge();}
@@ -8374,12 +9225,20 @@ function saveKordon(){
     if(!total)return toast('En az bir ölçü için adet girin','error');
   }
   const olcuTipi = metreModu?'metre':'adet';
+  // Kordon Takip stok kontrolü — sadece cm & adet modunda anlamlı
+  // ("Sadece Metre"de eşleşecek cm ölçüsü yok, kontrol atlanır).
+  if(!metreModu && typeof window.ktValidateBeforeCut==='function'){
+    const _chk=window.ktValidateBeforeCut(model, olcular);
+    if(_chk && _chk.ok===false) return;
+  }
   const termin=document.getElementById('korTermin').value;const aciklama=document.getElementById('korAciklama').value.trim();
   if(_saveUniIfEditing('kordon', {model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,olcular,totalAdet:total,olcuTipi,metre})) return;
   const no=getNextNo();
   const item={id:Date.now(),no:'KOR-'+String(no).padStart(3,'0'),type:'kordon',model,tarih,atolye,teslimEden,teslimAlan,renk,termin,aciklama,olcular,totalAdet:total,olcuTipi,metre,durum:'bekliyor',createdAt:new Date().toISOString()};
   _attachNfPhotosToItem(item,'kordon');
   const list=getData('kordonlar');list.unshift(item);setData('kordonlar',list);incNextNo();
+  // Kesilen ölçüleri Kordon Takip stoğundan düş (kontrol açıksa)
+  if(!metreModu){ try{ if(typeof window.ktConsumeForCut==='function') window.ktConsumeForCut(model, olcular, item.no); }catch(_){} }
   _uploadNfPhotosInBackground(item.id,'kordon');
   ['korModel','korTarih','korAtolye','korTeslimEden','korTeslimAlan','korRenk','korTermin','korAciklama'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   _syncAtolyeLabel('korAtolye');
@@ -8389,6 +9248,17 @@ function saveKordon(){
   const today=new Date().toISOString().split('T')[0];const dt=document.getElementById('korTarih');if(dt)dt.value=today;
   _subListPage.kordon=1;toast('Kordon irsaliyesi kaydedildi: '+item.no);refreshHome();refreshKordonList();
 }
+
+// Kordon Model Kodu autocomplete: yazdıkça Takip'teki modelleri filtrele.
+// Serbest yazma korunur — Takip'te olmayan kod da yazılabilir.
+(function(){
+  const el=document.getElementById('korModel');
+  if(!el || el._ktAcBound) return; el._ktAcBound=true;
+  el.addEventListener('input', ()=>ktRenderModelAc(el.value));
+  el.addEventListener('focus', ()=>ktRenderModelAc(el.value));
+  el.addEventListener('keydown', e=>{ if(e.key==='Escape'){ ktCloseModelAc(); }});
+  el.addEventListener('blur', ()=>{ setTimeout(()=>{ if(!_ktAcHover) ktCloseModelAc(); }, 150); });
+})();
 
 function deleteKordon(id){deleteItemUni(id,'kordon');}
 
@@ -8883,6 +9753,7 @@ MK.tumModeller = function(){
   try{ (getUnifiedList()||[]).forEach(function(i){ ekle(i.model||i.urun); }); }catch(e){}
   try{ (getData('telaKontrol')||[]).forEach(function(i){ ekle(i.modelKodu); }); }catch(e){}
   try{ (getData('fermuarTakip')||[]).forEach(function(i){ ekle(i.modelKodu); }); }catch(e){}
+  try{ (getData('kordonTakip')||[]).forEach(function(i){ ekle(i.modelKodu); }); }catch(e){}
   try{ (getData('aksesuarlar')||[]).forEach(function(i){ ekle(i.modelKodu); }); }catch(e){}
   try{ (AK.recs()||[]).forEach(function(r){ ekle(r.model); }); }catch(e){}
   return Object.keys(set).map(function(k){ return {kod:k, ad:set[k]}; })
@@ -8892,11 +9763,12 @@ MK.tumModeller = function(){
 MK.topla = function(model){
   var K=MK._norm(model);
   var esit=function(x){ return MK._norm(x)===K; };
-  var d={ kod:K, irsaliyeler:[], foyler:[], tela:[], fermuar:[], aksesuar:[] };
+  var d={ kod:K, irsaliyeler:[], foyler:[], tela:[], fermuar:[], kordon:[], aksesuar:[] };
   try{ d.irsaliyeler=(getUnifiedList()||[]).filter(function(i){ return esit(i.model)||esit(i.urun); }); }catch(e){}
   try{ d.foyler=(AK.recs()||[]).filter(function(r){ return esit(r.model); }); }catch(e){}
   try{ d.tela=(getData('telaKontrol')||[]).filter(function(t){ return esit(t.modelKodu); }); }catch(e){}
   try{ d.fermuar=(getData('fermuarTakip')||[]).filter(function(f){ return esit(f.modelKodu); }); }catch(e){}
+  try{ d.kordon=(getData('kordonTakip')||[]).filter(function(f){ return esit(f.modelKodu); }); }catch(e){}
   try{ d.aksesuar=(getData('aksesuarlar')||[]).filter(function(a){ return esit(a.modelKodu); }); }catch(e){}
   // Renk özeti: föy kayıtlarından (adet + toptan + PO)
   var renkler={};
@@ -8920,7 +9792,7 @@ MK.topla = function(model){
   d.polar=Object.keys(po);
   d.toplamAdet=d.renkler.reduce(function(s,r){ return s+r.adet; },0);
   d.toplamToptan=d.renkler.reduce(function(s,r){ return s+r.toptan; },0);
-  d.varMi = !!(d.irsaliyeler.length||d.foyler.length||d.tela.length||d.fermuar.length||d.aksesuar.length);
+  d.varMi = !!(d.irsaliyeler.length||d.foyler.length||d.tela.length||d.fermuar.length||d.kordon.length||d.aksesuar.length);
   return d;
 };
 
@@ -8986,6 +9858,7 @@ MK.ciz = function(){
     MK._foyHtml(d) +
     MK._telaHtml(d) +
     MK._fermuarHtml(d) +
+    MK._kordonHtml(d) +
     MK._aksHtml(d);
 };
 MK._kutu = function(ic,lbl,val,alt){
@@ -9008,6 +9881,7 @@ MK._basHtml = function(d){
     MK._kutu('fa-clipboard-check','Aksesuar Föyü', d.foyler.length, '') +
     MK._kutu('fa-layer-group','Tela', d.tela.length, '') +
     MK._kutu('fa-grip-lines','Fermuar', d.fermuar.length, '') +
+    MK._kutu('fa-bezier-curve','Kordon', d.kordon.length, '') +
   '</div>';
 };
 MK._blok = function(ic,baslik,sag,ic2){
@@ -9101,6 +9975,26 @@ MK._fermuarHtml = function(d){
   }).join('');
   return MK._blok('fa-grip-lines','Fermuar Takip', d.fermuar.length+' kayıt',
     '<div class="mk-tw"><table class="mk-t"><thead><tr><th>Tedarikçi</th><th>Termin</th><th>Ölçü</th><th>Sipariş</th><th>Gelen</th><th>Kullanılan</th><th>Kalan</th></tr></thead><tbody>'+sat+'</tbody></table></div>');
+};
+MK._kordonHtml = function(d){
+  if(!d.kordon.length) return '';
+  var sat=d.kordon.map(function(f){
+    var sz=(f.sizes||[]);
+    var sip=sz.reduce(function(s,x){ return s+(parseInt(x.siparisAdet,10)||0); },0);
+    var gel=sz.reduce(function(s,x){ return s+((x.teslimatlar||[]).reduce(function(a,t){ return a+(parseInt(t.adet,10)||0); },0)); },0);
+    var kul=sz.reduce(function(s,x){ return s+((x.kullanimlar||[]).reduce(function(a,t){ return a+(parseInt(t.adet,10)||0); },0)); },0);
+    return '<tr>'+
+      '<td><b>'+MK._esc(f.tedarikci||'\u2014')+'</b></td>'+
+      '<td>'+MK._esc(f.termin||'\u2014')+'</td>'+
+      '<td class="c">'+sz.length+' \u00f6l\u00e7\u00fc</td>'+
+      '<td class="c">'+MK._n(sip)+'</td>'+
+      '<td class="c">'+MK._n(gel)+'</td>'+
+      '<td class="c">'+MK._n(kul)+'</td>'+
+      '<td class="c"><b>'+MK._n(gel-kul)+'</b></td>'+
+    '</tr>';
+  }).join('');
+  return MK._blok('fa-bezier-curve','Kordon Takip', d.kordon.length+' kay\u0131t',
+    '<div class="mk-tw"><table class="mk-t"><thead><tr><th>Tedarik\u00e7i</th><th>Termin</th><th>\u00d6l\u00e7\u00fc</th><th>Sipari\u015f</th><th>Gelen</th><th>Kullan\u0131lan</th><th>Kalan</th></tr></thead><tbody>'+sat+'</tbody></table></div>');
 };
 MK._aksHtml = function(d){
   if(!d.aksesuar.length) return '';
@@ -11306,6 +12200,7 @@ function refreshPage(page){
   else if(page==='atolye')refreshAtolyeList();
   else if(page==='aksesuar')renderAksesuarTable();
   else if(page==='fermuar-takip'){ renderFermuarTakip(); window._ftRefreshPending=false; try{ const d=document.getElementById('ftRefreshDot'); if(d) d.style.display='none'; }catch(_){} }
+  else if(page==='kordon-takip'){ renderKordonTakip(); window._ktRefreshPending=false; try{ const d=document.getElementById('ktRefreshDot'); if(d) d.style.display='none'; }catch(_){} }
   else if(page==='stok')renderStokList();
   else if(page==='takvim')renderCalendar();
   else if(page==='lastik')refreshLastikList();
@@ -16959,6 +17854,8 @@ document.addEventListener('DOMContentLoaded', function(){
      model:'model',     alt:it=>[it.renk, it.po?('PO '+it.po):'', it.tarih].filter(Boolean).join(' • ')},
     {id:'ftakip',    key:'fermuarTakip', sayfa:'fermuar-takip', lbl:'Fermuar Takip', ic:'fa-link',            color:'#6366f1',
      model:'modelKodu', alt:it=>[it.tedarikci, it.termin?('Termin '+it.termin):''].filter(Boolean).join(' • ')},
+    {id:'ktakip',    key:'kordonTakip',  sayfa:'kordon-takip',  lbl:'Kordon Takip', ic:'fa-bezier-curve',    color:'#c026d3',
+     model:'modelKodu', alt:it=>[it.tedarikci, it.termin?('Termin '+it.termin):''].filter(Boolean).join(' • ')},
     {id:'tela',      key:'telaKontrol',  sayfa:'tela-kontrol',  lbl:'Tela Kontrol', ic:'fa-layer-group',      color:'#14b8a6',
      model:'modelKodu', alt:it=>[it.renk, it.adet?(it.adet+' adet'):''].filter(Boolean).join(' • ')},
     {id:'stok',      key:'stoklar',      sayfa:'stok',          lbl:'Genel Stok', ic:'fa-warehouse',          color:'#64748b',
@@ -16973,6 +17870,7 @@ document.addEventListener('DOMContentLoaded', function(){
     {p:'akskontrol',ad:'Aksesuar Kontrol',ek:'föy defacto arşiv barkod yıkama dokuma'},
     {p:'model',ad:'Model Kartı',ek:'model kodu ara tek ekran her şey'},
     {p:'fermuar-takip',ad:'Fermuar Takip',ek:'cm satın alma'},
+    {p:'kordon-takip',ad:'Kordon Takip',ek:'cm satın alma kordon stok'},
     {p:'tela-kontrol',ad:'Tela Kontrol',ek:'top 150 180'},
     {p:'atolye',ad:'Atölyeler',ek:''},
     {p:'takvim',ad:'Takvim',ek:'termin sevk'},
