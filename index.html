@@ -2222,11 +2222,12 @@ if(typeof Chart==='undefined'){
         <div class="ft-toolbar">
           <div class="ft-toolbar-group">
             <label class="ft-toggle" title="Açıkken, takipte kayıtlı olmayan fermuar için irsaliye kesilemez ve kesince stok düşer">
-              <input type="checkbox" id="ftStockControl" onchange="ftToggleStockControl(this.checked)">
+              <input type="checkbox" id="ftStockControl" role="switch" aria-label="Fermuar stok kontrolü" onchange="ftToggleStockControl(this.checked)">
               <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
               <span class="ft-toggle-lbl">Stok kontrolü</span>
+              <span class="ft-toggle-durum" aria-hidden="true"></span>
             </label>
-            <button class="btn btn-secondary" id="ftRefreshBtn" onclick="ftManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="ftRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
+            <button class="btn btn-secondary" id="ftRefreshBtn" onclick="ftManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span class="ft-refresh-dot" id="ftRefreshDot" style="display:none;"></span></button>
             <button class="btn btn-secondary" onclick="ftOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik</button>
           </div>
           <button class="btn btn-primary" onclick="ftOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Model</button>
@@ -2378,11 +2379,12 @@ if(typeof Chart==='undefined'){
         <div class="ft-toolbar">
           <div class="ft-toolbar-group">
             <label class="ft-toggle" title="Açıkken, takipte kayıtlı olmayan kordon için irsaliye kesilemez ve kesince stok düşer">
-              <input type="checkbox" id="ktStockControl" onchange="ktToggleStockControl(this.checked)">
+              <input type="checkbox" id="ktStockControl" role="switch" aria-label="Kordon stok kontrolü" onchange="ktToggleStockControl(this.checked)">
               <span class="ft-toggle-track"><span class="ft-toggle-dot"></span></span>
               <span class="ft-toggle-lbl">Stok kontrolü</span>
+              <span class="ft-toggle-durum" aria-hidden="true"></span>
             </label>
-            <button class="btn btn-secondary" id="ktRefreshBtn" onclick="ktManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span id="ktRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
+            <button class="btn btn-secondary" id="ktRefreshBtn" onclick="ktManualRefresh()" style="position:relative;"><i class="fas fa-sync-alt"></i> Yenile<span class="ft-refresh-dot" id="ktRefreshDot" style="display:none;"></span></button>
             <button class="btn btn-secondary" onclick="ktOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik</button>
           </div>
           <button class="btn btn-primary" onclick="ktOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Model</button>
@@ -6310,6 +6312,7 @@ function ftOpenDetailModal(id){
 }
 function ftCloseDetailModal(){
   document.getElementById('ftDetailModal').classList.remove('show');
+  window._takipDuzenle=null;
   _ftCurrentDetailId=null;
   renderFermuarTakip(); // ana ızgarayı tazele (yeni eklenen satırlar yansısın)
 }
@@ -6343,6 +6346,11 @@ function ftRenderDetail(){
   host.innerHTML = `<div class="ft-rowhead">
       <span>Beden</span><span>CM</span><span>Renk</span><span>Sipariş</span><span>Gelen</span><span>Kullanılan</span><span>Eksik</span><span>Stok</span><span></span>
     </div>` + sizes.map(z=>{
+    // Satır düzenleme modundaysa satırın yerine düzenleme formu gelir
+    const _duz=window._takipDuzenle;
+    if(_duz && _duz.store==='fermuarTakip' && _duz.modelId===m.id && _duz.sizeId===z.id){
+      return `<div class="ft-rowwrap">${_takipEditRowHtml('fermuarTakip', z, true)}</div>`;
+    }
     const zg=_ftGelen(z), zk=_ftKullanilan(z), zs=_ftStok(z), zb=_ftBekleyen(z);
     const stokCls = zs<=0 ? 'zero' : ((+z.siparisAdet||0)>0 && zs < (+z.siparisAdet)*0.15 ? 'low' : '');
     return `<div class="ft-rowwrap">
@@ -6357,6 +6365,7 @@ function ftRenderDetail(){
         <span class="ft-row-stok ${stokCls}">${zs.toLocaleString('tr')}</span>
         <span class="ft-row-acts">
           <button class="btn btn-xs btn-primary" onclick="ftOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
+          <button class="btn btn-xs btn-secondary" onclick="takipRowEdit('fermuarTakip',${m.id},${z.id})" title="Satırı düzenle (beden / cm / renk / sipariş)"><i class="fas fa-pen"></i></button>
           <button class="btn btn-xs btn-secondary" onclick="ftToggleHistory(${z.id})" title="Geçmiş"><i class="fas fa-clock-rotate-left"></i></button>
           <button class="btn btn-xs btn-danger" onclick="ftDeleteSizeRow(${m.id},${z.id})" title="Sil"><i class="fas fa-trash"></i></button>
         </span>
@@ -6434,8 +6443,10 @@ function ftOpenReceiveModal(modelId, sizeId){
   const m=_ftAll().find(x=>x.id===modelId); if(!m) return;
   const z=(m.sizes||[]).find(x=>x.id===sizeId); if(!z) return;
   _ftReceiveCtx={modelId, sizeId};
+  const _bek=_ftBekleyen(z);
   document.getElementById('ftReceiveCtx').innerHTML=`<div class="ft-rc-model">${esc(m.modelKodu)} · ${z.cm!=null?z.cm+' cm':''}${z.beden?(' · '+esc(z.beden)):''}${z.renk?(' · '+esc(z.renk)):''}</div>
-    <div class="ft-rc-stats"><span>Sipariş <b>${(+z.siparisAdet||0).toLocaleString('tr')}</b></span><span>Gelen <b>${_ftGelen(z).toLocaleString('tr')}</b></span><span>Bekleyen <b>${_ftBekleyen(z).toLocaleString('tr')}</b></span></div>`;
+    <div class="ft-rc-stats"><span>Sipariş <b>${(+z.siparisAdet||0).toLocaleString('tr')}</b></span><span>Gelen <b>${_ftGelen(z).toLocaleString('tr')}</b></span><span>Bekleyen <b>${_bek.toLocaleString('tr')}</b></span></div>`+
+    (_bek>0?`<button type="button" class="ft-rc-hizli" onclick="_takipKalaniGir('ftReceiveAdet',${_bek})"><i class="fas fa-bolt"></i> Tamamı geldi · ${_bek.toLocaleString('tr')} adet</button>`:'');
   document.getElementById('ftReceiveAdet').value='';
   document.getElementById('ftReceiveTarih').value=new Date().toISOString().slice(0,10);
   document.getElementById('ftReceiveModal').classList.add('show');
@@ -7046,6 +7057,7 @@ function ktOpenDetailModal(id){
 }
 function ktCloseDetailModal(){
   document.getElementById('ktDetailModal').classList.remove('show');
+  window._takipDuzenle=null;
   _ktCurrentDetailId=null;
   renderKordonTakip();
 }
@@ -7078,6 +7090,10 @@ function ktRenderDetail(){
   host.innerHTML = `<div class="ft-rowhead kt-rowhead">
       <span>CM</span><span>Renk</span><span>Sipariş</span><span>Gelen</span><span>Kullanılan</span><span>Eksik</span><span>Stok</span><span></span>
     </div>` + sizes.map(z=>{
+    const _duz=window._takipDuzenle;
+    if(_duz && _duz.store==='kordonTakip' && _duz.modelId===m.id && _duz.sizeId===z.id){
+      return `<div class="ft-rowwrap">${_takipEditRowHtml('kordonTakip', z, false)}</div>`;
+    }
     const zg=_ftGelen(z), zk=_ftKullanilan(z), zs=_ftStok(z), zb=_ftBekleyen(z);
     const stokCls = zs<=0 ? 'zero' : ((+z.siparisAdet||0)>0 && zs < (+z.siparisAdet)*0.15 ? 'low' : '');
     return `<div class="ft-rowwrap">
@@ -7091,6 +7107,7 @@ function ktRenderDetail(){
         <span class="ft-row-stok ${stokCls}">${zs.toLocaleString('tr')}</span>
         <span class="ft-row-acts">
           <button class="btn btn-xs btn-primary" onclick="ktOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
+          <button class="btn btn-xs btn-secondary" onclick="takipRowEdit('kordonTakip',${m.id},${z.id})" title="Satırı düzenle (cm / renk / sipariş)"><i class="fas fa-pen"></i></button>
           <button class="btn btn-xs btn-secondary" onclick="ktToggleHistory(${z.id})" title="Geçmiş"><i class="fas fa-clock-rotate-left"></i></button>
           <button class="btn btn-xs btn-danger" onclick="ktDeleteSizeRow(${m.id},${z.id})" title="Sil"><i class="fas fa-trash"></i></button>
         </span>
@@ -7162,8 +7179,10 @@ function ktOpenReceiveModal(modelId, sizeId){
   const m=_ktAll().find(x=>x.id===modelId); if(!m) return;
   const z=(m.sizes||[]).find(x=>x.id===sizeId); if(!z) return;
   _ktReceiveCtx={modelId, sizeId};
+  const _bek=_ftBekleyen(z);
   document.getElementById('ktReceiveCtx').innerHTML=`<div class="ft-rc-model">${esc(m.modelKodu)} · ${z.cm!=null?z.cm+' cm':''}${z.renk?(' · '+esc(z.renk)):''}</div>
-    <div class="ft-rc-stats"><span>Sipariş <b>${(+z.siparisAdet||0).toLocaleString('tr')}</b></span><span>Gelen <b>${_ftGelen(z).toLocaleString('tr')}</b></span><span>Bekleyen <b>${_ftBekleyen(z).toLocaleString('tr')}</b></span></div>`;
+    <div class="ft-rc-stats"><span>Sipariş <b>${(+z.siparisAdet||0).toLocaleString('tr')}</b></span><span>Gelen <b>${_ftGelen(z).toLocaleString('tr')}</b></span><span>Bekleyen <b>${_bek.toLocaleString('tr')}</b></span></div>`+
+    (_bek>0?`<button type="button" class="ft-rc-hizli" onclick="_takipKalaniGir('ktReceiveAdet',${_bek})"><i class="fas fa-bolt"></i> Tamamı geldi · ${_bek.toLocaleString('tr')} adet</button>`:'');
   document.getElementById('ktReceiveAdet').value='';
   document.getElementById('ktReceiveTarih').value=new Date().toISOString().slice(0,10);
   document.getElementById('ktReceiveModal').classList.add('show');
@@ -7495,6 +7514,106 @@ function ktRenderStockMode(){
 function ktToggleStockMode(){
   ktToggleStockControl(!ktStockControlOn());
   ktRenderStockMode();
+}
+
+// ============ TAKİP SATIRI DÜZENLEME (Fermuar + Kordon ortak) ============
+// Sipariş adedi ya da cm yanlış girildiğinde eskiden tek çare satırı silip
+// yeniden eklemekti — teslimat/kullanım geçmişi de siliniyordu. Artık satır
+// yerinde düzeltiliyor, geçmişe hiç dokunulmuyor.
+window._takipDuzenle = null;   // {store, modelId, sizeId}
+
+function _takipCiz(store){
+  if(store==='fermuarTakip'){ if(typeof ftRenderDetail==='function') ftRenderDetail(); }
+  else { if(typeof ktRenderDetail==='function') ktRenderDetail(); }
+}
+// Teslimat modalındaki "Tamamı geldi" kısayolu: kalan adedi kutuya yazar
+window._takipKalaniGir = function(inputId, adet){
+  const el=document.getElementById(inputId); if(!el) return;
+  el.value=adet; el.focus();
+  try{ el.select(); }catch(_){}
+};
+
+const _TAKIP_BEDENLER=['','Tek Beden','XXS','XS','S','M','L','XL','XXL','3XL'];
+function _takipEditRowHtml(store, z, bedenli){
+  const gelen=_ftGelen(z), kul=_ftKullanilan(z);
+  const bedenSec = bedenli
+    ? `<select class="form-input tk-in tk-in-beden" id="tkEditBeden" aria-label="Beden">`+
+      _TAKIP_BEDENLER.map(bd=>`<option value="${esc(bd)}"${(z.beden||'')===bd?' selected':''}>${bd||'Beden —'}</option>`).join('')+
+      `</select>` : '';
+  return `<div class="tk-edit">
+    <div class="tk-edit-form">
+      ${bedenSec}
+      <input class="form-input tk-in tk-in-cm" type="number" id="tkEditCm" step="0.1" min="0" inputmode="decimal"
+             value="${z.cm!=null?esc(String(z.cm)):''}" placeholder="CM" aria-label="CM"
+             onkeydown="_takipEditTus(event,'${store}')">
+      <input class="form-input tk-in tk-in-renk" id="tkEditRenk" value="${esc(z.renk||'')}" placeholder="Renk" aria-label="Renk"
+             onkeydown="_takipEditTus(event,'${store}')">
+      <input class="form-input tk-in tk-in-sip" type="number" id="tkEditSip" min="0" inputmode="numeric"
+             value="${+z.siparisAdet||0}" placeholder="Sipariş" aria-label="Satın alma adeti"
+             onkeydown="_takipEditTus(event,'${store}')">
+      <span class="tk-edit-acts">
+        <button class="btn btn-xs btn-primary" onclick="takipRowEditSave('${store}')" title="Kaydet (Enter)"><i class="fas fa-check"></i> Kaydet</button>
+        <button class="btn btn-xs btn-secondary" onclick="takipRowEditCancel('${store}')" title="Vazgeç (Esc)"><i class="fas fa-times"></i></button>
+      </span>
+    </div>
+    <div class="tk-edit-not">
+      <i class="fas fa-circle-info"></i>
+      Bu satırda <b>${gelen.toLocaleString('tr')}</b> adet gelmiş, <b>${kul.toLocaleString('tr')}</b> adet kullanılmış —
+      düzenleme bu geçmişi silmez, sadece sipariş bilgisini düzeltir.
+    </div>
+  </div>`;
+}
+function _takipEditTus(e, store){
+  if(e.key==='Enter'){ e.preventDefault(); takipRowEditSave(store); }
+  else if(e.key==='Escape'){ e.preventDefault(); takipRowEditCancel(store); }
+}
+function takipRowEdit(store, modelId, sizeId){
+  window._takipDuzenle={store, modelId, sizeId};
+  _takipCiz(store);
+  setTimeout(()=>{ const el=document.getElementById('tkEditSip'); if(el){ el.focus(); try{ el.select(); }catch(_){} } }, 60);
+}
+function takipRowEditCancel(store){
+  window._takipDuzenle=null;
+  _takipCiz(store);
+}
+function takipRowEditSave(store){
+  const ctx=window._takipDuzenle;
+  if(!ctx || ctx.store!==store) return;
+  const list=getData(store)||[];
+  const midx=list.findIndex(x=>x.id===ctx.modelId); if(midx<0) return;
+  const sizes=list[midx].sizes||[];
+  const zidx=sizes.findIndex(z=>z.id===ctx.sizeId); if(zidx<0) return;
+
+  const cm=(document.getElementById('tkEditCm')?.value||'').trim();
+  const renk=(document.getElementById('tkEditRenk')?.value||'').trim();
+  const sipEl=document.getElementById('tkEditSip');
+  const sip=+(sipEl?sipEl.value:0)||0;
+  const bedenEl=document.getElementById('tkEditBeden');
+
+  if(cm===''){ toast('Uzunluk (cm) gerekli','error'); return; }
+  if(sip<0){ toast('Satın alma adeti eksi olamaz','error'); return; }
+  if(sizes.some((z,i)=>i!==zidx && _ftNum(z.cm)===_ftNum(cm))){
+    toast('Bu cm zaten var: '+cm+'cm — iki satır aynı ölçüde olamaz','error'); return;
+  }
+  // Gelen mal yeni sipariş adedini aşıyorsa engelleme, sadece uyar
+  const gelen=_ftGelen(sizes[zidx]);
+  if(sip>0 && gelen>sip &&
+     !confirm('Bu ölçüde zaten '+gelen.toLocaleString('tr')+' adet gelmiş.\n'+
+              'Sipariş '+sip.toLocaleString('tr')+' olarak kaydedilirse fazla teslimat görünür.\n\nYine de kaydedilsin mi?')){
+    return;
+  }
+  sizes[zidx].cm=cm;
+  sizes[zidx].renk=renk;
+  sizes[zidx].siparisAdet=sip;
+  if(bedenEl) sizes[zidx].beden=bedenEl.value;
+  list[midx].sizes=sizes;
+  _ftStamp(list[midx]);
+  setData(store, list);
+  window._takipDuzenle=null;
+  _takipCiz(store);
+  // Ana ızgaradaki KPI/kart rakamları da tazelensin
+  try{ if(store==='fermuarTakip') renderFermuarTakip(); else renderKordonTakip(); }catch(_){}
+  toast(cm+'cm satırı güncellendi','success');
 }
 
 // ==================== İRSALİYE ====================
