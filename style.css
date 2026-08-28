@@ -14142,12 +14142,25 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-mini b .bad{ color:var(--danger); font-weight:800; }
 
 /* Üst satır: birincil eylem (Detay / CM Gir) tam genişlik; alt satır: Tamamla + düzenle + sil */
-.ft-actions{ display:grid; grid-template-columns:1fr auto auto; gap:7px; align-items:stretch; }
+/* NOT: Eskiden sıra numarasına (nth-child) göre biçimlendiriliyordu; araya
+   yeni bir düğme girince tüm dizilim kayıyordu. Artık her düğme kendi
+   sınıfını taşır. Üst satır: Detay + İrsaliye Kes, alt satır: Tamamla + ikonlar. */
+.ft-actions{ display:flex; flex-wrap:wrap; gap:7px; align-items:stretch; }
 .ft-actions .btn{ white-space:nowrap; }
-.ft-actions .btn:first-child{ grid-column:1 / -1; font-weight:800; padding-top:10px; padding-bottom:10px; }
-.ft-actions .btn:nth-child(2){ min-width:0; }               /* Tamamla/Geri Al: kalan alanı doldurur */
-.ft-actions .btn:nth-child(2) span,.ft-actions .btn:nth-child(2){ overflow:hidden; text-overflow:ellipsis; }
-.ft-actions .btn:nth-child(n+3){ width:42px; padding-left:0; padding-right:0; justify-content:center; }  /* ikon butonlar kare */
+.ft-act-ana{ flex:1 1 calc(50% - 4px); min-width:126px; font-weight:800; padding-top:10px; padding-bottom:10px; overflow:hidden; text-overflow:ellipsis; }
+.ft-act-genis{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.ft-act-ikon{ flex:0 0 42px; width:42px; padding-left:0; padding-right:0; justify-content:center; }
+/* Takip'ten doğrudan irsaliyeye geçiş — dikkat çeksin */
+.ft-act-kes{
+  background:color-mix(in srgb, var(--success, #16a34a) 16%, transparent) !important;
+  border:1px solid color-mix(in srgb, var(--success, #16a34a) 42%, var(--border)) !important;
+  color:var(--success, #16a34a) !important;
+}
+.ft-act-kes:hover{
+  background:color-mix(in srgb, var(--success, #16a34a) 26%, transparent) !important;
+  border-color:color-mix(in srgb, var(--success, #16a34a) 62%, var(--border)) !important;
+}
+.ft-act-kes.stoksuz{ opacity:.55; }
 
 .ft-history{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); }
 .ft-hist-list{ display:flex; flex-direction:column; gap:6px; }
@@ -16042,3 +16055,14 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
   .lgb-ust h3{ font-size:16px; }
   .lgb-mail{ font-size:13px; }
 }
+
+/* Takip'ten irsaliyeye geçince model kutusu kısa süre vurgulansın */
+.tk-vurgu{
+  animation:tkVurgu 1.6s ease-out 1;
+}
+@keyframes tkVurgu{
+  0%,100%{ box-shadow:0 0 0 0 transparent; border-color:var(--border); }
+  15%,60%{ box-shadow:0 0 0 4px color-mix(in srgb, var(--success, #16a34a) 28%, transparent);
+           border-color:var(--success, #16a34a); }
+}
+@media(prefers-reduced-motion:reduce){ .tk-vurgu{ animation:none; } }

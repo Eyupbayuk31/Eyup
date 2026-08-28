@@ -2289,7 +2289,8 @@ if(typeof Chart==='undefined'){
             <div class="ft-detail-model" id="ftDetailModel">—</div>
             <div class="ft-detail-meta" id="ftDetailMeta"></div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn btn-sm ft-act-kes" onclick="ftIrsaliyeKes(_ftCurrentDetailId)"><i class="fas fa-file-export"></i> İrsaliye Kes</button>
             <button class="btn btn-sm btn-secondary" onclick="ftEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
             <button onclick="ftCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
           </div>
@@ -2451,7 +2452,8 @@ if(typeof Chart==='undefined'){
             <div class="ft-detail-model" id="ktDetailModel">—</div>
             <div class="ft-detail-meta" id="ktDetailMeta"></div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn btn-sm ft-act-kes" onclick="ktIrsaliyeKes(_ktCurrentDetailId)"><i class="fas fa-file-export"></i> İrsaliye Kes</button>
             <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
             <button onclick="ktCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
           </div>
@@ -6219,12 +6221,15 @@ function renderFermuarTakip(){
       </div>
 
       <div class="ft-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-sm btn-primary" onclick="ftOpenDetailModal(${m.id})"><i class="fas fa-list"></i> Detay / CM Gir</button>
+        <button class="btn btn-sm btn-primary ft-act-ana" onclick="ftOpenDetailModal(${m.id})"><i class="fas fa-list"></i> Detay / CM Gir</button>
+        <button class="btn btn-sm ft-act-ana ft-act-kes${stok>0?'':' stoksuz'}" onclick="ftIrsaliyeKes(${m.id})"
+                title="${stok>0?'Bu modeli irsaliye ekranına taşı — bedenler eldeki stokla dolar':'Eldeki stok yok — irsaliye ekranında elle girersiniz'}">
+          <i class="fas fa-file-export"></i> İrsaliye Kes</button>
         ${done
-          ? `<button class="btn btn-sm btn-secondary" onclick="ftToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
-          : `<button class="btn btn-sm btn-secondary" onclick="ftToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
-        <button class="btn btn-sm btn-secondary" onclick="ftEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="ftDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
+          ? `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ftToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
+          : `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ftToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
+        <button class="btn btn-sm btn-secondary ft-act-ikon" onclick="ftEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-sm btn-danger ft-act-ikon" onclick="ftDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -6849,6 +6854,29 @@ function ftPickModel(id){
   toast(msg, filled?'success':'info');
 }
 
+// ── Takip → İrsaliye tek tıkla ────────────────────────────────────
+// Modeli Fermuar İrsaliyesi ekranına taşır ve beden/cm satırlarını eldeki
+// stokla doldurur. Elle model kodu yazıp aramaya gerek kalmaz.
+window.ftIrsaliyeKes = function(id){
+  const m=_ftAll().find(x=>x.id===id);
+  if(!m){ toast('Model bulunamadı','error'); return; }
+  try{ if(document.getElementById('ftDetailModal').classList.contains('show')) ftCloseDetailModal(); }catch(_){}
+  // Formda başka bir modelden kalan model/renk/termin varsa temizle — yoksa
+  // ftPickModel dolu alanların üzerine yazmadığı için YANLIŞ RENKLE irsaliye
+  // kesilebilirdi. Atölye/teslim eden gibi sevkiyat alanlarına dokunulmaz.
+  ['fModel','fRenk','fTermin'].forEach(function(x){ var e=document.getElementById(x); if(e) e.value=''; });
+  try{ showPage('fermuar'); }catch(_){}
+  // Sayfa çizildikten sonra doldur (showPage stok çipini yeniden basıyor)
+  setTimeout(function(){
+    try{ ftPickModel(id); }catch(_){}
+    try{
+      const el=document.getElementById('fModel');
+      if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('tk-vurgu');
+              setTimeout(function(){ el.classList.remove('tk-vurgu'); }, 1600); }
+    }catch(_){}
+  }, 90);
+};
+
 // Stok kontrolü mod çipi + toggle (İrsaliye sayfasında görünür)
 function ftRenderStockMode(){
   const host=document.getElementById('fStockMode'); if(!host) return;
@@ -7067,12 +7095,15 @@ function renderKordonTakip(){
       </div>
 
       <div class="ft-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-sm btn-primary" onclick="ktOpenDetailModal(${m.id})"><i class="fas fa-list"></i> ${metreMi?'Detay / Metre Gir':'Detay / CM Gir'}</button>
+        <button class="btn btn-sm btn-primary ft-act-ana" onclick="ktOpenDetailModal(${m.id})"><i class="fas fa-list"></i> ${metreMi?'Detay / Metre Gir':'Detay / CM Gir'}</button>
+        <button class="btn btn-sm ft-act-ana ft-act-kes${stok>0?'':' stoksuz'}" onclick="ktIrsaliyeKes(${m.id})"
+                title="${stok>0?'Bu modeli irsaliye ekranına taşı — ölçüler eldeki stokla dolar':'Eldeki stok yok — irsaliye ekranında elle girersiniz'}">
+          <i class="fas fa-file-export"></i> İrsaliye Kes</button>
         ${done
-          ? `<button class="btn btn-sm btn-secondary" onclick="ktToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
-          : `<button class="btn btn-sm btn-secondary" onclick="ktToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
-        <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="ktDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
+          ? `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ktToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
+          : `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ktToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
+        <button class="btn btn-sm btn-secondary ft-act-ikon" onclick="ktEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-sm btn-danger ft-act-ikon" onclick="ktDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -7794,6 +7825,26 @@ function ktPickModel(id){
   if(tasan) msg+=' ('+tasan+' ölçü sığmadı — 10 satır sınırı)';
   toast(msg, filled?'success':'info');
 }
+
+// ── Takip → İrsaliye tek tıkla ────────────────────────────────────
+// Modeli Kordon İrsaliyesi ekranına taşır. Ham kordon modelinde irsaliye
+// kendiliğinden "Sadece Metre" moduna geçer, eldeki metre yazılır.
+window.ktIrsaliyeKes = function(id){
+  const m=_ktAll().find(x=>x.id===id);
+  if(!m){ toast('Model bulunamadı','error'); return; }
+  try{ if(document.getElementById('ktDetailModal').classList.contains('show')) ktCloseDetailModal(); }catch(_){}
+  // Başka modelden kalan model/renk/termin temizlensin (bkz. ftIrsaliyeKes)
+  ['korModel','korRenk','korTermin'].forEach(function(x){ var e=document.getElementById(x); if(e) e.value=''; });
+  try{ showPage('kordon'); }catch(_){}
+  setTimeout(function(){
+    try{ ktPickModel(id); }catch(_){}
+    try{
+      const el=document.getElementById('korModel');
+      if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('tk-vurgu');
+              setTimeout(function(){ el.classList.remove('tk-vurgu'); }, 1600); }
+    }catch(_){}
+  }, 90);
+};
 
 // Stok kontrolü mod çipi (Kordon İrsaliyesi sayfasında görünür)
 function ktRenderStockMode(){
