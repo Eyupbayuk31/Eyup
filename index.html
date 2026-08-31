@@ -1843,6 +1843,7 @@ if(typeof Chart==='undefined'){
           <button class="bulk-btn" onclick="bulkDurum('bekliyor')"><i class="fas fa-clock"></i> Beklemeye Al</button>
           <button class="bulk-btn" onclick="bulkShareWhatsApp()"><svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp</button>
           <button class="bulk-btn" onclick="bulkExportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button class="bulk-btn" onclick="bulkExportImage()" title="Seçilenleri görsel (PNG) olarak telefona kaydet veya paylaş"><i class="fas fa-image"></i> Görsel</button>
           <button class="bulk-btn" onclick="bulkPrint()" style="background:rgba(255,255,255,0.15);"><i class="fas fa-print"></i> Yazdır</button>
               <button class="bulk-btn danger" onclick="bulkDelete()"><i class="fas fa-trash"></i> Sil</button>
           <button class="bulk-btn" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Tümünü Seç</button>
@@ -9446,12 +9447,15 @@ function generatePDF(id, type, mode) {
 // PDF zaten html2canvas ile rasterleştirilip jsPDF'e sarılıyor; burada
 // jsPDF adımı atlanır, aynı görüntü PNG olarak paylaşılır. Böylece
 // atölyeye WhatsApp'tan dosya eki yerine okunabilir bir fotoğraf gider.
-async function _shareElementAsImage(element, filename) {
+async function _shareElementAsImage(element, filename, hideEl) {
   if (typeof html2canvas === 'undefined') {
     toast('Görsel kütüphanesi yüklenemedi — internet bağlantınızı kontrol edin','error');
     return;
   }
   toast('Görsel hazırlanıyor…','info');
+  // Önizleme penceresindeki düğmeler görsele girmesin
+  const eskiGorunum = hideEl ? hideEl.style.display : null;
+  if (hideEl) hideEl.style.display = 'none';
   try {
     const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
@@ -9472,7 +9476,92 @@ async function _shareElementAsImage(element, filename) {
   } catch (err) {
     console.error('Görsel hatası:', err);
     toast('Görsel oluşturulamadı','error');
+  } finally {
+    if (hideEl) hideEl.style.display = eskiGorunum || 'flex';
   }
+}
+
+// ── HTML belgesini gizli iframe'de çizip PNG'ye çevirir ──
+// generatePDF'teki yöntemin aynısı: ağ yüzünden 'load' hiç tetiklenmezse
+// zaman aşımıyla yine de üretilir, tek sefer çalışır.
+function _htmlToPngBlob(html, genislik){
+  return new Promise(function(resolve){
+    const iframe=document.createElement('iframe');
+    iframe.setAttribute('aria-hidden','true');
+    iframe.style.cssText='position:fixed;left:-9999px;top:0;width:'+(genislik||800)+'px;height:1131px;border:0;';
+    document.body.appendChild(iframe);
+    let bitti=false;
+    const temizle=function(){ try{ document.body.removeChild(iframe); }catch(_){} };
+    const uret=async function(){
+      if(bitti) return; bitti=true;
+      try{
+        const doc=iframe.contentDocument;
+        const govde=doc && doc.body;
+        if(!govde){ temizle(); resolve(null); return; }
+        // Yazdırma düğmeleri belgenin parçası değil — görsele girmesin
+        try{ doc.querySelectorAll('.no-print').forEach(function(e){ e.remove(); }); }catch(_){}
+        const canvas=await html2canvas(govde, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+        const blob=await new Promise(function(r){ canvas.toBlob(r,'image/png'); });
+        temizle(); resolve(blob||null);
+      }catch(e){ console.error('Görsel üretim hatası:', e); temizle(); resolve(null); }
+    };
+    iframe.addEventListener('load', function onLoad(){
+      iframe.removeEventListener('load', onLoad);
+      setTimeout(uret, 250);      // QR ve fontların çizilmesi için kısa bekleme
+    });
+    setTimeout(uret, 2500);       // ağ takılırsa yine de üret
+    iframe.srcdoc=html;
+  });
+}
+
+// ── TOPLU GÖRSEL: seçilen irsaliyeleri PNG olarak kaydet/paylaş ──
+// Her irsaliye AYRI bir görsel olur (atölyeye tek tek gönderilebilsin).
+// Telefonda paylaşım sayfası açılır → galeriye kaydet veya WhatsApp'a yolla.
+async function bulkExportImage(){
+  const items=_bulkGetSelectedItems();
+  if(!items.length) return toast('En az 1 kayıt seçin','error');
+  if(typeof html2canvas === 'undefined'){
+    toast('Görsel kütüphanesi yüklenemedi — internet bağlantınızı kontrol edin','error');
+    return;
+  }
+  toast(items.length>1 ? (items.length+' kayıt görsele çevriliyor…') : 'Görsel hazırlanıyor…','info');
+
+  const dosyalar=[];
+  for(let i=0;i<items.length;i++){
+    if(items.length>1 && i>0) toast('Görsel '+(i+1)+'/'+items.length+'…','info');
+    const blob=await _htmlToPngBlob(_buildBulkHTML([items[i]]), 800);
+    if(!blob) continue;
+    const it=items[i].item;
+    const ad=((it.no||('irsaliye-'+it.id))+'').replace(/[^\w\-]+/g,'_')+'.png';
+    dosyalar.push(new File([blob], ad, {type:'image/png'}));
+  }
+  if(!dosyalar.length){ toast('Görsel oluşturulamadı','error'); return; }
+
+  // Telefon: paylaşım sayfası (galeriye kaydet / WhatsApp)
+  try{
+    if(navigator.canShare && navigator.canShare({files:dosyalar})){
+      await navigator.share({ files:dosyalar,
+        title: dosyalar.length>1 ? (dosyalar.length+' irsaliye') : dosyalar[0].name.replace(/\.png$/i,'') });
+      toast(dosyalar.length+' görsel paylaşıldı','success');
+      bulkClear();
+      return;
+    }
+  }catch(e){
+    if(e && e.name==='AbortError'){ toast('Paylaşım iptal edildi','info'); return; }
+    console.warn('paylasim yok, indirmeye dusuluyor:', e);
+  }
+
+  // Masaüstü / paylaşım desteklenmiyorsa: tek tek indir
+  dosyalar.forEach(function(f,i){
+    setTimeout(function(){
+      const u=URL.createObjectURL(f);
+      const a=document.createElement('a'); a.href=u; a.download=f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+    }, i*350);
+  });
+  toast(dosyalar.length+' görsel indiriliyor','success');
+  bulkClear();
 }
 
 // Keep old function name for compatibility
@@ -14329,6 +14418,7 @@ function _buildBulkHTML(items){
 </style></head><body>
 <div class="no-print" id="bulkPdfControls">
   <button class="btn-pdf" style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.body, '${pdfFilename}', document.getElementById('bulkPdfControls'))">📥 PDF İndir</button>
+  <button class="btn-pdf" style="background:#0891b2;" onclick="window.opener._shareElementAsImage(document.body, '${pdfFilename.replace(/\.pdf$/i,'')}.png', document.getElementById('bulkPdfControls'))">🖼️ Görsel</button>
   <button class="btn-pdf" onclick="window.print()">🖨️ Yazdır</button>
   <button class="btn-close" onclick="window.close()">✕ Kapat</button>
 </div>
