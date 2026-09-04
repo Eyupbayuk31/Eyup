@@ -8991,6 +8991,39 @@ let currentModalType = null;
 // Gerçek PDF dosyası indirir (tarayıcı yazdırma diyaloğu açmadan).
 // Yazdırma penceresinden de window.opener._downloadElementAsPDF(...) ile çağrılabilir.
 // hideEl: yakalama sırasında gizlenecek (ör. yüzen buton barı), sonra tekrar gösterilecek eleman.
+// ── Öğeyi boş alan katmadan, yüksek çözünürlükte tuvale çiz ──────────
+// SORUN: html2canvas varsayılan olarak PENCERE boyutunu alıyordu. İçerik
+// kısaysa altta kocaman boş bir şerit kalıyor; PDF'e çevrilince görsel
+// A4'ü aşıp bomboş bir 2. sayfa açıyordu (gerçek örnek: 1960x3716 piksel
+// görselin sadece 1400 pikseli doluydu → 398mm → 2 sayfa).
+// ÇÖZÜM: tuval, öğenin kendi içerik kutusuna kırpılır.
+// Ayrıca çözünürlük ~300 DPI hedeflenir (eskiden ~237 DPI idi); çok uzun
+// belgelerde telefon belleği şişmesin diye piksel bütçesine göre düşer.
+async function _elemaniTuvaleCiz(element){
+  const kutu = element.getBoundingClientRect();
+  const g = Math.ceil(Math.max(element.scrollWidth || 0, kutu.width || 0)) || 0;
+  const y = Math.ceil(Math.max(element.scrollHeight || 0, kutu.height || 0)) || 0;
+
+  const HEDEF_PX = 3300;    // A4 genişliği @400 DPI
+  const PIKSEL_BUTCESI = 24e6;   // eski telefonlarda bellek şişmesin
+  let olcek = 2;
+  if (g > 0) {
+    olcek = Math.min(4, Math.max(2, HEDEF_PX / g));
+    while (olcek > 2 && (g * olcek) * (y * olcek) > PIKSEL_BUTCESI) olcek -= 0.25;
+  }
+  const ayar = { scale: olcek, useCORS: true, backgroundColor: '#ffffff' };
+  if (g > 0 && y > 0) { ayar.width = g; ayar.height = y; ayar.x = 0; ayar.y = 0; }
+  return html2canvas(element, ayar);
+}
+function _tuvalBicim(veriAdresi){ return /^data:image\/png/i.test(veriAdresi) ? 'PNG' : 'JPEG'; }
+function _tuvalVeriAdresi(canvas){
+  // PNG denendi: jsPDF onu sıkıştırmadan gömüyor ve tek sayfalık bir liste
+  // 20 MB'a çıkıyor (WhatsApp'tan gönderilemez). Bu yüzden JPEG'de kalınıyor;
+  // keskinlik kaybı çözünürlükten kazanılıyor (~300 DPI, eskiden ~237) ve
+  // kalite 0.95'ten 0.98'e çıkarıldı.
+  return canvas.toDataURL('image/jpeg', 0.98);
+}
+
 async function _downloadElementAsPDF(element, filename, hideEl) {
   if (typeof html2canvas === 'undefined' || !(window.jspdf && window.jspdf.jsPDF)) {
     toast('PDF kütüphanesi yüklenemedi — internet bağlantınızı kontrol edin', 'error');
@@ -9000,12 +9033,12 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
   const prevDisplay = hideEl ? hideEl.style.display : null;
   if (hideEl) hideEl.style.display = 'none';
   try {
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const canvas = await _elemaniTuvaleCiz(element);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const imgData = _tuvalVeriAdresi(canvas);
     const imgWidth = pageWidth;
     const imgHeight = canvas.height * imgWidth / canvas.width;
 
@@ -9016,7 +9049,7 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
     if (imgHeight > pageHeight && imgHeight <= pageHeight * TASMA_PAYI) {
       const h = pageHeight;
       const w = imgWidth * (pageHeight / imgHeight);
-      pdf.addImage(imgData, 'JPEG', (pageWidth - w) / 2, 0, w, h);
+      pdf.addImage(imgData, _tuvalBicim(imgData), (pageWidth - w) / 2, 0, w, h);
       pdf.save(filename);
       toast('PDF indirildi 📥', 'success');
       return;
@@ -9026,7 +9059,7 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
     const sayfaSayisi = Math.max(1, Math.ceil((imgHeight - 0.5) / pageHeight));
     for (let i = 0; i < sayfaSayisi; i++) {
       if (i > 0) pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, -i * pageHeight, imgWidth, imgHeight);
+      pdf.addImage(imgData, _tuvalBicim(imgData), 0, -i * pageHeight, imgWidth, imgHeight);
     }
     pdf.save(filename);
     toast('PDF indirildi 📥', 'success');
@@ -9457,7 +9490,7 @@ async function _shareElementAsImage(element, filename, hideEl) {
   const eskiGorunum = hideEl ? hideEl.style.display : null;
   if (hideEl) hideEl.style.display = 'none';
   try {
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const canvas = await _elemaniTuvaleCiz(element);
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     if (!blob) { toast('Görsel oluşturulamadı','error'); return; }
     const dosya = new File([blob], filename, { type: 'image/png' });
@@ -9500,7 +9533,7 @@ function _htmlToPngBlob(html, genislik){
         if(!govde){ temizle(); resolve(null); return; }
         // Yazdırma düğmeleri belgenin parçası değil — görsele girmesin
         try{ doc.querySelectorAll('.no-print').forEach(function(e){ e.remove(); }); }catch(_){}
-        const canvas=await html2canvas(govde, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+        const canvas=await _elemaniTuvaleCiz(govde);
         const blob=await new Promise(function(r){ canvas.toBlob(r,'image/png'); });
         temizle(); resolve(blob||null);
       }catch(e){ console.error('Görsel üretim hatası:', e); temizle(); resolve(null); }
