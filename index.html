@@ -22016,6 +22016,20 @@ AK._cropBig = function(pdf,letter,scale,pageNum){ return AK._pageCanvas(pdf,page
   return AK._trim(cc,cx);
 }); }); };
 // Sayfayı metin içeriğinin sınırına kırp (boş şablon kutularını atar → içerik büyür/okunur).
+// Sayfayı OLDUĞU GİBİ al, yalnızca bomboş kenar paylarını kırp.
+// Neden: _textCrop, yazı parçalarının sadece BAŞLANGIÇ noktalarını topluyor,
+// parçanın uzunluğunu hesaba katmıyor. Sağ kenardaki model/renk kodu
+// ("H7863AX-(WT32, Solid)") bu yüzden kırpılıp gidiyordu — oysa föyde hangi
+// rengin talimatı olduğunu anlatan asıl bilgi o. Yıkama talimatı zaten düzgün
+// bir A4 yerleşimi; tahmine dayalı kırpmaya gerek yok. _trim piksel bazlı
+// çalıştığı için mürekkep olan hiçbir şeyi atmaz.
+// Yıkama artık tam sayfa alındığı için görüntü daha geniş; föyde aynı
+// genişliğe sığdırılınca yazı küçülmesin diye render ölçeği yükseltildi
+// (eskiden metin kutusuna zoom yapılıyordu, 3.4 yetiyordu).
+AK.YIKAMA_OLCEK = 4.4;
+AK._sayfaKirp = function(pdf,pageNum,scale){
+  return AK._pageCanvas(pdf,pageNum,scale).then(function(o){ return AK._trim(o.c,o.ctx); });
+};
 AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,scale).then(function(o){ return o.page.getTextContent().then(function(tc){
   var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9,any=false;
   tc.items.forEach(function(it){ if(!it.str.trim()) return; var v=o.vp.convertToViewportPoint(it.transform[4],it.transform[5]); any=true; if(v[0]<minx)minx=v[0]; if(v[0]>maxx)maxx=v[0]; if(v[1]<miny)miny=v[1]; if(v[1]>maxy)maxy=v[1]; });
@@ -22184,7 +22198,7 @@ AK._yikamaColors = function(bytes, onlyWash){ return window.pdfjsLib.getDocument
       var cm=full.replace(/\s+/g,' ').match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*[-\/]\s*\(?\s*([A-Z]{2}\d{1,4})/);
       var nm=full.replace(/\s+/g,' ').match(/\b([A-Z][a-z]{2,12})\)/);
       var code=cm?cm[2]:null; var model=cm?cm[1]:null; var renk=AK._renkFromText(nm?nm[1]:null) || AK._codeRenk(code);
-      return AK._textCrop(pdf,pageNum,3.4).then(function(r){ if((r.ink||0)>=150) out.push({code:code, renk:renk, model:model, url:r.url}); i++; return scan(); }); }); }
+      return AK._sayfaKirp(pdf,pageNum,AK.YIKAMA_OLCEK).then(function(r){ if((r.ink||0)>=150) out.push({code:code, renk:renk, model:model, url:r.url}); i++; return scan(); }); }); }
   return scan();
 }); };
 // Fall in Love birleşik etiket: TÜM dolu sayfaları tam (okunur) render et, renge
@@ -22217,7 +22231,7 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
 AK.renderSmart = function(bytes,type){ return window.pdfjsLib.getDocument({data:bytes}).promise.then(function(pdf){
   if(type==='icbarkod') return AK._findSizePage(pdf,'M').then(function(p){ return AK._pageCanvas(pdf,p,3.5); }).then(function(o){ return [AK._trim(o.c,o.ctx).url]; });
   if(type==='fiyat') return AK._cropBig(pdf,'M',3.6).then(function(r){ return [r.url]; });
-  if(type==='yikama'){ var out=[]; var i=1; function nx(){ if(i>pdf.numPages) return Promise.resolve(out.length?out:null); return pdf.getPage(i).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ var txt=tc.items.map(function(x){return x.str;}).join('').replace(/\s/g,''); if(txt.length<120){ i++; return nx(); } return AK._textCrop(pdf,i,3.4).then(function(r){ out.push(r.url); i++; return nx(); }); }); } return nx().then(function(r){ if(r) return r; return AK._textCrop(pdf,1,3.4).then(function(r){ return [r.url]; }); }); }
+  if(type==='yikama'){ var out=[]; var i=1; function nx(){ if(i>pdf.numPages) return Promise.resolve(out.length?out:null); return pdf.getPage(i).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ var txt=tc.items.map(function(x){return x.str;}).join('').replace(/\s/g,''); if(txt.length<120){ i++; return nx(); } return AK._sayfaKirp(pdf,i,AK.YIKAMA_OLCEK).then(function(r){ if((r.ink||0)<150){ i++; return nx(); }  /* boş şablon sayfası */ out.push(r.url); i++; return nx(); }); }); } return nx().then(function(r){ if(r) return r; return AK._sayfaKirp(pdf,1,AK.YIKAMA_OLCEK).then(function(r){ return [r.url]; }); }); }
   return AK._pageCanvas(pdf,1,3.2).then(function(o){ return [AK._trim(o.c,o.ctx).url]; });
 }); };
 AK._pngUrl = function(bytes,fn){ var bin='',u=new Uint8Array(bytes); for(var i=0;i<u.length;i++) bin+=String.fromCharCode(u[i]); return 'data:image/'+(/jpe?g$/i.test(fn)?'jpeg':'png')+';base64,'+btoa(bin); };
