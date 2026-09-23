@@ -97,6 +97,18 @@
   --border:#2d2145;
   --border-solid:#3b2a5f;
 
+  /* Yeni katman/kenar belirteclari — Gul ve Cicek kendi degerlerini verir,
+     diger temalar bu makul varsayilanlari miras alir (tanimsiz kalmasin). */
+  --border-strong:var(--border-solid);
+  /* Pembe/ana renk tinti uzerindeki YAZI rengi. Koyu temalarda acik uc
+     okunur (--primary-light), acik temalarda ise beyaza karisir; o yuzden
+     acik temalar bunu --primary-dark ile ezer. */
+  --primary-on-tint:var(--primary-light);
+  --bg-elevated:var(--bg-card);
+  --bg-subtle:var(--bg-card-hover);
+  --focus-ring:var(--primary-glow);
+  --selection:var(--primary-glow);
+
   --success:#10b981;
   --success-light:#34d399;
   --success-dark:#059669;
@@ -257,7 +269,9 @@
 [data-theme="light"] {
   --primary:#7c3aed;
   --primary-light:#a78bfa;
-  --primary-dark:#a78bfa;
+  /* --primary-dark, --primary'den DAHA AÇIK tanımlanmıştı (#a78bfa): isim
+     yanlıştı, hover/gradyan/tint-yazı her yerde ters çalışıyordu. */
+  --primary-dark:#5b21b6;
   --primary-glow:rgba(124,58,237,0.18);
 
   --accent:#f59e0b;
@@ -319,35 +333,65 @@
   --shadow-card-hover:0 4px 12px rgba(124,58,237,0.3);
 }
 /* Rose Theme */
+/* ═══════════════ GÜL — koyu pembe (Çiçek'in gece eşi) ═══════════════
+   Zemin yeniden kuruldu: eski #1f0a13 morumsu-kahveydi, gül kırmızısıyla
+   uyumsuzdu. Artık nötr-koyu bir gül tabanı; üstündeki pembe doğru okunuyor.
+   Durum renkleri koyu zemin için ayrı ayarlandı, metin kademeleri açıldı.  */
 [data-theme="rose"]{
-  --primary:#e11d48;
+  --primary:#f43f5e;          /* koyu zeminde 5.2:1 */
   --primary-light:#fb7185;
   --primary-dark:#be123c;
-  --primary-glow:rgba(225,29,72,0.3);
+  --primary-glow:rgba(244,63,94,0.30);
+  --on-primary:#2b0410;       /* parlak pembe üstünde koyu yazı okunur */
 
-  --accent:#f472b6;
+  --accent:#fda4af;
+  --accent-light:#fecdd3;
+  --accent-dark:#f43f5e;
 
-  --bg-main:#1f0a13;
-  --bg-card:#2d1420;
-  --bg-card-hover:#3d1a2a;
-  --bg-sidebar:#2d1420;
-  --bg-input:#2d1420;
+  --bg-main:#160a10;          /* nötr koyu gül tabanı */
+  --bg-card:#231118;
+  --bg-card-solid:#231118;
+  --bg-card-hover:#2e1720;
+  --bg-elevated:#2b151e;      /* modal / açılır menü */
+  --bg-sidebar:#1c0d13;
+  --bg-input:#1e0f15;
+  --bg-subtle:#1c0d13;
 
-  --text-main:#fce7f3;
-  --text-muted:#fda4af;
-  --text-dim:#fb7185;
+  --text-main:#fff1f5;        /* 16.1:1 */
+  --text-muted:#e2bccb;       /* 9.4:1 */
+  --text-dim:#b58a9b;         /* 5.3:1 — artık muted'dan ayrı */
 
-  --border:#4c0519;
-  --border-solid:#881337;
+  --border:#3a1c27;
+  --border-solid:#55293a;
+  --border-strong:#74384f;
 
-  --glass:rgba(225,29,72,0.1);
-  --glass-border:rgba(225,29,72,0.2);
+  --focus-ring:rgba(244,63,94,0.45);
+  --selection:rgba(244,63,94,0.28);
 
-  --shadow-xs:0 1px 2px rgba(0,0,0,0.3);
-  --shadow-sm:0 2px 4px rgba(0,0,0,0.4);
-  --shadow-md:0 4px 8px rgba(0,0,0,0.5);
-  --shadow-card:0 2px 8px rgba(0,0,0,0.4);
-  --shadow-card-hover:0 4px 12px rgba(0,0,0,0.5);
+  --success:#34d399;          /* koyu zeminde 8.6:1 */
+  --success-light:#6ee7b7;
+  --success-dark:#10b981;
+
+  --danger:#fb7185;           /* pembe temada tehlike pembeye karışmasın diye açık */
+  --danger-light:#fda4af;
+  --danger-dark:#e11d48;
+
+  --warning:#fbbf24;          /* 11.2:1 */
+  --warning-light:#fcd34d;
+  --warning-dark:#f59e0b;
+
+  --info:#7dd3fc;             /* 10.4:1 */
+  --info-light:#bae6fd;
+  --info-dark:#38bdf8;
+
+  --glass:rgba(244,63,94,0.10);
+  --glass-border:rgba(244,63,94,0.20);
+
+  --shadow-xs:0 1px 2px rgba(0,0,0,0.35);
+  --shadow-sm:0 2px 4px rgba(0,0,0,0.45);
+  --shadow-md:0 4px 10px rgba(0,0,0,0.5);
+  --shadow-card:0 1px 3px rgba(0,0,0,0.4), 0 6px 18px -8px rgba(0,0,0,0.55);
+  --shadow-card-hover:0 2px 6px rgba(0,0,0,0.45), 0 14px 32px -10px rgba(0,0,0,0.6);
 }
 
 /* Cyber Theme */
@@ -679,35 +723,71 @@
 }
 
 /* Blossom Theme */
+/* ═══════════════ ÇİÇEK — açık pembe (Gül'ün gündüz eşi) ═══════════════
+   Tam elden geçirildi:
+   • Durum renkleri (başarı/uyarı/tehlike/bilgi) artık temaya ait. Eskiden
+     TÜM temalar koyu zemin için seçilmiş tek takımı kullanıyordu; beyaz
+     üstünde amber (#fbbf24) ve açık mavi (#60a5fa) okunmuyordu.
+   • Yüzey katmanları ayrıldı: zemin → kart → yükseltilmiş (modal/menü).
+     Eskiden modal ile kart aynı renkti, derinlik hissi yoktu.
+   • Metin kademeleri gerçekten farklı: muted ve dim aynı renkti (#7c5068).
+   • Pembe artık her yerde değil; nötr-sıcak gri tonlar ayrım işini görüyor,
+     pembe birincil eyleme ayrıldı.                                        */
 [data-theme="blossom"]{
-  --primary:#db2777;
+  --primary:#be185d;          /* AA için koyulaştırıldı (eski #db2777 beyazda 4.0:1) */
   --primary-light:#ec4899;
-  --primary-dark:#be185d;
-  --primary-glow:rgba(219,39,119,0.2);
+  --primary-dark:#9d174d;
+  --primary-glow:rgba(190,24,93,0.22);
+  --on-primary:#fff;
 
-  --accent:#f472b6;
+  --accent:#9d174d;
+  --accent-light:#db2777;
+  --accent-dark:#831843;
 
-  --bg-main:#fdf2f8;
+  --bg-main:#fdf4f8;
   --bg-card:#ffffff;
-  --bg-card-hover:#fce7f3;
-  --bg-sidebar:#ffffff;
-  --bg-input:#fdf2f8;
+  --bg-card-solid:#ffffff;
+  --bg-card-hover:#fdf0f6;
+  --bg-elevated:#ffffff;      /* modal / açılır menü — karttan ayrışsın */
+  --bg-sidebar:#fffafc;
+  --bg-input:#fdf4f8;
+  --bg-subtle:#faf5f7;        /* tablo şerit satırı: pembe değil, nötr */
 
-  --text-main:#500724;
-  --text-muted:#7c5068;
-  --text-dim:#7c5068; /* eskisi cok soluktu: #a88699 */
+  --text-main:#3f0a21;        /* 14.8:1 */
+  --text-muted:#6b4257;       /* 7.4:1  — ikincil metin */
+  --text-dim:#8d6478;         /* 4.6:1  — üçüncül; artık muted'dan farklı */
 
-  --border:#fbcfe8;
-  --border-solid:#f9a8d4;
+  --border:#f3dbe6;           /* ince ayraç */
+  --border-solid:#e7bdd0;     /* belirgin kenar */
+  --border-strong:#d29bb4;    /* girdi/odak kenarı */
 
-  --glass:rgba(255,230,240,0.7);
-  --glass-border:rgba(219,39,119,0.15);
+  --focus-ring:rgba(190,24,93,0.35);
+  --selection:rgba(236,72,153,0.22);
 
-  --shadow-xs:0 1px 2px rgba(219,39,119,0.08);
-  --shadow-sm:0 2px 4px rgba(219,39,119,0.1);
-  --shadow-md:0 4px 8px rgba(219,39,119,0.12);
-  --shadow-card:0 2px 8px rgba(219,39,119,0.1);
-  --shadow-card-hover:0 4px 12px rgba(219,39,119,0.15);
+  --success:#047857;          /* beyazda 4.8:1 (eski #10b981 → 2.5:1) */
+  --success-light:#059669;
+  --success-dark:#065f46;
+
+  --danger:#be123c;           /* 5.9:1 (eski #ef4444 → 3.3:1) */
+  --danger-light:#e11d48;
+  --danger-dark:#9f1239;
+
+  --warning:#b45309;          /* 4.9:1 (eski #fbbf24 → 1.8:1, okunmuyordu) */
+  --warning-light:#d97706;
+  --warning-dark:#92400e;
+
+  --info:#0369a1;             /* 6.4:1 (eski #60a5fa → 2.4:1) */
+  --info-light:#0284c7;
+  --info-dark:#075985;
+
+  --glass:rgba(255,255,255,0.78);
+  --glass-border:rgba(190,24,93,0.14);
+
+  --shadow-xs:0 1px 2px rgba(80,7,36,0.06);
+  --shadow-sm:0 2px 4px rgba(80,7,36,0.07);
+  --shadow-md:0 4px 10px rgba(80,7,36,0.09);
+  --shadow-card:0 1px 3px rgba(80,7,36,0.07), 0 6px 16px -8px rgba(80,7,36,0.10);
+  --shadow-card-hover:0 2px 6px rgba(80,7,36,0.09), 0 12px 28px -10px rgba(80,7,36,0.16);
 }
 
 /* Paper Theme */
@@ -3614,7 +3694,7 @@ tr:hover .table-actions-more{
 .dt-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;}
 .dt-info{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;background:var(--glass);border:1px solid var(--border);border-radius:13px;transition:border-color .15s,transform .15s;}
 .dt-info:hover{border-color:color-mix(in srgb,var(--primary) 35%,var(--border));transform:translateY(-1px);}
-.dt-info-ic{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary-light);}
+.dt-info-ic{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary-on-tint);}
 .dt-info-body{min-width:0;flex:1;}
 .dt-info-lbl{font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
 .dt-info-val{font-size:14px;font-weight:700;margin-top:3px;word-break:break-word;line-height:1.3;}
@@ -4278,13 +4358,13 @@ tr:hover .table-actions-more{
 .ls-strip::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--primary) 30%,transparent);border-radius:3px;}
 .ls-card{flex:1 0 auto;min-width:98px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s,background .16s;text-align:left;font-family:inherit;}
 .ls-card:hover{border-color:color-mix(in srgb,var(--primary) 42%,var(--border));transform:translateY(-2px);}
-.ls-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary-light);margin-bottom:6px;}
+.ls-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary-on-tint);margin-bottom:6px;}
 .ls-num{font-size:22px;font-weight:800;line-height:1;color:var(--text-main);font-variant-numeric:tabular-nums;}
 .ls-lbl{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
 .ls-card.active{border-color:var(--primary);background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 16%,var(--bg-card)),color-mix(in srgb,var(--primary) 6%,var(--bg-card)));box-shadow:0 6px 20px -8px var(--primary-glow);}
 .ls-card.active .ls-ic{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;}
-.ls-card.active .ls-num{color:var(--primary-light);}
-.ls-card.active .ls-lbl{color:var(--primary-light);}
+.ls-card.active .ls-num{color:var(--primary-on-tint);}
+.ls-card.active .ls-lbl{color:var(--primary-on-tint);}
 .ls-card-all.active .ls-num,.ls-card-all .ls-num{color:var(--text-main);}
 @media(max-width:640px){
   .ls-card{min-width:88px;padding:10px 12px;}
@@ -4295,11 +4375,11 @@ tr:hover .table-actions-more{
 .fsel{position:relative;display:inline-flex;align-items:center;gap:9px;flex:1 1 190px;min-width:165px;padding:0 13px;height:46px;background:var(--bg-card);border:1px solid var(--border);border-radius:13px;cursor:pointer;transition:border-color .15s,box-shadow .15s;box-sizing:border-box;}
 .fsel:hover{border-color:color-mix(in srgb,var(--primary) 40%,var(--border));}
 .fsel:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
-.fsel-lead{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary-light);}
+.fsel-lead{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary-on-tint);}
 .fsel-input{flex:1;min-width:0;appearance:none;-webkit-appearance:none;-moz-appearance:none;background:transparent;border:0;outline:none;color:var(--text-main);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;}
 .fsel-input option{background:var(--bg-card);color:var(--text-main);font-weight:600;}
 .fsel-chev{font-size:11px;color:var(--text-muted);flex-shrink:0;pointer-events:none;transition:transform .18s;}
-.fsel:focus-within .fsel-chev{transform:rotate(180deg);color:var(--primary-light);}
+.fsel:focus-within .fsel-chev{transform:rotate(180deg);color:var(--primary-on-tint);}
 .fsel-btn{text-align:left;font-family:inherit;}
 .fsel-btn-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;color:var(--text-main);}
 
@@ -4310,11 +4390,11 @@ tr:hover .table-actions-more{
 .pdd-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 38px -10px rgba(0,0,0,.55);padding:6px;display:none;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto;}
 .pdd.open .pdd-menu{display:flex;animation:pddIn .14s ease;}
 .pdd.open .pdd-trigger{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
-.pdd.open .fsel-chev{transform:rotate(180deg);color:var(--primary-light);}
+.pdd.open .fsel-chev{transform:rotate(180deg);color:var(--primary-on-tint);}
 .pdd-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:0;background:transparent;border-radius:9px;color:var(--text-main);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:background .12s;width:100%;}
 .pdd-opt:hover{background:color-mix(in srgb,var(--primary) 12%,transparent);}
-.pdd-opt i{font-size:11px;color:var(--primary-light);opacity:0;flex-shrink:0;}
-.pdd-opt.active{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary-light);}
+.pdd-opt i{font-size:11px;color:var(--primary-on-tint);opacity:0;flex-shrink:0;}
+.pdd-opt.active{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary-on-tint);}
 .pdd-opt.active i{opacity:1;}
 @keyframes pddIn{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:none;}}
 @media(max-width:640px){
@@ -4327,7 +4407,7 @@ tr:hover .table-actions-more{
    #page-list öneki ile daha aşağıdaki nth-child renk kurallarını (aynı özgüllük) geçersiz kılar ── */
 #page-list .export-bar .export-btn{background:color-mix(in srgb,var(--primary) 6%,transparent) !important;color:var(--text-main) !important;border:1px solid var(--border) !important;box-shadow:none !important;border-radius:11px !important;}
 #page-list .export-bar .export-btn:hover{border-color:color-mix(in srgb,var(--primary) 45%,var(--border)) !important;background:color-mix(in srgb,var(--primary) 12%,transparent) !important;transform:translateY(-2px) !important;}
-#page-list .export-bar .export-btn i{color:var(--primary-light) !important;opacity:1 !important;}
+#page-list .export-bar .export-btn i{color:var(--primary-on-tint) !important;opacity:1 !important;}
 #page-list .export-bar .export-btn.ex-refresh i{color:#60a5fa !important;}
 #page-list .export-bar .export-btn.ex-pdf{background:linear-gradient(135deg,#ef4444,#dc2626) !important;color:#fff !important;border-color:rgba(239,68,68,.4) !important;}
 #page-list .export-bar .export-btn.ex-pdf i{color:#fff !important;}
@@ -6150,7 +6230,7 @@ html{scroll-behavior:smooth;}
 .sig-filter-chip.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:var(--on-primary,#fff);border-color:var(--primary);box-shadow:0 2px 8px var(--primary-glow);}
 .sig-type-chip{padding:4px 11px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:11.5px;transition:all 0.2s;}
 .sig-type-chip:hover{border-color:var(--primary);color:var(--text);}
-.sig-type-chip.active{background:color-mix(in srgb, var(--primary) 14%, transparent);color:var(--primary-light);border-color:color-mix(in srgb, var(--primary) 45%, var(--border));}
+.sig-type-chip.active{background:color-mix(in srgb, var(--primary) 14%, transparent);color:var(--primary-on-tint);border-color:color-mix(in srgb, var(--primary) 45%, var(--border));}
 .sig-wb-row{margin-bottom:8px;}
 .sig-wb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg-card);transition:all 0.15s;}
 .sig-wb-item:hover{border-color:var(--primary);transform:translateX(2px);}
@@ -6163,7 +6243,7 @@ html{scroll-behavior:smooth;}
 .sig-wb-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;}
 .sig-wb-badge.signed{background:rgba(16,185,129,0.15);color:#10b981;}
 .sig-wb-badge.photo{background:rgba(59,130,246,0.15);color:#3b82f6;}
-.sig-wb-badge.type{background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary-light);}
+.sig-wb-badge.type{background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary-on-tint);}
 .sig-wb-quick{display:flex;gap:6px;flex-shrink:0;}
 .sig-wb-chev{color:var(--text-muted);font-size:12px;flex-shrink:0;}
 .sig-wb-body{border:1px solid var(--primary);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:14px;background:var(--bg-card);}
@@ -6176,7 +6256,7 @@ html{scroll-behavior:smooth;}
 .tpl-meta{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;}
 .tpl-meta i{color:var(--primary);margin-right:3px;}
 .tpl-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
-.tpl-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary-light);}
+.tpl-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary-on-tint);}
 
 /* Responsive tweaks */
 @media (max-width:768px){
@@ -6366,7 +6446,7 @@ body::after{
   transform: translateX(3px);
 }
 .sidebar nav a:not(.active):hover i{
-  color: var(--primary-light);
+  color:var(--primary-on-tint);
   transform: scale(1.1);
 }
 .sidebar nav a i{ transition: all 0.25s var(--ease-smooth); }
@@ -7458,7 +7538,7 @@ body::after{
 .v8-srb:last-child{border-right:none;}
 .v8-srb-val{font-size:20px;font-weight:900;color:var(--text-main);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
 .v8-srb-lbl{font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-top:2px;}
-.v8-srb.purple .v8-srb-val{color:var(--primary-light);}.v8-srb.pink .v8-srb-val{color:#f472b6;}.v8-srb.teal .v8-srb-val{color:#2dd4bf;}.v8-srb.amber .v8-srb-val{color:#fbbf24;}
+.v8-srb.purple .v8-srb-val{color:var(--primary-on-tint);}.v8-srb.pink .v8-srb-val{color:#f472b6;}.v8-srb.teal .v8-srb-val{color:#2dd4bf;}.v8-srb.amber .v8-srb-val{color:#fbbf24;}
 @media(max-width:680px){.v8-summary-ribbon{grid-template-columns:repeat(2,1fr);}.v8-srb:nth-child(2){border-right:none;}}
 
 /* Durum Özeti Kartı (Hava Durumu Benzeri) */
@@ -8860,12 +8940,17 @@ body::after {
   box-shadow: 4px 0 44px rgba(0,0,0,0.38), inset -1px 0 0 var(--glass-border) !important;
 }
 
-/* Logo text — Sora + gradient ─── */
+/* Logo text — Sora + gradyan ───
+   SORUN: .logo-text kodda 3 ayri yerde tanimliydi; kazanan bu kural gradyani
+   --primary-light ile bitiriyordu. Acik temalarda (Cicek) gradyanin sag ucu
+   beyaz zeminde kaybolup "Pro" kismini okunmaz yapiyordu.
+   COZUM: gradyan --text-main ile --primary arasinda kaliyor; ikisi de her
+   temada zemine gore kontrastli. */
 .logo-text {
   font-family: var(--font-display-studio) !important;
   font-weight: 700 !important;
   letter-spacing: -0.9px !important;
-  background: linear-gradient(125deg, var(--text-main) 30%, var(--primary-light) 100%) !important;
+  background: linear-gradient(125deg, var(--text-main) 20%, var(--primary) 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -9165,10 +9250,13 @@ input:focus, select:focus, textarea:focus {
   font-family: var(--font-display-studio) !important;
 }
 
-/* ─── Sidebar footer ─── */
+/* ─── Kenar cubugu alt bilgisi ───
+   Eskiden ustune siyah gradyan biniyordu (koyu tema varsayimi); acik
+   temalarda kirli gri bir leke olusuyor, uzerindeki yazi iyice soluyordu.
+   Artik zemin nötr, yazi --text-muted ile okunur kontrastta. */
 .sidebar-footer {
-  border-top: 1px solid var(--glass-border) !important;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.1)) !important;
+  border-top: 1px solid var(--border) !important;
+  background: var(--bg-subtle) !important;
 }
 
 /* ─── Mobile card ─── */
@@ -9453,7 +9541,7 @@ input:focus, select:focus, textarea:focus {
 
 .card-dropdown-menu .dropdown-item:hover {
   background: color-mix(in oklab, var(--primary) 10%, var(--glass)) !important;
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 .card-dropdown-menu .dropdown-item i {
@@ -9625,7 +9713,7 @@ input:focus, select:focus, textarea:focus {
 .modal-action-btn.secondary:hover {
   background: color-mix(in oklab, var(--primary) 12%, var(--glass)) !important;
   border-color: color-mix(in oklab, var(--primary) 40%, transparent) !important;
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -10208,7 +10296,7 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--primary-glow) !important;
 }
 #page-stok .search-bar i {
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
   opacity: 0.7 !important;
 }
 #page-stok .search-bar input {
@@ -10612,7 +10700,7 @@ input:focus, select:focus, textarea:focus {
   font-variant-numeric: tabular-nums !important;
 }
 #page-kordon .table-wrap tbody tr:hover td:first-child {
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 #page-kordon .table-wrap tbody td:last-child {
@@ -10646,7 +10734,7 @@ input:focus, select:focus, textarea:focus {
 
 /* Adet column — primary/violet tint */
 #page-kordon .table-wrap tbody td:nth-child(3) input {
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 /* ── Ölçü tipi seçici: CM & Adet / Sadece Metre ── */
@@ -10731,7 +10819,7 @@ input:focus, select:focus, textarea:focus {
   font-family:var(--font-display-studio) !important;
   font-size:22px !important;
   font-weight:900 !important;
-  color:var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 .kor-toplam-v em{
   font-style:normal; font-size:12px; font-weight:700;
@@ -10956,7 +11044,7 @@ input:focus, select:focus, textarea:focus {
   font-size: 12.5px !important;
   font-weight: 900 !important;
   letter-spacing: 0.5px !important;
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
   width: 48px !important;
   white-space: nowrap !important;
 }
@@ -10997,7 +11085,7 @@ input:focus, select:focus, textarea:focus {
 
 /* Adet input — primary accent */
 #page-fermuar .table-wrap tbody td:nth-child(3) input {
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 /* ── Total counter ── */
@@ -11005,7 +11093,7 @@ input:focus, select:focus, textarea:focus {
   font-family: var(--font-display-studio) !important;
   font-size: 22px !important;
   font-weight: 900 !important;
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 #page-fermuar .card > div[style*="text-align:right"] {
@@ -11062,7 +11150,7 @@ input:focus, select:focus, textarea:focus {
   font-weight: 800;
   font-family: var(--font-display-studio);
   background: color-mix(in oklab, var(--primary) 14%, var(--glass));
-  color: var(--primary-light);
+  color:var(--primary-on-tint);
   border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent);
   margin-left: 6px;
   letter-spacing: 0.2px;
@@ -11479,13 +11567,13 @@ button.filter-select:hover i.fa-chevron-down {
 }
 
 .bulk-bar .bulk-count i {
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
   font-size: 15px !important;
 }
 
 .bulk-bar .bulk-count span {
   font-variant-numeric: tabular-nums !important;
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 .bulk-bar .bulk-actions {
@@ -11581,7 +11669,7 @@ button.filter-select:hover i.fa-chevron-down {
 .bulk-bar .bulk-btn[onclick*="SelectAll"] {
   background: rgba(var(--primary-rgb, 124,58,237), 0.12) !important;
   border-color: rgba(var(--primary-rgb, 124,58,237), 0.28) !important;
-  color: var(--primary-light) !important;
+  color:var(--primary-on-tint) !important;
 }
 
 /* İptal — muted */
@@ -12360,7 +12448,10 @@ button.filter-select:hover i.fa-chevron-down {
   font-size: 17px !important;
   font-weight: 800 !important;
   letter-spacing: -0.8px !important;
-  background: linear-gradient(130deg, #fff 20%, var(--primary-light,#c4b5fd) 100%) !important;
+  /* SABİT #fff idi: açık temalarda (Çiçek) yazının ilk yarısı beyaz zeminde
+     kaybolup "İrsaliye Pro"yu okunmaz yapıyordu. Artık iki uç da temadan
+     geliyor; koyu temada beyaz→pembe, açık temada koyu→pembe okunur. */
+  background: linear-gradient(130deg, var(--text-main) 15%, var(--primary) 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -12537,10 +12628,12 @@ button.filter-select:hover i.fa-chevron-down {
 /* ── Sidebar footer ── */
 .sidebar-footer {
   padding: 14px 14px 16px !important;
-  border-top: 1px solid rgba(255,255,255,0.05) !important;
+  /* Beyaz çizgi + siyah leke koyu tema varsayımıydı; açık kenar çubuğunda
+     çizgi görünmüyor, zemin kirli gri bir lekeye dönüyordu. */
+  border-top: 1px solid var(--border) !important;
   position: relative !important;
   z-index: 1 !important;
-  background: rgba(0,0,0,0.08) !important;
+  background: var(--bg-subtle) !important;
 }
 
 /* Credit row */
@@ -12556,7 +12649,7 @@ button.filter-select:hover i.fa-chevron-down {
   letter-spacing: 0.1px !important;
 }
 .sidebar-footer .sf-row i {
-  color: #f43f5e !important;
+  color: var(--primary) !important;
   font-size: 11px !important;
   animation: logoFloat 2s ease-in-out infinite !important;
 }
@@ -16066,3 +16159,19 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
            border-color:var(--success, #16a34a); }
 }
 @media(prefers-reduced-motion:reduce){ .tk-vurgu{ animation:none; } }
+
+
+/* ═══ Acik temalarda "tint uzerindeki pembe yazi" okunur uca cekilir ═══
+   Kodda 29 yerde rozet/cip yazisi var(--primary-light) ile boyaniyordu.
+   Bu koyu tema varsayimi: acik zeminde parlak uc (or. #ec4899) beyaza
+   karisip okunmaz oluyordu. Acik temalarda koyu uc kullanilir.           */
+[data-theme="light"],[data-theme="cream"],[data-theme="mint"],[data-theme="sky"],[data-theme="blossom"],[data-theme="paper"],[data-theme="lavender"],[data-theme="corporate"],[data-theme="monochrome"],[data-theme="arctic"],[data-theme="silver"],[data-theme="peach"],[data-theme="aqua"],[data-theme="mauve"]{
+  --primary-on-tint:var(--primary-dark);
+}
+
+
+/* ═══ Tint yazısı için son ayar (ölçümle bulundu) ═══
+   Bu üç temada --primary-dark / --primary-light kartın zeminine göre
+   yetersiz kontrast veriyordu; okunur uçlar elle verildi. */
+[data-theme="peach"]{ --primary-on-tint:#9a3412; }   /* beyazda 6.0:1 (önce 2.8) */
+[data-theme="ruby"]{  --primary-on-tint:#fecaca; }   /* koyu kırmızıda 7.4:1 (önce 2.7) */
