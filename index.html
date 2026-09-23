@@ -1327,7 +1327,10 @@
 <script>
 (function(){
   try{
-    var t=JSON.parse(localStorage.getItem('config_theme'));
+    // Görünüm moduyla çözülmüş tema varsa onu kullan (tema ailesi: Gül↔Çiçek)
+    var t=null;
+    try{ t=JSON.parse(localStorage.getItem('config_theme_aktif')); }catch(_){}
+    if(!t||typeof t!=='string'){ try{ t=JSON.parse(localStorage.getItem('config_theme')); }catch(_){} }
     if(t&&typeof t==='string'){
       document.documentElement.setAttribute('data-theme',t);
       // body parse edilir edilmez de uygula
@@ -1524,7 +1527,7 @@ if(typeof Chart==='undefined'){
 
   <div class="db-hero">
     <div class="db-hero-left">
-      <div class="db-greeting" id="dbGreeting">Hos Geldiniz</div>
+      <div class="db-greeting" id="dbGreeting">Hoş Geldiniz</div>
       <div class="db-date" id="dbDate"></div>
     </div>
     <div class="db-hero-right">
@@ -1585,7 +1588,7 @@ if(typeof Chart==='undefined'){
       <div class="db-kpi-icon"><i class="fas fa-file-invoice"></i></div>
       <div class="db-kpi-body">
         <div class="db-kpi-value" id="kpiTotal">0</div>
-        <div class="db-kpi-label">Toplam Irsaliye</div>
+        <div class="db-kpi-label">Toplam İrsaliye</div>
         <div class="db-kpi-sub" id="kpiTotalSub"></div>
       </div>
     </div>
@@ -1609,8 +1612,8 @@ if(typeof Chart==='undefined'){
       <div class="db-kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
       <div class="db-kpi-body">
         <div class="db-kpi-value" id="kpiGecmis">0</div>
-        <div class="db-kpi-label">Vadesi Gecmis</div>
-        <div class="db-kpi-sub">Termini dolmus</div>
+        <div class="db-kpi-label">Vadesi Geçmiş</div>
+        <div class="db-kpi-sub">Termini dolmuş</div>
       </div>
     </div>
   </div>
@@ -10046,10 +10049,10 @@ function refreshHome(){
   var danteller=getData('danteller')||[];
   var atolyeler=getData('atolyeler')||[];
 
-  var dayNames=['Pazar','Pazartesi','Sali','Carsamba','Persembe','Cuma','Cumartesi'];
-  var monthNames=['Ocak','Subat','Mart','Nisan','Mayis','Haziran','Temmuz','Agustos','Eylul','Ekim','Kasim','Aralik'];
+  var dayNames=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  var monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   var hr=now.getHours();
-  var greetTxt=hr<12?'Gunaydin \u2600\uFE0F':'Hos Geldiniz \uD83D\uDC4B';
+  var greetTxt=hr<12?'Günaydın \u2600\uFE0F':'Hoş Geldiniz \uD83D\uDC4B';
   var elGr=document.getElementById('dbGreeting');
   var elDt=document.getElementById('dbDate');
   if(elGr)elGr.textContent=greetTxt;
@@ -10074,7 +10077,7 @@ function refreshHome(){
   function sv(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
   var todayCount=allUnified.filter(function(i){return i.tarih===todayStr;}).length;
   sv('kpiTotal',allUnified.length);
-  sv('kpiTotalSub','Bugun: '+todayCount+' yeni');
+  sv('kpiTotalSub','Bugün: '+todayCount+' yeni');
   sv('kpiBekliyor',bekliyor);
   sv('kpiBekliyorSub','Bu ay: '+allIrs.filter(function(i){return i.tarih&&i.tarih.substring(0,7)===monthStr;}).length+' irsaliye');
   sv('kpiTeslim',teslimAy);
@@ -10168,7 +10171,7 @@ function refreshHome(){
     if(window.homeChartObj){window.homeChartObj.destroy();window.homeChartObj=null;}
     window.homeChartObj=new Chart(dCtx,{
       type:'doughnut',
-      data:{labels:['Bekliyor','Teslim Edildi','Vadesi Gecmis'],datasets:[{data:[Math.max(0,beklTop-gecTop),teslimTop,gecTop],backgroundColor:['#f59e0b','#10b981','#ef4444'],borderWidth:0,hoverOffset:6}]},
+      data:{labels:['Bekliyor','Teslim Edildi','Vadesi Geçmiş'],datasets:[{data:[Math.max(0,beklTop-gecTop),teslimTop,gecTop],backgroundColor:['#f59e0b','#10b981','#ef4444'],borderWidth:0,hoverOffset:6}]},
       options:{responsive:true,cutout:'70%',plugins:{legend:{display:false}}}
     });
   }
@@ -10177,7 +10180,7 @@ function refreshHome(){
     var tot=allUnified.length||1;
     // Bekliyor slice'i, çakışmayı önlemek için vadesi geçmiş olanları hariç tutar
     // (doughnut ile aynı) — aksi halde geciken kayıtlar iki kez sayılıp yüzdeler %100'ü aşıyordu.
-    var lgRows=[{label:'Bekliyor',val:Math.max(0,beklTop-gecTop),color:'#f59e0b'},{label:'Teslim',val:teslimTop,color:'#10b981'},{label:'Vadesi Gecmis',val:gecTop,color:'#ef4444'}];
+    var lgRows=[{label:'Bekliyor',val:Math.max(0,beklTop-gecTop),color:'#f59e0b'},{label:'Teslim',val:teslimTop,color:'#10b981'},{label:'Vadesi Geçmiş',val:gecTop,color:'#ef4444'}];
     var lgHtml='';
     lgRows.forEach(function(r){
       lgHtml+='<div class="db-legend-item"><div class="db-legend-dot" style="background:'+r.color+'"></div>'
@@ -12259,12 +12262,81 @@ let monthlyChartObj=null,atolyeChartObj=null;
 /* LEGACY renderTerminAnalysis removed in v13 */
 
 // ==================== SETTINGS ====================
+/* ═══════════════ TEMA AİLESİ (gece / gündüz eşleri) ═══════════════
+   ESKİDEN: Görünüm Modu düğmeleri data-theme'i doğrudan 'dark' ya da
+   'light' yapıyordu — seçtiğin tema (Gül, Çiçek…) TAMAMEN siliniyordu.
+   Üstelik kaydedilen mod açılışta hiç uygulanmıyordu; düğme "seçili"
+   görünüyor ama hiçbir şey yapmıyordu.
+   ARTIK: seçilen tema ayrı saklanır ve hiç değişmez. Görünüm Modu yalnızca
+   AYNI AİLENİN diğer yarısına geçirir; geri basınca tam olarak seçtiğin
+   temaya dönersin.                                                        */
+const TEMA_AILE = [
+  ['rose','blossom'],      // Gül ↔ Çiçek   (pembe aile)
+  ['default','light'],     // Mor Gece ↔ Açık
+  ['midnight','lavender'], ['indigo','lavender'], ['dracula','mauve'],
+  ['plum','mauve'], ['neon','mauve'], ['galaxy','mauve'], ['fuchsia','mauve'],
+  ['teal','mint'], ['jade','mint'], ['emerald','mint'], ['forest','mint'],
+  ['olive','mint'], ['lime','mint'],
+  ['navy','sky'], ['cobalt','sky'], ['sapphire','sky'],
+  ['ocean','aqua'], ['nord','arctic'],
+  ['warm','cream'], ['amber','cream'], ['gold','cream'], ['bronze','cream'],
+  ['coral','peach'], ['volcano','peach'], ['sunset','peach'],
+  ['charcoal','paper'], ['obsidian','paper'], ['cyber','paper'],
+  ['slate','silver'], ['steel','silver'],
+  ['crimson','blossom'], ['cherry','blossom'], ['ruby','blossom'], ['burgundy','blossom'],
+  ['navy','corporate'], ['monochrome','paper']
+];
+const _ESI_ACIK = {}, _ESI_KOYU = {};
+TEMA_AILE.forEach(function(c){
+  if(!_ESI_ACIK[c[0]]) _ESI_ACIK[c[0]] = c[1];   // koyu → açık eşi
+  if(!_ESI_KOYU[c[1]]) _ESI_KOYU[c[1]] = c[0];   // açık → koyu eşi
+});
+window._temaAcikMi = function(id){
+  var t=(window.V9_THEMES||[]).filter(function(x){ return x.id===id; })[0];
+  return !!(t && (t.lightMode===true || t.cat==='light'));
+};
+// istenen: 'acik' | 'koyu' — tema zaten o taraftaysa olduğu gibi döner
+window._temaEsi = function(id, istenen){
+  if(!id) id='default';
+  if((istenen==='acik') === window._temaAcikMi(id)) return id;
+  return istenen==='acik' ? (_ESI_ACIK[id]||'light') : (_ESI_KOYU[id]||'default');
+};
+window._temaCozumle = function(secilen, mod){
+  if(mod==='light') return window._temaEsi(secilen,'acik');
+  if(mod==='dark')  return window._temaEsi(secilen,'koyu');
+  if(mod==='auto'){
+    var koyuIster = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return window._temaEsi(secilen, koyuIster?'koyu':'acik');
+  }
+  return secilen;
+};
+// Seçilen tema + görünüm modundan gerçekte uygulanacak temayı hesaplar ve uygular
+window._temaUygula = function(){
+  var secilen=getConfig('theme','default');
+  var mod=getConfig('colorMode', window._temaAcikMi(secilen)?'light':'dark');
+  var uygulanan=window._temaCozumle(secilen, mod);
+  document.documentElement.setAttribute('data-theme',uygulanan);
+  if(document.body) document.body.setAttribute('data-theme',uygulanan);
+  // V9 tema seçici açılışta kendi temasını basıyor olabilir — inline
+  // ezmeleri temizle ki palet tek kaynaktan (CSS tema blokları) gelsin
+  try{ var rt=document.documentElement.style;
+    rt.removeProperty('--primary'); rt.removeProperty('--primary-dark'); rt.removeProperty('--accent'); }catch(_){}
+  document.querySelectorAll('.theme-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn=document.querySelector('[data-theme-btn="'+secilen+'"]'); if(btn) btn.classList.add('active');
+  document.querySelectorAll('.theme-card').forEach(function(c){ c.classList.toggle('active', c.dataset.themeBtn===secilen); });
+  // Açılış flaşını önlemek için ÇÖZÜLMÜŞ temayı ayrıca sakla: sayfanın en
+  // başındaki küçük betik tema ailesini bilmiyor, hazır sonucu okuyor.
+  try{ localStorage.setItem('config_theme_aktif', JSON.stringify(uygulanan)); }catch(_){}
+  return uygulanan;
+};
+// Kullanıcı tema seçti: seçimi sakla ve görünüm modunu o temanın kendi
+// aydınlığına ayarla ki tıkladığı tema birebir uygulansın.
 function setTheme(theme){
-  document.documentElement.setAttribute('data-theme',theme);
-  document.body.setAttribute('data-theme',theme);
   setConfig('theme',theme);
-  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
-  const btn=document.querySelector(`[data-theme-btn="${theme}"]`);if(btn)btn.classList.add('active');
+  setConfig('colorMode', window._temaAcikMi(theme) ? 'light' : 'dark');
+  window._temaUygula();
+  try{ document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(function(b){
+    b.classList.toggle('active', b.dataset.modeBtn===getConfig('colorMode','dark')); }); }catch(_){}
 }
 function setFontSize(val){
   val = Math.max(12, Math.min(20, parseInt(val,10)||14));
@@ -13517,7 +13589,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   const today=new Date().toISOString().split('T')[0];
   ['iTarih','fTarih','lTarih','dTarih','saTarih','korTarih','danTarih'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
-  const theme=getConfig('theme','default');setTheme(theme);
+  // Açılışta seçilen tema + kaydedilen görünüm modu birlikte uygulanır
+  // (eskiden yalnız tema uygulanıyor, mod düğmesi yanıltıcı duruyordu).
+  window._temaUygula();
   const fs=getConfig('fontSize',14);setFontSize(fs);
   refreshAll();
   // Check notifications on load (debounced)
@@ -15495,16 +15569,23 @@ function settingsChangePassword(){
 // ─────────────────────────────────────────────────────────
 
 function setMode(mode){
+  if(['light','dark','auto'].indexOf(mode)<0) mode='auto';
   document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
   setConfig('colorMode',mode);
-  if(mode==='dark'){document.documentElement.setAttribute('data-theme','dark');}
-  else if(mode==='light'){document.documentElement.setAttribute('data-theme','light');}
-  else{
-    const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', prefersDark?'dark':'light');
-  }
-  toast('Görünüm modu: '+(mode==='dark'?'Karanlık':mode==='light'?'Aydınlık':'Otomatik'),'success');
+  // Tema SİLİNMİYOR — aynı ailenin istenen yarısına geçiliyor
+  var uygulanan=window._temaUygula();
+  var t=(window.V9_THEMES||[]).filter(function(x){ return x.id===uygulanan; })[0];
+  toast('Görünüm: '+(mode==='dark'?'Karanlık':mode==='light'?'Aydınlık':'Otomatik')+(t?(' · '+t.name):''),'success');
 }
+// İşletim sistemi gece moduna geçerse Otomatik'teki tema da anında dönsün
+try{
+  if(window.matchMedia){
+    var _mq=window.matchMedia('(prefers-color-scheme: dark)');
+    var _mqDinle=function(){ if(getConfig('colorMode','')==='auto') window._temaUygula(); };
+    if(_mq.addEventListener) _mq.addEventListener('change',_mqDinle);
+    else if(_mq.addListener) _mq.addListener(_mqDinle);
+  }
+}catch(_){}
 
 // ── Performans modu ────────────────────────────────────────────────────────
 // Zayıf iş bilgisayarlarında arayüz takılıyordu: 57 sürekli animasyon,
@@ -19132,7 +19213,20 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
       apply();
     }
 
-    if(typeof setConfig==='function') setConfig('theme', id);
+    if(typeof setConfig==='function'){
+      setConfig('theme', id);
+      // Tema ailesi: seçilen tema kaydedilirken görünüm modu da o temanın
+      // kendi aydınlığına ayarlanır — böylece tıkladığın tema BİREBİR
+      // uygulanır, Görünüm Modu düğmeleri de o andan sonra aynı ailenin
+      // diğer yarısına (Gül ↔ Çiçek) geçirir.
+      try{
+        var _acik = (typeof window._temaAcikMi==='function') ? window._temaAcikMi(id) : !!t.lightMode;
+        setConfig('colorMode', _acik ? 'light' : 'dark');
+        localStorage.setItem('config_theme_aktif', JSON.stringify(id));
+        document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(function(bt){
+          bt.classList.toggle('active', bt.dataset.modeBtn===(_acik?'light':'dark')); });
+      }catch(_){}
+    }
     try{ window.v9SyncThemeSummary(id); }catch(_){}
     // Kullanıcı seçtiyse listeyi kapat — seçim yapıldı, yer kaplamasın
     if(window._v9Ready){ try{ window.v9ToggleThemePicker(false); }catch(_){} }
