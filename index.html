@@ -2294,6 +2294,7 @@ if(typeof Chart==='undefined'){
             <div class="ft-detail-meta" id="ftDetailMeta"></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn btn-sm btn-primary tkg-ac" onclick="takipGelenAc('fermuarTakip',_ftCurrentDetailId)" title="Gelen malı bedenler için tek seferde gir"><i class="fas fa-truck-ramp-box"></i> Gelen Gir</button>
             <button class="btn btn-sm ft-act-kes" onclick="ftIrsaliyeKes(_ftCurrentDetailId)"><i class="fas fa-file-export"></i> İrsaliye Kes</button>
             <button class="btn btn-sm btn-secondary" onclick="ftEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
             <button onclick="ftCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
@@ -2321,6 +2322,33 @@ if(typeof Chart==='undefined'){
 
         <!-- cm cm sıralı satır listesi -->
         <div class="ft-rows" id="ftDetailRows"></div>
+      </div>
+    </div>
+
+    <!-- Toplu "Gelen Gir" ekranı (Fermuar + Kordon ortak). Detay ekranına
+         DOKUNMAZ; onun üstüne açılır, kapanınca detay aynen yerinde durur. -->
+    <div class="modal-overlay" id="tkGelenModal" onclick="if(event.target===this)takipGelenKapat()">
+      <div class="modal tkg-modal" role="dialog" aria-modal="true" aria-labelledby="tkgBaslik">
+        <div class="tkg-ust">
+          <button type="button" class="tkg-geri" onclick="takipGelenKapat()" aria-label="Kapat"><i class="fas fa-arrow-left"></i></button>
+          <div class="tkg-ust-orta">
+            <div class="tkg-baslik" id="tkgBaslik">Gelen Gir</div>
+            <div class="tkg-alt">
+              <span id="tkgModel">—</span>
+              <label class="tkg-tarih" title="Teslim tarihi">
+                <i class="fas fa-calendar-day"></i> <span id="tkgTarihYazi">Bugün</span>
+                <input type="date" id="tkgTarih" onchange="takipGelenTarihYaz()">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="tkg-liste" id="tkgListe"></div>
+        <div class="tkg-alt-cubuk">
+          <button type="button" class="btn btn-secondary tkg-hepsi" onclick="takipGelenHepsi()"><i class="fas fa-check-double"></i> Hepsi geldi</button>
+          <button type="button" class="btn btn-primary tkg-kaydet" id="tkgKaydet" onclick="takipGelenKaydet()" disabled>
+            <i class="fas fa-check"></i> <span id="tkgKaydetYazi">Kaydet</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -2457,6 +2485,7 @@ if(typeof Chart==='undefined'){
             <div class="ft-detail-meta" id="ktDetailMeta"></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn btn-sm btn-primary tkg-ac" onclick="takipGelenAc('kordonTakip',_ktCurrentDetailId)" title="Gelen malı ölçüler için tek seferde gir"><i class="fas fa-truck-ramp-box"></i> Gelen Gir</button>
             <button class="btn btn-sm ft-act-kes" onclick="ktIrsaliyeKes(_ktCurrentDetailId)"><i class="fas fa-file-export"></i> İrsaliye Kes</button>
             <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
             <button onclick="ktCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
@@ -7984,6 +8013,173 @@ function takipRowEditSave(store){
   try{ if(store==='fermuarTakip') renderFermuarTakip(); else renderKordonTakip(); }catch(_){}
   toast((metreli ? renk : (cm+'cm'))+' satırı güncellendi','success');
 }
+
+// ============ TOPLU "GELEN GİR" (Fermuar + Kordon ortak) ============
+// Detay / CM Gir ekranına DOKUNMAZ, onun üstüne açılır. Tedarikçi
+// irsaliyesinde tek model, 1–4 ölçü gelir ("54 → 300, 56 → 300"); eskiden
+// her ölçü için ayrı pencere açılıyordu. Burada hepsi tek ekranda, tek
+// Kaydet. Boş bırakılan satır kaydedilmez.
+var _tkg = null;   // {store, modelId, metre}
+function _tkgBugun(){ var d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function _tkgSayi(v, metre){ v=+v||0; return metre ? (Math.round(v*10)/10).toLocaleString('tr') : Math.round(v).toLocaleString('tr'); }
+function _tkgModel(){
+  if(!_tkg) return null;
+  var list=getData(_tkg.store)||[];
+  return list.filter(function(x){ return x.id===_tkg.modelId; })[0]||null;
+}
+function _tkgSatirlar(m){
+  if(_tkg.store==='kordonTakip' && typeof _ktSatirlar==='function') return _ktSatirlar(m);
+  return _ftSizesSorted(m);
+}
+function takipGelenAc(store, modelId){
+  if(modelId==null) return;
+  _tkg={store:store, modelId:modelId, metre:false};
+  var m=_tkgModel(); if(!m){ _tkg=null; return; }
+  _tkg.metre = (store==='kordonTakip' && typeof _ktMetreMi==='function' && _ktMetreMi(m));
+  var satirlar=_tkgSatirlar(m);
+  if(!satirlar.length){ toast('Önce Detay ekranından beden / cm ekleyin','error'); _tkg=null; return; }
+  document.getElementById('tkgModel').textContent=m.modelKodu||'—';
+  document.getElementById('tkgBaslik').textContent = _tkg.metre ? 'Gelen Metre Gir' : 'Gelen Gir';
+  document.getElementById('tkgTarih').value=_tkgBugun();
+  takipGelenTarihYaz();
+  var BR=_tkg.metre?'m':'adet';
+  document.getElementById('tkgListe').innerHTML = satirlar.map(function(z,i){
+    var bek=_ftBekleyen(z), gel=_ftGelen(z), sip=+z.siparisAdet||0;
+    // Tedarikçinin kâğıdında anahtar cm; o yüzden cm büyük, beden/renk küçük
+    var ana = _tkg.metre ? (z.renk?esc(z.renk):'—') : (z.cm!=null ? (esc(String(z.cm))+' <small>cm</small>') : '—');
+    var yan = _tkg.metre ? '' : [z.beden?esc(z.beden):'', z.renk?esc(z.renk):''].filter(Boolean).join(' · ');
+    return '<div class="tkg-satir'+(bek<=0?' tamam':'')+'" data-id="'+z.id+'" data-bek="'+bek+'" data-sip="'+sip+'" data-gel="'+gel+'">'+
+      '<div class="tkg-kimlik"><div class="tkg-cm">'+ana+'</div>'+(yan?'<div class="tkg-yan">'+yan+'</div>':'')+'</div>'+
+      '<div class="tkg-durum">'+(bek>0 ? ('bekleyen <b>'+_tkgSayi(bek,_tkg.metre)+'</b> '+BR) : '<span class="tkg-ok"><i class="fas fa-check"></i> tamamı geldi</span>')+
+        '<div class="tkg-not" id="tkgNot'+z.id+'"></div></div>'+
+      '<div class="tkg-giris">'+
+        '<input class="form-input tkg-kutu" type="number" min="0" step="'+(_tkg.metre?'0.1':'1')+'" inputmode="'+(_tkg.metre?'decimal':'numeric')+'" enterkeyhint="'+(i===satirlar.length-1?'done':'next')+'" '+
+          'placeholder="0" aria-label="'+(_tkg.metre?'Gelen metre':'Gelen adet')+'" data-i="'+i+'" oninput="takipGelenHesap()" onkeydown="_tkgTus(event,this)">'+
+        (bek>0 ? '<button type="button" class="tkg-tamami" onclick="takipGelenTamami('+z.id+')">Tamamı</button>' : '')+
+      '</div>'+
+    '</div>';
+  }).join('');
+  takipGelenHesap();
+  document.getElementById('tkGelenModal').classList.add('show');
+  // İlk bekleyen satırın kutusuna odaklan (klavye hemen sayı için açılsın)
+  setTimeout(function(){
+    var ilk=document.querySelector('#tkgListe .tkg-satir:not(.tamam) .tkg-kutu')||document.querySelector('#tkgListe .tkg-kutu');
+    if(ilk) ilk.focus();
+  }, 120);
+}
+function takipGelenKapat(){
+  document.getElementById('tkGelenModal').classList.remove('show');
+  _tkg=null;
+}
+function takipGelenTarihYaz(){
+  var v=document.getElementById('tkgTarih').value, yazi=document.getElementById('tkgTarihYazi');
+  if(!yazi) return;
+  if(!v || v===_tkgBugun()){ yazi.textContent='Bugün'; return; }
+  try{ yazi.textContent=new Date(v+'T12:00:00').toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'}); }
+  catch(_){ yazi.textContent=v; }
+}
+function _tkgTus(e, el){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  var kutular=[].slice.call(document.querySelectorAll('#tkgListe .tkg-kutu'));
+  var i=kutular.indexOf(el);
+  if(i>=0 && i<kutular.length-1){ kutular[i+1].focus(); try{ kutular[i+1].select(); }catch(_){} }
+  else { var k=document.getElementById('tkgKaydet'); if(k && !k.disabled) takipGelenKaydet(); else el.blur(); }
+}
+function takipGelenTamami(sizeId){
+  var s=document.querySelector('#tkgListe .tkg-satir[data-id="'+sizeId+'"]'); if(!s) return;
+  var k=s.querySelector('.tkg-kutu'); k.value=(+s.dataset.bek||0); takipGelenHesap();
+}
+function takipGelenHepsi(){
+  document.querySelectorAll('#tkgListe .tkg-satir').forEach(function(s){
+    var bek=+s.dataset.bek||0; if(bek>0) s.querySelector('.tkg-kutu').value=bek;
+  });
+  takipGelenHesap();
+}
+function takipGelenHesap(){
+  if(!_tkg) return;
+  var toplam=0, adetSatir=0, BR=_tkg.metre?'m':'adet';
+  document.querySelectorAll('#tkgListe .tkg-satir').forEach(function(s){
+    var v=+s.querySelector('.tkg-kutu').value||0;
+    var not=s.querySelector('.tkg-not');
+    s.classList.toggle('dolu', v>0);
+    if(v<0){ not.textContent='Eksi olamaz'; s.classList.add('uyari'); return; }
+    if(v>0){ toplam+=v; adetSatir++; }
+    // Sipariş aşılıyorsa engelleme, sadece uyar
+    var fazla = (+s.dataset.gel||0) + v - (+s.dataset.sip||0);
+    var sipVar = (+s.dataset.sip||0) > 0;
+    if(v>0 && sipVar && fazla>0){ not.textContent='+'+_tkgSayi(fazla,_tkg.metre)+' '+BR+' fazla'; s.classList.add('uyari'); }
+    else { not.textContent=''; s.classList.remove('uyari'); }
+  });
+  var kaydet=document.getElementById('tkgKaydet'), yazi=document.getElementById('tkgKaydetYazi');
+  var negatif=!!document.querySelector('#tkgListe .tkg-kutu:invalid') || [].some.call(document.querySelectorAll('#tkgListe .tkg-kutu'),function(k){ return (+k.value||0)<0; });
+  kaydet.disabled = (toplam<=0 || negatif);
+  yazi.textContent = toplam>0 ? ('Kaydet · +'+_tkgSayi(toplam,_tkg.metre)+' '+BR+' ('+adetSatir+' '+(_tkg.metre?'renk':'ölçü')+')') : 'Kaydet';
+}
+function takipGelenKaydet(){
+  if(!_tkg) return;
+  var tarih=document.getElementById('tkgTarih').value||_tkgBugun();
+  var girisler=[];
+  document.querySelectorAll('#tkgListe .tkg-satir').forEach(function(s){
+    var v=+s.querySelector('.tkg-kutu').value||0;
+    if(v>0) girisler.push({sizeId:+s.dataset.id, adet:v});
+  });
+  if(!girisler.length){ toast('En az bir satıra gelen miktar yazın','error'); return; }
+  var store=_tkg.store, modelId=_tkg.modelId, metre=_tkg.metre;
+  var list=getData(store)||[];
+  var midx=list.findIndex(function(x){ return x.id===modelId; }); if(midx<0) return;
+  var sizes=list[midx].sizes||[];
+  var taban=Date.now(), eklenen=[], toplam=0;
+  girisler.forEach(function(g,i){
+    var z=sizes.filter(function(x){ return x.id===g.sizeId; })[0]; if(!z) return;
+    z.teslimatlar=z.teslimatlar||[];
+    var eid=taban+i;   // aynı milisaniyede birden çok kayıt: kimlikler çakışmasın
+    z.teslimatlar.push({id:eid, tarih:tarih, adet:g.adet});
+    eklenen.push({sizeId:g.sizeId, eid:eid});
+    toplam+=g.adet;
+  });
+  list[midx].sizes=sizes;
+  _ftStamp(list[midx]);
+  setData(store, list);
+  takipGelenKapat();
+  _tkgYenile(store, modelId);
+  _tkgGeriAlGoster(store, modelId, eklenen,
+    '+'+_tkgSayi(toplam,metre)+' '+(metre?'m':'adet')+' kaydedildi ('+eklenen.length+' '+(metre?'renk':'ölçü')+')');
+}
+function _tkgYenile(store, modelId){
+  try{
+    if(store==='fermuarTakip'){ if(_ftCurrentDetailId===modelId) ftRenderDetail(); else renderFermuarTakip(); }
+    else { if(_ktCurrentDetailId===modelId) ktRenderDetail(); else renderKordonTakip(); }
+  }catch(_){}
+}
+// Kaydettikten sonra 7 sn "Geri al": telefonda yanlış rakam yazmak kolay.
+// Geri al yalnızca BU turda eklenen teslimatları siler.
+var _tkgGeriSayac=null;
+function _tkgGeriAlGoster(store, modelId, eklenen, mesaj){
+  var el=document.getElementById('tkgGeriAl');
+  if(!el){ el=document.createElement('div'); el.id='tkgGeriAl'; el.setAttribute('role','status'); document.body.appendChild(el); }
+  el.innerHTML='<i class="fas fa-circle-check"></i><span></span><button type="button">Geri al</button>';
+  el.querySelector('span').textContent=mesaj;
+  el.querySelector('button').onclick=function(){
+    clearTimeout(_tkgGeriSayac); el.classList.remove('show');
+    var list=getData(store)||[]; var m=list.filter(function(x){ return x.id===modelId; })[0]; if(!m) return;
+    eklenen.forEach(function(e){
+      var z=(m.sizes||[]).filter(function(x){ return x.id===e.sizeId; })[0];
+      if(z) z.teslimatlar=(z.teslimatlar||[]).filter(function(t){ return t.id!==e.eid; });
+    });
+    _ftStamp(m); setData(store, list); _tkgYenile(store, modelId);
+    toast('Teslimat geri alındı','info');
+  };
+  el.classList.add('show');
+  clearTimeout(_tkgGeriSayac);
+  _tkgGeriSayac=setTimeout(function(){ el.classList.remove('show'); }, 7000);
+}
+// Esc ile kapanır
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape' && _tkg && document.getElementById('tkGelenModal').classList.contains('show')){
+    e.stopPropagation(); takipGelenKapat();
+  }
+}, true);
 
 // ==================== İRSALİYE ====================
 function getNextNo(){return getConfig('nextIrsaliyeNo',1);}
