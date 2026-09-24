@@ -16175,3 +16175,109 @@ html[data-perf="lite"]{ scroll-behavior:auto !important; }
    yetersiz kontrast veriyordu; okunur uçlar elle verildi. */
 [data-theme="peach"]{ --primary-on-tint:#9a3412; }   /* beyazda 6.0:1 (önce 2.8) */
 [data-theme="ruby"]{  --primary-on-tint:#fecaca; }   /* koyu kırmızıda 7.4:1 (önce 2.7) */
+
+/* ════════════════════════════════════════════════════════════
+   TOPLU "GELEN GİR" EKRANI (Fermuar + Kordon Takip)
+   Detay / CM Gir ekranına dokunmaz; onun ÜSTÜNE açılır.
+   Telefonda tam ekran sayfa, masaüstünde ortada kart.
+   ════════════════════════════════════════════════════════════ */
+#tkGelenModal{ z-index:140; }   /* detay pencerelerinin (100) üstünde */
+.tkg-modal{
+  width:100%; max-width:540px; max-height:min(88vh,860px);
+  padding:0 !important; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--bg-elevated, var(--bg-card)) !important;
+}
+.tkg-ust{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 16px 12px; border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.tkg-geri{
+  width:42px; height:42px; flex-shrink:0; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid var(--border); color:var(--text-main);
+  font-size:16px; cursor:pointer;
+}
+.tkg-geri:hover{ background:var(--bg-card-hover); }
+.tkg-ust-orta{ min-width:0; flex:1; }
+.tkg-baslik{ font-size:17px; font-weight:800; color:var(--text-main); letter-spacing:-.01em; }
+.tkg-alt{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:2px; font-size:12.5px; color:var(--text-muted); }
+#tkgModel{ font-weight:700; color:var(--primary-on-tint, var(--primary)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60vw; }
+/* Tarih hep aynı gün giriliyor — alan değil, küçük bir yazı; dokununca takvim açılır */
+.tkg-tarih{ position:relative; display:inline-flex; align-items:center; gap:5px; cursor:pointer;
+  padding:2px 8px; border-radius:999px; border:1px dashed var(--border-solid); }
+.tkg-tarih input{ position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; }
+
+.tkg-liste{ flex:1; min-height:0; overflow-y:auto; padding:6px 12px 12px; -webkit-overflow-scrolling:touch; }
+.tkg-satir{
+  display:grid; grid-template-columns:1fr auto; grid-template-areas:"kimlik durum" "giris giris";
+  gap:8px 12px; align-items:center;
+  padding:12px; margin-top:8px; border-radius:14px;
+  background:var(--bg-card); border:1px solid var(--border);
+  transition:border-color .15s, background .15s;
+}
+.tkg-satir.dolu{ border-color:var(--primary); background:color-mix(in srgb, var(--primary) 6%, var(--bg-card)); }
+.tkg-satir.uyari{ border-color:var(--warning); }
+.tkg-satir.tamam{ opacity:.62; }
+.tkg-kimlik{ grid-area:kimlik; min-width:0; }
+.tkg-cm{ font-size:22px; font-weight:900; color:var(--text-main); line-height:1.1; font-variant-numeric:tabular-nums; }
+.tkg-cm small{ font-size:13px; font-weight:700; color:var(--text-muted); }
+.tkg-yan{ font-size:12px; color:var(--text-muted); margin-top:2px; }
+.tkg-durum{ grid-area:durum; text-align:right; font-size:12px; color:var(--text-muted); }
+.tkg-durum b{ font-size:15px; color:var(--text-main); font-variant-numeric:tabular-nums; }
+.tkg-ok{ color:var(--success); font-weight:700; }
+.tkg-not{ font-size:11.5px; font-weight:700; color:var(--warning); min-height:0; }
+.tkg-giris{ grid-area:giris; display:flex; gap:8px; }
+/* 16px altı yazı iPhone'da kutuya basınca sayfayı zoom'luyor */
+.tkg-giris .tkg-kutu{ flex:1; margin:0; height:52px; min-height:52px; font-size:20px !important; font-weight:800;
+  text-align:center; font-variant-numeric:tabular-nums; }
+.tkg-tamami{
+  flex-shrink:0; padding:0 16px; min-height:52px; border-radius:12px; cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:800;
+  color:var(--primary-on-tint, var(--primary)); background:color-mix(in srgb, var(--primary) 10%, transparent);
+  border:1px dashed color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+.tkg-tamami:active{ transform:scale(.97); }
+
+.tkg-alt-cubuk{
+  display:flex; gap:8px; flex-shrink:0;
+  padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top:1px solid var(--border); background:var(--bg-elevated, var(--bg-card));
+}
+.tkg-alt-cubuk .btn{ min-height:52px; justify-content:center; font-size:14px; }
+.tkg-hepsi{ flex:0 0 auto; }
+.tkg-kaydet{ flex:1; font-weight:800 !important; }
+.tkg-kaydet:disabled{ opacity:.5; cursor:not-allowed; }
+
+/* Telefonda tam ekran sayfa */
+@media (max-width:640px){
+  #tkGelenModal{ padding:0 !important; align-items:stretch !important; }
+  .tkg-modal{ max-width:none; max-height:none; height:100%; height:100dvh; border-radius:0 !important; }
+}
+/* Açıkken alttaki menü, + düğmesi ve bulut rozeti üstüne binmesin */
+body:has(#tkGelenModal.show) .bottom-nav,
+body:has(#tkGelenModal.show) .fab,
+body:has(#tkGelenModal.show) .gs-fab,
+body:has(#tkGelenModal.show) .v8-fab-menu,
+body:has(#tkGelenModal.show) #cloudSyncBadge{ display:none !important; }
+
+/* Kaydettikten sonra "Geri al" şeridi */
+#tkgGeriAl{
+  position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom, 0px)); z-index:100000;
+  transform:translate(-50%, 20px); opacity:0; pointer-events:none;
+  display:flex; align-items:center; gap:12px; max-width:calc(100vw - 24px);
+  padding:10px 10px 10px 16px; border-radius:14px;
+  background:var(--text-main); color:var(--bg-card);
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.45);
+  font-size:13.5px; font-weight:700;
+  transition:opacity .2s, transform .2s;
+}
+#tkgGeriAl.show{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+#tkgGeriAl i{ color:var(--success-light, #34d399); }
+#tkgGeriAl span{ min-width:0; }
+#tkgGeriAl button{
+  flex-shrink:0; min-height:40px; padding:0 14px; border-radius:10px; cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:800;
+  background:transparent; color:var(--primary-light); border:1px solid currentColor;
+}
+.tkg-ac{ white-space:nowrap; }
