@@ -25,6 +25,17 @@ self.addEventListener('fetch', (e) => {
   const istek = e.request;
   if (istek.method !== 'GET') return;
   const url = new URL(istek.url);
+  // Barkod okuyucu (iPhone/bilgisayar yedeği): sürümü sabit, değişmez dosyalar.
+  // Önbellekte tutulur ki atölyede internet yokken de kamera barkodu okusun.
+  if (/(^|\.)jsdelivr\.net$/.test(url.hostname) && /\/npm\/(barcode-detector|zxing-wasm)@/.test(url.pathname)) {
+    e.respondWith(
+      caches.open(CACHE).then(c => c.match(istek).then(y => y || fetch(istek).then(ag => {
+        if (ag && (ag.ok || ag.type === 'opaque')) c.put(istek, ag.clone());
+        return ag;
+      })))
+    );
+    return;
+  }
   if (url.origin !== self.location.origin) return;   // CDN/Firebase isteklerine karışma
 
   // HTML ve CSS → ağ öncelikli. style.css her sürümde HTML ile birlikte
