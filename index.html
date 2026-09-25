@@ -4086,7 +4086,9 @@ if(typeof Chart==='undefined'){
         <div class="akc-step" id="akcStepCam">
           <div class="akc-stage">
             <video id="akcVideo" playsinline muted autoplay></video>
-            <canvas id="akcOverlay"></canvas>
+            <canvas id="akcOverlay" onclick="AKC.dokunNetle(event)"></canvas>
+            <span class="akc-netnokta" id="akcNetNokta" aria-hidden="true"></span>
+            <div class="akc-bkcip" id="akcBkCip" style="display:none;"></div>
             <div class="akc-durum" id="akcDurum">Kamera açılıyor…</div>
           </div>
           <div class="akc-zoomwrap">
@@ -4101,6 +4103,8 @@ if(typeof Chart==='undefined'){
             </label>
             <button class="akc-shutter" id="akcShutter" onclick="AKC.cek()" aria-label="Çek"><span></span></button>
             <div class="akc-sag">
+              <button type="button" class="akc-ikon" id="akcDondur" onclick="AKC.cerceveDondur()" title="Çerçeveyi döndür (etiket yan duruyorsa)" aria-label="Çerçeveyi döndür"><i class="fas fa-rotate"></i></button>
+              <button type="button" class="akc-ikon acik" id="akcHayalet" onclick="AKC.hayaletAcKapa()" title="Sistemdeki etiketi çerçevede soluk göster" aria-label="Sistemdeki etiketi göster"><i class="fas fa-ghost"></i></button>
               <button type="button" class="akc-ikon" id="akcFener" style="display:none;" onclick="AKC.fenerAcKapa()" title="Işık"><i class="fas fa-bolt"></i></button>
               <label class="akc-ikon akc-dosya" title="Kamera yerine galeriden seç">
                 <i class="fas fa-image"></i>
@@ -4115,7 +4119,7 @@ if(typeof Chart==='undefined'){
           <div class="akc-stage akc-stage-kose">
             <canvas id="akcKoseCv"></canvas>
           </div>
-          <p class="akc-ip"><i class="fas fa-hand-pointer"></i> Köşeler yanlışsa parmakla/fareyle çekiştir.</p>
+          <p class="akc-ip"><i class="fas fa-hand-pointer"></i> Köşeler yanlışsa parmakla/fareyle çekiştir — büyüteç açılır.</p>
           <div class="akc-bar akc-bar-2">
             <button class="btn btn-secondary btn-sm" onclick="AKC.geri()"><i class="fas fa-rotate-left"></i> Tekrar çek</button>
             <button class="btn btn-secondary btn-sm" onclick="AKC.koseSifirla()"><i class="fas fa-expand"></i> Tüm kare</button>
@@ -4129,6 +4133,7 @@ if(typeof Chart==='undefined'){
             <figure><div class="akc-img" id="akcSys"></div><figcaption>SİSTEMDEKİ · arşivden</figcaption></figure>
             <figure><div class="akc-img" id="akcYeni"></div><figcaption>GELEN · çekildi</figcaption></figure>
           </div>
+          <div class="akc-verdict" id="akcBarkod" style="display:none;"></div>
           <div class="akc-verdict" id="akcVerdict"></div>
           <input id="akcNot" class="form-input akc-not" placeholder="Not (ops.) — ör. renk tonu farklı, punto küçük…" autocomplete="off">
           <div class="akc-bar akc-bar-2">
@@ -22374,6 +22379,34 @@ AK._pageInfo = function(t){
   return { code: code, model: cm?cm[1]:null, size: sz?sz[1].toUpperCase():null, renk: renk,
            lisans: /licen[cs]e|lisansl/i.test(t) };
 };
+// Sayfa yazısındaki barkod numaraları (EAN-13 / UPC-A; 8 haneli sayılar PO vb.
+// ile karışabildiği için alınmaz). Rakamlar
+// gruplu da basılabiliyor ("8 684584 726499"); boşluklar atılır, sadece
+// kontrol hanesi TUTAN numaralar alınır — model/adet gibi sayılar karışmaz.
+AK._eanGecerli = function(d){
+  if(!/^\d+$/.test(d) || [8,12,13].indexOf(d.length)<0) return false;
+  var top=0, n=d.length;
+  for(var i=0;i<n-1;i++){ var r=+d[n-2-i]; top += (i%2===0) ? r*3 : r; }
+  return (10-(top%10))%10 === +d[n-1];
+};
+AK._eanlar = function(t){
+  // Yan yana duran sayı grupları ("7799 8 684584 726499 50") tek parça
+  // yakalanır; içindeki her ardışık grup birleşimi ayrı ayrı denenir.
+  var out=[], m, re=/\d+(?: \d+)*/g;
+  t=(t||'').replace(/\s+/g,' ');
+  while((m=re.exec(t))){
+    var g=m[0].split(' ');
+    for(var i=0;i<g.length;i++){
+      var d='';
+      for(var j=i;j<g.length;j++){
+        d+=g[j];
+        if(d.length>13) break;
+        if(AK._eanGecerli(d) && d.length>=12 && out.indexOf(d)<0) out.push(d);
+      }
+    }
+  }
+  return out;
+};
 // Renk kovası anahtarı: MODEL + RENK KODU. Sadece renk koduyla anahtarlamak,
 // bir arşivde iki farklı modelin aynı renk kodunu (ör. BK81 = siyah, her
 // modelde bulunur) taşıması durumunda ikisini TEK kovada birleştiriyordu:
@@ -22416,17 +22449,17 @@ AK._icbarkodColors = function(bytes){ return window.pdfjsLib.getDocument({data:b
   var infos=[]; var i=1;
   function scan(){ if(i>pdf.numPages) return Promise.resolve(); var pageNum=i;
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
-      var info=AK._pageInfo(tc.items.map(function(x){return x.str;}).join(' ')); info.page=pageNum; infos.push(info); i++; return scan(); }); }
+      var yazi=tc.items.map(function(x){return x.str;}).join(' '); var info=AK._pageInfo(yazi); info.ean=AK._eanlar(yazi); info.page=pageNum; infos.push(info); i++; return scan(); }); }
   return scan().then(function(){
     var byCode={};
     // Yalnızca BARKOD sayfaları (SIZE'lı) grubu belirler; birleşik dosyada
     // yıkama/boş sayfa barkod olarak render edilmesin.
-    infos.forEach(function(p){ var key=AK._ckey(p.code,p.model); if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, lisans:false, mPage:null, firstSized:null}; if(p.lisans) byCode[key].lisans=true; if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
+    infos.forEach(function(p){ var key=AK._ckey(p.code,p.model); if(!byCode[key]) byCode[key]={code:p.code, renk:p.renk, model:p.model, lisans:false, mPage:null, firstSized:null, barkodlar:{}}; if(p.lisans) byCode[key].lisans=true; if(p.ean&&p.ean.length){ byCode[key].barkodlar[p.size||('s'+p.page)]=p.ean[0]; } if(p.size){ if(!byCode[key].firstSized) byCode[key].firstSized=p.page; if(p.size==='M'&&!byCode[key].mPage) byCode[key].mPage=p.page; } if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; });
     var keys=Object.keys(byCode); var out=[];
     var szSet={}; infos.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; }); out.sizes=Object.keys(szSet);
     return keys.reduce(function(ch,k){ return ch.then(function(){ var info=byCode[k]; var pg=info.mPage||info.firstSized; if(!pg) return; // barkod sayfası yok → atla
       return AK._pageCanvas(pdf, pg, 3.6).then(function(o){ var t=AK._trim(o.c,o.ctx); if((t.ink||0)<200) return; // neredeyse boş → atla
-        out.push({code:info.code, renk:info.renk, model:info.model, lisans:info.lisans, url:t.url}); }); }); }, Promise.resolve()).then(function(){ return out; });
+        out.push({code:info.code, renk:info.renk, model:info.model, lisans:info.lisans, url:t.url, barkodlar:info.barkodlar}); }); }); }, Promise.resolve()).then(function(){ return out; });
   });
 }); };
 // Fiyat kartındaki "Baskı Adet / Printing Quantity" değerlerini bedenlere eşle.
@@ -22454,8 +22487,9 @@ AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
       var joined=tc.items.map(function(x){return x.str;}).join(' ');
       var info=AK._pageInfo(joined); var adet=AK._parseAdet(joined);
       var key=AK._ckey(info.code,info.model);
-      if(!byCode[key]){ byCode[key]={code:info.code, model:info.model, adet:{}, mPage:0, firstPage:pageNum}; order.push(key); }
+      if(!byCode[key]){ byCode[key]={code:info.code, model:info.model, adet:{}, mPage:0, firstPage:pageNum, barkodlar:{}}; order.push(key); }
       var e=byCode[key];
+      AK._eanlar(joined).forEach(function(d,ix){ e.barkodlar['f'+pageNum+'_'+ix]=d; });
       Object.keys(adet).forEach(function(sz){ e.adet[sz]=(e.adet[sz]||0)+adet[sz]; });
       if(!e.mPage && AK._bigSizeItems(tc).some(function(it){ return it.s==='M'; })) e.mPage=pageNum;
       i++; return scan();
@@ -22465,7 +22499,7 @@ AK._fiyatColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     return order.reduce(function(ch,key){ return ch.then(function(){
       var e=byCode[key];
       return AK._cropBig(pdf, e.mPage?'M':null, 3.6, e.mPage||e.firstPage).then(function(r){
-        out.push({code:e.code, model:e.model, url:r.url, adet:e.adet});
+        out.push({code:e.code, model:e.model, url:r.url, adet:e.adet, barkodlar:e.barkodlar});
       });
     }); }, Promise.resolve()).then(function(){ return out; });
   });
@@ -22499,7 +22533,7 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     return pdf.getPage(pageNum).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
       var full=tc.items.map(function(x){return x.str;}).join(' ');
       var info=AK._pageInfo(full);
-      pages.push({page:pageNum, code:info.code, renk:info.renk, model:info.model, lisans:info.lisans, size:info.size, origSize:info.size||null, len:full.replace(/\s/g,'').length});
+      pages.push({page:pageNum, code:info.code, renk:info.renk, model:info.model, lisans:info.lisans, size:info.size, origSize:info.size||null, len:full.replace(/\s/g,'').length, ean:AK._eanlar(full)});
       i++; return scan(); }); }
   return scan().then(function(){
     var szSet={}; pages.forEach(function(p){ if(p.size) szSet[p.size.toLowerCase()]=true; });
@@ -22512,9 +22546,11 @@ AK._comboColors = function(bytes){ return window.pdfjsLib.getDocument({data:byte
     var target = sp['M'] ? 'M' : (['L','S','XL','XXL','XS','XXS','2XL','3XL','4XL'].filter(function(s){return sp[s];})[0] || null);
     var byCode={};
     pages.forEach(function(p){ if(p.len<40 && !p.origSize) return; if(target && p.size && p.size.toUpperCase()!==target) return; var key=AK._ckey(p.code,p.model||lastModel); if(!byCode[key]) byCode[key]={code:p.code,renk:p.renk,model:p.model||lastModel,lisans:false,pages:[]}; if(p.lisans) byCode[key].lisans=true; if(!byCode[key].renk&&p.renk) byCode[key].renk=p.renk; byCode[key].pages.push(p.page); });
+    // Bütün bedenlerin barkod numaraları (föye sadece M basılsa da gelen etiket her beden olabilir)
+    pages.forEach(function(p){ if(!p.ean||!p.ean.length) return; var g=byCode[AK._ckey(p.code,p.model||lastModel)]; if(!g) return; g.barkodlar=g.barkodlar||{}; g.barkodlar[p.origSize||p.size||('s'+p.page)]=p.ean[0]; });
     var keys=Object.keys(byCode); var out=[];
     return keys.reduce(function(ch,k){ return ch.then(function(){ var g=byCode[k];
-      return g.pages.reduce(function(ch2,pn){ return ch2.then(function(imgs){ return AK._textCrop(pdf,pn,3.4).then(function(r){ if((r.ink||0)>=150) imgs.push(r.url); return imgs; }); }); }, Promise.resolve([])).then(function(imgs){ if(imgs.length) out.push({code:g.code, renk:AK._renkFromText(g.renk)||g.renk||AK._codeRenk(g.code), model:g.model, lisans:g.lisans, images:imgs}); });
+      return g.pages.reduce(function(ch2,pn){ return ch2.then(function(imgs){ return AK._textCrop(pdf,pn,3.4).then(function(r){ if((r.ink||0)>=150) imgs.push(r.url); return imgs; }); }); }, Promise.resolve([])).then(function(imgs){ if(imgs.length) out.push({code:g.code, renk:AK._renkFromText(g.renk)||g.renk||AK._codeRenk(g.code), model:g.model, lisans:g.lisans, images:imgs, barkodlar:g.barkodlar||null}); });
     }); }, Promise.resolve()).then(function(){ out.sizes=Object.keys(szSet); return out; });
   });
 }); };
@@ -22610,15 +22646,15 @@ AK.processEntries = function(entries){
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         // Birleşik dosya varsa ayrı barkod/yıkama dosyasını atla (mükerrer olmasın)
         if((cat.type==='icbarkod'||cat.type==='yikama') && hasCombo) return;
-        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.icbarkod=x.url?[x.url]:[]; if(x.lisans) col.lisans=true; }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
+        if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.icbarkod=x.url?[x.url]:[]; if(x.lisans) col.lisans=true; if(x.barkodlar) col.barkodlar=Object.assign(col.barkodlar||{}, x.barkodlar); }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
         // Fall in Love birleşik: tüm dolu sayfaları TAM (okunur) render et → tek "birleşik" bölüm
         if(cat.type==='icbarkod_yikama'){
           return AK._comboColors(bytes).then(function(list){
-            list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.combo=x.images.slice(); col._combo=true; if(x.lisans) col.lisans=true; });
+            list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.combo=x.images.slice(); col._combo=true; if(x.lisans) col.lisans=true; if(x.barkodlar) col.barkodlar=Object.assign(col.barkodlar||{}, x.barkodlar); });
             if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; });
           });
         }
-        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,null,x.model); if(x.url) col.fiyat=[x.url];
+        if(cat.type==='fiyat'){ return AK._fiyatColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,null,x.model); if(x.url) col.fiyat=[x.url]; if(x.barkodlar) col.fiyatBarkod=Object.assign(col.fiyatBarkod||{}, x.barkodlar);
           // Birden fazla fiyat dosyası gelirse de adetler birikir (ezilmez)
           if(x.adet && Object.keys(x.adet).length){ if(!col.adet) col.adet={}; Object.keys(x.adet).forEach(function(sz){ col.adet[sz]=x.adet[sz]; sizeSet[sz]=true; }); } }); }); }
         if(cat.type==='yikama'){ return AK._yikamaColors(bytes).then(function(list){
@@ -22853,12 +22889,12 @@ AK._colorsFromMerged = function(m, prev){
     var effRenk = (p.renk&&p.renk!==col.renk ? p.renk : (col.renk||p.renk||'')) || null;
     var comboNote = 'Fall in Love: yıkama + iç barkod TEK etikette birleşik geliyor.';
     // Birleşik (Fall in Love): tam okunur sayfalar, tek bölüm (İç Barkod + Yıkama)
-    if(col.combo&&col.combo.length){ files.push({type:'icbarkod', images:col.combo.slice(), renk:effRenk, code:col.code||null, name:'combo:'+k, note:comboNote, full:true, label:'İç Barkod + Yıkama (birleşik)'}); }
+    if(col.combo&&col.combo.length){ files.push({type:'icbarkod', images:col.combo.slice(), renk:effRenk, code:col.code||null, name:'combo:'+k, note:comboNote, full:true, label:'İç Barkod + Yıkama (birleşik)', barkodlar:col.barkodlar||null}); }
     else {
-      if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:effRenk,code:col.code||null,name:'icbarkod:'+k});
+      if(col.icbarkod&&col.icbarkod.length) files.push({type:'icbarkod',images:col.icbarkod.slice(),renk:effRenk,code:col.code||null,name:'icbarkod:'+k,barkodlar:col.barkodlar||null});
       if(col.yikama&&col.yikama.length) files.push({type:'yikama',images:col.yikama.slice(),renk:effRenk,name:'yikama:'+k});
     }
-    if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:effRenk,code:col.code||null,name:'fiyat:'+k});
+    if(col.fiyat&&col.fiyat.length) files.push({type:'fiyat',images:col.fiyat.slice(),renk:effRenk,code:col.code||null,name:'fiyat:'+k,barkodlar:col.fiyatBarkod||null});
     // Ortak dosyalar. Dokuma etiketi MAL RENGİNE göre seçilir (açık→beyaz,
     // koyu→siyah); uygun olmayan etiket gizlenir + açıklama eklenir.
     // Lisanslı model: barkodta "License" geçiyorsa ya da arşivde lisans
@@ -24158,7 +24194,7 @@ AK.gelenEkle = function(c, tip, dataUrl, ek){
   var k=AK._gelenKey(c,tip);
   var kayit={ id:id, key:k, tip:tip, model:(c&&c.model)||AK.state.model||'', renk:(c&&c.renk)||'',
               ts:Date.now(), by:AK._kim(), onay:(ek&&ek.onay), not:(ek&&ek.not)||'',
-              ton:(ek&&ek.ton)||'', img:dataUrl };
+              ton:(ek&&ek.ton)||'', barkod:(ek&&ek.barkod)||'', bkDurum:(ek&&ek.bkDurum)||'', img:dataUrl };
   var L=AK.gelenList();
   L.push(kayit);
   // aynı anahtarda fazlası düşsün
@@ -24348,7 +24384,7 @@ AKC._bul = function(cv, klv, tip){
   // beyaz kağıdın üstündedir. Onlarda önce baskının sınırları aranır.
   if(AKC._basiliMi(tip)){
     var mk=null; try{ mk=AKC._mrkKutu(cv, klv); }catch(e){ mk=null; }
-    if(mk) return mk;
+    if(mk) return AKC._oranaUydur(mk, klv);
   }
   var w=cv.width, h=cv.height, ctx=cv.getContext('2d');
   var d=ctx.getImageData(0,0,w,h).data, n=w*h;
@@ -24407,7 +24443,7 @@ AKC._bul = function(cv, klv, tip){
   // Dokumada da kenar bulunamadıysa son çare: baskının/yazının sınırları
   if(!AKC._basiliMi(tip)){
     var mk2=null; try{ mk2=AKC._mrkKutu(cv, klv); }catch(e){ mk2=null; }
-    if(mk2) return mk2;
+    if(mk2) return AKC._oranaUydur(mk2, klv);
   }
   return null;
 };
@@ -24492,6 +24528,27 @@ AKC._mrkKutu = function(cv, klv){
   var pad=Math.round(Math.min(bw,bh)*0.035);
   var x1=Math.max(0, enIyi.minx-pad)+bx, y1=Math.max(0, enIyi.miny-pad)+by;
   var x2=Math.min(bw-1, enIyi.maxx+pad)+bx, y2=Math.min(bh-1, enIyi.maxy+pad)+by;
+  return [[x1,y1],[x2,y1],[x2,y2],[x1,y2]];
+};
+/* Mürekkep kutusu yazının sınırında kalır, kartın kenarında değil. Sistemdeki
+   kartın en/boy oranı biliniyorsa kutu o orana genişletilir (ortası sabit,
+   kılavuz çerçeveden taşmaz). Barkodsuz kartlarda (süs, lisans…) asıl işe
+   yarayan bu: kartın kendisi beyaz, kenar görünmüyor, ama oranı belli. */
+AKC._oranaUydur = function(q, klv){
+  if(!AKC._oran || !q) return q;
+  var r = AKC._klvDon ? 1/AKC._oran : AKC._oran;
+  var x1=q[0][0], y1=q[0][1], x2=q[2][0], y2=q[2][1];
+  var w=x2-x1, h=y2-y1; if(w<=0||h<=0) return q;
+  var cx=(x1+x2)/2, cy=(y1+y2)/2;
+  if(w/h < r) w=h*r; else h=w/r;
+  // oran çok uçuksa (yanlış tip / yan tutulmuş) dokunma
+  if(w > klv[2]*1.02 || h > klv[3]*1.02){
+    var k=Math.min(klv[2]/w, klv[3]/h);
+    if(k<0.8) return q;
+    w*=k; h*=k;
+  }
+  x1=Math.max(klv[0], cx-w/2); y1=Math.max(klv[1], cy-h/2);
+  x2=Math.min(klv[0]+klv[2], x1+w); y2=Math.min(klv[1]+klv[3], y1+h);
   return [[x1,y1],[x2,y1],[x2,y2],[x1,y2]];
 };
 // Bu aksesuar BASILI mı (sticker/kart) yoksa DOKUMA mı?
@@ -24638,12 +24695,17 @@ AKC.ac = function(cid, tip){
   }
   AKC._cid=cid; AKC._tip=tip; AKC._quad=null; AKC._sabit=0; AKC._kirpUrl=null;
   AKC._ton=null; AKC._mesgul=false; AKC._fener=false;
+  AKC._bkSifirla();
   var c=AK._c(cid);
   var b=AKC._el('akcBaslik');
   if(b) b.textContent=((AK.TYPES[tip]&&AK.TYPES[tip].label)||tip)+((c&&c.renk)?(' · '+c.renk):'');
   var n=AKC._el('akcNot'); if(n) n.value='';
   AKC._goster('Cam');
   AKC._el('akcModal').classList.add('show');
+  // Barkod okuyucu ve sistemdeki barkodlar kamera açılırken hazırlansın
+  AKC._dedektor().catch(function(){});
+  AKC._haritaP = AKC._barkodHaritasi();
+  AKC._sistemGorseliHazirla();
   AKC._kameraAc();
 };
 AKC._kameraAc = function(){
@@ -24706,11 +24768,129 @@ AKC.fenerAcKapa = function(){
   try{ AKC._track.applyConstraints({advanced:[{torch:AKC._fener}]}); }catch(e){}
   var fb=AKC._el('akcFener'); if(fb) fb.classList.toggle('acik', AKC._fener);
 };
+/* ── Kılavuz çerçeve etiketin oranında ──
+   Sistemdeki görselin en/boy oranı biliniyorsa çerçeve ona göre çizilir
+   (iç barkod dikey ve dar, dokuma yatay). Döndür tuşu yan tutulan etiket için. */
+AKC._oran = null;          // etiket genişlik/yükseklik (sistem görselinden)
+AKC._klvDon = false;
+AKC._hayalet = null;       // sistem görseli (çerçevede soluk gösterilir)
+AKC._hayaletAcik = true;
+AKC.KLV_VARSAYILAN = {x:0.10, y:0.30, w:0.80, h:0.40};
+AKC._sistemGorseli = function(){
+  var c=AK._c(AKC._cid); if(!c) return null;
+  var f=((c.files)||[]).filter(function(x){ return x.type===AKC._tip && x.images && x.images[0]; })[0];
+  return f ? f.images[0] : null;
+};
+AKC._sistemGorseliHazirla = function(){
+  AKC._oran=null; AKC._hayalet=null; AKC._klvDon=false; AKC._klvBoyut=null;
+  AKC.KLV = Object.assign({}, AKC.KLV_VARSAYILAN);
+  var u=AKC._sistemGorseli(); if(!u) return;
+  var im=new Image();
+  im.onload=function(){
+    if(!im.naturalWidth || !im.naturalHeight) return;
+    AKC._oran = im.naturalWidth/im.naturalHeight;
+    AKC._hayalet = im;
+    AKC._klvBoyut = null;   // bir sonraki karede yeniden hesaplanır
+  };
+  im.src=u;
+};
+AKC._klvAyarla = function(vw, vh){
+  var anahtar=vw+'x'+vh+'|'+AKC._oran+'|'+AKC._klvDon;
+  if(AKC._klvBoyut===anahtar) return;
+  AKC._klvBoyut=anahtar;
+  if(!AKC._oran){ AKC.KLV=Object.assign({}, AKC.KLV_VARSAYILAN); return; }
+  var r = AKC._klvDon ? 1/AKC._oran : AKC._oran;
+  // çok ince etiketlerde çerçeve biraz genişletilir (elde tam oturtmak zor)
+  r = Math.max(0.28, Math.min(4.5, r));
+  var mw=vw*0.86, mh=vh*0.76, w=Math.min(mw, mh*r), h=w/r;
+  AKC.KLV = {x:(vw-w)/2/vw, y:(vh-h)/2/vh, w:w/vw, h:h/vh};
+};
+AKC.cerceveDondur = function(){
+  AKC._klvDon=!AKC._klvDon; AKC._klvBoyut=null;
+  var b=AKC._el('akcDondur'); if(b) b.classList.toggle('acik', AKC._klvDon);
+};
+AKC.hayaletAcKapa = function(){
+  AKC._hayaletAcik=!AKC._hayaletAcik;
+  var b=AKC._el('akcHayalet'); if(b) b.classList.toggle('acik', AKC._hayaletAcik);
+};
+
+/* ── Canlı barkod takibi ──
+   Her ~150 ms'de bir kare arkada taranır. Son 5 sonucun köşeleri oylanır
+   (medyan) → çerçeve titremez, tek karelik yanlış kenar kaybolur. */
+AKC._bkSifirla = function(){
+  AKC._bk=null; AKC._bkOy=[]; AKC._bkSabit=0; AKC._bkMesgul=false; AKC._bkSonDeneme=0; AKC._bkHam=null;
+  AKC._acilisT=performance.now();
+  AKC._barkod=null; AKC._bulunamadiBas=0;
+};
+AKC._medyanQ = function(liste){
+  var q=[];
+  for(var i=0;i<4;i++){
+    var xs=liste.map(function(z){ return z[i][0]; }).sort(function(a,b){ return a-b; });
+    var ys=liste.map(function(z){ return z[i][1]; }).sort(function(a,b){ return a-b; });
+    q.push([xs[xs.length>>1], ys[ys.length>>1]]);
+  }
+  return q;
+};
+AKC._bkBaslat = function(v){
+  AKC._bkMesgul=true; AKC._bkSonDeneme=performance.now();
+  var vw=v.videoWidth, vh=v.videoHeight, k=Math.min(1, 640/Math.min(vw,vh));
+  var cv=document.createElement('canvas'); cv.width=Math.round(vw*k); cv.height=Math.round(vh*k);
+  cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+  AKC._barkodBul(cv,false).then(function(r){
+    AKC._bkMesgul=false;
+    if(!AKC._el('akcModal').classList.contains('show') || AKC._kare || AKC._mesgul) return;
+    var simdi=performance.now();
+    if(!r){
+      if(AKC._bk && simdi-AKC._bk.ts>900){ AKC._bk=null; AKC._bkOy=[]; AKC._bkSabit=0; }
+      return;
+    }
+    var qn=r.q.map(function(p){ return [p[0]/cv.width, p[1]/cv.height]; });
+    // Tek okuma yanlış olabilir: numara ancak art arda iki kez aynı okununca kabul
+    var onceki=AKC._bkHam; AKC._bkHam=r.deger;
+    if(onceki!==r.deger && !(AKC._bk && AKC._bk.deger===r.deger)) return;
+    if(AKC._bk && AKC._bk.deger!==r.deger){ AKC._bkOy=[]; AKC._bkSabit=0; }
+    AKC._bkOy.push(qn); if(AKC._bkOy.length>5) AKC._bkOy.shift();
+    var med=AKC._medyanQ(AKC._bkOy);
+    if(AKC._bk){
+      var fark=0;
+      for(var i=0;i<4;i++) fark=Math.max(fark, Math.abs(med[i][0]-AKC._bk.q[i][0]), Math.abs(med[i][1]-AKC._bk.q[i][1]));
+      if(fark<0.03) AKC._bkSabit++; else AKC._bkSabit=0;
+    }
+    AKC._bk={q:med, deger:r.deger, format:r.format, guven:r.guven, ts:simdi};
+    AKC._bkCipGoster(r.deger);
+  });
+};
+// Canlı görüntünün üstündeki barkod çipi: numara + sistemle eşleşme
+AKC._bkCipGoster = function(deger){
+  var el=AKC._el('akcBkCip'); if(!el) return;
+  if(!deger){ el.style.display='none'; el._deger=null; return; }
+  if(el._deger===deger && el.style.display!=='none') return;
+  el._deger=deger;
+  el.style.display='';
+  el.className='akc-bkcip bekle';
+  el.innerHTML='<i class="fas fa-barcode"></i> <b>'+AK._esc(deger)+'</b>';
+  AKC._barkodKarar(deger).then(function(k){
+    if(el._deger!==deger) return;
+    el.className='akc-bkcip '+k.sinif;
+    el.innerHTML='<i class="fas '+k.ikon+'"></i> <b>'+AK._esc(deger)+'</b>'+(k.kisa?' <span>'+k.kisa+'</span>':'');
+  });
+};
+
 AKC._dongu = function(){
   var v=AKC._el('akcVideo'), ov=AKC._el('akcOverlay'), du=AKC._el('akcDurum');
   if(!v || !AKC._el('akcModal').classList.contains('show')) return;
   var son=0;
   var kucuk=document.createElement('canvas');
+  function durum(yazi, renk){
+    if(!du) return;
+    du.textContent=yazi;
+    du.className='akc-durum'+(renk?' '+renk:'');
+  }
+  function yol(ctx, q){
+    ctx.beginPath(); ctx.moveTo(q[0][0],q[0][1]);
+    for(var k=1;k<4;k++) ctx.lineTo(q[k][0],q[k][1]);
+    ctx.closePath();
+  }
   function adim(t){
     AKC._raf=requestAnimationFrame(adim);
     if(!AKC._el('akcModal').classList.contains('show')) return;
@@ -24718,6 +24898,7 @@ AKC._dongu = function(){
     if(t-son < 100) return; son=t;
     var vw=v.videoWidth, vh=v.videoHeight;
     if(!vw||!vh) return;
+    AKC._klvAyarla(vw, vh);
     if(ov.width!==vw||ov.height!==vh){ ov.width=vw; ov.height=vh; }
     var aw=AKC.ANALIZ_W, ah=Math.round(aw*vh/vw);
     kucuk.width=aw; kucuk.height=ah;
@@ -24725,18 +24906,45 @@ AKC._dongu = function(){
     var klvA=AKC._kilavuzPx(aw,ah);
     var klvV=AKC._kilavuzPx(vw,vh);
 
+    // Barkod taraması arkada sürer
+    if(!AKC._bkMesgul && t-AKC._bkSonDeneme>150) AKC._bkBaslat(v);
+    var bkTaze = AKC._bk && (performance.now()-AKC._bk.ts < 900);
+
     var net=AKC._netlik(kucuk, klvA);
     var parla=AKC._parlama(kucuk, klvA);
-    var q=null;
-    try{ q=AKC._bul(kucuk, klvA, AKC._tip); }catch(e){ q=null; }
+    var q=null, kaynak='';
+    if(bkTaze){ q=AKC._bk.q.map(function(p){ return [p[0]*vw, p[1]*vh]; }); kaynak='barkod'; }
+    else{
+      var qa=null; try{ qa=AKC._bul(kucuk, klvA, AKC._tip); }catch(e){ qa=null; }
+      if(qa){
+        var olc=vw/aw;
+        q=qa.map(function(p){ return [p[0]*olc, p[1]*olc]; });
+        // Eski yolda da titremeyi azalt: önceki köşelerle yumuşat
+        if(AKC._quad && AKC._quadKaynak==='kenar'){
+          q=q.map(function(p,i){ return [AKC._quad[i][0]*0.5+p[0]*0.5, AKC._quad[i][1]*0.5+p[1]*0.5]; });
+        }
+        kaynak='kenar';
+      }
+    }
+    if(!bkTaze) AKC._bkCipGoster(null);
 
     var octx=ov.getContext('2d');
     octx.clearRect(0,0,ov.width,ov.height);
-    // Kılavuz çerçeve her zaman çizilir — arama sadece burada yapılıyor
+    // Kılavuz çerçeve her zaman çizilir
     octx.save();
     octx.fillStyle='rgba(0,0,0,.34)';
     octx.fillRect(0,0,vw,vh);
     octx.clearRect(klvV[0],klvV[1],klvV[2],klvV[3]);
+    // Hayalet: sistemdeki etiket çerçevede soluk durur, gerçeği üstüne oturtulur
+    if(!q && AKC._hayalet && AKC._hayaletAcik){
+      octx.globalAlpha=0.2;
+      if(AKC._klvDon){
+        octx.translate(klvV[0]+klvV[2]/2, klvV[1]+klvV[3]/2); octx.rotate(Math.PI/2);
+        octx.drawImage(AKC._hayalet, -klvV[3]/2, -klvV[2]/2, klvV[3], klvV[2]);
+        octx.setTransform(1,0,0,1,0,0);
+      }else octx.drawImage(AKC._hayalet, klvV[0], klvV[1], klvV[2], klvV[3]);
+      octx.globalAlpha=1;
+    }
     octx.strokeStyle='rgba(255,255,255,.9)'; octx.lineWidth=Math.max(2,vw*0.003);
     octx.setLineDash([vw*0.025, vw*0.018]);
     octx.strokeRect(klvV[0],klvV[1],klvV[2],klvV[3]);
@@ -24747,70 +24955,104 @@ AKC._dongu = function(){
     var parlamaVar = parla > AKC.PARLAMA;
 
     if(q){
-      var olc=vw/aw;
-      var buyuk=q.map(function(p){ return [p[0]*olc, p[1]*olc]; });
-      if(AKC._quad){
-        var fark=0;
-        for(var i=0;i<4;i++) fark=Math.max(fark, Math.hypot(buyuk[i][0]-AKC._quad[i][0], buyuk[i][1]-AKC._quad[i][1]));
-        if(fark < vw*AKC.SABIT_TOL) AKC._sabit++; else AKC._sabit=0;
+      AKC._bulunamadiBas=0;
+      var hazir;
+      if(kaynak==='barkod'){
+        hazir = AKC._bkSabit>=2 && !bulanik && !parlamaVar;
+      }else{
+        if(AKC._quad){
+          var fark=0;
+          for(var i=0;i<4;i++) fark=Math.max(fark, Math.hypot(q[i][0]-AKC._quad[i][0], q[i][1]-AKC._quad[i][1]));
+          if(fark < vw*AKC.SABIT_TOL) AKC._sabit++; else AKC._sabit=0;
+        }
+        hazir = AKC._sabit>=AKC.SABIT_KARE && !bulanik && !parlamaVar;
+        // Barkodlu etikette eski yol (mürekkep kutusu) sadece barkodun kutusunu
+        // bulur. Okuyucu ilk açılışta ~1 sn'de yükleniyor; o sürede eski yol
+        // çekimi tetiklemesin. Barkod hiç okunamazsa 2.5 sn sonra devreye girer.
+        if(AKC._basiliMi() && (AKC._bkHam || t-AKC._acilisT < 2500)) hazir=false;
       }
-      AKC._quad=buyuk;
-      var hazir = AKC._sabit>=AKC.SABIT_KARE && !bulanik && !parlamaVar;
-      octx.strokeStyle = hazir ? '#22c55e' : '#a78bfa';
+      AKC._quad=q; AKC._quadKaynak=kaynak;
+      octx.strokeStyle = hazir ? '#22c55e' : (kaynak==='barkod' ? '#facc15' : '#a78bfa');
       octx.lineWidth = Math.max(3, vw*0.005);
-      octx.beginPath();
-      octx.moveTo(buyuk[0][0],buyuk[0][1]);
-      for(var k=1;k<4;k++) octx.lineTo(buyuk[k][0],buyuk[k][1]);
-      octx.closePath(); octx.stroke();
-      octx.fillStyle = hazir ? 'rgba(34,197,94,.16)' : 'rgba(167,139,250,.10)';
+      yol(octx,q); octx.stroke();
+      octx.fillStyle = hazir ? 'rgba(34,197,94,.16)' : 'rgba(250,204,21,.08)';
       octx.fill();
-      if(du) du.textContent = bulanik ? 'Netleşmesini bekle…'
-                            : parlamaVar ? 'Parlama var — açıyı biraz değiştir'
-                            : hazir ? 'Etiket bulundu — çekiliyor…' : 'Etiket bulundu, sabit tut';
-      if(hazir && AKC._el('akcOto').checked){ AKC._sabit=-999; AKC.cek(); }
+      // köşe tutamaçları
+      octx.fillStyle = hazir ? '#22c55e' : '#facc15';
+      q.forEach(function(p){ octx.beginPath(); octx.arc(p[0],p[1],Math.max(5,vw*0.008),0,Math.PI*2); octx.fill(); });
+      if(bulanik) durum('Netleşmesini bekle…','sari');
+      else if(parlamaVar) durum('Parlama var — telefonu biraz eğ','sari');
+      else if(hazir) durum(AKC._el('akcOto').checked ? 'Tamam — çekiliyor…' : 'Hazır — deklanşöre bas','yesil');
+      else durum(kaynak==='barkod' ? 'Barkod okundu, sabit tut' : 'Etiket bulundu, sabit tut','sari');
+      if(hazir && AKC._el('akcOto').checked){ AKC._sabit=-999; AKC._bkSabit=-999; AKC.cek(); }
     }else{
       AKC._quad=null; AKC._sabit=0;
+      if(!AKC._bulunamadiBas) AKC._bulunamadiBas=t;
+      var uzun = t-AKC._bulunamadiBas > 4000;
       var ad = AKC._basiliMi() ? 'Barkodu/kartı' : 'Etiketi';
-      if(du) du.textContent = bulanik ? 'Netleşmesini bekle…'
-                            : parlamaVar ? 'Parlama var — açıyı biraz değiştir'
-                            : ad+' çerçeveye getir — bulamazsam çerçeveyi kırparım';
+      if(bulanik) durum('Netleşmesini bekle…','kirmizi');
+      else if(parlamaVar) durum('Parlama var — telefonu biraz eğ','kirmizi');
+      else if(uzun) durum(AKC._basiliMi() ? 'Barkodu okuyamadım — biraz yaklaş, ışığa dön' : 'İpucu: koyu bir zeminde çok daha kolay bulurum','kirmizi');
+      else durum(ad+' çerçeveye getir','kirmizi');
     }
   }
   cancelAnimationFrame(AKC._raf);
   AKC._raf=requestAnimationFrame(adim);
 };
-AKC.otoDegisti = function(){ AKC._sabit=0; };
+AKC.otoDegisti = function(){ AKC._sabit=0; AKC._bkSabit=0; };
+// Ekrana dokununca o noktaya netle (cihaz destekliyorsa)
+AKC.dokunNetle = function(ev){
+  var t=AKC._track; if(!t || AKC._mesgul) return;
+  // Görüntü kutuya "contain" ile sığdırılıyor: kenarlardaki siyah boşluk hesaba katılır
+  var el=ev.currentTarget, r=el.getBoundingClientRect();
+  var oran=(el.width||1)/(el.height||1), gw=r.width, gh=r.height;
+  if(gw/gh>oran) gw=gh*oran; else gh=gw/oran;
+  var ox=r.left+(r.width-gw)/2, oy=r.top+(r.height-gh)/2;
+  var x=Math.max(0,Math.min(1,(ev.clientX-ox)/gw)), y=Math.max(0,Math.min(1,(ev.clientY-oy)/gh));
+  var cap={}; try{ cap=t.getCapabilities?t.getCapabilities():{}; }catch(e){}
+  var ist={};
+  if(cap.pointsOfInterest!==undefined || 'pointsOfInterest' in (t.getSettings?t.getSettings():{})) ist.pointsOfInterest=[{x:x,y:y}];
+  if(cap.focusMode && cap.focusMode.indexOf('single-shot')>=0) ist.focusMode='single-shot';
+  if(!Object.keys(ist).length) return;
+  try{ t.applyConstraints({advanced:[ist]}).catch(function(){}); }catch(e){}
+  var nk=AKC._el('akcNetNokta');
+  if(nk){ nk.style.left=(ev.clientX-r.left)+'px'; nk.style.top=(ev.clientY-r.top)+'px'; nk.classList.remove('goster'); void nk.offsetWidth; nk.classList.add('goster'); }
+  // birazdan sürekli netlemeye geri dön
+  setTimeout(function(){
+    if(AKC._track!==t) return;
+    if(cap.focusMode && cap.focusMode.indexOf('continuous')>=0){ try{ t.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){}); }catch(e){} }
+  }, 2500);
+};
 
-/* Çekim: mümkünse ImageCapture ile SENSÖRÜN tam çözünürlüklü karesi alınır
-   (önizleme karesi düşük çözünürlüklü olabiliyor). Kılavuz çerçeve oransal
-   tutulduğu için farklı en-boy oranında da doğru yere denk gelir. */
+/* Çekim: mümkünse ImageCapture ile SENSÖRÜN tam çözünürlüklü karesi alınır.
+   Yoksa videodan 3 kare alınıp en neti seçilir. Sonra tam karede barkod
+   bir kez daha, hassas olarak aranır. */
+AKC._enNetKare = function(v, adet){
+  var enIyi=null, enNet=-1, i=0;
+  return new Promise(function(coz){
+    (function al(){
+      var cv=document.createElement('canvas'); cv.width=v.videoWidth; cv.height=v.videoHeight;
+      cv.getContext('2d').drawImage(v,0,0);
+      var k=document.createElement('canvas'); k.width=AKC.ANALIZ_W; k.height=Math.round(AKC.ANALIZ_W*cv.height/cv.width);
+      k.getContext('2d').drawImage(cv,0,0,k.width,k.height);
+      var n=AKC._netlik(k, AKC._kilavuzPx(k.width,k.height));
+      if(n>enNet){ enNet=n; enIyi=cv; }
+      if(++i>=adet) coz(enIyi); else setTimeout(al, 90);
+    })();
+  });
+};
 AKC.cek = function(){
   if(AKC._mesgul) return;
   var v=AKC._el('akcVideo');
   if(!v || !v.videoWidth){ if(typeof toast==='function') toast('Kamera hazır değil','error'); return; }
   AKC._mesgul=true;
-  var du=AKC._el('akcDurum'); if(du) du.textContent='Çekiliyor…';
-  var onizQuad = AKC._quad ? AKC._quad.map(function(p){ return [p[0]/v.videoWidth, p[1]/v.videoHeight]; }) : null;
-
-  var bitir=function(cv){
-    AKC._mesgul=false;
-    var quad = onizQuad ? onizQuad.map(function(p){ return [p[0]*cv.width, p[1]*cv.height]; }) : null;
-    // Tam çözünürlükte köşeleri bir kez daha, hassas olarak ara
-    try{
-      var aw=Math.min(560, cv.width), ah=Math.round(aw*cv.height/cv.width);
-      var k=document.createElement('canvas'); k.width=aw; k.height=ah;
-      k.getContext('2d').drawImage(cv,0,0,aw,ah);
-      var q2=AKC._bul(k, AKC._kilavuzPx(aw,ah), AKC._tip);
-      if(q2){ var o=cv.width/aw; quad=q2.map(function(p){ return [p[0]*o, p[1]*o]; }); }
-    }catch(e){}
-    AKC._kareAl(cv, quad);
-  };
-  var yedek=function(){
-    var cv=document.createElement('canvas');
-    cv.width=v.videoWidth; cv.height=v.videoHeight;
-    cv.getContext('2d').drawImage(v,0,0);
-    bitir(cv);
-  };
+  var du=AKC._el('akcDurum'); if(du){ du.textContent='Çekiliyor…'; du.className='akc-durum yesil'; }
+  var bkTaze = AKC._bk && (performance.now()-AKC._bk.ts < 900);
+  var onizQuad = bkTaze ? AKC._bk.q.map(function(p){ return [p[0],p[1]]; })
+               : (AKC._quad ? AKC._quad.map(function(p){ return [p[0]/v.videoWidth, p[1]/v.videoHeight]; }) : null);
+  var bkOnceki = bkTaze ? {deger:AKC._bk.deger, format:AKC._bk.format} : null;
+  var bitir=function(cv){ AKC._kareIsle(cv, onizQuad, bkOnceki); };
+  var yedek=function(){ AKC._enNetKare(v, 3).then(bitir); };
   if(AKC._ic && AKC._ic.takePhoto){
     AKC._ic.takePhoto()
       .then(function(blob){ return createImageBitmap(blob); })
@@ -24824,6 +25066,41 @@ AKC.cek = function(){
       .catch(yedek);
   }else yedek();
 };
+/* Çekilen (ya da galeriden seçilen) karede etiketi bul.
+   Önce barkod (bütün açılar), bulunamazsa önizlemedeki köşeler, o da yoksa
+   eski kenar/mürekkep araması. */
+AKC._kareIsle = function(cv, onizQuad, bkOnceki){
+  AKC._mesgul=true;
+  var du=AKC._el('akcDurum'); if(du) du.textContent='Etiket ayıklanıyor…';
+  // Tek kare, zaman sorunu yok: yüksek çözünürlükte ara (uzaktan çekilmiş
+  // sayfada barkod küçük kalıyor)
+  var k=Math.min(1, 2400/Math.max(cv.width,cv.height));
+  var kc=cv;
+  if(k<1){ kc=document.createElement('canvas'); kc.width=Math.round(cv.width*k); kc.height=Math.round(cv.height*k); kc.getContext('2d').drawImage(cv,0,0,kc.width,kc.height); }
+  AKC._barkodBul(kc,true).then(function(r){
+    var quad=null;
+    if(r){
+      quad=r.q.map(function(p){ return [p[0]/k, p[1]/k]; });
+      if(r.supheli && bkOnceki) AKC._barkod=bkOnceki;                 // canlıda iki kez okunmuştu
+      else AKC._barkod={deger:r.deger, format:r.format, supheli:!!r.supheli};
+    }else{
+      AKC._barkod=bkOnceki||null;
+      if(onizQuad) quad=onizQuad.map(function(p){ return [p[0]*cv.width, p[1]*cv.height]; });
+      if(!bkOnceki){
+        // Barkod yok (dokuma vb.) → tam karede köşeleri bir kez daha, hassas ara
+        try{
+          var aw=Math.min(560, cv.width), ah=Math.round(aw*cv.height/cv.width);
+          var kk=document.createElement('canvas'); kk.width=aw; kk.height=ah;
+          kk.getContext('2d').drawImage(cv,0,0,aw,ah);
+          var q2=AKC._bul(kk, AKC._kilavuzPx(aw,ah), AKC._tip);
+          if(q2){ var o=cv.width/aw; quad=q2.map(function(p){ return [p[0]*o, p[1]*o]; }); }
+        }catch(e){}
+      }
+    }
+    AKC._mesgul=false;
+    AKC._kareAl(cv, quad);
+  });
+};
 AKC.dosyadan = function(input){
   var f=input&&input.files&&input.files[0]; if(!f) return;
   var rd=new FileReader();
@@ -24831,15 +25108,10 @@ AKC.dosyadan = function(input){
     var im=new Image();
     im.onload=function(){
       var mw=2400, w=im.width, h=im.height;
-      if(w>mw){ h=Math.round(h*mw/w); w=mw; }
+      if(Math.max(w,h)>mw){ var o=mw/Math.max(w,h); w=Math.round(w*o); h=Math.round(h*o); }
       var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
       cv.getContext('2d').drawImage(im,0,0,w,h);
-      var aw=Math.min(560,w), ah=Math.round(aw*h/w);
-      var kucuk=document.createElement('canvas'); kucuk.width=aw; kucuk.height=ah;
-      kucuk.getContext('2d').drawImage(cv,0,0,aw,ah);
-      var q=null; try{ q=AKC._bul(kucuk, AKC._kilavuzPx(aw,ah), AKC._tip); }catch(_){ }
-      var olc=w/aw;
-      AKC._kareAl(cv, q?q.map(function(p){ return [p[0]*olc,p[1]*olc]; }):null);
+      AKC._kareIsle(cv, null, null);
     };
     im.src=e.target.result;
   };
@@ -24849,7 +25121,7 @@ AKC.dosyadan = function(input){
 AKC._kareAl = function(cv, quad){
   AKC._kare=cv;
   if(quad){
-    AKC._kose = quad.map(function(p){ return [p[0],p[1]]; });
+    AKC._kose = quad.map(function(p){ return [Math.max(0,Math.min(cv.width,p[0])), Math.max(0,Math.min(cv.height,p[1]))]; });
   }else{
     // Etiket bulunamadı → kılavuz çerçeve kırpılır (köşeler elle düzeltilebilir)
     var kv=AKC._kilavuzPx(cv.width, cv.height);
@@ -24884,6 +25156,33 @@ AKC._koseCiz = function(){
     x.fillStyle='#22c55e'; x.fill();
     x.strokeStyle='#fff'; x.lineWidth=2.5; x.stroke();
   }
+  // Büyüteç: sürüklenen köşe parmağın altında kalıyor; tam karenin o bölgesi
+  // 3 kat büyütülüp karşı üst köşede gösterilir.
+  if(AKC._suruklenen>=0){
+    var kp=AKC._kose[AKC._suruklenen];
+    var R=Math.round(Math.min(c.width,c.height)*0.2);
+    var sagda = kp[0]*olc < c.width/2;
+    var mx = sagda ? c.width-R-10 : R+10, my=R+10;
+    x.save();
+    x.beginPath(); x.arc(mx,my,R,0,Math.PI*2); x.closePath();
+    x.fillStyle='#000'; x.fill();
+    x.clip();
+    var sr=R/3/olc;
+    x.drawImage(cv, kp[0]-sr, kp[1]-sr, sr*2, sr*2, mx-R, my-R, R*2, R*2);
+    // kenar çizgileri büyütecin içinde de görünsün
+    x.strokeStyle='#22c55e'; x.lineWidth=2;
+    x.beginPath();
+    for(var z=0;z<5;z++){
+      var pp=AKC._kose[z%4];
+      var zx=mx+(pp[0]-kp[0])*olc*3, zy=my+(pp[1]-kp[1])*olc*3;
+      if(!z) x.moveTo(zx,zy); else x.lineTo(zx,zy);
+    }
+    x.stroke();
+    x.strokeStyle='rgba(255,255,255,.95)'; x.lineWidth=1.5;
+    x.beginPath(); x.moveTo(mx-R,my); x.lineTo(mx+R,my); x.moveTo(mx,my-R); x.lineTo(mx,my+R); x.stroke();
+    x.restore();
+    x.beginPath(); x.arc(mx,my,R,0,Math.PI*2); x.strokeStyle='#fff'; x.lineWidth=3; x.stroke();
+  }
   if(!c._baglandi){
     c._baglandi=true;
     var yer=function(ev){
@@ -24907,7 +25206,7 @@ AKC._koseCiz = function(){
                                   Math.max(0,Math.min(AKC._kare.height,p[1]))];
       AKC._koseCiz(); ev.preventDefault();
     };
-    var birak=function(){ AKC._suruklenen=-1; };
+    var birak=function(){ if(AKC._suruklenen<0) return; AKC._suruklenen=-1; AKC._koseCiz(); };
     c.addEventListener('mousedown',bas); c.addEventListener('touchstart',bas,{passive:false});
     window.addEventListener('mousemove',oynat); c.addEventListener('touchmove',oynat,{passive:false});
     window.addEventListener('mouseup',birak); c.addEventListener('touchend',birak);
@@ -24951,26 +25250,53 @@ AKC._sonucGoster = function(){
     : '<div class="akc-yok"><i class="fas fa-circle-question"></i> Arşivde bu etiket yok</div>';
   var yeni=AKC._el('akcYeni');
   if(yeni) yeni.innerHTML='<img src="'+AKC._kirpUrl+'" alt="gelen">';
+  // Barkod numarası sistemle karşılaştırılır
+  AKC._bkDurum=null;
+  var bkEl=AKC._el('akcBarkod');
+  if(bkEl){
+    if(!AKC._barkod){ bkEl.style.display='none'; bkEl.innerHTML=''; }
+    else{
+      var deger=AKC._barkod.deger;
+      bkEl.style.display=''; bkEl.className='akc-verdict bekle';
+      if(AKC._barkod.supheli){
+        // Tek okuma: sistemde birebir karşılığı varsa güvenilir, yoksa alarm verme
+        AKC._barkodKarar(deger).then(function(k){
+          if(!AKC._barkod || AKC._barkod.deger!==deger) return;
+          if(k.sinif==='ok'){ AKC._bkDurum='ok'; bkEl.className='akc-verdict ok'; bkEl.innerHTML='<i class="fas '+k.ikon+'"></i> <span>'+k.uzun+'<small class="akc-bkno">'+AK._esc(deger)+'</small></span>'; return; }
+          AKC._bkDurum='supheli';
+          bkEl.innerHTML='<i class="fas fa-circle-question"></i> <span>Barkod net okunamadı — biraz yaklaşıp tekrar çek, ya da gözle kontrol et.</span>';
+        });
+        return;
+      }
+      bkEl.innerHTML='<i class="fas fa-spinner fa-spin"></i> Barkod sistemle karşılaştırılıyor…';
+      AKC._barkodKarar(deger).then(function(k){
+        if(!AKC._barkod || AKC._barkod.deger!==deger) return;
+        AKC._bkDurum=k.sinif;
+        bkEl.className='akc-verdict '+(k.sinif==='uyari'||k.sinif==='bilgi'?'bekle':k.sinif);
+        bkEl.innerHTML='<i class="fas '+k.ikon+'"></i> <span>'+k.uzun+'<small class="akc-bkno">'+AK._esc(deger)+'</small></span>';
+      });
+    }
+  }
   var v=AKC._el('akcVerdict');
   if(v){ v.className='akc-verdict bekle'; v.innerHTML='<i class="fas fa-spinner fa-spin"></i> Etiket rengi ölçülüyor…'; }
   AK._labelTone(AKC._kirpUrl).then(function(ton){
     AKC._ton = ton==='Siyah' ? 'siyah' : ton==='Beyaz' ? 'beyaz' : '';
     if(!v) return;
-    if(!AKC._ton){ v.className='akc-verdict bekle'; v.innerHTML='<i class="fas fa-circle-question"></i> Etiket rengi net ölçülemedi — gözle karşılaştır.'; return; }
+    if(!AKC._ton){ v.className='akc-verdict bekle'; v.innerHTML='<i class="fas fa-circle-question"></i> <span>Etiket rengi net ölçülemedi — gözle karşılaştır.</span>'; return; }
     var okunan = AKC._ton==='siyah' ? 'SİYAH' : 'BEYAZ';
     var bekleniyor = AKC._beklenenTon();
     if(!bekleniyor){
       v.className='akc-verdict bekle';
-      v.innerHTML='<i class="fas fa-eye"></i> Gelen etiket <b>'+okunan+'</b>. Sistemde karşılaştıracak dokuma yok.';
+      v.innerHTML='<i class="fas fa-eye"></i> <span>Gelen etiket <b>'+okunan+'</b>. Sistemde karşılaştıracak dokuma yok.</span>';
       return;
     }
     var bAd = bekleniyor==='siyah' ? 'SİYAH' : 'BEYAZ';
     if(bekleniyor===AKC._ton){
       v.className='akc-verdict ok';
-      v.innerHTML='<i class="fas fa-circle-check"></i> Renk tutuyor — gelen <b>'+okunan+'</b>, olması gereken <b>'+bAd+'</b>.';
+      v.innerHTML='<i class="fas fa-circle-check"></i> <span>Renk tutuyor — gelen <b>'+okunan+'</b>, olması gereken <b>'+bAd+'</b>.</span>';
     }else{
       v.className='akc-verdict no';
-      v.innerHTML='<i class="fas fa-triangle-exclamation"></i> <b>RENK TUTMUYOR!</b> Gelen etiket <b>'+okunan+'</b>, olması gereken <b>'+bAd+'</b>.';
+      v.innerHTML='<i class="fas fa-triangle-exclamation"></i> <span><b>RENK TUTMUYOR!</b> Gelen etiket <b>'+okunan+'</b>, olması gereken <b>'+bAd+'</b>.</span>';
     }
   }).catch(function(){});
 };
@@ -24988,7 +25314,8 @@ AKC._beklenenTon = function(){
   return '';
 };
 AKC.geri = function(){
-  AKC._kirpUrl=null; AKC._sabit=0; AKC._quad=null; AKC._mesgul=false;
+  AKC._kirpUrl=null; AKC._sabit=0; AKC._quad=null; AKC._mesgul=false; AKC._kare=null;
+  AKC._bkSifirla();
   AKC._goster('Cam');
   AKC._kameraAc();
 };
@@ -24996,7 +25323,8 @@ AKC.kaydet = function(uygun){
   if(!AKC._kirpUrl) return;
   var c=AK._c(AKC._cid); if(!c) return;
   var not=(AKC._el('akcNot')||{}).value||'';
-  AK.gelenEkle(c, AKC._tip, AKC._kirpUrl, {onay:!!uygun, not:not.trim(), ton:AKC._ton||''}).then(function(){
+  AK.gelenEkle(c, AKC._tip, AKC._kirpUrl, {onay:!!uygun, not:not.trim(), ton:AKC._ton||'',
+    barkod:(AKC._barkod&&!AKC._barkod.supheli&&AKC._barkod.deger)||'', bkDurum:AKC._bkDurum||''}).then(function(){
     AKC.kapat();
     AK.renderColors();
     if(typeof toast==='function') toast(uygun?'Numune uygun kaydedildi':'Numune UYGUN DEĞİL kaydedildi', uygun?'success':'error');
@@ -25015,7 +25343,523 @@ AKC.kapat = function(){
   AKC._kamerayiDurdur();
   var m=AKC._el('akcModal'); if(m) m.classList.remove('show');
   AKC._kare=null; AKC._kose=null; AKC._kirpUrl=null; AKC._mesgul=false;
+  AKC._bkSifirla(); AKC._bkCipGoster(null);
 };
+/* ═══════════════════════════════════════════════════════════════════
+   BARKOD YOLU
+   Beyaz sticker beyaz kağıdın üstünde: bütün kareye bakınca kenar yok gibi.
+   Ama barkodun kendisi çok güçlü bir işaret. Barkod okunur → yönü ve yeri
+   kesinleşir → etiketin kenarları barkodun EKSENLERİ boyunca, çizgi çizgi
+   taranır. Her çizgide yüzlerce piksel birlikte değerlendirildiği için
+   etiket ile kağıt arasındaki 10-20 tonluk fark bile net çıkar.
+   Okunan numara sistemdeki barkodlarla karşılaştırılır.
+   ═══════════════════════════════════════════════════════════════════ */
+// Android Chrome'da tarayıcının kendi okuyucusu var; olmayan cihazlarda
+// (iPhone, bilgisayar) aynı arayüzü sağlayan ZXing kullanılır.
+AKC.BK_URL = 'https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/dist/es/ponyfill.js';
+AKC.BK_FORMAT = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','itf','codabar','qr_code','data_matrix'];
+AKC._dedP = null;
+AKC._dedektor = function(){
+  if(AKC._dedP) return AKC._dedP;
+  var yerel = (window.BarcodeDetector && window.BarcodeDetector.getSupportedFormats)
+    ? window.BarcodeDetector.getSupportedFormats().then(function(f){
+        var ist=AKC.BK_FORMAT.filter(function(x){ return f.indexOf(x)>=0; });
+        if(ist.indexOf('ean_13')<0) throw new Error('ean yok');
+        return {d:new window.BarcodeDetector({formats:ist}), yerel:true};
+      })
+    : Promise.reject(new Error('yok'));
+  AKC._dedP = yerel.catch(function(){
+    return import(AKC.BK_URL).then(function(m){
+      return {d:new m.BarcodeDetector({formats:AKC.BK_FORMAT}), yerel:false};
+    });
+  }).catch(function(e){ AKC._dedP=null; throw e; });
+  return AKC._dedP;
+};
+
+AKC._gri = function(cv){
+  var w=cv.width, h=cv.height, d=cv.getContext('2d').getImageData(0,0,w,h).data, n=w*h;
+  var g=new Uint8Array(n);
+  for(var i=0,j=0;i<n;i++,j+=4) g[i]=(d[j]*77+d[j+1]*150+d[j+2]*29)>>8;
+  return {g:g, w:w, h:h};
+};
+AKC._px = function(G,x,y){
+  if(x<0||y<0||x>G.w-1.001||y>G.h-1.001) return -1;
+  var x0=x|0, y0=y|0, fx=x-x0, fy=y-y0, i=y0*G.w+x0, g=G.g;
+  return g[i]*(1-fx)*(1-fy)+g[i+1]*fx*(1-fy)+g[i+G.w]*(1-fx)*fy+g[i+G.w+1]*fx*fy;
+};
+// c + s·A + t·B doğrusu üzerindeki piksellerin p. yüzdeliği.
+// Yüksek p seyrek yazı/barkod mürekkebini yok sayar, zeminin tonunu verir.
+AKC._cizgi = function(G,c,A,B,s,t0,t1,p){
+  var n=Math.max(8, Math.min(90, Math.round(Math.abs(t1-t0)))), v=[], disari=0;
+  for(var i=0;i<n;i++){
+    var t=t0+(t1-t0)*i/(n-1);
+    var x=AKC._px(G, c[0]+s*A[0]+t*B[0], c[1]+s*A[1]+t*B[1]);
+    if(x<0){ disari++; continue; }
+    v.push(x);
+  }
+  if(disari > n*0.4) return -1;
+  v.sort(function(a,b){ return a-b; });
+  return v[Math.min(v.length-1, Math.floor(p*v.length))];
+};
+// Barkodun okuma yönü: çubuk kenarlarının gradyanı hep bu yönde (yapı tensörü)
+AKC._barkodEksen = function(G, cp){
+  var xs=cp.map(function(p){ return p.x; }), ys=cp.map(function(p){ return p.y; });
+  var x0=Math.max(1,Math.floor(Math.min.apply(null,xs))), x1=Math.min(G.w-2,Math.ceil(Math.max.apply(null,xs)));
+  var y0=Math.max(1,Math.floor(Math.min.apply(null,ys))), y1=Math.min(G.h-2,Math.ceil(Math.max.apply(null,ys)));
+  var sxx=0, syy=0, sxy=0, g=G.g, w=G.w;
+  var adim=Math.max(1, Math.round(Math.sqrt((x1-x0+1)*(y1-y0+1)/40000)));
+  for(var y=y0;y<=y1;y+=adim) for(var x=x0;x<=x1;x+=adim){
+    var i=y*w+x, gx=g[i+1]-g[i-1], gy=g[i+w]-g[i-w];
+    sxx+=gx*gx; syy+=gy*gy; sxy+=gx*gy;
+  }
+  var a=0.5*Math.atan2(2*sxy, sxx-syy);
+  return [Math.cos(a), Math.sin(a)];
+};
+/* Yön ince ayarı: çubuklar dümdüz olduğu için doğru açıda okuma çizgisi
+   yana kaydırılınca profil aynen tekrar eder. ±8°'yi 1'er derece dener,
+   çubuğun iki yakasındaki profillerin ortaya en çok benzediği açıyı alır. */
+AKC._aciInce = function(G, cp, c, u){
+  var a0=Math.atan2(u[1],u[0]);
+  function uzunluk(uu){
+    var pu=cp.map(function(p){ return (p.x-c[0])*uu[0]+(p.y-c[1])*uu[1]; });
+    return [Math.min.apply(null,pu), Math.max.apply(null,pu)];
+  }
+  var r=uzunluk(u), L=r[1]-r[0];
+  if(L<16) return u;
+  var N=Math.max(24, Math.min(160, Math.round(L)));
+  function puan(a){
+    var uu=[Math.cos(a),Math.sin(a)], vv=[-uu[1],uu[0]], rr=uzunluk(uu), LL=rr[1]-rr[0];
+    function prof(s){
+      var p=new Float32Array(N);
+      for(var i=0;i<N;i++){
+        var t=rr[0]+LL*i/(N-1), x=AKC._px(G, c[0]+t*uu[0]+s*vv[0], c[1]+t*uu[1]+s*vv[1]);
+        if(x<0) return null; p[i]=x;
+      }
+      return p;
+    }
+    var P0=prof(0), d=Math.max(3, LL*0.12), t=0, n=0;
+    if(!P0) return -2;
+    [-d, d, -d*0.5, d*0.5].forEach(function(s){ var P=prof(s); if(P){ t+=AKC._korel(P0,P); n++; } });
+    return n ? t/n : -2;
+  }
+  var enA=a0, enP=puan(a0);
+  for(var da=-8; da<=8; da++){
+    if(!da) continue;
+    var a=a0+da*Math.PI/180, p=puan(a);
+    if(p>enP){ enP=p; enA=a; }
+  }
+  // yarım derece hassasiyet
+  [-0.5,0.5].forEach(function(dd){ var a=enA+dd*Math.PI/180, p=puan(a); if(p>enP){ enP=p; enA=a; } });
+  return [Math.cos(enA), Math.sin(enA)];
+};
+AKC._korel = function(a,b){
+  var n=a.length, ma=0, mb=0, i;
+  for(i=0;i<n;i++){ ma+=a[i]; mb+=b[i]; } ma/=n; mb/=n;
+  var ab=0, aa=0, bb=0;
+  for(i=0;i<n;i++){ var x=a[i]-ma, y=b[i]-mb; ab+=x*y; aa+=x*x; bb+=y*y; }
+  return (aa>0&&bb>0) ? ab/Math.sqrt(aa*bb) : 0;
+};
+/* Kenar tarama: s0'dan yon yönünde ilerler, her adımda B boyunca bir çizginin
+   zemin tonunu ölçer. Etiketten çıkınca ton ya kalıcı olarak değişir (kağıt
+   daha koyu/açık) ya da ince bir gölge çizgisi görünür. İlk belirgin olan alınır. */
+AKC._kenarBul = function(G,c,A,B,t0,t1,s0,yon,sMax,Ls,kalici){
+  var R=[];
+  for(var k=0;k<=sMax;k++){
+    // 0.92: harf/rakam aralarındaki boşluklar etiketin tonunu verir; yazı satırı
+    // çizgiyi ancak %92'den fazla kaplarsa koyu görünür (kenar ya da kağıt).
+    var v=AKC._cizgi(G,c,A,B,s0+yon*k,t0,t1,0.92);
+    if(v<0) break;
+    R.push(v);
+  }
+  var K=R.length;
+  if(K<10) return {s:null, sinir:true, R:R};
+  // Etiketin tonu bu taramanın başından ölçülür: barkodun hemen dışı hâlâ
+  // etiketin boşluğu. (Çubuk aralarından ölçmek kalın basılmış barkodda
+  // tonu olduğundan koyu gösteriyordu.)
+  var bas=R.slice(0,Math.min(K,7)).sort(function(a,b){ return a-b; });
+  Ls=bas[bas.length>>1];
+  // Eşik sabit değil: çizgi ölçümünün kendi gürültüsüne göre. Beyaz etiket
+  // beyaz kağıtta 5 ton fark ederken gürültülü karede 11'in altı güvenilmez.
+  var fl=[];
+  for(var i=1;i<Math.min(K,18);i++) fl.push(Math.abs(R[i]-R[i-1]));
+  fl.sort(function(a,b){ return a-b; });
+  var esik=Math.max(4, Math.min(11, (fl[fl.length>>1]||0)*1.48*5));
+  // Yazı satırı da tonu düşürür ama kısa sürer, sonra etiketin rengi geri gelir.
+  // Gerçek kenarda dışarısı en az "kalici" piksel boyunca farklı kalır.
+  kalici=Math.max(10, Math.round(kalici||0));
+  function ort(a,b){ var t=0,n=0; for(var i=Math.max(0,a);i<=Math.min(K-1,b);i++){ t+=R[i]; n++; } return n?t/n:0; }
+  function kaliciMi(k, once, sonra){
+    var son=Math.min(K-1,k+kalici), n=son-k;
+    if(n<Math.min(kalici,8)) return false;
+    var p=[]; for(var i=k+1;i<=son;i++) p.push(R[i]);
+    p.sort(function(a,b){ return a-b; });
+    var orta=p[p.length>>1];
+    var kuyruk=ort(son-Math.max(3,Math.round(n/3)), son);   // pencerenin sonu
+    return Math.abs(orta-once)>=esik*0.8 && Math.abs(kuyruk-once)>=esik*0.8 &&
+           (orta-once)*(kuyruk-once)>0 &&                      // aynı yönde kalmış
+           (orta-once)*(sonra-once)>0;                         // basamakla aynı yönde
+  }
+  // Etiketin kenarı barkoda paralel ve düz: ton değişimi çizginin üç
+  // parçasında da AYNI yerde olur. Şeffaf bandın ya da gölgenin kenarı çapraz
+  // geçer; bir parçada değişmişken ötekinde henüz değişmemiştir.
+  function duzMu(k, yonF){
+    for(var j=0;j<3;j++){
+      var a0=t0+(t1-t0)*j/3, a1=t0+(t1-t0)*(j+1)/3, on=0, ar=0;
+      for(var d=3;d<=6;d++){
+        on+=AKC._cizgi(G,c,A,B,s0+yon*(k-d),a0,a1,0.75);
+        ar+=AKC._cizgi(G,c,A,B,s0+yon*(k+d),a0,a1,0.75);
+      }
+      if((on-ar)/4*yonF < esik*0.4) return false;
+    }
+    return true;
+  }
+  // Gölge çizgisi de düz olmalı: etiketin üstündeki çizik/kırışık eğri gider.
+  function duzDip(k){
+    for(var j=0;j<3;j++){
+      var a0=t0+(t1-t0)*j/3, a1=t0+(t1-t0)*(j+1)/3;
+      var o=AKC._cizgi(G,c,A,B,s0+yon*k,a0,a1,0.75);
+      var n1=AKC._cizgi(G,c,A,B,s0+yon*(k-5),a0,a1,0.75), n2=AKC._cizgi(G,c,A,B,s0+yon*(k+5),a0,a1,0.75);
+      if(o<0||n1<0||n2<0) return false;
+      if(o > Math.min(n1,n2)-Math.max(4,esik*0.6)) return false;
+    }
+    return true;
+  }
+  for(k=4;k<K-4;k++){
+    var once=ort(k-4,k-1), sonra=ort(k+1,k+4), fark=once-sonra;
+    // 1) basamak: dışarısı kalıcı olarak farklı tonda
+    if(Math.abs(fark)>=esik && Math.abs(once-Ls)<Math.max(12,esik*1.5) &&
+       Math.abs(sonra-Ls)>=esik*0.8 && Math.abs(sonra-Ls)>=Math.abs(once-Ls)+esik*0.5 &&   // etiket tonundan UZAKLAŞIYOR
+       kaliciMi(k, once, sonra)){
+      var en=k, enF=Math.abs(fark);
+      for(var j=k+1;j<=Math.min(K-5,k+4);j++){
+        var f2=Math.abs(ort(j-4,j-1)-ort(j+1,j+4)); if(f2>enF){ enF=f2; en=j; }
+      }
+      if(!duzMu(en, fark>0?1:-1)){ if(duzMu(k, fark>0?1:-1)) en=k; else continue; }
+      return {s:s0+yon*en, k:en, tur:'basamak', fark:Math.round(enF), esik:esik, R:R};
+    }
+    // 2) gölge çizgisi: beyaz-beyaz durumda kenarın ince gölgesi. Yazı satırı
+    // da ince bir düşüş yapar; ama gölge kenar boyunca kesintisizdir, çizginin
+    // en açık pikselleri bile koyudur (yazıda aralar etiket renginde kalır).
+    if(R[k] < once-Math.max(8,esik) && Math.abs(once-Ls)<20 &&
+       AKC._cizgi(G,c,A,B,s0+yon*k,t0,t1,0.97) < once-Math.max(6,esik*0.8)){
+      var dip=k;
+      for(var d=k+1; d<=Math.min(K-1,k+3); d++) if(R[d]<R[dip]) dip=d;
+      if(!duzDip(dip)) continue;
+      return {s:s0+yon*dip, tur:'golge', fark:Math.round(once-R[dip]), esik:esik, R:R};
+    }
+  }
+  return {s:null, sinir:K<sMax, esik:esik, R:R};
+};
+// Kenar bulunamazsa: etiketin üstündeki yazının bittiği yer.
+// Etiketteki yazı bloğu barkodun en fazla ~1.3 katı uzar, arama 1.5 katta kesilir.
+AKC._murekkepUc = function(G,c,A,B,t0,t1,s0,yon,sMax,Ls,L){
+  var son=0, bosluk=0;
+  for(var k=0;k<=sMax;k++){
+    var v=AKC._cizgi(G,c,A,B,s0+yon*k,t0,t1,0.06);
+    if(v<0) break;
+    if(v<Ls-55){ son=k; bosluk=0; } else if(++bosluk>L*0.45) break;
+  }
+  return s0+yon*(son+Math.round(L*0.05));
+};
+AKC._sirala = function(q){
+  var tl=q[0], tr=q[0], br=q[0], bl=q[0];
+  q.forEach(function(p){
+    if(p[0]+p[1] < tl[0]+tl[1]) tl=p;
+    if(p[0]+p[1] > br[0]+br[1]) br=p;
+    if(p[0]-p[1] > tr[0]-tr[1]) tr=p;
+    if(p[0]-p[1] < bl[0]-bl[1]) bl=p;
+  });
+  return [tl,tr,br,bl];
+};
+/* Barkodun köşelerinden etiketin tamamı.
+   cp: dedektörün köşe noktaları ({x,y}), G: aynı karenin gri hâli.
+   Döner: {q:[4 köşe], guven:0..4 (bulunan gerçek kenar sayısı), bar:[4 köşe]} */
+AKC._etiketBarkoddan = function(G, cp){
+  if(!cp || cp.length<4) return null;
+  var c=[0,0]; cp.forEach(function(p){ c[0]+=p.x/4; c[1]+=p.y/4; });
+  var u=AKC._aciInce(G, cp, c, AKC._barkodEksen(G,cp)), v=[-u[1],u[0]];
+  var pu=cp.map(function(p){ return (p.x-c[0])*u[0]+(p.y-c[1])*u[1]; });
+  var pv=cp.map(function(p){ return (p.x-c[0])*v[0]+(p.y-c[1])*v[1]; });
+  var u0=Math.min.apply(null,pu), u1=Math.max.apply(null,pu), L=u1-u0;
+  if(L<16) return null;
+  var v0q=Math.min.apply(null,pv), v1q=Math.max.apply(null,pv), vm=(v0q+v1q)/2;
+
+  // Çubukların boyu: okuma çizgisinin profili yana kaydırıldıkça benzer kalıyorsa hâlâ çubuğun üstündeyiz
+  var N=Math.max(24, Math.min(220, Math.round(L)));
+  function prof(s){
+    var a=new Float32Array(N);
+    for(var i=0;i<N;i++){
+      var t=u0+L*i/(N-1), x=AKC._px(G, c[0]+t*u[0]+s*v[0], c[1]+t*u[1]+s*v[1]);
+      if(x<0) return null; a[i]=x;
+    }
+    return a;
+  }
+  var P0=prof(vm), bv0=v0q, bv1=v1q;
+  if(P0){
+    var st=Math.max(1, L/140);
+    [-1,1].forEach(function(yon){
+      var s=vm, kacan=0;
+      while(Math.abs(s-vm) < L*1.2){
+        s+=yon*st;
+        var P=prof(s); if(!P) break;
+        if(AKC._korel(P0,P)>0.5){ if(yon>0) bv1=Math.max(bv1,s); else bv0=Math.min(bv0,s); kacan=0; }
+        else if(++kacan>2) break;
+      }
+    });
+  }
+  // Etiketin tonu: çubuk aralarındaki beyaz
+  var ton=[];
+  for(var a=0;a<24;a++) for(var b=0;b<8;b++){
+    var x=AKC._px(G, c[0]+(u0+L*(a+.5)/24)*u[0]+(bv0+(bv1-bv0)*(b+.5)/8)*v[0],
+                     c[1]+(u0+L*(a+.5)/24)*u[1]+(bv0+(bv1-bv0)*(b+.5)/8)*v[1]);
+    if(x>=0) ton.push(x);
+  }
+  ton.sort(function(p,q){ return p-q; });
+  var Ls=ton.length ? ton[Math.floor(ton.length*0.85)] : 220;
+
+  var guven=0;
+  // Yan kenarlar (okuma yönüne paralel)
+  var yanMax=Math.round(L*1.6), pay=Math.max(2, L*0.01);
+  var k1=AKC._kenarBul(G,c,v,u,u0,u1,bv1+pay,+1,yanMax,Ls,L*0.2);
+  var k0=AKC._kenarBul(G,c,v,u,u0,u1,bv0-pay,-1,yanMax,Ls,L*0.2);
+  var V1=k1.s!=null ? k1.s : bv1+L*0.14; if(k1.s!=null) guven++;
+  var V0=k0.s!=null ? k0.s : bv0-L*0.14; if(k0.s!=null) guven++;
+  var W=V1-V0;
+  // Uçlar (okuma yönünde, barkodun iki ucundan dışarı)
+  var ucMax=Math.round(L*3.2), t0=V0+W*0.12, t1=V1-W*0.12;
+  var e1=AKC._kenarBul(G,c,u,v,t0,t1,u1+pay,+1,ucMax,Ls,L*0.22);
+  var e0=AKC._kenarBul(G,c,u,v,t0,t1,u0-pay,-1,ucMax,Ls,L*0.22);
+  var U1=e1.s!=null ? e1.s : AKC._murekkepUc(G,c,u,v,t0,t1,u1+pay,+1,Math.round(L*1.5),Ls,L); if(e1.s!=null) guven++;
+  var U0=e0.s!=null ? e0.s : AKC._murekkepUc(G,c,u,v,t0,t1,u0-pay,-1,Math.round(L*1.5),Ls,L); if(e0.s!=null) guven++;
+
+  function nok(a,b){ return [c[0]+a*u[0]+b*v[0], c[1]+a*u[1]+b*v[1]]; }
+  return {
+    q: AKC._sirala([nok(U0,V0),nok(U1,V0),nok(U1,V1),nok(U0,V1)]),
+    bar: AKC._sirala([nok(u0,bv0),nok(u1,bv0),nok(u1,bv1),nok(u0,bv1)]),
+    guven: guven, Ls: Ls,
+    eksen: {c:c, u:u, u0:u0, u1:u1, v0:bv0, v1:bv1},
+    kenar: {yan1:k1, yan0:k0, uc1:e1, uc0:e0}
+  };
+};
+/* Bir karede barkod ara → en merkezdeki barkoddan etiket.
+   Döner: null ya da {q, bar, guven, deger, format} (cv pikselinde) */
+/* ZXing çizgi barkodu yatay/dikey tarar; 15-20°'den fazla eğik tutulunca
+   okuyamıyor (Android'in kendi okuyucusu eğikliği kendisi çözüyor). Bu yüzden
+   bulunamazsa kare döndürülüp tekrar denenir, köşeler geri çevrilir.
+   Canlı görüntüde her karede tek açı denenir (sırayla), çekimde hepsi. */
+AKC.BK_ACILAR = [0, 22, -22, 45, -45, 67, -67];
+AKC._bkAciSira = 0;
+AKC._bkSonAci = 0;
+AKC._donmusKopya = function(cv, aci){
+  var r=aci*Math.PI/180, cs=Math.abs(Math.cos(r)), sn=Math.abs(Math.sin(r));
+  var W=Math.round(cv.width*cs+cv.height*sn), H=Math.round(cv.width*sn+cv.height*cs);
+  var o=document.createElement('canvas'); o.width=W; o.height=H;
+  var x=o.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H);
+  x.translate(W/2,H/2); x.rotate(r); x.drawImage(cv,-cv.width/2,-cv.height/2);
+  // döndürülmüş karedeki nokta → asıl karedeki nokta
+  o._geri=function(p){
+    var dx=p.x-W/2, dy=p.y-H/2, c=Math.cos(-r), s=Math.sin(-r);
+    return {x:dx*c-dy*s+cv.width/2, y:dx*s+dy*c+cv.height/2};
+  };
+  return o;
+};
+AKC._barkodTek = function(D, cv, aci){
+  var kaynak = aci ? AKC._donmusKopya(cv, aci) : cv;
+  return D.d.detect(kaynak).then(function(list){
+    list=(list||[]).filter(function(b){ return b && b.rawValue && b.cornerPoints && b.cornerPoints.length>=4; });
+    if(!list.length) return null;
+    list.forEach(function(b){ if(kaynak._geri) b._cp=b.cornerPoints.map(kaynak._geri); else b._cp=b.cornerPoints.map(function(p){ return {x:p.x,y:p.y}; }); });
+    var mx=cv.width/2, my=cv.height/2;
+    function uz(b){ var x=0,y=0; b._cp.forEach(function(p){ x+=p.x/4; y+=p.y/4; }); return Math.hypot(x-mx,y-my); }
+    list.sort(function(a,b){ return uz(a)-uz(b); });
+    return list[0];
+  });
+};
+// hepsi=true: bütün açılar denenir (çekim/galeri). Değilse sırayla tek açı (canlı).
+AKC._barkodBul = function(cv, hepsi){
+  var p=AKC._barkodBulHam(cv, hepsi);
+  return hepsi ? p.then(function(r){ return r ? AKC._barkodDogrula(cv, r) : r; }) : p;
+};
+AKC._barkodBulHam = function(cv, hepsi){
+  return AKC._dedektor().then(function(D){
+    var acilar;
+    if(D.yerel) acilar=[0];
+    else if(hepsi){ acilar=[AKC._bkSonAci].concat(AKC.BK_ACILAR.filter(function(a){ return a!==AKC._bkSonAci; })); }
+    else{
+      // önce en son tutan açı, sonra sıradaki bir açı daha
+      var sira=AKC.BK_ACILAR[(++AKC._bkAciSira)%AKC.BK_ACILAR.length];
+      acilar = sira===AKC._bkSonAci ? [AKC._bkSonAci] : [AKC._bkSonAci, sira];
+    }
+    var i=0, buyuttu=false;
+    function dene(){
+      if(i>=acilar.length){
+        // Uzaktan tutulunca barkod çizgileri piksel altına iner: ortayı
+        // büyütüp bir kez daha dene (etiket zaten çerçevenin ortasında).
+        if(buyuttu || cv.width<200) return null;
+        buyuttu=true;
+        var ok=AKC._ortaBuyut(cv);
+        return AKC._barkodTek(D, ok, AKC._bkSonAci).then(function(bk){
+          if(!bk) return null;
+          bk._cp=bk._cp.map(ok._geri);
+          return AKC._barkodSonuc(cv, bk);
+        });
+      }
+      var aci=acilar[i++];
+      return AKC._barkodTek(D, cv, aci).then(function(bk){
+        if(!bk) return dene();
+        AKC._bkSonAci=aci;
+        return AKC._barkodSonuc(cv, bk) || dene();
+      });
+    }
+    return dene();
+  }).catch(function(){ return null; });
+};
+/* Doğrulama: ZXing uzaktan/bulanık karede EAN'ı YANLIŞ okuyabiliyor (kontrol
+   hanesi de tesadüfen tutabiliyor) — yanlış numara "barkod tutmuyor" diye
+   sahte alarm verir. Barkodun çevresi düz çevrilip iki farklı büyüklükte
+   yeniden okunur; en az iki okuma aynı değilse sonuç "şüpheli" işaretlenir. */
+AKC._barkodDogrula = function(cv, r){
+  if(!r || !r.eksen) return Promise.resolve(r);
+  var e=r.eksen, L=e.u1-e.u0, H=Math.max(e.v1-e.v0, L*0.25);
+  var cx=e.c[0]+((e.u0+e.u1)/2)*e.u[0]+((e.v0+e.v1)/2)*(-e.u[1]);
+  var cy=e.c[1]+((e.u0+e.u1)/2)*e.u[1]+((e.v0+e.v1)/2)*(e.u[0]);
+  var aci=Math.atan2(e.u[1], e.u[0]);
+  return AKC._dedektor().then(function(D){
+    var okunan=[r.deger];
+    function oku(hedefL){
+      var k=hedefL/L, W=Math.round(L*1.5*k), Hh=Math.round(H*2.2*k);
+      var o=document.createElement('canvas'); o.width=W; o.height=Hh;
+      var x=o.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,Hh);
+      x.imageSmoothingQuality='high';
+      x.translate(W/2,Hh/2); x.scale(k,k); x.rotate(-aci); x.translate(-cx,-cy);
+      x.drawImage(cv,0,0);
+      return D.d.detect(o).then(function(l){ return (l&&l[0]&&l[0].rawValue)||null; }).catch(function(){ return null; });
+    }
+    function karar(){
+      var say={}; okunan.forEach(function(d){ say[d]=(say[d]||0)+1; });
+      var en=Object.keys(say).sort(function(p,q){ return say[q]-say[p]; })[0];
+      return {en:en, n:say[en]};
+    }
+    // Yakın okuma tutmazsa bütün kare iki farklı ölçekte yeniden okunur
+    // (bulanık karede büyütmek yetmiyor, küçültmek bazen netleştiriyor)
+    function olcekli(o){
+      var k=document.createElement('canvas'); k.width=Math.round(cv.width*o); k.height=Math.round(cv.height*o);
+      var x=k.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(cv,0,0,k.width,k.height);
+      return AKC._barkodTek(D, k, AKC._bkSonAci).then(function(b){ return b&&b.rawValue; }).catch(function(){ return null; });
+    }
+    return oku(560).then(function(a){ if(a) okunan.push(a); return oku(380); })
+      .then(function(b){
+        if(b) okunan.push(b);
+        if(karar().n>=2) return;
+        return olcekli(0.83).then(function(c2){
+          if(c2) okunan.push(c2);
+          if(karar().n>=2) return;
+          return olcekli(0.68).then(function(c3){ if(c3) okunan.push(c3); });
+        });
+      })
+      .then(function(){
+        var k=karar();
+        r.deger=k.en; r.supheli = k.n<2;
+        return r;
+      });
+  }).catch(function(){ r.supheli=true; return r; });
+};
+AKC._barkodSonuc = function(cv, bk){
+  var G=AKC._gri(cv), r=null;
+  try{ r=AKC._etiketBarkoddan(G, bk._cp); }catch(e){ r=null; }
+  if(!r) return null;
+  r.deger=bk.rawValue; r.format=bk.format;
+  return r;
+};
+// Karenin ortasındaki %60'lık bölge, asıl genişliğe büyütülmüş
+AKC._ortaBuyut = function(cv){
+  var sw=cv.width*0.6, sh=cv.height*0.6, sx=(cv.width-sw)/2, sy=(cv.height-sh)/2;
+  var o=document.createElement('canvas'); o.width=cv.width; o.height=cv.height;
+  var x=o.getContext('2d'); x.imageSmoothingQuality='high';
+  x.drawImage(cv, sx, sy, sw, sh, 0, 0, o.width, o.height);
+  var k=sw/o.width;
+  o._geri=function(p){ return {x:sx+p.x*k, y:sy+p.y*k}; };
+  return o;
+};
+
+/* ── Sistemdeki barkodlar ──
+   Bu siparişin BÜTÜN renklerindeki barkod numaraları tek haritada:
+   numara → {cid, renk, beden, kaynak}. Böylece gelen etiket başka bir renge
+   aitse bu da söylenebilir. Numara arşivin PDF yazısından (her beden) gelir;
+   eski kayıtlarda o yoksa föydeki görselin barkodu okunur (yalnızca M). */
+AKC._gorselBkOnbellek = {};
+AKC._gorseldenBarkod = function(url){
+  if(AKC._gorselBkOnbellek[url]) return AKC._gorselBkOnbellek[url];
+  AKC._gorselBkOnbellek[url] = AKC._dedektor().then(function(D){
+    return new Promise(function(coz){
+      var im=new Image();
+      im.onload=function(){
+        var k=Math.min(1, 2000/Math.max(im.naturalWidth,im.naturalHeight));
+        var cv=document.createElement('canvas'); cv.width=Math.round(im.naturalWidth*k); cv.height=Math.round(im.naturalHeight*k);
+        var x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height); x.drawImage(im,0,0,cv.width,cv.height);
+        D.d.detect(cv).then(function(l){ coz((l||[]).map(function(b){ return b.rawValue; }).filter(Boolean)); }).catch(function(){ coz([]); });
+      };
+      im.onerror=function(){ coz([]); };
+      im.src=url;
+    });
+  }).catch(function(){ return []; });
+  return AKC._gorselBkOnbellek[url];
+};
+AKC.BK_TIPLER = ['icbarkod','fiyat'];
+AKC._barkodHaritasi = function(){
+  var harita={}, isler=[];
+  (AK.state.colors||[]).forEach(function(c){
+    (c.files||[]).forEach(function(f){
+      if(AKC.BK_TIPLER.indexOf(f.type)<0) return;
+      var pdfte=false;
+      Object.keys(f.barkodlar||{}).forEach(function(k){
+        var d=f.barkodlar[k]; if(!d) return;
+        pdfte=true;
+        if(!harita[d]) harita[d]={cid:c.id, renk:c.renk||f.renk||'', beden:/^(s|f)\d/.test(k)?'':k, kaynak:'pdf', tip:f.type};
+      });
+      if(pdfte) return;
+      (f.images||[]).slice(0,2).forEach(function(u){
+        isler.push(AKC._gorseldenBarkod(u).then(function(l){
+          l.forEach(function(d){ if(!harita[d]) harita[d]={cid:c.id, renk:c.renk||f.renk||'', beden:'', kaynak:'gorsel', tip:f.type}; });
+        }));
+      });
+    });
+  });
+  return Promise.all(isler).then(function(){ return harita; });
+};
+/* Karar: {sinif:'ok'|'no'|'uyari'|'bilgi', ikon, kisa (canlı çip), uzun (sonuç ekranı)} */
+AKC._barkodKarar = function(deger){
+  var p = AKC._haritaP || (AKC._haritaP = AKC._barkodHaritasi());
+  return p.then(function(h){
+    var benim=[], digerVar=false;
+    Object.keys(h).forEach(function(d){
+      if(h[d].cid===AKC._cid) benim.push(d); else digerVar=true;
+    });
+    var e=h[deger];
+    var esc=AK._esc;
+    if(e && e.cid===AKC._cid){
+      var bd=e.beden ? e.beden+' beden' : (e.kaynak==='gorsel' ? 'föydeki barkodla aynı' : '');
+      return {sinif:'ok', ikon:'fa-circle-check', kisa:'Doğru'+(e.beden?' · '+esc(e.beden):''),
+              uzun:'<b>Barkod doğru</b>'+(bd?' — '+esc(bd):'')+'. Sistemdeki numarayla birebir aynı.'};
+    }
+    if(e){
+      return {sinif:'no', ikon:'fa-triangle-exclamation', kisa:'Başka renk!',
+              uzun:'<b>BARKOD YANLIŞ RENK!</b> Bu numara <b>'+esc(e.renk||'başka bir renk')+'</b>'+(e.beden?' ('+esc(e.beden)+')':'')+' kartına ait.'};
+    }
+    if(!benim.length){
+      return {sinif:'bilgi', ikon:'fa-barcode', kisa:'',
+              uzun:'Barkod okundu. Sistemde karşılaştıracak barkod numarası yok — gözle kontrol et.'};
+    }
+    var hepsiPdf = benim.every(function(d){ return h[d].kaynak==='pdf'; });
+    if(hepsiPdf){
+      return {sinif:'no', ikon:'fa-circle-xmark', kisa:'Sistemde yok!',
+              uzun:'<b>BARKOD TUTMUYOR!</b> Bu numara bu siparişin hiçbir bedeninde yok.'};
+    }
+    return {sinif:'uyari', ikon:'fa-circle-exclamation', kisa:'Farklı',
+            uzun:'Sistemde sadece föydeki bedenin barkodu var ('+esc(benim[0])+'). Gelen farklı — başka bir beden olabilir, gözle kontrol et.'};
+  }).catch(function(){ return {sinif:'bilgi', ikon:'fa-barcode', kisa:'', uzun:'Barkod okundu.'}; });
+};
+
 window.AKC = AKC;
 
 })();
