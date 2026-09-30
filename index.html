@@ -180,6 +180,9 @@
     // HTML özel karakterlerini kaçır (XSS koruması)
     function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
+    // Kayıttaki 2026-09-25 tarihi kâğıtta 25.09.2026 görünsün
+    function trTarih(t){ var m=/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/.exec(String(t==null?'':t).trim()); return m?m[3]+'.'+m[2]+'.'+m[1]:t; }
+
     // Info satırları
     function infoItem(label, value){ if(!value) return ''; return '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-radius:10px;padding:10px 12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;word-break:break-word;">'+esc(value)+'</div></div>'; }
 
@@ -187,13 +190,13 @@
     var hasSizeTable = !!(d.sizes || d.bant || d.beden);
 
     var infoHtml = ''
-      + infoItem('Tarih', d.tarih)
+      + infoItem('Tarih', trTarih(d.tarih))
       + '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-radius:10px;padding:10px 12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">Durum</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+durumBadge+'</div></div>'
       + infoItem('Model / Ürün', d.model || d.urun)
       + infoItem(d.atolye ? 'Atölye' : 'Firma', d.atolye || d.firma)
       + infoItem('Teslim Eden', d.teslimEden)
       + infoItem('Teslim Alan', d.teslimAlan)
-      + infoItem('Termin', d.termin)
+      + infoItem('Termin', trTarih(d.termin))
       + (!hasSizeTable ? infoItem('Adet', d.adet) : '')
       + (!hasSizeTable ? infoItem('Toplam', d.total || d.totalAdet) : '')
       + (d.renk ? '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:10px;padding:10px 12px;grid-column:span 2;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">🎨 Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+esc(d.renk)+'</div></div>' : '');
@@ -9313,6 +9316,13 @@ function _whenWindowReady(w, cb) {
   w.addEventListener('load', run);
 }
 
+// Kayıtlarda tarih "2026-09-25" biçiminde saklanıyor; kâğıtta 25.09.2026 yazmalı.
+// Tanınmayan biçime dokunulmaz.
+function _trTarih(t){
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/.exec(String(t == null ? '' : t).trim());
+  return m ? m[3] + '.' + m[2] + '.' + m[1] : (t == null ? '' : String(t));
+}
+
 function generatePDFFromModal() {
   if (currentModalItem && currentModalType) {
     generatePDF(currentModalItem.id, currentModalType);
@@ -9361,7 +9371,10 @@ function generatePDF(id, type, mode) {
     .signatures { display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:25px; }
     .sig-box { text-align:center; }
     .sig-line { border-top:1px solid #1a1a2e; margin-top:35px; padding-top:4px; font-size:10px; color:#6b7280; }
-    @media print { body { padding:12px; } }
+    /* @page boşluğu 0: tarayıcı kenar boşluğuna kendi tarih/saat/başlık
+       satırını basıyor; boşluk yoksa basılmıyor. Kenar payı gövdede. */
+    @page { size:A4; margin:0; }
+    @media print { body { padding:12mm 12mm; max-width:none; } }
   </style></head><body>`;
 
   // === QR KOD — Header'ın içinde hazırla, no'nun altına bas ===
@@ -9384,21 +9397,20 @@ function generatePDF(id, type, mode) {
     </div>
     <div class="header-right">
       <div class="no">${esc(item.no) || '—'}</div>
-      <div class="date">Oluşturma: ${printDate}</div>
       ${qrHeaderBlock}
     </div>
   </div>`;
 
   // Info grid
   html += `<div class="info-grid">
-    <div class="info-box"><div class="label">Tarih</div><div class="value">${esc(item.tarih) || '—'}</div></div>
+    <div class="info-box"><div class="label">Tarih</div><div class="value">${esc(_trTarih(item.tarih)) || '—'}</div></div>
     <div class="info-box"><div class="label">Durum</div><div class="value"><span class="status-badge status-${esc(item.durum || 'bekliyor')}">${item.durum === 'teslim' ? '✅ Teslim Edildi' : '⏳ Bekliyor'}</span></div></div>
     <div class="info-box"><div class="label">Model / Ürün</div><div class="value">${esc(item.model || item.urun) || '—'}</div></div>
     <div class="info-box"><div class="label">Atölye / Firma</div><div class="value">${esc(item.atolye || item.firma) || '—'}</div></div>`;
 
   if (item.teslimEden) html += `<div class="info-box"><div class="label">Teslim Eden</div><div class="value">${esc(item.teslimEden)}</div></div>`;
   if (item.teslimAlan) html += `<div class="info-box"><div class="label">Teslim Alan</div><div class="value">${esc(item.teslimAlan)}</div></div>`;
-  if (item.termin) html += `<div class="info-box"><div class="label">Termin Tarihi</div><div class="value">${esc(item.termin)}</div></div>`;
+  if (item.termin) html += `<div class="info-box"><div class="label">Termin Tarihi</div><div class="value">${esc(_trTarih(item.termin))}</div></div>`;
   if ((type === 'fermuar' || type === 'dugme') && item.renk) {
     html += `<div class="info-box" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="label">🎨 Renk</div><div class="value">${esc(item.renk)}</div></div>`;
   }
@@ -9609,7 +9621,6 @@ function generatePDF(id, type, mode) {
   // Footer
   html += `<div class="footer">
     <span>İrsaliye Pro — Eyüp</span>
-    <span>Yazdırma: ${printDate}</span>
   </div>`;
 
   html += `</body></html>`;
@@ -14423,15 +14434,15 @@ function _singleItemPdfHtml(item, type){
   const qrDataUrl=(typeof _buildQrDataUrl==='function'&&qrScanUrl)?_buildQrDataUrl(qrScanUrl,{size:1024,correctLevel:'H'}):'';
   const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;"><div style="font-size:8px;color:#7c3aed;margin-top:2px;font-weight:700;max-width:110px;margin-left:auto;line-height:1.25;">📷 QR'ı okutarak kanıt<br>fotoğraflarını görebilirsiniz</div></div>`:'';
   let h=`<div class="irsaliye-page">
-  <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${esc(item.no)||'—'}</div><div class="pdate">Tarih: ${printDate}</div>${qrBlock}</div></div>
+  <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${esc(item.no)||'—'}</div>${qrBlock}</div></div>
   <div class="ig">
-    <div class="ib"><div class="il">Tarih</div><div class="iv">${esc(item.tarih)||'—'}</div></div>
+    <div class="ib"><div class="il">Tarih</div><div class="iv">${esc(_trTarih(item.tarih))||'—'}</div></div>
     <div class="ib"><div class="il">Durum</div><div class="iv"><span class="sb ${item.durum==='teslim'?'sb-teslim':'sb-bekliyor'}">${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}</span></div></div>
     <div class="ib"><div class="il">Model / Ürün</div><div class="iv">${esc(item.model||item.urun)||'—'}</div></div>
     <div class="ib"><div class="il">Atölye / Firma</div><div class="iv">${esc(item.atolye||item.firma)||'—'}</div></div>
     ${item.teslimEden?`<div class="ib"><div class="il">Teslim Eden</div><div class="iv">${esc(item.teslimEden)}</div></div>`:''}
     ${item.teslimAlan?`<div class="ib"><div class="il">Teslim Alan</div><div class="iv">${esc(item.teslimAlan)}</div></div>`:''}
-    ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${esc(item.termin)}</div></div>`:''}
+    ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${esc(_trTarih(item.termin))}</div></div>`:''}
     ${((type==='fermuar'||type==='dugme'||type==='satenaskilik')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${esc(item.renk)}</div></div>`:''}
   </div>`;
 
@@ -14500,20 +14511,20 @@ function _singleItemPdfHtml(item, type){
     <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+esc(item.teslimEden):''}</div></div>
     <div class="sb2"><div style="height:70px;"></div><div class="sl">Teslim Alan${item.teslimAlan?': '+esc(item.teslimAlan):''}</div></div>
   </div>
-  <div class="pf"><span>İrsaliye Pro — Eyüp</span><span>Yazdırma: ${printDate}</span></div>
+  <div class="pf"><span>İrsaliye Pro — Eyüp</span></div>
   </div>`;
   return h;
 }
 
 function _buildBulkHTML(items){
-  const today=new Date().toLocaleDateString('tr-TR');
   const pdfFilename='Toplu_Irsaliye_'+new Date().toISOString().split('T')[0]+'.pdf';
   const pages=items.map(x=>_singleItemPdfHtml(x.item,x.type)).join('');
   return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
-<title>İrsaliye PDF — ${today}</title>
+<title>İrsaliye</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-  @page{size:A4 portrait;margin:10mm;}
+  /* Boşluk 0: tarayıcının kendi tarih/saat/başlık satırı basılmasın */
+  @page{size:A4 portrait;margin:0;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
     font-family:'Inter',system-ui,sans-serif;
@@ -14524,11 +14535,11 @@ function _buildBulkHTML(items){
     print-color-adjust:exact;
   }
   .irsaliye-page{
-    padding:20px;
+    padding:12mm 14mm;
     max-width:100%;
     margin:0 auto;
     page-break-after:always;
-    min-height:277mm;
+    min-height:295mm;
     display:flex;
     flex-direction:column;
   }
@@ -21448,13 +21459,13 @@ function _renderPublicViewer(d){
         </div>
         <div class="pv-body">
           <div class="pv-info">
-            ${d.tarih?`<div class="pv-info-item"><div class="pv-label">Tarih</div><div class="pv-value">${d.tarih}</div></div>`:''}
+            ${d.tarih?`<div class="pv-info-item"><div class="pv-label">Tarih</div><div class="pv-value">${_trTarih(d.tarih)}</div></div>`:''}
             <div class="pv-info-item"><div class="pv-label">Durum</div><div class="pv-value">${durumBadge}</div></div>
             ${(d.model||d.urun)?`<div class="pv-info-item"><div class="pv-label">Model / Ürün</div><div class="pv-value">${d.model||d.urun}</div></div>`:''}
             ${(d.atolye||d.firma)?`<div class="pv-info-item"><div class="pv-label">${d.atolye?'Atölye':'Firma'}</div><div class="pv-value">${d.atolye||d.firma}</div></div>`:''}
             ${d.teslimEden?`<div class="pv-info-item"><div class="pv-label">Teslim Eden</div><div class="pv-value">${d.teslimEden}</div></div>`:''}
             ${d.teslimAlan?`<div class="pv-info-item"><div class="pv-label">Teslim Alan</div><div class="pv-value">${d.teslimAlan}</div></div>`:''}
-            ${d.termin?`<div class="pv-info-item"><div class="pv-label">Termin</div><div class="pv-value">${d.termin}</div></div>`:''}
+            ${d.termin?`<div class="pv-info-item"><div class="pv-label">Termin</div><div class="pv-value">${_trTarih(d.termin)}</div></div>`:''}
             ${d.renk?`<div class="pv-info-item" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="pv-label">🎨 Renk</div><div class="pv-value">${d.renk}</div></div>`:''}
           </div>
           ${sizesHtml}
