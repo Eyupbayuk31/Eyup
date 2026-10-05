@@ -22602,6 +22602,14 @@ AK._extractEntries = function(file){
   return file.slice(0,8).arrayBuffer().then(function(head){
     var b=new Uint8Array(head);
     var isZip=(b[0]===0x50&&b[1]===0x4B);
+    // Arşivsiz tek dosya (ör. ayrı gelen 2019142_WashingInstruction...pdf).
+    // Eskiden bu da RAR motoruna gidiyordu; PDF arşiv olmadığı için içinden
+    // hiçbir şey çıkmıyor, yıkama BOŞ görünüyordu. Dosyanın kendisi tek giriş olur.
+    var isPdf=(b[0]===0x25&&b[1]===0x50&&b[2]===0x44&&b[3]===0x46);           // %PDF
+    var isImg=(b[0]===0x89&&b[1]===0x50&&b[2]===0x4E&&b[3]===0x47)||(b[0]===0xFF&&b[1]===0xD8); // PNG / JPEG
+    if(!isZip && (isPdf || isImg || /\.(pdf|png|jpe?g)$/i.test(file.name||''))){
+      return file.arrayBuffer().then(function(ab){ return [{name:file.name||'dosya.pdf', bytes:new Uint8Array(ab)}]; });
+    }
     if(isZip){
       return file.arrayBuffer().then(function(ab){ return AK.loadLibs().then(function(){ return JSZip.loadAsync(new Uint8Array(ab)); }); }).then(function(zip){
         var names=Object.keys(zip.files).filter(function(n){ return !zip.files[n].dir; });
@@ -22799,9 +22807,9 @@ AK.renderColors = function(){
       '<span class="ak-tot"><em>Σ</em> '+tot.toLocaleString('tr')+'</span></div>'+
       '<div class="ak-drop'+((c.zipNames&&c.zipNames.length)?' loaded':'')+'" onclick="this.querySelector(\'input\').click()"><i class="fas '+((c.zipNames&&c.zipNames.length)?'fa-circle-check':'fa-file-zipper')+'"></i>'+
         ((c.zipNames&&c.zipNames.length)
-          ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
-          : 'ZIP / RAR + Excel dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Hepsini birden bırakabilirsin: ana arşiv, ayrı yıkama arşivi ve adetler için özet tablo (SummaryTable .xlsx)</div>')+
-        '<input type="file" accept=".zip,.rar,.7z,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
+          ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv / PDF ekle (yıkama ayrıysa)</div>')
+          : 'ZIP / RAR / PDF + Excel dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Hepsini birden bırakabilirsin: ana arşiv, ayrı yıkama (arşiv ya da tek PDF) ve adetler için özet tablo (SummaryTable .xlsx)</div>')+
+        '<input type="file" accept=".zip,.rar,.7z,.pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
         ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
       '<div class="ak-libbar">'+
