@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BMO Portfolyo</title>
+<meta name="description" content="GitHub projelerimi BMO'ya kaset olarak tak.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="room" aria-hidden="true"><div class="pouf"></div><div class="floor"></div></div>
+
+<header class="top">
+  <div>
+    <h1>EYÜP'ÜN AĞAÇ EVİ</h1>
+    <p id="status">Kasetler yükleniyor…</p>
+  </div>
+  <button id="mute" class="icon-btn" aria-label="Sesi aç/kapat" title="Ses">♪</button>
+</header>
+
+<main class="stage">
+  <div class="side left" id="sideL" role="list"></div>
+
+  <div class="bmo-wrap" id="bmo">
+    <svg class="bmo-svg" viewBox="0 0 300 440" aria-label="BMO">
+      <g stroke="#1e3b3a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path class="arm arm-l" d="M24 250 C-4 290 8 330 22 352" fill="none" stroke-width="9"/>
+        <path class="arm arm-r" d="M276 300 C300 330 296 360 282 380" fill="none" stroke-width="9"/>
+        <path d="M100 400 L100 424 L84 428 M200 400 L200 424 L216 428" fill="none" stroke-width="9"/>
+        <rect x="20" y="20" width="260" height="380" rx="30" fill="#a4ddcb"/>
+        <rect x="30" y="30" width="240" height="40" rx="20" fill="#b9ebdb" stroke="none"/>
+        <rect x="40" y="50" width="220" height="150" rx="8" fill="#eaf7d3"/>
+        <rect x="40" y="218" width="150" height="12" rx="3" fill="#1e3b3a"/>
+        <circle cx="240" cy="224" r="7" fill="#2f5bff" stroke-width="3"/>
+        <g class="btn" data-action="dpad" stroke-width="4">
+          <rect x="52" y="287" width="66" height="22" rx="3" fill="#f4d94a"/>
+          <rect x="74" y="265" width="22" height="66" rx="3" fill="#f4d94a"/>
+          <rect x="75" y="288" width="20" height="20" fill="#f4d94a" stroke="none"/>
+          <rect class="hit" x="48" y="260" width="74" height="74" fill="transparent" stroke="none"/>
+          <rect class="dp dp-u" x="74" y="262" width="22" height="26" fill="transparent" stroke="none" data-dir="-1"/>
+          <rect class="dp dp-d" x="74" y="308" width="22" height="26" fill="transparent" stroke="none" data-dir="1"/>
+          <rect class="dp dp-l" x="48" y="287" width="28" height="22" fill="transparent" stroke="none" data-dir="-1"/>
+          <rect class="dp dp-r" x="94" y="287" width="28" height="22" fill="transparent" stroke="none" data-dir="1"/>
+        </g>
+        <rect x="58" y="352" width="36" height="13" rx="6.5" fill="#2f5bff" stroke-width="3"/>
+        <rect x="104" y="352" width="36" height="13" rx="6.5" fill="#2f5bff" stroke-width="3"/>
+        <path d="M185 295 L205 262 L225 295 Z" fill="#9fd6ea" stroke-width="3"/>
+        <g class="btn" data-action="eject"><circle cx="205" cy="335" r="26" fill="#ee3f55" stroke-width="4"/></g>
+        <g class="btn" data-action="insert"><circle cx="258" cy="298" r="16" fill="#5fd35f" stroke-width="3"/></g>
+      </g>
+    </svg>
+
+    <div class="screen" id="screen">
+      <div class="screen-inner" id="screenInner"></div>
+    </div>
+    <div class="stub" id="stub"></div>
+    <div class="slot-ref" id="slot"></div>
+    <div class="flash" id="flash"></div>
+  </div>
+
+  <div class="side right" id="sideR" role="list"></div>
+</main>
+
+<footer class="bottom">
+  <span>◀ ▲ ▼ ▶ seç · ENTER tak · B / ESC çıkar</span>
+  <a id="ghLink" href="https://github.com/eyupbayuk31" target="_blank" rel="noopener">github.com/eyupbayuk31</a>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
