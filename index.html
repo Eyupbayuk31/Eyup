@@ -6269,6 +6269,7 @@ function renderFermuarTakip(){
         ${done
           ? `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ftToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
           : `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ftToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
+        <button class="btn btn-sm btn-secondary ft-act-pdf" onclick="ftTekPdf(${m.id})" title="Bu modelin teslim durumu belgesi (PDF) — atölyeye gönder"><i class="fas fa-file-pdf"></i> PDF</button>
         <button class="btn btn-sm btn-secondary ft-act-ikon" onclick="ftEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
         <button class="btn btn-sm btn-danger ft-act-ikon" onclick="ftDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
       </div>
@@ -6563,14 +6564,37 @@ function ftPdfUpdateSummary(){
   const lbl=document.getElementById('ftPdfGenLabel');
   if(lbl) lbl.textContent = count>0 ? ('PDF Oluştur ('+count+')') : 'PDF Oluştur';
 }
+// PDF listesi: varsayılan olarak yalnız EKSİĞİ OLAN aktif modeller. Tamamı
+// gelmiş ya da "Tamamla" ile kapatılmış modeller listeyi boşuna uzatıyordu
+// (çok modelde alt butonlar ekrandan taşıyordu); onlar en altta gizli durur,
+// "göster" ile açılır, aramada da bulunur. Tek modelin belgesi kartın PDF
+// butonundan da alınabilir.
+function _takipPdfDiger(m, eksik){ return !!m.tamamlandi || !(eksik>0); }
+function _takipPdfListe(all, eksikFn, satirFn){
+  const sirali=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
+  const aktif=sirali.filter(m=>!_takipPdfDiger(m, eksikFn(m))), diger=sirali.filter(m=>_takipPdfDiger(m, eksikFn(m)));
+  let h=aktif.map(satirFn).join('');
+  if(!aktif.length) h+='<div class="ft-pdf-bos"><i class="fas fa-circle-check"></i> Eksiği olan aktif model yok.</div>';
+  if(diger.length) h+=`<button type="button" class="ft-pdf-more" onclick="takipPdfDigerAc(this)"><i class="fas fa-chevron-down"></i> Tamamlanan ${diger.length} model gizli — göster</button>`+diger.map(satirFn).join('');
+  return h;
+}
+function takipPdfDigerAc(btn){
+  const liste=btn.closest('.ft-pdf-list'); if(!liste) return;
+  const acik=liste.classList.toggle('diger-acik');
+  const n=liste.querySelectorAll('.ft-pdf-diger').length;
+  btn.innerHTML='<i class="fas fa-chevron-'+(acik?'up':'down')+'"></i> Tamamlanan '+n+' model '+(acik?'— gizle':'gizli — göster');
+}
+// Satır şu an ekranda mı (arama ya da "tamamlanan gizli" yüzünden saklı değil mi)
+function _takipPdfGorunur(row){ return row.getClientRects().length>0; }
 function ftOpenPdfModal(){
   const all=_ftAll();
   if(!all.length){ toast('Önce fermuar modeli ekleyin','error'); return; }
   const host=document.getElementById('ftPdfModelList');
-  host.innerHTML=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||'')).map(m=>{
+  host.classList.remove('diger-acik','arama');
+  host.innerHTML=_takipPdfListe(all, _ftModelBekleyen, m=>{
     const eksik=_ftModelBekleyen(m), stok=_ftModelStok(m), n=(m.sizes||[]).length;
     const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr');
-    return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
+    return `<label class="ft-pdf-row${_takipPdfDiger(m,eksik)?' ft-pdf-diger':''}" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
       <input type="checkbox" class="ft-pdf-chk" value="${m.id}" onchange="ftPdfUpdateSummary()">
       <span class="ft-pdf-check"></span>
       <span class="ft-pdf-info">
@@ -6579,7 +6603,7 @@ function ftOpenPdfModal(){
       </span>
       ${eksik>0?`<span class="ft-pdf-eksik">${eksik.toLocaleString('tr')} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
     </label>`;
-  }).join('');
+  });
   const searchInp=document.getElementById('ftPdfSearch');
   if(searchInp) searchInp.value='';
   const emptyEl=document.getElementById('ftPdfEmpty');
@@ -6595,8 +6619,8 @@ function ftClosePdfModal(){ document.getElementById('ftPdfModal').classList.remo
 // Sadece GÖRÜNEN (arama ile eşleşen) satırları seç/temizle — gizli
 // satırlardaki mevcut seçimler bozulmaz.
 function ftPdfSelectAll(on){
-  document.querySelectorAll('.ft-pdf-row').forEach(row=>{
-    if(row.style.display==='none') return;
+  document.querySelectorAll('#ftPdfModelList .ft-pdf-row').forEach(row=>{
+    if(!_takipPdfGorunur(row)) return;
     const chk=row.querySelector('.ft-pdf-chk');
     if(chk) chk.checked=on;
   });
@@ -6604,8 +6628,8 @@ function ftPdfSelectAll(on){
 }
 // Yalnızca eksiği > 0 olan (görünür) modelleri seç — tipik akış.
 function ftPdfSelectOnlyMissing(){
-  document.querySelectorAll('.ft-pdf-row').forEach(row=>{
-    if(row.style.display==='none') return;
+  document.querySelectorAll('#ftPdfModelList .ft-pdf-row').forEach(row=>{
+    if(!_takipPdfGorunur(row)) return;
     const chk=row.querySelector('.ft-pdf-chk');
     if(!chk) return;
     chk.checked = (+row.dataset.eksik||0) > 0;
@@ -6629,7 +6653,8 @@ function ftPdfRenderOnlyMissingChip(forceChecked){
 // aramayı temizleyince önceki seçimleri kaybolmaz).
 function ftPdfFilterModels(){
   const q=(document.getElementById('ftPdfSearch')?.value||'').trim().toLocaleLowerCase('tr');
-  const rows=document.querySelectorAll('.ft-pdf-row');
+  const liste=document.getElementById('ftPdfModelList'); if(liste) liste.classList.toggle('arama', !!q);
+  const rows=document.querySelectorAll('#ftPdfModelList .ft-pdf-row');
   let anyVisible=false;
   rows.forEach(row=>{
     const match = !q || (row.dataset.search||'').includes(q);
@@ -6799,20 +6824,25 @@ function _takipTeslimBelgesi(o){
 }
 
 function ftGeneratePdf(){
-  const seciliIds=[...document.querySelectorAll('.ft-pdf-chk:checked')].map(c=>+c.value);
+  const seciliIds=[...document.querySelectorAll('#ftPdfModelList .ft-pdf-chk:checked')].map(c=>+c.value);
   if(!seciliIds.length){ toast('En az bir model seçin','error'); return; }
+  if(_ftTeslimAc(seciliIds, window._ftPdfOnlyMissing===true)) ftClosePdfModal();
+}
+// Karttaki PDF butonu: listeye girmeden tek modelin belgesi (tüm bedenler)
+function ftTekPdf(id){ _ftTeslimAc([id], false); }
+function _ftTeslimAc(seciliIds, onlyMissing){
   const models=_ftAll().filter(m=>seciliIds.includes(m.id)).sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
   const html=_takipTeslimBelgesi({
     tur:'Fermuar', cogul:'fermuarlar', dosya:'Fermuar_Teslim_Durumu',
-    onlyMissing: window._ftPdfOnlyMissing===true,
+    onlyMissing: onlyMissing,
     sayi:v=>Math.round(+v||0).toLocaleString('tr'),
     models: models.map(m=>({ kod:m.modelKodu||'—', renk:m.renk||'', tedarikci:m.tedarikci||'', termin:m.termin||'', metre:false,
       rows:_ftSizesSorted(m).map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }))
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
-  if(!w){ toast('Popup engellendi — izin verin','error'); return; }
-  ftClosePdfModal();
+  if(!w){ toast('Popup engellendi — izin verin','error'); return false; }
   toast('Teslim durumu hazırlandı 📄','success');
+  return true;
 }
 
 // ── İRSALİYE ENTEGRASYONU (dışa açık API) ──
@@ -7193,6 +7223,7 @@ function renderKordonTakip(){
         ${done
           ? `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ktToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
           : `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ktToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
+        <button class="btn btn-sm btn-secondary ft-act-pdf" onclick="ktTekPdf(${m.id})" title="Bu modelin teslim durumu belgesi (PDF) — atölyeye gönder"><i class="fas fa-file-pdf"></i> PDF</button>
         <button class="btn btn-sm btn-secondary ft-act-ikon" onclick="ktEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
         <button class="btn btn-sm btn-danger ft-act-ikon" onclick="ktDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
       </div>
@@ -7523,11 +7554,12 @@ function ktOpenPdfModal(){
   const all=_ktAll();
   if(!all.length){ toast('Önce kordon modeli ekleyin','error'); return; }
   const host=document.getElementById('ktPdfModelList');
-  host.innerHTML=all.slice().sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||'')).map(m=>{
+  host.classList.remove('diger-acik','arama');
+  host.innerHTML=_takipPdfListe(all, _ftModelBekleyen, m=>{
     const eksik=_ftModelBekleyen(m), stok=_ftModelStok(m), n=(m.sizes||[]).length;
     const mm=_ktMetreMi(m), BR=mm?'m':'adet';
     const searchTxt=((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr');
-    return `<label class="ft-pdf-row" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
+    return `<label class="ft-pdf-row${_takipPdfDiger(m,eksik)?' ft-pdf-diger':''}" data-search="${esc(searchTxt)}" data-eksik="${eksik}">
       <input type="checkbox" class="ft-pdf-chk" value="${m.id}" onchange="ktPdfUpdateSummary()">
       <span class="ft-pdf-check"></span>
       <span class="ft-pdf-info">
@@ -7536,7 +7568,7 @@ function ktOpenPdfModal(){
       </span>
       ${eksik>0?`<span class="ft-pdf-eksik">${_ktSayi(eksik,mm)} ${BR} eksik</span>`:`<span class="ft-pdf-tam">tamam</span>`}
     </label>`;
-  }).join('');
+  });
   const searchInp=document.getElementById('ktPdfSearch');
   if(searchInp) searchInp.value='';
   const emptyEl=document.getElementById('ktPdfEmpty');
@@ -7549,7 +7581,7 @@ function ktOpenPdfModal(){
 function ktClosePdfModal(){ document.getElementById('ktPdfModal').classList.remove('show'); }
 function ktPdfSelectAll(on){
   document.querySelectorAll('#ktPdfModelList .ft-pdf-row').forEach(row=>{
-    if(row.style.display==='none') return;
+    if(!_takipPdfGorunur(row)) return;
     const chk=row.querySelector('.ft-pdf-chk');
     if(chk) chk.checked=on;
   });
@@ -7557,7 +7589,7 @@ function ktPdfSelectAll(on){
 }
 function ktPdfSelectOnlyMissing(){
   document.querySelectorAll('#ktPdfModelList .ft-pdf-row').forEach(row=>{
-    if(row.style.display==='none') return;
+    if(!_takipPdfGorunur(row)) return;
     const chk=row.querySelector('.ft-pdf-chk');
     if(!chk) return;
     chk.checked = (+row.dataset.eksik||0) > 0;
@@ -7576,6 +7608,7 @@ function ktPdfRenderOnlyMissingChip(forceChecked){
 }
 function ktPdfFilterModels(){
   const q=(document.getElementById('ktPdfSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const liste=document.getElementById('ktPdfModelList'); if(liste) liste.classList.toggle('arama', !!q);
   const rows=document.querySelectorAll('#ktPdfModelList .ft-pdf-row');
   let anyVisible=false;
   rows.forEach(row=>{
@@ -7590,19 +7623,23 @@ function ktPdfFilterModels(){
 function ktGeneratePdf(){
   const seciliIds=[...document.querySelectorAll('#ktPdfModelList .ft-pdf-chk:checked')].map(c=>+c.value);
   if(!seciliIds.length){ toast('En az bir model seçin','error'); return; }
+  if(_ktTeslimAc(seciliIds, window._ktPdfOnlyMissing===true)) ktClosePdfModal();
+}
+function ktTekPdf(id){ _ktTeslimAc([id], false); }
+function _ktTeslimAc(seciliIds, onlyMissing){
   const models=_ktAll().filter(m=>seciliIds.includes(m.id)).sort((a,b)=>(a.modelKodu||'').localeCompare(b.modelKodu||''));
   const html=_takipTeslimBelgesi({
     tur:'Kordon', cogul:'kordonlar', dosya:'Kordon_Teslim_Durumu',
-    onlyMissing: window._ktPdfOnlyMissing===true,
+    onlyMissing: onlyMissing,
     sayi:(v,metre)=>_ktSayi(v, metre),
     models: models.map(m=>{ const mm=_ktMetreMi(m); return { kod:m.modelKodu||'—', renk:m.renk||'', tedarikci:m.tedarikci||'', termin:m.termin||'',
       metre:mm, birimEtiket: mm?'HAM KORDON · METRE':'CM & BEDEN · ADET',
       rows:_ktSatirlar(m).map(z=>({beden:z.beden||'', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }; })
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
-  if(!w){ toast('Popup engellendi — izin verin','error'); return; }
-  ktClosePdfModal();
+  if(!w){ toast('Popup engellendi — izin verin','error'); return false; }
   toast('Teslim durumu hazırlandı 📄','success');
+  return true;
 }
 
 // ── İRSALİYE ENTEGRASYONU ──
