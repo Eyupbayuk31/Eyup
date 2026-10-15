@@ -6641,7 +6641,7 @@ function ftPdfFilterModels(){
 }
 
 // ── TESLİM DURUMU BELGESİ (Fermuar + Kordon ortak) ──
-// Atölyeye gönderilen A4 belge. Eskiden "Eksik Listesi" adıyla sayfanın
+// Atölyeye gönderilen A4 belge (eldeki stok bilinçli olarak YOK — atölyeyi ilgilendirmiyor). Eskiden "Eksik Listesi" adıyla sayfanın
 // üstüne küçük bir tablo basılıyor, altı boş kalıyordu; mal tamamen gelmişse
 // hiç oluşmuyor ya da başlığında yine "Eksik" yazıyordu → atölye anlamıyordu.
 // Şimdi: üstte büyük TAMAMLANDI / EKSİK VAR bandı (renk + işaret + yazı, siyah
@@ -6649,7 +6649,7 @@ function ftPdfFilterModels(){
 // sayfa A4 boyunda, imza alanı sayfanın dibine oturur.
 // o = { tur:'Fermuar', cogul:'fermuarlar', dosya:'Fermuar_Teslim_Durumu',
 //       onlyMissing, sayi:(v,metre)=>'1.250',
-//       models:[{kod,renk,tedarikci,termin,metre,birimEtiket,rows:[{beden,cm,renk,siparis,gelen,eksik,stok}]}] }
+//       models:[{kod,renk,tedarikci,termin,metre,birimEtiket,rows:[{beden,cm,renk,siparis,gelen,eksik}]}] }
 function _takipTeslimTarih(t){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(t||''); return m?(m[3]+'.'+m[2]+'.'+m[1]):(t||''); }
 function _takipTeslimBelgesi(o){
   const S=o.sayi, now=new Date();
@@ -6674,11 +6674,11 @@ function _takipTeslimBelgesi(o){
     // Renk sütunu yalnızca satırlarda modelden farklı renk varsa (metrede renk asıl ayırt edici)
     const renkSut = mm || m.rows.some(r=>r.renk && r.renk!==(m.renk||'—'));
     const bas = (mm?'':'<th>Beden</th><th>CM</th>')+(renkSut?'<th>Renk</th>':'')+
-      '<th class="n">Sipariş'+(mm?' (m)':'')+'</th><th class="n">Gelen</th><th class="n">Eldeki</th><th class="d">Durum</th>';
+      '<th class="n">Sipariş'+(mm?' (m)':'')+'</th><th class="n">Gelen</th><th class="d">Durum</th>';
     const satirlar=rows.map(r=>`<tr class="${r.eksik>0?'eks':'tam'}">
       ${mm?'':`<td class="bd">${esc(r.beden||'—')}</td><td class="cm">${r.cm!=null?esc(String(r.cm))+' cm':'—'}</td>`}
       ${renkSut?`<td${mm?' class="bd"':''}>${esc(r.renk||'—')}</td>`:''}
-      <td class="n">${S(r.siparis,mm)}</td><td class="n">${S(r.gelen,mm)}</td><td class="n sk">${S(r.stok,mm)}</td>
+      <td class="n">${S(r.siparis,mm)}</td><td class="n">${S(r.gelen,mm)}</td>
       <td class="d">${r.eksik>0?`<span class="rz eks">✗ ${S(r.eksik,mm)} ${BR} eksik</span>`:'<span class="rz tam">✓ Tamam</span>'}</td>
     </tr>`).join('');
     const tablo = rows.length
@@ -6741,7 +6741,6 @@ function _takipTeslimBelgesi(o){
   td{font-size:16px;padding:10px 10px;border-bottom:1px solid #d1d5db;font-variant-numeric:tabular-nums;}
   th.n,td.n{text-align:right;} th.d,td.d{text-align:right;width:1%;white-space:nowrap;}
   td.bd{font-weight:900;font-size:17px;} td.cm{font-weight:700;}
-  td.sk{color:#6b7280;}
   tr.eks td{background:#fff7ed;}
   .rz{display:inline-block;font-weight:800;font-size:14px;padding:4px 10px;border-radius:7px;border:2px solid;}
   .rz.tam{color:#047857;border-color:#a7f3d0;background:#ecfdf5;}
@@ -6808,7 +6807,7 @@ function ftGeneratePdf(){
     onlyMissing: window._ftPdfOnlyMissing===true,
     sayi:v=>Math.round(+v||0).toLocaleString('tr'),
     models: models.map(m=>({ kod:m.modelKodu||'—', renk:m.renk||'', tedarikci:m.tedarikci||'', termin:m.termin||'', metre:false,
-      rows:_ftSizesSorted(m).map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z), stok:_ftStok(z)})) }))
+      rows:_ftSizesSorted(m).map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }))
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
   if(!w){ toast('Popup engellendi — izin verin','error'); return; }
@@ -7598,7 +7597,7 @@ function ktGeneratePdf(){
     sayi:(v,metre)=>_ktSayi(v, metre),
     models: models.map(m=>{ const mm=_ktMetreMi(m); return { kod:m.modelKodu||'—', renk:m.renk||'', tedarikci:m.tedarikci||'', termin:m.termin||'',
       metre:mm, birimEtiket: mm?'HAM KORDON · METRE':'CM & BEDEN · ADET',
-      rows:_ktSatirlar(m).map(z=>({beden:z.beden||'', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z), stok:_ftStok(z)})) }; })
+      rows:_ktSatirlar(m).map(z=>({beden:z.beden||'', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }; })
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
   if(!w){ toast('Popup engellendi — izin verin','error'); return; }
