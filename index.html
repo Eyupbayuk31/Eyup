@@ -1143,7 +1143,7 @@
         else { el.style.background='#7f1d1d'; el.style.color='#fecaca'; el.textContent='bağlı değil'; el.title=(detail||'SDK yüklenemedi')+' — tıkla: sayfayı yenile'; }
       }
       // Durum noktası CSS'ten (#cloudSyncBadge::before) — emoji yok
-      var _place=place; place=function(){ _place(); var e=document.getElementById('cloudSyncBadge'); if(e) e.setAttribute('data-durum', state); };
+      var _place=place; place=function(){ _place(); var e=document.getElementById('cloudSyncBadge'); if(e){ e.setAttribute('data-durum', state); try{ window._t2RozetYerlestir && window._t2RozetYerlestir(); }catch(_){} } };
       if(document.body){ place(); }
       else { document.addEventListener('DOMContentLoaded', place, { once:true }); }
     }
@@ -1734,7 +1734,7 @@ if(typeof Chart==='undefined'){
 
     <div class="page" id="page-new">
       <div class="section-header">
-        <div><h2>Yeni İrsaliye</h2><p>Sevk irsaliyesi oluşturun</p></div>
+        <div><h2><i class="fas fa-plus-circle"></i>Yeni İrsaliye</h2><p>Sevk irsaliyesi oluşturun</p></div>
         <button class="btn btn-primary" onclick="saveIrsaliye()"><i class="fas fa-save"></i> Kaydet</button>
       </div>
 
@@ -1791,7 +1791,7 @@ if(typeof Chart==='undefined'){
     <!-- ========== İRSALİYELER ========== -->
     <div class="page" id="page-list">
       <div class="section-header">
-        <div><h2>Tüm İrsaliyeler</h2><p>Tüm sevkiyat türlerini görüntüleyin ve filtreleyin</p></div>
+        <div><h2><i class="fas fa-list"></i>Tüm İrsaliyeler</h2><p>Tüm sevkiyat türlerini görüntüleyin ve filtreleyin</p></div>
         <button class="btn btn-primary" onclick="showPage('new')"><i class="fas fa-plus"></i> Yeni Ekle</button>
       </div>
 
@@ -2610,7 +2610,7 @@ if(typeof Chart==='undefined'){
 
     <!-- ========== ATÖLYELER ========== -->
     <div class="page" id="page-atolye">
-      <div class="section-header"><h2>Atölyeler</h2></div>
+      <div class="section-header"><h2><i class="fas fa-industry"></i>Atölyeler</h2></div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title"><i class="fas fa-plus"></i> Yeni Atölye Ekle</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:flex-end;">
@@ -3357,7 +3357,7 @@ if(typeof Chart==='undefined'){
     <!-- ========== GERİ DÖNÜŞÜM ========== -->
     <div class="page" id="page-geridonusum">
       <div class="section-header">
-        <div><h2>Geri Dönüşüm Kutusu</h2><p>Silinen kayıtları görüntüleyin ve kurtarın</p></div>
+        <div><h2><i class="fas fa-trash-restore"></i>Geri Dönüşüm Kutusu</h2><p>Silinen kayıtları görüntüleyin ve kurtarın</p></div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-danger btn-sm" onclick="emptyRecycleBin()"><i class="fas fa-trash"></i> Tümünü Sil</button>
         </div>
@@ -3432,7 +3432,7 @@ if(typeof Chart==='undefined'){
 
         <div class="s-card" id="githubConfigCard">
           <div class="s-card-head">
-            <div class="s-ico" style="background:linear-gradient(135deg,#1f2937,#111827);"><i class="fab fa-github"></i></div>
+            <div class="s-ico" style="background:linear-gradient(135deg,#1f2937,#111827);"><i class="fa-brands fa-github"></i></div>
             <div>
               <h3>GitHub Bulut Yükleme</h3>
               <p>Fotoğraflar GitHub deposuna yüklenir, QR raw.githubusercontent.com linkini taşır</p>
@@ -4245,7 +4245,7 @@ if(typeof Chart==='undefined'){
     <!-- ================= MODEL KARTI ================= -->
     <div class="page" id="page-model">
       <div class="section-header">
-        <div><h2>Model Kartı</h2><p>Bir modelin her şeyi tek ekranda — irsaliyeler, aksesuar föyleri, tela, fermuar</p></div>
+        <div><h2><i class="fas fa-id-card"></i>Model Kartı</h2><p>Bir modelin her şeyi tek ekranda — irsaliyeler, aksesuar föyleri, tela, fermuar</p></div>
         <span class="mk-ipucu"><i class="fas fa-magnifying-glass"></i> Üstteki aramaya model kodu yazarak da açabilirsiniz <kbd>Ctrl</kbd><kbd>K</kbd></span>
       </div>
       <div class="mk-search">
@@ -4816,7 +4816,7 @@ function refreshAtolyeList(){
   el.innerHTML=shown.map(a=>{
     const tel = (a.telefon||'').replace(/[^\d+]/g,'');
     const normTel = tel ? _normalizePhoneForWa(tel) : '';
-    const waBtn = normTel ? '<a href="javascript:void(0)" onclick="_openWhatsApp(\''+normTel+'\',\'\')" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fab fa-whatsapp"></i></a>' : '';
+    const waBtn = normTel ? '<a href="javascript:void(0)" onclick="_openWhatsApp(\''+normTel+'\',\'\')" title="WhatsApp\'tan ac" style="color:#25D366;text-decoration:none;margin-left:8px;"><i class="fa-brands fa-whatsapp"></i></a>' : '';
     return `
     <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;"><i class="fas fa-industry" style="color:#fff;font-size:13px;"></i></div>
@@ -8866,7 +8866,7 @@ function renderFilteredList(list){
           <i class="fas fa-file-pdf"></i> PDF İndir
         </div>
         <div class="dropdown-item" onclick="event.stopPropagation();shareIrsaliyeWhatsApp(${i.id},'${i._type}');closeAllMenus()" style="color:#25D366;">
-          <i class="fab fa-whatsapp"></i> WhatsApp'tan Gönder
+          <i class="fa-brands fa-whatsapp"></i> WhatsApp'tan Gönder
         </div>
         <div class="dropdown-item" onclick="event.stopPropagation();copyWaybill(${i.id},'${i._type}');closeAllMenus()">
           <i class="fas fa-copy"></i> Kopyala
@@ -12661,8 +12661,23 @@ function setTasarim(v){
   setConfig('tasarim', v);
   document.documentElement.setAttribute('data-tasarim', v);
   _tasarimButonlari();
+  try{ window._t2RozetYerlestir(); }catch(_){}
   if(typeof toast==='function') toast(v==='yeni' ? 'Yeni tasarım açıldı' : 'Klasik tasarıma dönüldü','success');
 }
+// Yeni tasarımda bulut rozeti üst bara (zilin soluna) taşınır — sol altta
+// içeriği örtüyordu. Klasikte eski yerine (sayfa gövdesi) döner.
+window._t2RozetYerlestir=function(){
+  var e=document.getElementById('cloudSyncBadge'); if(!e) return;
+  var yeni=document.documentElement.getAttribute('data-tasarim')==='yeni';
+  var hedef=yeni ? document.querySelector('.topbar-right') : document.body;
+  if(!hedef) return;
+  if(yeni){ var zil=hedef.querySelector('.notif-bell'); var ref=zil?zil.parentElement:null;
+    if(e.parentElement!==hedef) hedef.insertBefore(e, ref && ref.parentElement===hedef ? ref : hedef.firstChild); }
+  else if(e.parentElement!==document.body){ document.body.appendChild(e); }
+  if(!e._t2Dinle){ e._t2Dinle=true; e.addEventListener('click', function(){
+    if(document.documentElement.getAttribute('data-tasarim')==='yeni' && window.innerWidth<=768 && typeof toast==='function')
+      toast('Bulut: '+(e.textContent||'')+(e.title?(' — '+e.title):''),'info'); }); }
+};
 function _tasarimButonlari(){
   var v=document.documentElement.getAttribute('data-tasarim')||'yeni';
   document.querySelectorAll('.s-tasarim-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tasarimBtn===v); });
@@ -14277,7 +14292,7 @@ function openShareMenu(id, type) {
   currentShareItem = item; currentShareType = type;
   document.getElementById('shareMenuTitle').textContent = (item.no || 'Kayıt') + ' — Paylaş';
   document.getElementById('shareOptions').innerHTML = `
-    <div class="share-opt wa" onclick="shareWhatsApp()"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></div>
+    <div class="share-opt wa" onclick="shareWhatsApp()"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></div>
     <div class="share-opt img" onclick="shareImageNative()"><i class="fas fa-image"></i><span>Görsel Gönder</span></div>
     <div class="share-opt mail" onclick="shareEmail()"><i class="fas fa-envelope"></i><span>E-posta</span></div>
     <div class="share-opt copy" onclick="shareCopy()"><i class="fas fa-copy"></i><span>Kopyala</span></div>
@@ -16676,7 +16691,7 @@ async function generateQrForItem(id, type){
         <button class="btn btn-primary" onclick="downloadQrPng()"><i class="fas fa-download"></i> PNG İndir</button>
         <button class="btn btn-secondary" onclick="printQrOnly()"><i class="fas fa-print"></i> Yazdır</button>
         <button class="btn btn-secondary" onclick="_copyQrUrl()"><i class="fas fa-link"></i> Linki Kopyala</button>
-        <button class="btn" onclick="_shareQrWhatsApp()" style="background:#25D366;color:#fff;border:0;"><i class="fab fa-whatsapp"></i> WhatsApp'tan Gönder</button>
+        <button class="btn" onclick="_shareQrWhatsApp()" style="background:#25D366;color:#fff;border:0;"><i class="fa-brands fa-whatsapp"></i> WhatsApp'tan Gönder</button>
       </div>
       <div style="font-size:10px;color:var(--text-dim);margin-top:10px;word-break:break-all;max-width:460px;margin-left:auto;margin-right:auto;">
         <b>Bu QR şu URL'yi açar:</b><br>${scanUrl.length>180?scanUrl.slice(0,180)+'…':scanUrl}
@@ -16914,7 +16929,7 @@ let _sigFilter = 'all'; // all | unsigned | signed | bekliyor
 let _sigTypeFilter = 'all'; // all | standart | fermuar | lastik | ...
 
 // WhatsApp logosu — inline SVG. Font Awesome "brands" fontu bazı tarayıcılarda
-// yüklenmediğinden (fab fa-whatsapp boş kalıyor) ikon garanti görünsün diye SVG kullanıyoruz.
+// yüklenmediğinden (fa-brands fa-whatsapp boş kalıyor) ikon garanti görünsün diye SVG kullanıyoruz.
 const _WA_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="display:block;"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.588 5.345l-.999 3.648 3.911-1.021zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.767.967-.94 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.297-.497.1-.198.05-.371-.025-.52-.074-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>';
 
 function refreshSignaturePage(){
@@ -18593,7 +18608,7 @@ function renderSigSavedList(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-xs btn-secondary" onclick="editSigForItem('${i._type}',${i.id})"><i class="fas fa-pen"></i></button>
         <button class="btn btn-xs btn-secondary" onclick="generatePDF(${i.id},'${i._type}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
-        <button class="btn btn-xs btn-secondary" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" title="WhatsApp'tan Gönder" style="color:#25D366;"><i class="fab fa-whatsapp"></i></button>
+        <button class="btn btn-xs btn-secondary" onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" title="WhatsApp'tan Gönder" style="color:#25D366;"><i class="fa-brands fa-whatsapp"></i></button>
       </div>
     </div>
   `}).join('');

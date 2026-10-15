@@ -17038,3 +17038,88 @@ html[data-tasarim="yeni"][data-perf="lite"] .t2-ilerleme{ display:none; }
 :is(.t2-mark, .lg-mark) :is(.lgm-d1, .lgm-d2, .lgm-d3){
   stroke:color-mix(in srgb, var(--primary-light, var(--primary)) 70%, #fff) !important;
 }
+
+/* ══ TASARIM 2 · E: SON DOKUNUŞLAR ════════════════════════════════════ */
+
+/* E1 — Bulut rozeti üst barda: bilgisayarda küçük etiket, telefonda yalnız nokta */
+html[data-tasarim="yeni"] .topbar-right > #cloudSyncBadge{
+  position:static !important; inset:auto !important; bottom:auto !important; left:auto !important;
+  height:34px; box-shadow:none !important; flex-shrink:0;
+}
+@media (max-width:768px){
+  html[data-tasarim="yeni"] .topbar-right > #cloudSyncBadge{
+    width:36px; height:36px; padding:0 !important; justify-content:center; font-size:0 !important; letter-spacing:0;
+    border-radius:10px !important;
+  }
+  html[data-tasarim="yeni"] .topbar-right > #cloudSyncBadge::before{ width:9px; height:9px; }
+  /* + düğmesi: alt menüde "Yeni" var, içeriğin üstüne biniyordu */
+  html[data-tasarim="yeni"] .fab{ display:none !important; }
+}
+
+/* E2 — Pencereler: serif başlık + ikon kutusu, Kaydet/İptal altta sabit */
+html[data-tasarim="yeni"] .modal h3{
+  font-family:var(--t2-serif) !important; font-weight:400 !important; font-size:26px !important;
+  letter-spacing:-.5px !important; line-height:1.1 !important; display:flex; align-items:center; gap:12px;
+  color:var(--text-main) !important;
+}
+html[data-tasarim="yeni"] .modal h3 > i:first-child{
+  width:38px; height:38px; min-width:38px; margin:0 !important; border-radius:11px; font-size:15px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary)));
+  color:var(--on-primary, #fff) !important;
+  box-shadow:0 8px 20px -8px color-mix(in srgb, var(--primary) 65%, transparent), inset 0 1px 0 rgba(255,255,255,.22);
+}
+html[data-tasarim="yeni"] .modal > div:last-child:has(> .btn-primary){
+  position:sticky; bottom:-24px; z-index:5;
+  margin:16px -24px -24px !important; padding:14px 24px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  background:color-mix(in srgb, var(--bg-main) 90%, var(--primary)) !important;
+  border-top:1px solid var(--t2-cizgi);
+}
+
+/* E3 — Sayfa başlıklarındaki ikon: altın ikon kutusu (Ayarlar, Şablonlar, Atölyeler…) */
+html[data-tasarim="yeni"] #mainContent .section-header h2 > i:first-child{
+  width:46px; height:46px; min-width:46px; margin:0 14px 0 0 !important; border-radius:14px; font-size:19px;
+  display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; top:-4px;
+  background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))) !important;
+  color:var(--on-primary, #fff) !important; -webkit-text-fill-color:currentColor !important;
+  border:1px solid color-mix(in srgb, var(--primary-light, var(--primary)) 45%, transparent);
+  box-shadow:0 10px 26px -10px color-mix(in srgb, var(--primary) 65%, transparent), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.section-header h2 > i:first-child{ margin-right:8px; }   /* klasikte de ikonla yazı arasında boşluk */
+
+/* E4 — Geri Dönüşüm: özet kutuları telefonda tek satır, küçük */
+@media (max-width:768px){
+  html[data-tasarim="yeni"] #page-geridonusum .stats-grid{ grid-template-columns:repeat(3, minmax(0,1fr)) !important; gap:8px !important; }
+  html[data-tasarim="yeni"] #page-geridonusum .stat-card{ padding:12px 10px !important; min-height:0 !important; }
+  html[data-tasarim="yeni"] #page-geridonusum .stat-icon{ width:30px !important; height:30px !important; font-size:13px !important; margin-bottom:6px !important; border-radius:9px !important; }
+  html[data-tasarim="yeni"] #page-geridonusum .stat-value{ font-size:22px !important; line-height:1.1 !important; }
+  html[data-tasarim="yeni"] #page-geridonusum .stat-label{ font-size:9px !important; letter-spacing:.04em !important; line-height:1.25 !important; white-space:normal; }
+}
+
+/* E5 — İrsaliye sayfaları (telefon): tür şeridinin kenarı söner; Kaydet altta sabit */
+@media (max-width:768px){
+  html[data-tasarim="yeni"] .irs-bar-rail{
+    -webkit-mask-image:linear-gradient(90deg, #000 0, #000 calc(100% - 40px), transparent 100%);
+            mask-image:linear-gradient(90deg, #000 0, #000 calc(100% - 40px), transparent 100%);
+    padding-right:28px !important;
+  }
+  html[data-tasarim="yeni"] .page.active:has(> .irs-bar) > .section-header .btn-primary{
+    position:fixed !important; z-index:9990; left:12px; right:12px; width:auto !important;
+    bottom:calc(92px + env(safe-area-inset-bottom, 0px)); min-height:50px; justify-content:center;
+    font-size:15px !important; border-radius:16px !important;
+    box-shadow:0 14px 32px -10px rgba(0,0,0,.7), 0 10px 26px -10px color-mix(in srgb, var(--primary) 70%, transparent) !important;
+  }
+  html[data-tasarim="yeni"] .page.active:has(> .irs-bar){ padding-bottom:80px; }
+  html[data-tasarim="yeni"] body:has(.modal-overlay.show) .page.active:has(> .irs-bar) > .section-header .btn-primary,
+  html[data-tasarim="yeni"] body:has(.sidebar.open) .page.active:has(> .irs-bar) > .section-header .btn-primary{ display:none !important; }
+}
+
+/* E6 — Tarih kutuları: takvim simgesi tema rengiyle, diğer alanlarla aynı yükseklik */
+html[data-tasarim="yeni"] input[type="date"].form-input{ min-height:46px; }
+html[data-tasarim="yeni"] input[type="date"]::-webkit-calendar-picker-indicator{
+  cursor:pointer; opacity:.85; border-radius:6px; padding:4px;
+  background-color:color-mix(in srgb, var(--primary) 18%, transparent);
+}
+/* Yüzen + düğmesi: ikon sol üste kayıyordu */
+button.fab{ display:inline-flex; align-items:center; justify-content:center; padding:0 !important; }
+button.fab > i{ position:static !important; margin:0 !important; transform:none !important; inset:auto !important; line-height:1 !important; }
