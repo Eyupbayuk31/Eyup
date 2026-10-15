@@ -16982,3 +16982,43 @@ html[data-tasarim="yeni"] .toast-container .toast .toast-close{ color:var(--text
 .type-chip.active .tc-count{ color:inherit !important; background:rgba(0,0,0,.18) !important; }
 .type-chip.active::before{ opacity:0 !important; }   /* zemin zaten geçişli; bu katman yazıyı örtüyordu */
 html[data-tasarim="yeni"] .toast-container{ z-index:100000 !important; }
+
+/* ══ TASARIM 2 · D: CANLILIK ══════════════════════════════════════════ */
+.t2-yukle, .t2-ilerleme{ display:none; }
+/* D12 — Yükleniyor: dönen çark yerine girişteki çizilen işaret */
+html[data-tasarim="yeni"] .global-loading .loading-spinner{ display:none !important; }
+html[data-tasarim="yeni"] .global-loading{ background:color-mix(in srgb, var(--bg-main) 55%, transparent) !important; }
+html[data-tasarim="yeni"] .t2-yukle{
+  display:flex; flex-direction:column; align-items:center; gap:14px; padding:26px 30px; border-radius:20px;
+  background:color-mix(in srgb, var(--bg-main) 92%, var(--primary)); border:1px solid var(--t2-cizgi);
+  box-shadow:0 30px 70px -24px rgba(0,0,0,.8);
+}
+html[data-tasarim="yeni"] .t2-yukle svg{ width:64px; height:64px; overflow:visible; }
+html[data-tasarim="yeni"] .t2-yukle span{ font-family:var(--t2-mono); font-size:10.5px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-muted); }
+html[data-tasarim="yeni"] .t2y-kutu{ stroke:color-mix(in srgb, var(--primary-light, var(--primary)) 55%, transparent); stroke-width:2; fill:color-mix(in srgb, var(--primary) 12%, transparent); }
+html[data-tasarim="yeni"] .t2y-ip{
+  stroke:var(--primary-light, var(--primary)); stroke-width:2.6; stroke-dasharray:38; stroke-dashoffset:38;
+  filter:drop-shadow(0 0 5px color-mix(in srgb, var(--primary) 55%, transparent));
+  animation:t2Dok 1.8s cubic-bezier(.5,0,.2,1) var(--d, 0s) infinite;
+}
+@keyframes t2Dok{ 0%{ stroke-dashoffset:38; opacity:.3; } 40%,70%{ stroke-dashoffset:0; opacity:1; } 100%{ stroke-dashoffset:-38; opacity:.3; } }
+
+/* D13 — Sayfa geçişinde üstte ince ilerleme çizgisi */
+html[data-tasarim="yeni"] .t2-ilerleme{
+  display:block; position:fixed; top:0; left:0; right:0; height:2px; z-index:100001; pointer-events:none;
+  transform-origin:left center; transform:scaleX(0); opacity:0;
+  background:linear-gradient(90deg, transparent, var(--primary-light, var(--primary)), var(--primary));
+  box-shadow:0 0 10px var(--primary);
+}
+html[data-tasarim="yeni"] .t2-ilerleme.calis{ animation:t2Ilerle .7s cubic-bezier(.22,1,.36,1) forwards; }
+@keyframes t2Ilerle{ 0%{ transform:scaleX(0); opacity:1; } 70%{ transform:scaleX(1); opacity:1; } 100%{ transform:scaleX(1); opacity:0; } }
+
+/* D13 — Butona basınca hafif basılma */
+html[data-tasarim="yeni"] :is(.btn, .export-btn, .ft-pdf-chip, .type-chip, .fsel, .bottom-nav a, .sidebar nav a, .db-quick-btn):active{
+  transform:scale(.97) !important; transition-duration:.08s !important;
+}
+@media (prefers-reduced-motion: reduce){
+  html[data-tasarim="yeni"] .t2y-ip{ animation:none; stroke-dashoffset:0; }
+  html[data-tasarim="yeni"] .t2-ilerleme{ display:none; }
+}
+html[data-tasarim="yeni"][data-perf="lite"] .t2-ilerleme{ display:none; }
