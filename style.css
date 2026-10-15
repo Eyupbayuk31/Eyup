@@ -14375,6 +14375,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-row span.pos{ color:var(--success); font-weight:700; font-variant-numeric:tabular-nums; }
 .ft-row span.neg{ color:var(--text-muted); font-variant-numeric:tabular-nums; }
 .ft-row span.bad{ color:var(--danger); font-weight:800; font-variant-numeric:tabular-nums; }
+.ft-row span.fz{ color:#3b82f6; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }   /* siparişten fazla gelen */
 .ft-row-stok{ font-weight:900; font-variant-numeric:tabular-nums; color:var(--text-main); }
 .ft-row-stok.low{ color:var(--warning); }
 .ft-row-stok.zero{ color:var(--danger); }
