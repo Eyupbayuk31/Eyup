@@ -6680,7 +6680,7 @@ function _takipTeslimBelgesi(o){
   const S=o.sayi, now=new Date();
   const tarih=now.toLocaleDateString('tr-TR'), saat=now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
   const T={sip:{adet:0,metre:0}, gel:{adet:0,metre:0}, eks:{adet:0,metre:0}, fz:{adet:0,metre:0}};
-  // Siparişten FAZLA gelen (eksik değil ama atölye bilsin: "✓ Tamam · +33 fazla")
+  // Siparişten FAZLA gelen (eksik değil ama atölye bilsin: "Tamam · +33 fazla")
   const fazla=r=>Math.max(0, r.gelen-r.siparis);
   const toplamYaz=t=>{ const p=[]; if(t.adet>0 || t.metre<=0) p.push(S(t.adet,false)+' adet'); if(t.metre>0) p.push(S(t.metre,true)+' m'); return p.join(' + '); };
   const kunye=m=>[m.renk?('Renk: <b>'+esc(m.renk)+'</b>'):'', m.tedarikci?('Tedarikçi: <b>'+esc(m.tedarikci)+'</b>'):'',
@@ -6706,13 +6706,13 @@ function _takipTeslimBelgesi(o){
       ${mm?'':`<td class="bd">${esc(r.beden||'—')}</td><td class="cm">${r.cm!=null?esc(String(r.cm))+' cm':'—'}</td>`}
       ${renkSut?`<td${mm?' class="bd"':''}>${esc(r.renk||'—')}</td>`:''}
       <td class="n">${S(r.siparis,mm)}</td><td class="n">${S(r.gelen,mm)}</td>
-      <td class="d">${r.eksik>0?`<span class="rz eks">✗ ${S(r.eksik,mm)} ${BR} eksik</span>`:(fazla(r)>0?`<span class="rz tam">✓ Tamam · <span class="fz">+${S(fazla(r),mm)} fazla</span></span>`:'<span class="rz tam">✓ Tamam</span>')}</td>
+      <td class="d">${r.eksik>0?`<span class="rz eks">${S(r.eksik,mm)} ${BR} eksik</span>`:(fazla(r)>0?`<span class="rz tam">Tamam · <span class="fz">+${S(fazla(r),mm)} fazla</span></span>`:'<span class="rz tam">Tamam</span>')}</td>
     </tr>`).join('');
     const tablo = rows.length
       ? `<table><thead><tr>${bas}</tr></thead><tbody>${satirlar}</tbody></table>`
-      : `<div class="hepsi">✓ Bu modelin tüm ${mm?'renkleri':'bedenleri'} geldi.</div>`;
+      : `<div class="hepsi">Bu modelin tüm ${mm?'renkleri':'bedenleri'} geldi.</div>`;
     const gizliNot = (gizli>0 && rows.length) ? `<div class="gizli">Listede yalnızca eksik olanlar var — diğer ${gizli} ${mm?'renk':'beden'} tamam geldi.</div>` : '';
-    const rozet = eks>0 ? `<span class="rz eks buyuk">✗ ${S(eks,mm)} ${BR} EKSİK</span>` : `<span class="rz tam buyuk">✓ TAMAM${fz>0?` · <span class="fz">+${S(fz,mm)} ${BR} fazla</span>`:''}</span>`;
+    const rozet = eks>0 ? `<span class="rz eks buyuk">${S(eks,mm)} ${BR} EKSİK</span>` : `<span class="rz tam buyuk">TAMAM${fz>0?` · <span class="fz">+${S(fz,mm)} ${BR} fazla</span>`:''}</span>`;
     bloklar += `<section class="mb">
       ${tek?'':`<div class="mb-hd"><div><div class="mb-kod">${esc(m.kod)}${m.birimEtiket?` <span class="be">${m.birimEtiket}</span>`:''}</div><div class="mb-kn">${kunye(m)}</div></div>${rozet}</div>`}
       ${tablo}${gizliNot}
@@ -6799,16 +6799,16 @@ function _takipTeslimBelgesi(o){
   }
 </style></head><body>
 <div class="no-print" id="tkbKontrol">
-  <button style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.querySelector('.sayfa'),'${o.dosya}${tek?'_'+String(m0.kod).replace(/[^\w-]+/g,''):''}.pdf',document.getElementById('tkbKontrol'))">📥 PDF İndir</button>
-  <button style="background:#7c3aed;" onclick="window.print()">🖨️ Yazdır</button>
-  <button style="background:#6b7280;" onclick="window.close()">✕ Kapat</button>
+  <button style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.querySelector('.sayfa'),'${o.dosya}${tek?'_'+String(m0.kod).replace(/[^\w-]+/g,''):''}.pdf',document.getElementById('tkbKontrol'))">PDF İndir</button>
+  <button style="background:#7c3aed;" onclick="window.print()">Yazdır</button>
+  <button style="background:#6b7280;" onclick="window.close()">Kapat</button>
 </div>
 <div class="sayfa">
   <header class="ust">
     <div><div class="tur">${o.tur.toLocaleUpperCase('tr')} TESLİM DURUMU</div><h1>${baslik}</h1><div class="kn">${ustKunye}</div></div>
     <div class="ust-r"><div class="l">TARİH</div><div class="t">${tarih}</div><div class="s">${saat}</div></div>
   </header>
-  <div class="durum ${eksikVar?'eks':'tam'}"><div class="ik">${eksikVar?'!':'✓'}</div><div><div class="b">${durumBas}</div><div class="a">${durumAlt}</div></div></div>
+  <div class="durum ${eksikVar?'eks':'tam'}"><div class="ik"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${eksikVar?'<path d="M12 5.5v8"/><path d="M12 18.4v.2"/>':'<path d="M5.5 12.5l4.2 4.2L18.5 8"/>'}</svg></div><div><div class="b">${durumBas}</div><div class="a">${durumAlt}</div></div></div>
   <div class="ozet">
     <div><span>SİPARİŞ</span><b>${toplamYaz(T.sip)}</b></div>
     <div><span>GELEN</span><b>${toplamYaz(T.gel)}</b></div>
@@ -6845,7 +6845,7 @@ function _ftTeslimAc(seciliIds, onlyMissing){
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
   if(!w){ toast('Popup engellendi — izin verin','error'); return false; }
-  toast('Teslim durumu hazırlandı 📄','success');
+  toast('Teslim durumu hazırlandı','success');
   return true;
 }
 
@@ -7642,7 +7642,7 @@ function _ktTeslimAc(seciliIds, onlyMissing){
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
   if(!w){ toast('Popup engellendi — izin verin','error'); return false; }
-  toast('Teslim durumu hazırlandı 📄','success');
+  toast('Teslim durumu hazırlandı','success');
   return true;
 }
 
