@@ -1341,6 +1341,9 @@
         document.body.setAttribute('data-theme',t);
       },{once:true});
     }
+    // Tasarım: 'yeni' (varsayılan) | 'klasik' — Ayarlar › Görünüm › Tasarım
+    var ts=null; try{ ts=JSON.parse(localStorage.getItem('config_tasarim')); }catch(_){}
+    document.documentElement.setAttribute('data-tasarim', ts==='klasik' ? 'klasik' : 'yeni');
     var fs=JSON.parse(localStorage.getItem('config_fontSize'));
     if(fs){ var _fsv=Math.max(12,Math.min(20,parseInt(fs,10)||14)); document.documentElement.style.zoom=(_fsv/14).toFixed(4); }
     // Performans modu: zayıf PC'lerde animasyon/bulanıklık/gölge kapanır.
@@ -1400,6 +1403,14 @@ if(typeof Chart==='undefined'){
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- Yeni tasarım zemini: giriş ekranındaki ışık + ızgara + iplikler (soluk) -->
+<div class="t2-zemin" aria-hidden="true">
+  <div class="t2-mesh"></div>
+  <div class="t2-grid"></div>
+  <div class="t2-iplik"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="t2-noise"></div>
+</div>
+
 <!-- Sidebar Overlay (Mobile) -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
@@ -1408,8 +1419,15 @@ if(typeof Chart==='undefined'){
   <div class="logo">
     <div class="logo-inner">
       <div class="logo-icon"><i class="fas fa-file-invoice"></i></div>
+      <div class="t2-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none" stroke-linecap="round">
+          <rect class="lgm-kutu" x="6" y="6" width="52" height="52" rx="15"/>
+          <path class="lgm-ip lgm-y1" d="M14 24 H50"/><path class="lgm-ip lgm-y2" d="M14 32 H50"/><path class="lgm-ip lgm-y3" d="M14 40 H50"/>
+          <path class="lgm-ip lgm-d1" d="M24 14 V50"/><path class="lgm-ip lgm-d2" d="M32 14 V50"/><path class="lgm-ip lgm-d3" d="M40 14 V50"/>
+        </svg>
+      </div>
       <div>
-        <div class="logo-text">İrsaliye Pro</div>
+        <div class="logo-text"><span class="t2-lt1">İrsaliye</span> <em class="t2-lt2">Pro</em></div>
       </div>
     </div>
   </div>
@@ -1455,7 +1473,7 @@ if(typeof Chart==='undefined'){
     </div>
   </nav>
   <div class="sidebar-footer">
-    <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır ✦</span></div>
+    <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır</span></div>
     <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
       <i class="fas fa-right-from-bracket"></i> Çıkış Yap
     </button>
@@ -1472,7 +1490,10 @@ if(typeof Chart==='undefined'){
   <div class="topbar">
     <div class="topbar-left">
       <button class="menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-      <span class="page-title" id="pageTitle">Anasayfa</span>
+      <div class="t2-tb-baslik">
+        <span class="page-title" id="pageTitle">Anasayfa</span>
+        <span class="t2-tb-tarih" id="t2TbTarih"></span>
+      </div>
     </div>
     <div class="topbar-right">
       <button type="button" class="tb-search" onclick="openGlobalSearch()" title="Model, irsaliye veya menü ara (Ctrl+K)">
@@ -3572,6 +3593,22 @@ if(typeof Chart==='undefined'){
 
       <!-- GÖRÜNÜM -->
       <div class="s-panel" data-spanel="gorunum">
+        <div class="s-card">
+          <div class="s-card-head">
+            <div class="s-ico" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-wand-magic-sparkles"></i></div>
+            <div>
+              <h3>Tasarım</h3>
+              <p>Yeni: giriş ekranındaki ışıklı, hareketli görünüm. Klasik: eski düz görünüm.</p>
+            </div>
+          </div>
+          <div class="s-body">
+            <div class="s-mode-toggle">
+              <button class="s-mode-btn s-tasarim-btn" onclick="setTasarim('yeni')" data-tasarim-btn="yeni"><i class="fas fa-wand-magic-sparkles"></i> Yeni</button>
+              <button class="s-mode-btn s-tasarim-btn" onclick="setTasarim('klasik')" data-tasarim-btn="klasik"><i class="fas fa-square"></i> Klasik</button>
+            </div>
+          </div>
+        </div>
+
         <div class="s-card">
           <div class="s-card-head">
             <div class="s-ico" style="background:linear-gradient(135deg,#ec4899,#be185d);"><i class="fas fa-palette"></i></div>
@@ -12513,9 +12550,26 @@ function setTheme(theme){
   setConfig('theme',theme);
   setConfig('colorMode', window._temaAcikMi(theme) ? 'light' : 'dark');
   window._temaUygula();
-  try{ document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(function(b){
+  try{ document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(function(b){
     b.classList.toggle('active', b.dataset.modeBtn===getConfig('colorMode','dark')); }); }catch(_){}
 }
+// Tasarım seçimi (cihaza özel): 'yeni' | 'klasik'
+function setTasarim(v){
+  v = (v==='klasik') ? 'klasik' : 'yeni';
+  setConfig('tasarim', v);
+  document.documentElement.setAttribute('data-tasarim', v);
+  _tasarimButonlari();
+  if(typeof toast==='function') toast(v==='yeni' ? 'Yeni tasarım açıldı' : 'Klasik tasarıma dönüldü','success');
+}
+function _tasarimButonlari(){
+  var v=document.documentElement.getAttribute('data-tasarim')||'yeni';
+  document.querySelectorAll('.s-tasarim-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tasarimBtn===v); });
+}
+function _t2TarihYaz(){
+  var el=document.getElementById('t2TbTarih'); if(!el) return;
+  try{ el.textContent=new Date().toLocaleDateString('tr-TR',{weekday:'long', day:'numeric', month:'long'}); }catch(_){}
+}
+document.addEventListener('DOMContentLoaded', function(){ _tasarimButonlari(); _t2TarihYaz(); setInterval(_t2TarihYaz, 60000); });
 function setFontSize(val){
   val = Math.max(12, Math.min(20, parseInt(val,10)||14));
   // Uygulamadaki metinlerin çoğu sabit px boyutunda olduğundan body font-size
@@ -15748,7 +15802,7 @@ function settingsChangePassword(){
 
 function setMode(mode){
   if(['light','dark','auto'].indexOf(mode)<0) mode='auto';
-  document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
+  document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
   setConfig('colorMode',mode);
   // Tema SİLİNMİYOR — aynı ailenin istenen yarısına geçiliyor
   var uygulanan=window._temaUygula();
@@ -15809,7 +15863,7 @@ document.addEventListener('DOMContentLoaded',function(){
     if(fs&&fsVal)fsVal.textContent=fs.value+'px';
     // Mode
     const savedMode=getConfig('colorMode','auto');
-    document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(b=>b.classList.toggle('active',b.dataset.modeBtn===savedMode));
+    document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(b=>b.classList.toggle('active',b.dataset.modeBtn===savedMode));
     // Performans modu düğmeleri
     if(typeof applyPerfMode==='function') applyPerfMode(getConfig('perfMode','auto'), true);
     // Active theme card sync
@@ -19401,7 +19455,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
         var _acik = (typeof window._temaAcikMi==='function') ? window._temaAcikMi(id) : !!t.lightMode;
         setConfig('colorMode', _acik ? 'light' : 'dark');
         localStorage.setItem('config_theme_aktif', JSON.stringify(id));
-        document.querySelectorAll('.s-mode-btn:not(.s-perf-btn)').forEach(function(bt){
+        document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(function(bt){
           bt.classList.toggle('active', bt.dataset.modeBtn===(_acik?'light':'dark')); });
       }catch(_){}
     }
