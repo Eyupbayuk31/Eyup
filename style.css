@@ -14327,6 +14327,11 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-detail-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:16px; flex-shrink:0; }
 .ft-detail-model{ font-size:26px; font-weight:900; color:var(--text-main); letter-spacing:-.02em; line-height:1.1; }
 .ft-detail-meta{ display:flex; gap:16px; flex-wrap:wrap; margin-top:6px; font-size:12.5px; color:var(--text-muted); }
+.ft-detail-head-l{ flex:1; min-width:0; }
+.ft-detail-acts{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.ft-detail-head > .ft-x{ flex-shrink:0; }
+.ft-addrow-ok{ display:none; }
+.km-renk{ font-weight:800; color:var(--text-main); }
 .ft-detail-meta span{ display:inline-flex; align-items:center; gap:6px; }
 .ft-detail-meta i{ color:var(--primary); font-size:11px; }
 .ft-detail-meta .ft-termin-late{ color:var(--danger); font-weight:700; }
@@ -16311,3 +16316,105 @@ body:has(#tkGelenModal.show) #cloudSyncBadge{ display:none !important; }
   background:transparent; color:var(--primary-light); border:1px solid currentColor;
 }
 .tkg-ac{ white-space:nowrap; }
+
+/* ============================================================
+   TAKİP DETAY PENCERESİ — TELEFON (Fermuar / Kordon / Tela)
+   Eskiden: pencere alt menünün (z-index 9999) ALTINDA kalıyordu, en alttaki
+   satırın butonlarına dokunulamıyordu; yalnız liste kaydığı için başlık +
+   özet + form ekranın çoğunu yiyordu; satırlar etiketsiz iki sütuna
+   dökülüp hangi sayının ne olduğu belli olmuyordu.
+   Şimdi: tam ekran, tek parça kayar, başlık üstte sabit, alt menü gizli,
+   her beden etiketli bir kart, ekleme formu dokununca açılır.
+   ============================================================ */
+@media(max-width:760px){
+  .ft-detail-overlay{ padding:0 !important; align-items:stretch !important; justify-content:stretch !important; }
+  .ft-detail-overlay .ft-detail-modal{
+    width:100vw; max-width:100vw; height:100vh; height:100dvh; max-height:none;
+    margin:0; border:0; border-radius:0; display:block;
+    overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+    padding:0 14px calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Pencere açıkken alttaki/yüzen öğeler araya girmesin */
+  body:has(.ft-detail-overlay.show) .bottom-nav,
+  body:has(.ft-detail-overlay.show) #cloudSyncBadge,
+  body:has(.ft-detail-overlay.show) #v8ScrollTop,
+  body:has(.ft-detail-overlay.show) .v8-scroll-top,
+  body:has(.ft-detail-overlay.show) .fab,
+  body:has(.ft-detail-overlay.show) .v8-fab-menu{ display:none !important; }
+
+  /* Başlık: model + X üstte, işlem butonları altında eşit genişlikte; kaydırınca sabit */
+  .ft-detail-overlay .ft-detail-head{
+    position:sticky; top:0; z-index:6;
+    display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"l x" "a a";
+    gap:8px 10px; align-items:start;
+    margin:0 -14px 12px; padding:calc(12px + env(safe-area-inset-top, 0px)) 14px 10px;
+    background:var(--bg-card-solid); border-bottom:1px solid var(--border);
+  }
+  .ft-detail-overlay .ft-detail-head-l{ grid-area:l; }
+  .ft-detail-overlay .ft-detail-head > .ft-x{ grid-area:x; }
+  .ft-detail-overlay .ft-detail-model{ font-size:22px; }
+  .ft-detail-overlay .ft-detail-meta{ gap:3px 12px; margin-top:4px; font-size:12px; }
+  .ft-detail-overlay .ft-detail-acts{ grid-area:a; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:6px; }
+  .ft-detail-overlay .ft-detail-acts .btn{ justify-content:center; text-align:center; white-space:normal; line-height:1.15; height:100%; min-height:44px; margin:0; padding:6px; font-size:12px; gap:6px; }
+
+  /* Özet kutuları: dördü tek sırada, küçük */
+  .ft-detail-overlay .ft-detail-kpis{ grid-template-columns:repeat(auto-fit, minmax(72px, 1fr)); gap:6px; margin-bottom:12px; }
+  .ft-detail-overlay .ft-dkpi{ flex-direction:column; align-items:flex-start; gap:3px; padding:8px 9px; border-radius:10px; }
+  .ft-detail-overlay .ft-dkpi i{ display:none; }
+  .ft-detail-overlay .ft-dkpi b{ font-size:15px; }
+  .ft-detail-overlay .ft-dkpi span{ display:block; font-size:8.5px; line-height:1.2; }
+
+  /* Ekleme formu: kapalı başlar, başlığa dokununca açılır */
+  .ft-detail-overlay .ft-addrow{ padding:0; margin-bottom:12px; }
+  .ft-detail-overlay .ft-addrow-title{ margin:0; padding:13px 14px; cursor:pointer; user-select:none; -webkit-user-select:none; }
+  .ft-detail-overlay .ft-addrow-ok{ display:inline-block; margin-left:auto; transition:transform .2s; }
+  .ft-detail-overlay .ft-addrow.acik .ft-addrow-ok{ transform:rotate(180deg); }
+  .ft-detail-overlay .ft-addrow:not(.acik) > :not(.ft-addrow-title){ display:none; }
+  .ft-detail-overlay .ft-addrow.acik{ padding:0 14px 14px; }
+  .ft-detail-overlay .ft-addrow.acik .ft-addrow-title{ margin:0 -14px 4px; }
+
+  /* Liste kendi içinde değil, pencereyle birlikte kayar */
+  .ft-detail-overlay .ft-rows{ overflow:visible; flex:none; min-height:0; }
+
+  /* Her beden = bir kart */
+  .ft-detail-overlay .ft-rowwrap,
+  .ft-detail-overlay .ft-rowwrap:last-child{
+    border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden;
+    background:color-mix(in srgb, var(--primary) 3%, transparent);
+  }
+  .ft-detail-overlay .ft-row{
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    grid-template-areas:"bed cm renk stok" "sip gel kul eks" "acts acts acts acts";
+    gap:10px 8px; padding:12px; font-size:13px; align-items:center;
+  }
+  .ft-detail-overlay .ft-row.km-row{ grid-template-areas:"renk renk renk stok" "sip gel kul eks" "acts acts acts acts"; }
+  .ft-detail-overlay .ft-row-beden{ grid-area:bed; font-size:17px; }
+  .ft-detail-overlay .ft-row-cm{ grid-area:cm; font-size:15px; }
+  .ft-detail-overlay .ft-row-renk{ grid-area:renk; color:var(--text-main); overflow-wrap:anywhere; }
+  .ft-detail-overlay .ft-row.km-row .ft-row-renk{ font-size:16px; }
+  .ft-detail-overlay .ft-row-stok{ grid-area:stok; text-align:right; font-size:18px; line-height:1.1; }
+  .ft-detail-overlay .ft-c-sip{ grid-area:sip; }
+  .ft-detail-overlay .ft-c-gel{ grid-area:gel; }
+  .ft-detail-overlay .ft-c-kul{ grid-area:kul; }
+  .ft-detail-overlay .ft-c-eks{ grid-area:eks; }
+  .ft-detail-overlay .ft-c-sip, .ft-detail-overlay .ft-c-gel,
+  .ft-detail-overlay .ft-c-kul, .ft-detail-overlay .ft-c-eks{
+    min-width:0; padding:6px 7px; border-radius:8px; font-weight:700; font-variant-numeric:tabular-nums;
+    background:color-mix(in srgb, var(--text-dim, #888) 8%, transparent);
+  }
+  .ft-detail-overlay .ft-row [data-l]::before{
+    content:attr(data-l); display:block; margin-bottom:2px;
+    font-size:8.5px; font-weight:800; letter-spacing:0; text-transform:uppercase; color:var(--text-muted);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .ft-detail-overlay .ft-row-acts{ grid-area:acts; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; margin:0; }
+  .ft-detail-overlay .ft-row-acts .btn{ min-height:42px; justify-content:center; font-size:15px; }
+
+  /* Tela verme satırları da kart olsun, sil butonu rahat basılsın */
+  .ft-detail-overlay .tk-row,
+  .ft-detail-overlay .tk-row:last-child{ border:1px solid var(--border); border-left:3px solid var(--primary); border-radius:10px; margin-bottom:8px; }
+  .ft-detail-overlay .tk-row-date{ grid-column:1 / 3; grid-row:2; }
+  .ft-detail-overlay .tk-row button{ grid-column:3; grid-row:2; align-self:center; min-width:42px; min-height:42px; justify-content:center; }
+  .ft-detail-overlay .tk-stok-cm{ flex-wrap:nowrap; padding:9px 12px; }
+  .ft-detail-overlay .tk-sc-kalan{ width:auto; margin-left:auto; }
+}
