@@ -6436,7 +6436,7 @@ function ftRenderDetail(){
         <span class="ft-c-sip" data-l="Sipariş">${(+z.siparisAdet||0).toLocaleString('tr')}</span>
         <span class="pos ft-c-gel" data-l="Gelen">${zg.toLocaleString('tr')}</span>
         <span class="neg ft-c-kul" data-l="Kullanılan">${zk.toLocaleString('tr')}</span>
-        <span class="${zb>0?'bad':''} ft-c-eks" data-l="Eksik">${zb>0?zb.toLocaleString('tr'):'—'}</span>
+        <span class="${zb>0?'bad':(zg>(+z.siparisAdet||0)?'fz':'')} ft-c-eks" data-l="Eksik">${zb>0?zb.toLocaleString('tr'):(zg>(+z.siparisAdet||0)?'+'+(zg-(+z.siparisAdet||0)).toLocaleString('tr')+' fazla':'—')}</span>
         <span class="ft-row-stok ${stokCls}" data-l="Stok">${zs.toLocaleString('tr')}</span>
         <span class="ft-row-acts">
           <button class="btn btn-xs btn-primary" onclick="ftOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
@@ -6679,7 +6679,9 @@ function _takipTeslimTarih(t){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(t||''); r
 function _takipTeslimBelgesi(o){
   const S=o.sayi, now=new Date();
   const tarih=now.toLocaleDateString('tr-TR'), saat=now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
-  const T={sip:{adet:0,metre:0}, gel:{adet:0,metre:0}, eks:{adet:0,metre:0}};
+  const T={sip:{adet:0,metre:0}, gel:{adet:0,metre:0}, eks:{adet:0,metre:0}, fz:{adet:0,metre:0}};
+  // Siparişten FAZLA gelen (eksik değil ama atölye bilsin: "✓ Tamam · +33 fazla")
+  const fazla=r=>Math.max(0, r.gelen-r.siparis);
   const toplamYaz=t=>{ const p=[]; if(t.adet>0 || t.metre<=0) p.push(S(t.adet,false)+' adet'); if(t.metre>0) p.push(S(t.metre,true)+' m'); return p.join(' + '); };
   const kunye=m=>[m.renk?('Renk: <b>'+esc(m.renk)+'</b>'):'', m.tedarikci?('Tedarikçi: <b>'+esc(m.tedarikci)+'</b>'):'',
                   'Termin: <b>'+(m.termin?esc(_takipTeslimTarih(m.termin)):'—')+'</b>'].filter(Boolean).join('<span class="ay">·</span>');
@@ -6688,8 +6690,8 @@ function _takipTeslimBelgesi(o){
 
   o.models.forEach(m=>{
     const mm=!!m.metre, K=mm?'metre':'adet', BR=mm?'m':'adet';
-    const sip=m.rows.reduce((s,r)=>s+r.siparis,0), gel=m.rows.reduce((s,r)=>s+r.gelen,0), eks=m.rows.reduce((s,r)=>s+r.eksik,0);
-    T.sip[K]+=sip; T.gel[K]+=gel; T.eks[K]+=eks;
+    const sip=m.rows.reduce((s,r)=>s+r.siparis,0), gel=m.rows.reduce((s,r)=>s+r.gelen,0), eks=m.rows.reduce((s,r)=>s+r.eksik,0), fz=m.rows.reduce((s,r)=>s+fazla(r),0);
+    T.sip[K]+=sip; T.gel[K]+=gel; T.eks[K]+=eks; T.fz[K]+=fz;
     if(eks>0) eksikModel++; else tamamModel++;
     // "Sadece eksik" açık olsa da TEK ve tamamlanmış modelde tam liste basılır:
     // gösterilecek eksik yok, atölye neyin geldiğini görmeli (sayfa boş kalmasın).
@@ -6704,13 +6706,13 @@ function _takipTeslimBelgesi(o){
       ${mm?'':`<td class="bd">${esc(r.beden||'—')}</td><td class="cm">${r.cm!=null?esc(String(r.cm))+' cm':'—'}</td>`}
       ${renkSut?`<td${mm?' class="bd"':''}>${esc(r.renk||'—')}</td>`:''}
       <td class="n">${S(r.siparis,mm)}</td><td class="n">${S(r.gelen,mm)}</td>
-      <td class="d">${r.eksik>0?`<span class="rz eks">✗ ${S(r.eksik,mm)} ${BR} eksik</span>`:'<span class="rz tam">✓ Tamam</span>'}</td>
+      <td class="d">${r.eksik>0?`<span class="rz eks">✗ ${S(r.eksik,mm)} ${BR} eksik</span>`:(fazla(r)>0?`<span class="rz tam">✓ Tamam · <span class="fz">+${S(fazla(r),mm)} fazla</span></span>`:'<span class="rz tam">✓ Tamam</span>')}</td>
     </tr>`).join('');
     const tablo = rows.length
       ? `<table><thead><tr>${bas}</tr></thead><tbody>${satirlar}</tbody></table>`
       : `<div class="hepsi">✓ Bu modelin tüm ${mm?'renkleri':'bedenleri'} geldi.</div>`;
     const gizliNot = (gizli>0 && rows.length) ? `<div class="gizli">Listede yalnızca eksik olanlar var — diğer ${gizli} ${mm?'renk':'beden'} tamam geldi.</div>` : '';
-    const rozet = eks>0 ? `<span class="rz eks buyuk">✗ ${S(eks,mm)} ${BR} EKSİK</span>` : '<span class="rz tam buyuk">✓ TAMAM</span>';
+    const rozet = eks>0 ? `<span class="rz eks buyuk">✗ ${S(eks,mm)} ${BR} EKSİK</span>` : `<span class="rz tam buyuk">✓ TAMAM${fz>0?` · <span class="fz">+${S(fz,mm)} ${BR} fazla</span>`:''}</span>`;
     bloklar += `<section class="mb">
       ${tek?'':`<div class="mb-hd"><div><div class="mb-kod">${esc(m.kod)}${m.birimEtiket?` <span class="be">${m.birimEtiket}</span>`:''}</div><div class="mb-kn">${kunye(m)}</div></div>${rozet}</div>`}
       ${tablo}${gizliNot}
@@ -6723,7 +6725,8 @@ function _takipTeslimBelgesi(o){
     ? (tek ? `Toplam <b>${toplamYaz(T.eks)}</b> ${o.tur.toLowerCase()} henüz gelmedi.`
            : `${tamamModel} model tamam, <b>${eksikModel} modelde</b> eksik var — toplam <b>${toplamYaz(T.eks)}</b> bekleniyor.`)
     : (tek ? `Tüm ${o.cogul} geldi. Toplam <b>${toplamYaz(T.gel)}</b> teslim alındı.`
-           : `${o.models.length} modelin tüm ${o.cogul} geldi. Toplam <b>${toplamYaz(T.gel)}</b> teslim alındı.`);
+           : `${o.models.length} modelin tüm ${o.cogul} geldi. Toplam <b>${toplamYaz(T.gel)}</b> teslim alındı.`)
+    + ((T.fz.adet>0 || T.fz.metre>0) ? ` Siparişten <b>${toplamYaz(T.fz)} fazla</b> geldi.` : '');
   const m0=o.models[0];
   const baslik = tek ? esc(m0.kod) : (o.models.length+' model');
   const ustKunye = tek ? kunye(m0)+(m0.birimEtiket?'<span class="ay">·</span>'+m0.birimEtiket:'') : o.models.map(m=>esc(m.kod)).join(', ');
@@ -6771,6 +6774,7 @@ function _takipTeslimBelgesi(o){
   .rz.tam{color:#047857;border-color:#a7f3d0;background:#ecfdf5;}
   .rz.eks{color:#c2410c;border-color:#fdba74;background:#fff;}
   .rz.buyuk{font-size:15px;padding:5px 12px;}
+  .rz .fz{color:#1d4ed8;}
   .hepsi{font-size:16px;font-weight:800;color:#047857;padding:12px 10px;border-bottom:1px solid #d1d5db;}
   .gizli{font-size:12px;color:#6b7280;margin-top:6px;}
   .alt{margin-top:auto;padding-top:18px;}
@@ -7410,7 +7414,7 @@ function ktRenderDetail(){
         <span class="ft-c-sip" data-l="Sipariş${metreMi?' (m)':''}">${S(z.siparisAdet)}</span>
         <span class="pos ft-c-gel" data-l="Gelen">${S(zg)}</span>
         <span class="neg ft-c-kul" data-l="Kullanılan">${S(zk)}</span>
-        <span class="${zb>0?'bad':''} ft-c-eks" data-l="Eksik">${zb>0?S(zb):'—'}</span>
+        <span class="${zb>0?'bad':(zg>(+z.siparisAdet||0)?'fz':'')} ft-c-eks" data-l="Eksik">${zb>0?S(zb):(zg>(+z.siparisAdet||0)?'+'+S(zg-(+z.siparisAdet||0))+' fazla':'—')}</span>
         <span class="ft-row-stok ${stokCls}" data-l="Stok">${S(zs)}</span>
         <span class="ft-row-acts">
           <button class="btn btn-xs btn-primary" onclick="ktOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
