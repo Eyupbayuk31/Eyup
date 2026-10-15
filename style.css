@@ -16919,3 +16919,66 @@ html[data-tasarim] .empty-state .es-btn i, html .empty-state .es-btn i{ font-siz
 @media (max-width:768px){
   html[data-tasarim="yeni"] .topbar{ background:color-mix(in srgb, var(--bg-main) 94%, transparent) !important; }
 }
+
+/* ══ TASARIM 2 · B: TUTARLILIK ════════════════════════════════════════ */
+/* B5 — Kendi başlığını kullanan sayfalar da serif başlık + aynı ikon kutusu */
+html[data-tasarim="yeni"] #mainContent :is(.rep-hero-title, .aks-title, .cal-ph-title){
+  font-family:var(--t2-serif) !important; font-weight:400 !important;
+  font-size:clamp(30px, 3.4vw, 42px) !important; letter-spacing:-1px !important; line-height:1.05 !important;
+  background:none !important; -webkit-text-fill-color:currentColor !important; color:var(--text-main) !important;
+}
+html[data-tasarim="yeni"] #mainContent .rep-hero-amp{ font-style:italic; color:var(--primary) !important; -webkit-text-fill-color:var(--primary) !important; }
+html[data-tasarim="yeni"] #mainContent :is(.rep-hero-icon, .aks-icon-badge, .cal-ph-icon, .ak-hicon, .ft-page-badge){
+  background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))) !important;
+  color:var(--on-primary, #fff) !important;
+  border:1px solid color-mix(in srgb, var(--primary-light, var(--primary)) 45%, transparent) !important;
+  box-shadow:0 10px 26px -10px color-mix(in srgb, var(--primary) 65%, transparent), inset 0 1px 0 rgba(255,255,255,.22) !important;
+}
+html[data-tasarim="yeni"] #mainContent :is(.rep-hero-icon, .aks-icon-badge, .cal-ph-icon, .ak-hicon, .ft-page-badge) i{ color:inherit !important; -webkit-text-fill-color:currentColor !important; background:none !important; }
+html[data-tasarim="yeni"] #mainContent :is(.rep-hero, .aks-header, .cal-page-header){ background:transparent !important; border-color:transparent !important; box-shadow:none !important; }
+
+/* B6 — Tablolar: aralıklı küçük başlıklar, üstüne gelince tema ışığı, başlık satırı yapışkan */
+html[data-tasarim="yeni"] #mainContent table thead th{
+  font-family:var(--t2-mono) !important; font-size:10px !important; font-weight:700 !important;
+  letter-spacing:.12em !important; text-transform:uppercase !important; color:var(--text-muted) !important;
+  position:sticky; top:0; z-index:2;
+  background:color-mix(in srgb, var(--bg-main) 92%, var(--primary)) !important;
+  border-bottom:1px solid var(--t2-cizgi) !important;
+}
+html[data-tasarim="yeni"] #mainContent table tbody tr{ transition:background-color .18s; }
+@media (hover:hover){
+  html[data-tasarim="yeni"] #mainContent table tbody tr:hover > td{
+    background:color-mix(in srgb, var(--primary) 7%, transparent) !important;
+  }
+}
+html[data-tasarim="yeni"] #mainContent table tbody td{ border-bottom-color:color-mix(in srgb, var(--primary) 9%, var(--border)) !important; }
+
+/* B7 — Bildirimler: cam kart, solda renkli şerit, ikon kutusu */
+html[data-tasarim="yeni"] .toast{ --t2-tc:var(--info, #3b82f6); }
+html[data-tasarim="yeni"] .toast.toast-success{ --t2-tc:var(--success, #10b981); }
+html[data-tasarim="yeni"] .toast.toast-error{ --t2-tc:var(--danger, #ef4444); }
+html[data-tasarim="yeni"] .toast.toast-warning{ --t2-tc:var(--warning, #f59e0b); }
+html[data-tasarim="yeni"] .toast-container .toast{
+  position:relative; overflow:hidden;
+  background:color-mix(in srgb, var(--bg-main) 93%, var(--t2-tc)) !important;
+  color:var(--text-main) !important;
+  border:1px solid color-mix(in srgb, var(--t2-tc) 35%, var(--border)) !important;
+  border-radius:14px !important; padding-left:18px !important;
+  -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  box-shadow:0 20px 44px -18px rgba(0,0,0,.75), 0 0 0 1px color-mix(in srgb, var(--t2-tc) 10%, transparent) !important;
+}
+html[data-tasarim="yeni"] .toast-container .toast::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--t2-tc);
+  box-shadow:0 0 12px var(--t2-tc);
+}
+html[data-tasarim="yeni"] .toast-container .toast .toast-icon{
+  width:32px; height:32px; min-width:32px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--t2-tc) 16%, transparent) !important; color:var(--t2-tc) !important;
+}
+html[data-tasarim="yeni"] .toast-container .toast .toast-message{ color:var(--text-main) !important; font-weight:600; }
+html[data-tasarim="yeni"] .toast-container .toast .toast-close{ color:var(--text-muted) !important; background:transparent !important; }
+/* Seçili tür çipinde yazı zeminle aynı renge düşüp kayboluyordu (her iki tasarımda) */
+.type-chip.active, .type-chip.active i{ color:var(--on-primary, #fff) !important; -webkit-text-fill-color:var(--on-primary, #fff) !important; }
+.type-chip.active .tc-count{ color:inherit !important; background:rgba(0,0,0,.18) !important; }
+.type-chip.active::before{ opacity:0 !important; }   /* zemin zaten geçişli; bu katman yazıyı örtüyordu */
+html[data-tasarim="yeni"] .toast-container{ z-index:100000 !important; }
