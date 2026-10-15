@@ -1793,6 +1793,13 @@ if(typeof Chart==='undefined'){
         <input type="text" id="listSearch" placeholder="İrsaliye no, model, atölye veya kişi ara..." oninput="applyFilters()">
       </div>
 
+      <!-- Telefonda filtreler ve dışa aktarma bu düğmenin altına katlanır (yeni tasarım) -->
+      <button type="button" class="t2-filtre-ac" id="t2FiltreAc" onclick="t2FiltreAcKapa()" aria-expanded="false" aria-controls="t2FiltreKutu">
+        <i class="fas fa-sliders"></i><span>Filtrele ve dışa aktar</span>
+        <span class="t2-filtre-say" id="t2FiltreSay" hidden>0</span>
+        <i class="fas fa-chevron-down t2-fc"></i>
+      </button>
+      <div class="t2-filtre-kutu" id="t2FiltreKutu">
       <!-- Filter Row: Date + Atölye + Durum + Sort — özel (tema uyumlu) dropdown'lar -->
       <div class="filter-row">
         <div class="pdd">
@@ -1865,6 +1872,7 @@ if(typeof Chart==='undefined'){
         <button class="export-btn" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> Filtreli CSV</button>
         <button class="export-btn ex-pdf" onclick="printListPDF()"><i class="fas fa-file-pdf"></i> PDF Yazdır</button>
       </div>
+      </div><!-- /t2-filtre-kutu -->
 
       <!-- Bulk Action Bar -->
       <div class="bulk-bar" id="bulkBar">
@@ -4331,6 +4339,7 @@ if(typeof Chart==='undefined'){
 <!-- Bottom Navigation (Mobile) -->
 <nav class="bottom-nav" id="bottomNav">
   <div class="bottom-nav-inner">
+    <span class="t2-nav-ind" aria-hidden="true"></span>
     <a class="active" onclick="showPage('home')" data-nav="home"><i class="fas fa-home"></i><span>Ana</span></a>
     <a onclick="showPage('new')" data-nav="new"><i class="fas fa-plus-circle"></i><span>Yeni</span></a>
     <a onclick="showPage('list')" data-nav="list"><i class="fas fa-list"></i><span>Liste</span></a>
@@ -4480,6 +4489,8 @@ function showPage(page){
   document.querySelectorAll('.bottom-nav a').forEach(a=>a.classList.remove('active'));
   const bIdx=bottomNavPages.indexOf(page);
   if(bIdx>=0){document.querySelectorAll('.bottom-nav a')[bIdx]?.classList.add('active');}
+  try{ var _bn=document.getElementById('bottomNav'); if(_bn){ _bn.style.setProperty('--t2-i', Math.max(0,bIdx)); _bn.classList.toggle('t2-nav-yok', bIdx<0); } }catch(_){}
+  try{ setTimeout(_t2BaslikIzle, 30); if(page==='list') _t2FiltreSay(); }catch(_){}
   
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
 
@@ -8648,6 +8659,7 @@ document.addEventListener('click', function(e){
 });
 
 function applyFilters(){
+  try{ _t2FiltreSay(); }catch(_){}
   renderTypeFilterBar();
   loadAtolyeFilter();
   pddSyncAll();
@@ -12567,6 +12579,40 @@ function setTheme(theme){
   try{ document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(function(b){
     b.classList.toggle('active', b.dataset.modeBtn===getConfig('colorMode','dark')); }); }catch(_){}
 }
+// ── Telefonda büyük başlık: sayfadaki başlık ekrandan çıkınca üst bara geçer ──
+var _t2Gozlemci=null;
+var _T2_BASLIK_SEC='.section-header h2, .ak-head h2, .rep-hero-title, .aks-title, .cal-ph-title, .db-greeting';
+function _t2BaslikIzle(){
+  var kok=document.documentElement;
+  if(_t2Gozlemci){ try{ _t2Gozlemci.disconnect(); }catch(_){} _t2Gozlemci=null; }
+  var sayfa=document.querySelector('.page.active');
+  var h=sayfa && sayfa.querySelector(_T2_BASLIK_SEC);
+  if(!h || !('IntersectionObserver' in window)){ kok.classList.add('t2-bas-ust'); return; }
+  kok.classList.remove('t2-bas-ust');
+  _t2Gozlemci=new IntersectionObserver(function(g){
+    var e=g[g.length-1]; kok.classList.toggle('t2-bas-ust', !e.isIntersecting);
+  }, { rootMargin:'-64px 0px 0px 0px', threshold:0 });
+  _t2Gozlemci.observe(h);
+}
+// ── İrsaliyeler: telefonda filtre paneli + etkin filtre sayısı ──
+function t2FiltreAcKapa(){
+  var k=document.getElementById('t2FiltreKutu'), b=document.getElementById('t2FiltreAc'); if(!k||!b) return;
+  var acik=k.classList.toggle('acik'); b.classList.toggle('acik', acik); b.setAttribute('aria-expanded', acik?'true':'false');
+}
+function _t2FiltreSay(){
+  var el=document.getElementById('t2FiltreSay'); if(!el) return;
+  var v=function(id){ var e=document.getElementById(id); return e ? e.value : ''; };
+  var n=0;
+  if(v('filterDate') && v('filterDate')!=='all') n++;
+  if(v('filterAtolye') && v('filterAtolye')!=='all') n++;
+  if(v('filterDurum') && v('filterDurum')!=='all') n++;
+  if(v('filterSort') && v('filterSort')!=='newest') n++;
+  if(v('filterDateFrom') || v('filterDateTo')) n++;
+  el.textContent=n; el.hidden = !n;
+}
+document.addEventListener('change', function(e){ if(e.target && e.target.closest && e.target.closest('#page-list')) setTimeout(_t2FiltreSay, 0); });
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(_t2BaslikIzle, 300); });
+
 // Tasarım seçimi (cihaza özel): 'yeni' | 'klasik'
 function setTasarim(v){
   v = (v==='klasik') ? 'klasik' : 'yeni';
