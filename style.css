@@ -16771,7 +16771,9 @@ html[data-tasarim="yeni"] #cloudSyncBadge:not([data-durum="ok"]):not([data-durum
 
 /* ── Raporlar sekmeleri: sığmayınca yazılar kesiliyordu (butonlar daralıyordu).
    Butonlar daralmaz; geniş ekranda iki satıra iner, telefonda yana kayar. ── */
-.rep-tab-btn{ flex:0 0 auto !important; overflow:visible !important; }
+/* overflow gizli kalmalı: .btn::before parlama katmanı butonun dışına taşıp sekmelerin üstünde
+   bulanık beyaz lekeler bırakıyordu. Kesilme sorunu daralmadan (flex-shrink) geliyordu. */
+.rep-tab-btn{ flex:0 0 auto !important; overflow:hidden !important; position:relative !important; }
 @media (min-width:769px){
   .rep-tab-bar{ flex-wrap:wrap !important; row-gap:6px !important; }
 }
