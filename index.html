@@ -74,7 +74,7 @@
       if(!d || (d.app !== 'irsaliyepro' && d.a !== 'ip')) return;
     }
 
-    // ✅ Geçerli viewer URL
+    // Geçerli viewer URL
     window._isViewerUrl = true;
 
     // ════════════════════════════════════════════════════════════════
@@ -88,8 +88,8 @@
     var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     var typeLabel  = TYPE_NAMES[d.type] || 'İrsaliye';
     var durumBadge = d.durum === 'teslim'
-      ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">✓ Teslim Edildi</span>'
-      : '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;">⏳ Bekliyor</span>';
+      ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">Teslim Edildi</span>'
+      : '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;">Bekliyor</span>';
 
     function tbl(baslik, cols, rows, toplam){
       if(!rows) return '';
@@ -107,7 +107,7 @@
         .map(function(k){return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(SIZE_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.sizes[k]+'</td></tr>';}).join('');
       if(rows){
         var total = Object.values(d.sizes).reduce(function(a,b){return a+(+b||0);},0);
-        sizesHtml += tbl('📦 Poşet Ölçüleri',['Ölçü','Adet'],rows,total);
+        sizesHtml += tbl('Poşet Ölçüleri',['Ölçü','Adet'],rows,total);
       }
     }
     if(d.bant){
@@ -115,7 +115,7 @@
         .map(function(k){return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BANT_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.bant[k]+'</td></tr>';}).join('');
       if(rows2){
         var total2 = Object.values(d.bant).reduce(function(a,b){return a+(+b||0);},0);
-        sizesHtml += tbl('🎀 Bant & Kılçık',['Ürün','Adet'],rows2,total2);
+        sizesHtml += tbl('Bant & Kılçık',['Ürün','Adet'],rows2,total2);
       }
     }
     if(d.beden){
@@ -128,12 +128,12 @@
         if(typeof v === 'object') return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(v.cm||'-')+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(v.adet||0)+'</td></tr>';
         return '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td colspan="2" style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+v+'</td></tr>';
       }).join('');
-      sizesHtml += tbl('🔗 Beden Detayları',['Beden','CM','Adet'],rows3, d.total||null);
+      sizesHtml += tbl('Beden Detayları',['Beden','CM','Adet'],rows3, d.total||null);
     }
     // Kordon sadece metre olarak kesilmişse (faturada cm yoksa) metre gösterilir
     var korMetre = (d.olcuTipi==='metre');
     if(korMetre){
-      sizesHtml += tbl('🪢 Kordon Miktarı',['Alan','Değer'],
+      sizesHtml += tbl('Kordon Miktarı',['Alan','Değer'],
         '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;font-weight:600;">Toplam Metre</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+(d.metre||0)+' m</td></tr>',
         null);
     }
@@ -142,7 +142,7 @@
       if(d.cm)    rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">CM</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.cm+'</td></tr>';
       if(d.metre) rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">Metre</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.metre+'</td></tr>';
       if(d.adet)  rows4 += '<tr><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">Adet</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+d.adet+'</td></tr>';
-      sizesHtml += tbl('📏 Detaylar',['Alan','Değer'],rows4,null);
+      sizesHtml += tbl('Detaylar',['Alan','Değer'],rows4,null);
     }
     if(d.olcular && Array.isArray(d.olcular) && d.olcular.length > 0){
       var korBd = d.olcular.some(function(o){ return o && (o.beden||'').toString().trim(); });
@@ -151,7 +151,7 @@
           '<td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;font-weight:600;">'+o.cm+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #ede9fe;font-size:13px;">'+o.adet+' adet</td></tr>';
       }).join('');
       var korTotal = d.olcular.reduce(function(a,o){return a+(+o.adet||0);},0);
-      sizesHtml += tbl('🪢 Kordon Ölçüleri', korBd?['Beden','CM','Adet']:['CM','Adet'], rows5, korTotal+' adet');
+      sizesHtml += tbl('Kordon Ölçüleri', korBd?['Beden','CM','Adet']:['CM','Adet'], rows5, korTotal+' adet');
     }
     if(d.totalAdet) sizesHtml += '<div style="text-align:right;font-size:15px;font-weight:800;color:#7c3aed;padding:10px 0;">Toplam Adet: '+d.totalAdet+'</div>';
 
@@ -162,19 +162,19 @@
         return '<div style="border:1px solid #ede9fe;border-radius:10px;padding:8px;background:#f9fafb;">'
           +'<a href="'+p.url+'" target="_blank" rel="noopener">'
           +'<img src="'+p.url+'" alt="Kanıt '+(i+1)+'" style="display:block;width:100%;height:auto;max-height:250px;object-fit:contain;border-radius:8px;cursor:zoom-in;" '
-          +'onerror="this.parentNode.parentNode.innerHTML=\'<div style=&quot;padding:16px;background:#fef2f2;color:#991b1b;text-align:center;&quot;>⚠️ Fotoğraf yüklenemedi</div>\'">'
+          +'onerror="this.parentNode.parentNode.innerHTML=\'<div style=&quot;padding:16px;background:#fef2f2;color:#991b1b;text-align:center;&quot;>Fotoğraf yüklenemedi</div>\'">'
           +'</a></div>';
       }).join('');
-      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">📸 Kanıt Fotoğrafları ('+d.photos.length+')</h3>'
+      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">Kanıt Fotoğrafları ('+d.photos.length+')</h3>'
         +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;">'+imgs+'</div>'
         +'<div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>';
     } else if(d.photoUrl){
-      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">📸 Ürün Fotoğrafı</h3>'
+      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#7c3aed;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ede9fe;">Ürün Fotoğrafı</h3>'
         +'<a href="'+d.photoUrl+'" target="_blank" rel="noopener">'
         +'<img src="'+d.photoUrl+'" alt="Fotoğraf" style="display:block;width:100%;height:auto;max-height:300px;object-fit:contain;border-radius:10px;">'
         +'</a>';
     } else {
-      photoHtml = '<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;margin-top:12px;">⚠️ Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.</div>';
+      photoHtml = '<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;margin-top:12px;">Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.</div>';
     }
 
     // HTML özel karakterlerini kaçır (XSS koruması)
@@ -199,7 +199,7 @@
       + infoItem('Termin', trTarih(d.termin))
       + (!hasSizeTable ? infoItem('Adet', d.adet) : '')
       + (!hasSizeTable ? infoItem('Toplam', d.total || d.totalAdet) : '')
-      + (d.renk ? '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:10px;padding:10px 12px;grid-column:span 2;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">🎨 Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+esc(d.renk)+'</div></div>' : '');
+      + (d.renk ? '<div style="background:#f8f7fc;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:10px;padding:10px 12px;grid-column:span 2;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+esc(d.renk)+'</div></div>' : '');
 
     var html = '<!DOCTYPE html><html lang="tr"><head>'
       + '<meta charset="UTF-8">'
@@ -221,19 +221,19 @@
       + '</style></head><body>'
       + '<div class="wrap">'
       + '<div class="hdr">'
-      + '<h1>📦 '+typeLabel+'</h1>'
+      + '<h1>'+typeLabel+'</h1>'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;flex-wrap:wrap;gap:8px;">'
       + '<div class="no">'+esc(d.no||'—')+'</div>'
       + '</div></div>'
       + '<div style="padding:20px;">'
       + '<div class="info-grid">'+infoHtml+'</div>'
       + sizesHtml
-      + (d.aciklama ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;color:#92400e;">📝 <b>Not:</b> '+esc(d.aciklama)+'</div>' : '')
+      + (d.aciklama ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;color:#92400e;"><b>Not:</b> '+esc(d.aciklama)+'</div>' : '')
       + '<div style="margin-top:18px;">'+photoHtml+'</div>'
       + '</div>'
       + '<div class="ftr">İrsaliye Pro</div>'
       + '</div>'
-      + '<div class="print-bar"><button onclick="window.print()" class="print-btn">🖨️ PDF Kaydet / Yazdır</button></div>'
+      + '<div class="print-bar"><button onclick="window.print()" class="print-btn">PDF Kaydet / Yazdır</button></div>'
       + '</body></html>';
 
     // ANINDA YAZ — geri kalan HTML dosyasını okumayı DURDUR
@@ -258,7 +258,7 @@
       document.documentElement.appendChild(_ls);
       var _box = document.createElement('div');
       _box.id = '_qrV3LoaderBox';
-      _box.innerHTML = '<div class="b"><div style="font-size:48px;margin-bottom:16px;">📦</div>'
+      _box.innerHTML = '<div class="b"><div style="font-size:44px;margin-bottom:16px;opacity:.6;"><i class="fas fa-box"></i></div>'
         + '<div style="font-size:18px;font-weight:600;color:#7c3aed;">İrsaliye yükleniyor…</div>'
         + '<div id="_qrV3Step" style="font-size:13px;color:#6b7280;margin-top:10px;">Başlatılıyor…</div>'
         + '<div style="font-size:10px;color:#c4b5fd;margin-top:14px;">sürüm: ' + _ver + '</div></div>';
@@ -275,7 +275,7 @@
       function _viewerErr(m){
         try{ var s=document.getElementById('_qrV3Loader'); if(s&&s.parentNode) s.parentNode.removeChild(s); var b=document.getElementById('_qrV3LoaderBox'); if(b&&b.parentNode) b.parentNode.removeChild(b); }catch(_){}
         try{ document.documentElement.style.visibility='visible'; document.body.style.visibility='visible'; }catch(_){}
-        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;"><div style="text-align:center;max-width:400px;padding:20px;"><div style="font-size:48px;">⚠️</div><div style="font-size:18px;font-weight:600;color:#dc2626;margin:8px 0;">İrsaliye Yüklenemedi</div><div style="font-size:13px;color:#6b7280;margin-bottom:16px;word-break:break-word;">'+(m||'')+'</div><button onclick="location.reload()" style="background:#7c3aed;color:#fff;border:0;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;">🔄 Tekrar Dene</button></div></div>';
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;"><div style="text-align:center;max-width:400px;padding:20px;"><div style="font-size:44px;opacity:.7;"><i class="fas fa-triangle-exclamation"></i></div><div style="font-size:18px;font-weight:600;color:#dc2626;margin:8px 0;">İrsaliye Yüklenemedi</div><div style="font-size:13px;color:#6b7280;margin-bottom:16px;word-break:break-word;">'+(m||'')+'</div><button onclick="location.reload()" style="background:#7c3aed;color:#fff;border:0;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;">Tekrar Dene</button></div></div>';
       }
 
       // GitHub raw'a yazma yapilamayan eski v3 QR (r yok) → ana app Firebase'den ceksin
@@ -787,7 +787,7 @@
       } catch(e){
         logError('setData-write', e, {key, size: JSON.stringify(val).length});
         if(e.name === 'QuotaExceededError'){
-          toast('⚠️ Depolama alanı dolu! Eski kayıtları temizleyin.', 'error');
+          toast('Depolama alanı dolu! Eski kayıtları temizleyin.', 'error');
         }
       }
 
@@ -807,7 +807,7 @@
         } catch(err){
           logError('firestore-sync', err, {key});
           console.warn('[fs] write err:', key, err);
-          toast('⚠️ ' + key + ' yazilamadi: ' + (err && err.message || err), true);
+          toast('' + key + ' yazilamadi: ' + (err && err.message || err), true);
           try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('err', key + ' yazılamadı: ' + (err && err.message || err)); }catch(_){}
         }
       })();
@@ -1170,8 +1170,8 @@
         if(!window._fs && !window._isViewerUrl){
           updateCloudBadge('off', window._fsLoadError);
           var why = window._fsLoadError ? (' Sebep: ' + window._fsLoadError) : '';
-          toast('⚠️ Sunucu SDK yuklenemedi — kayitlar SADECE bu cihazda kalir!' + why, true);
-          toast('💡 Firefox kullaniyorsaniz: adres cubugundaki kalkan simgesine tiklayip korumayi bu site icin kapatin, eklentileri (uBlock vb.) devre disi birakin, sayfayi yenileyin.', true);
+          toast('Sunucu SDK yuklenemedi — kayitlar SADECE bu cihazda kalir!' + why, true);
+          toast('Firefox kullaniyorsaniz: adres cubugundaki kalkan simgesine tiklayip korumayi bu site icin kapatin, eklentileri (uBlock vb.) devre disi birakin, sayfayi yenileyin.', true);
         }
       }, 12000);
     }
@@ -1742,7 +1742,7 @@ if(typeof Chart==='undefined'){
             <div class="form-group"><label id="iTeslimAlanLbl">Teslim Alan *</label><input class="form-input" id="iTeslimAlan" placeholder="Ad Soyad"></div>
             <div class="form-group"><label>Termin Tarihi</label><input class="form-input" id="iTermin" type="date"></div>
             <div class="form-group"><label>Durum</label>
-              <select class="form-input" id="iDurum"><option value="bekliyor">⏳ Bekliyor</option><option value="teslim">✓ Teslim Edildi</option></select>
+              <select class="form-input" id="iDurum"><option value="bekliyor">Bekliyor</option><option value="teslim">Teslim Edildi</option></select>
             </div>
             <div class="form-group" style="grid-column:span 2;" id="grpMalAdedi">
               <label>Mal Adeti <span class="lbl-ipucu">kaç adet ürün için verildi — sadece 30×40 ve 35×45 poşetlerle karşılaştırılır</span></label>
@@ -1893,7 +1893,7 @@ if(typeof Chart==='undefined'){
             <tbody id="irsaliyeTable"></tbody>
           </table>
         </div>
-        <div class="empty-state" id="listEmpty" style="display:none;"><i class="fas fa-inbox"></i><p>Aramanıza uygun kayıt bulunamadı.</p></div>
+        <div class="empty-state" id="listEmpty" style="display:none;"><i class="fas fa-inbox"></i><p>Aramanıza uygun kayıt bulunamadı.</p><button class="btn btn-primary btn-sm es-btn" onclick="showPage('new')"><i class="fas fa-plus"></i> Yeni İrsaliye</button></div>
       </div>
 
       <!-- Mobile Cards -->
@@ -2642,7 +2642,7 @@ if(typeof Chart==='undefined'){
       <!-- Kategori filtresi -->
       <div class="type-filter-bar" style="margin-bottom:16px;" id="stokTypeFilter"></div>
 
-      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>Güncelleme</th><th>İşlem</th></tr></thead><tbody id="stokTable"></tbody></table></div><div class="empty-state" id="stokEmpty" style="display:none;"><i class="fas fa-warehouse"></i><p>Henüz stok kaydı yok.</p></div></div>
+      <div class="card table-desktop" style="padding:0;"><div class="table-wrap"><table><thead><tr><th>Malzeme</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Sınır</th><th>Durum</th><th>Güncelleme</th><th>İşlem</th></tr></thead><tbody id="stokTable"></tbody></table></div><div class="empty-state" id="stokEmpty" style="display:none;"><i class="fas fa-warehouse"></i><p>Henüz stok kaydı yok.</p><button class="btn btn-primary btn-sm es-btn" onclick="openStokModal()"><i class="fas fa-plus"></i> Yeni Stok</button></div></div>
       <div class="table-mobile" id="stokMobile" style="display:none;"></div>
     </div>
 
@@ -2665,19 +2665,19 @@ if(typeof Chart==='undefined'){
           <div class="form-group"><label>Kategori *</label>
             <select class="form-input" id="stokKategori" onchange="_stokKatChange()">
               <optgroup label="Ütü &amp; Paket">
-                <option value="Poşet">📦 Poşet</option>
-                <option value="Bant Geniş">🎀 Bant Geniş</option>
-                <option value="Bant Dar">🎗️ Bant Dar</option>
-                <option value="Kılçık">📌 Kılçık</option>
+                <option value="Poşet">Poşet</option>
+                <option value="Bant Geniş">Bant Geniş</option>
+                <option value="Bant Dar">Bant Dar</option>
+                <option value="Kılçık">Kılçık</option>
               </optgroup>
               <optgroup label="Dikim">
-                <option value="Fermuar">🔗 Fermuar</option>
-                <option value="Düğme">🔘 Düğme</option>
-                <option value="Lastik">📏 Lastik</option>
-                <option value="Tela">🧵 Tela</option>
+                <option value="Fermuar">Fermuar</option>
+                <option value="Düğme">Düğme</option>
+                <option value="Lastik">Lastik</option>
+                <option value="Tela">Tela</option>
               </optgroup>
               <optgroup label="Diğer">
-                <option value="Diğer">📋 Diğer</option>
+                <option value="Diğer">Diğer</option>
               </optgroup>
             </select>
           </div>
@@ -2742,7 +2742,7 @@ if(typeof Chart==='undefined'){
       <!-- Header -->
       <div class="rep-hero">
         <div class="rep-hero-left">
-          <div class="rep-hero-icon"><i class="fas fa-chart-mixed"></i></div>
+          <div class="rep-hero-icon"><i class="fas fa-chart-pie"></i></div>
           <div>
             <h2 class="rep-hero-title">Raporlar <span class="rep-hero-amp">&</span> Analiz</h2>
             <p class="rep-hero-sub">Detaylı istatistikler ve performans takibi</p>
@@ -3338,7 +3338,7 @@ if(typeof Chart==='undefined'){
     <!-- ========== GERİ DÖNÜŞÜM ========== -->
     <div class="page" id="page-geridonusum">
       <div class="section-header">
-        <div><h2>🗑️ Geri Dönüşüm Kutusu</h2><p>Silinen kayıtları görüntüleyin ve kurtarın</p></div>
+        <div><h2>Geri Dönüşüm Kutusu</h2><p>Silinen kayıtları görüntüleyin ve kurtarın</p></div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-danger btn-sm" onclick="emptyRecycleBin()"><i class="fas fa-trash"></i> Tümünü Sil</button>
         </div>
@@ -3421,7 +3421,7 @@ if(typeof Chart==='undefined'){
           </div>
           <div class="s-body">
             <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#ef4444;line-height:1.6;">
-              <b>⚠️ Güvenlik:</b> Token sadece bu cihazın tarayıcısında saklanır, uygulama koduna asla gömülmez. Token başkasına verme — repo'nuza yazma yetkisi sağlar. Token'ı kaybederseniz GitHub'dan iptal edip yenisini girin.
+              <b>Güvenlik:</b> Token sadece bu cihazın tarayıcısında saklanır, uygulama koduna asla gömülmez. Token başkasına verme — repo'nuza yazma yetkisi sağlar. Token'ı kaybederseniz GitHub'dan iptal edip yenisini girin.
             </div>
 
             <div class="form-group">
@@ -3944,12 +3944,12 @@ if(typeof Chart==='undefined'){
       <div class="sig-wrap">
         <div class="card-title"><i class="fas fa-list"></i> İrsaliyeler</div>
         <div class="form-group">
-          <input type="text" id="sigSearchInput" class="form-input" placeholder="🔍 İrsaliye no, model veya atölye ara..." oninput="renderSigWaybillList()">
+          <input type="text" id="sigSearchInput" class="form-input" placeholder="İrsaliye no, model veya atölye ara..." oninput="renderSigWaybillList()">
         </div>
         <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
           <button type="button" class="sig-filter-chip active" data-sigfilter="all" onclick="setSigFilter('all')">Tümü</button>
-          <button type="button" class="sig-filter-chip" data-sigfilter="bekliyor" onclick="setSigFilter('bekliyor')">⏳ Bekleyen</button>
-          <button type="button" class="sig-filter-chip" data-sigfilter="signed" onclick="setSigFilter('signed')">📸 Fotoğraflı</button>
+          <button type="button" class="sig-filter-chip" data-sigfilter="bekliyor" onclick="setSigFilter('bekliyor')">Bekleyen</button>
+          <button type="button" class="sig-filter-chip" data-sigfilter="signed" onclick="setSigFilter('signed')">Fotoğraflı</button>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
           <button type="button" class="sig-type-chip active" data-sigtype="all" onclick="setSigTypeFilter('all')">Tüm Türler</button>
@@ -4003,7 +4003,7 @@ if(typeof Chart==='undefined'){
             </div>
             <div id="photoUrlStatus" style="font-size:12px;margin-top:6px;"></div>
             <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7;">
-              <b style="color:var(--primary);">📖 Hızlı rehber:</b><br>
+              <b style="color:var(--primary);">Hızlı rehber:</b><br>
               <b>OneDrive:</b> Fotoğrafa sağ tıkla → Paylaş → Link kopyala<br>
               <b>Google Drive:</b> Fotoğrafa sağ tıkla → "Linki al" → "Linkin olan herkes görebilir" seç<br>
               <b>WhatsApp Web:</b> Fotoğrafı kendine gönder → Açıldığında URL'yi kopyala (geçici)<br>
@@ -4910,7 +4910,7 @@ function deleteStok(id){
   if(typeof window.syncDeleteWithTombstone === 'function'){
     window.syncDeleteWithTombstone('stoklar', [id], [id])
       .then(()=>{ if(typeof window._updateCloudBadge==='function') window._updateCloudBadge('ok'); })
-      .catch(err=>{ console.warn('[stok] silme err:', err); try{ toast('⚠️ Buluta yazılamadı, Yenile ile tekrar deneyin','error'); }catch(_){} });
+      .catch(err=>{ console.warn('[stok] silme err:', err); try{ toast('Buluta yazılamadı, Yenile ile tekrar deneyin','error'); }catch(_){} });
   } else {
     setData('stoklar', next);
   }
@@ -4951,11 +4951,11 @@ function stokHareket(id, tip){
 }
 
 function getStockStatus(miktar, minStok){
-  if(minStok <= 0) return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0, barClass: 'green' };
-  if(miktar <= 0) return { label: '🚨 Tükendi!', class: 'chip-danger', icon: '🚨', urgent: 3, barClass: 'red' };
-  if(miktar <= minStok) return { label: '⚠️ Düşük', class: 'chip-warning', icon: '⚠️', urgent: 2, barClass: 'red' };
-  if(miktar <= minStok * 1.5) return { label: '🔶 Yaklaşıyor', class: 'chip-info', icon: '🔶', urgent: 1, barClass: 'yellow' };
-  return { label: 'Yeterli', class: 'chip-success', icon: '✅', urgent: 0, barClass: 'green' };
+  if(minStok <= 0) return { label: 'Yeterli', class: 'chip-success', icon: '<i class="fas fa-circle-check" style="color:#10b981"></i>', urgent: 0, barClass: 'green' };
+  if(miktar <= 0) return { label: 'Tükendi', class: 'chip-danger', icon: '<i class="fas fa-circle-xmark" style="color:#ef4444"></i>', urgent: 3, barClass: 'red' };
+  if(miktar <= minStok) return { label: 'Düşük', class: 'chip-warning', icon: '<i class="fas fa-triangle-exclamation" style="color:#f59e0b"></i>', urgent: 2, barClass: 'red' };
+  if(miktar <= minStok * 1.5) return { label: 'Yaklaşıyor', class: 'chip-info', icon: '<i class="fas fa-circle-exclamation" style="color:#3b82f6"></i>', urgent: 1, barClass: 'yellow' };
+  return { label: 'Yeterli', class: 'chip-success', icon: '<i class="fas fa-circle-check" style="color:#10b981"></i>', urgent: 0, barClass: 'green' };
 }
 
 function _stokUyariPanelHtml(list, cats){
@@ -5038,6 +5038,8 @@ function renderStokTypeFilter(){
   const counts = {all: list.length};
   list.forEach(s => { counts[s.kategori] = (counts[s.kategori]||0) + 1; });
 
+  // Hiç stok yokken tek başına boş bir "Tümü" çipi görünüyordu — gizle
+  if(!(counts.all||0) && !cats.some(c=>c!=='all' && (counts[c]||0)>0)){ document.getElementById('stokTypeFilter').innerHTML=''; return; }
   document.getElementById('stokTypeFilter').innerHTML = cats.filter(c => c === 'all' || (counts[c]||0) > 0).map(c => `
     <div class="type-chip ${stokCatFilter===c?'active':''}" onclick="setStokCatFilter('${c}')">
       <i class="${icons[c]||'fas fa-box'}"></i> ${c==='all'?'Tümü':c} <span class="tc-count">${counts[c]||0}</span>
@@ -5233,7 +5235,7 @@ function deductStockFromIrsaliye(irsaliye) {
   }
 
   if (warnings.length > 0) {
-    toast('⚠️ Stok Uyarısı: ' + warnings.join(', '), 'error');
+    toast('Stok Uyarısı: ' + warnings.join(', '), 'error');
   }
 
   return updated;
@@ -5312,7 +5314,7 @@ function _aksMapHeader(h){
   if(/raf/.test(h)) return 'raf';
   return null;
 }
-// İşaret sütunu → sayaç. Wingdings "a"=✓, çift "aa"=2, sayı ise sayı, boş → 0.
+// İşaret sütunu → sayaç. Wingdings "a"=, çift "aa"=2, sayı ise sayı, boş → 0.
 function _aksParseCheck(v){
   if(v==null) return 0;
   if(typeof v==='number') return v;
@@ -5450,7 +5452,7 @@ function importAksesuarFromExcel(files){
       });
       setData('aksesuarlar', list);
       renderAksesuarTable();
-      toast(ozet.join('  ·  ')+(cikmisAtlandi?('  ·  '+cikmisAtlandi+' çıkmış model alınmadı'):'')+' ✓','success');
+      toast(ozet.join('  ·  ')+(cikmisAtlandi?('  ·  '+cikmisAtlandi+' çıkmış model alınmadı'):'')+' ','success');
     }catch(err){ console.error('[aks import]', err); toast('Excel okunamadı: '+((err&&err.message)||err),'error'); }
   };
   reader.readAsArrayBuffer(file);
@@ -5560,7 +5562,7 @@ function aksTerminPdf(){
     });
 
     pdf.save('termin-raporu.pdf');
-    toast(sel.length+' model PDF olarak indirildi ✓','success');
+    toast(sel.length+' model PDF olarak indirildi ','success');
   }catch(err){ console.error('[termin pdf]', err); toast('PDF oluşturulamadı: '+((err&&err.message)||err),'error'); }
 }
 
@@ -5807,7 +5809,7 @@ function aksHazirlanacakPdf(){
     }
 
     pdf.save('hazirlanacak-modeller.pdf');
-    toast(sel.length+' model listelendi ✓'+(cikmis?(' · '+cikmis+' çıkmış model atlandı'):''),'success');
+    toast(sel.length+' model listelendi '+(cikmis?(' · '+cikmis+' çıkmış model atlandı'):''),'success');
   }catch(err){ console.error('[hazirlanacak pdf]', err); toast('PDF oluşturulamadı: '+((err&&err.message)||err),'error'); }
 }
 
@@ -6401,7 +6403,7 @@ function ftDeleteModel(id){
     } catch(err){
       console.warn('[ft] atomik silme err:', err);
       try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('err', 'fermuar silinemedi: '+(err&&err.message||err)); }catch(_){}
-      try{ if(typeof toast==='function') toast('⚠️ Buluta yazılamadı, tekrar denemek için Yenile','error'); }catch(_){}
+      try{ if(typeof toast==='function') toast('Buluta yazılamadı, tekrar denemek için Yenile','error'); }catch(_){}
     }
   })();
   renderFermuarTakip(); toast('Model silindi','info');
@@ -7050,7 +7052,7 @@ function ftRenderStockMode(){
   host.innerHTML='<span class="f-stock-chip '+(on?'on':'off')+'">'+
       '<i class="fas '+(on?'fa-shield-halved':'fa-feather')+'"></i> '+
       (on?'Stok kontrolü AÇIK · Takip\'te olmayan model engellenir, stoğu düşer'
-         :'✦ Özel irsaliye · Takip\'te olmasa da kesilir, stok düşmez')+
+         :'Özel irsaliye · Takip\'te olmasa da kesilir, stok düşmez')+
     '</span>'+
     '<button class="btn btn-sm btn-secondary" onclick="ftToggleStockMode()">'+
       '<i class="fas '+(on?'fa-toggle-off':'fa-toggle-on')+'"></i> '+(on?'Kapat (özel)':'Aç (kontrol)')+
@@ -7369,7 +7371,7 @@ function ktDeleteModel(id){
     } catch(err){
       console.warn('[kt] atomik silme err:', err);
       try{ if(typeof window._updateCloudBadge === 'function') window._updateCloudBadge('err', 'kordon silinemedi: '+(err&&err.message||err)); }catch(_){}
-      try{ if(typeof toast==='function') toast('⚠️ Buluta yazılamadı, tekrar denemek için Yenile','error'); }catch(_){}
+      try{ if(typeof toast==='function') toast('Buluta yazılamadı, tekrar denemek için Yenile','error'); }catch(_){}
     }
   })();
   renderKordonTakip(); toast('Model silindi','info');
@@ -7901,7 +7903,7 @@ function ktRenderStockMode(){
   host.innerHTML='<span class="f-stock-chip '+(on?'on':'off')+'">'+
       '<i class="fas '+(on?'fa-shield-halved':'fa-feather')+'"></i> '+
       (on?'Stok kontrolü AÇIK · Takip\'te olmayan model engellenir, stoğu düşer'
-         :'✦ Özel irsaliye · Takip\'te olmasa da kesilir, stok düşmez')+
+         :'Özel irsaliye · Takip\'te olmasa da kesilir, stok düşmez')+
     '</span>'+
     '<button class="btn btn-sm btn-secondary" onclick="ktToggleStockMode()">'+
       '<i class="fas '+(on?'fa-toggle-off':'fa-toggle-on')+'"></i> '+(on?'Kapat (özel)':'Aç (kontrol)')+
@@ -8277,7 +8279,7 @@ function nRenderSerbestMode(){
   const on=serbestModOn();
   host.innerHTML='<span class="f-stock-chip '+(on?'off':'on')+'">'+
       '<i class="fas '+(on?'fa-clipboard-question':'fa-industry')+'"></i> '+
-      (on?'✦ Serbest irsaliye · Modele bağlı değil — neden verildiği yazılır, mal oranına karışmaz'
+      (on?'Serbest irsaliye · Modele bağlı değil — neden verildiği yazılır, mal oranına karışmaz'
          :'Model irsaliyesi · Dikim için verilir, mal adetiyle karşılaştırılır')+
     '</span>'+
     '<button type="button" class="btn btn-sm btn-secondary" onclick="toggleSerbestMod()">'+
@@ -8502,7 +8504,7 @@ function loadAtolyeFilter(){
   const atolyeler=getData('atolyeler');
   const sel=document.getElementById('filterAtolye');
   const current=sel.value;
-  sel.innerHTML='<option value="all">🏭 Tüm Atölyeler</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
+  sel.innerHTML='<option value="all">Tüm Atölyeler</option>'+atolyeler.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
   sel.value=current||'all';
   // Aramali picker butonunun label'ini sync et
   const lbl = document.getElementById('filterAtolyeLabel');
@@ -8567,7 +8569,7 @@ function renderAtolyePickerList(filter){
   const sel = document.getElementById(targetId);
   const cur = sel ? sel.value : (isFilter ? 'all' : '');
   // Liste filtresinde "Tum Atolyeler" secenegi de gosterilir; form alanlarinda gosterilmez.
-  const items = (isFilter ? [{ name:'all', label:'🏭 Tüm Atölyeler', count:null }] : [])
+  const items = (isFilter ? [{ name:'all', label:'Tüm Atölyeler', count:null }] : [])
     .concat(atolyeler
       .filter(a=> !f || (a.name||'').toLowerCase().includes(f))
       .sort((a,b)=> (a.name||'').localeCompare(b.name||'','tr'))
@@ -8671,7 +8673,7 @@ function applyFilters(){
       }
       if(box){
         box.innerHTML = '<span><i class="fas fa-filter" style="color:var(--primary);"></i> <b>Anasayfa filtresi aktif:</b> '+(window._dashFilterLabel||'Özel filtre')+' • <b>'+list.length+'</b> kayıt</span>'
-          + '<button onclick="window._dashFilter=null;window._dashFilterLabel=\'\';var b=document.getElementById(\'dashFilterBanner\');if(b)b.remove();applyFilters();" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;">✕ Filtreyi Kaldır</button>';
+          + '<button onclick="window._dashFilter=null;window._dashFilterLabel=\'\';var b=document.getElementById(\'dashFilterBanner\');if(b)b.remove();applyFilters();" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;">Filtreyi Kaldır</button>';
       }
     }, 30);
   } else {
@@ -8731,7 +8733,7 @@ function applyFilters(){
 }
 
 function getTypeLabel(type){
-  const map={standart:'📦 Poşet',fermuar:'🔗 Fermuar',lastik:'📏 Lastik',dugme:'🔘 Düğme',toptan:'📦 Toptan',satenaskilik:'🪢 Saten',kordon:'🪢 Kordon',dantel:'🕸️ Dantel'};
+  const map={standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten',kordon:'Kordon',dantel:'Dantel'};
   return map[type]||type;
 }
 
@@ -8747,7 +8749,7 @@ function getItemDetail(item, gizle){
     const parts=[];
     const sizeNames={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     const bantNames={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
-    if(item.serbest) parts.push('✦ SERBEST');
+    if(item.serbest) parts.push('SERBEST');
     if(item.sizes){for(let k in item.sizes){if(item.sizes[k]>0)parts.push(sizeNames[k]+':'+item.sizes[k]);}}
     if(item.bant){for(let k in item.bant){if(item.bant[k]>0)parts.push(bantNames[k]+':'+item.bant[k]);}}
     if(!gizle && !item.serbest && item.malAdedi>0) parts.push('Mal:'+item.malAdedi);
@@ -8788,7 +8790,7 @@ function renderFilteredList(list){
       <td>${i.model||i.urun||'-'}</td>
       <td>${i.atolye||i.firma||'-'}</td>
       <td style="font-size:11px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getItemDetail(i)}</td>
-      <td><span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'} clickable" onclick="toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'✓ Teslim':'⏳ Bekliyor'}</span></td>
+      <td><span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'} clickable" onclick="toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'Teslim':'Bekliyor'}</span></td>
       <td style="white-space:nowrap;font-size:12px;">${i.termin||'-'}</td>
       <td>
         <div class="table-actions">
@@ -8817,7 +8819,7 @@ function renderFilteredList(list){
             ${getTypeBadge(i._type)}
             <span class="mc-title">${i.no}</span>
           </div>
-          <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'✓':'⏳'}</span>
+          <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'<i class="fas fa-check"></i>':'<i class="fas fa-hourglass-half"></i>'}</span>
         </div>
         <div class="mc-meta" style="margin-top:6px;">
           <span><i class="fas fa-cube"></i> ${i.model||i.urun||'-'}</span>
@@ -9265,7 +9267,7 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
       const w = imgWidth * (pageHeight / imgHeight);
       pdf.addImage(imgData, _tuvalBicim(imgData), (pageWidth - w) / 2, 0, w, h);
       pdf.save(filename);
-      toast('PDF indirildi 📥', 'success');
+      toast('PDF indirildi', 'success');
       return;
     }
 
@@ -9276,7 +9278,7 @@ async function _downloadElementAsPDF(element, filename, hideEl) {
       pdf.addImage(imgData, _tuvalBicim(imgData), 0, -i * pageHeight, imgWidth, imgHeight);
     }
     pdf.save(filename);
-    toast('PDF indirildi 📥', 'success');
+    toast('PDF indirildi', 'success');
   } catch (err) {
     console.error('PDF indirme hatası:', err);
     toast('PDF indirilemedi — tekrar deneyin', 'error');
@@ -9392,14 +9394,14 @@ function generatePDF(id, type, mode) {
   const qrHeaderBlock = qrDataUrl
     ? `<div style="margin-top:6px;text-align:right;">
          <img src="${qrDataUrl}" alt="QR" style="width:140px;height:140px;border:1px solid #e5e7eb;border-radius:6px;padding:4px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;">
-         <div style="font-size:10px;color:#7c3aed;margin-top:4px;font-weight:700;max-width:150px;margin-left:auto;line-height:1.3;">📷 QR'ı okutarak kanıt<br>fotoğraflarını görebilirsiniz</div>
+         <div style="font-size:10px;color:#7c3aed;margin-top:4px;font-weight:700;max-width:150px;margin-left:auto;line-height:1.3;">QR'ı okutarak kanıt<br>fotoğraflarını görebilirsiniz</div>
        </div>`
     : '';
 
   // Header
   html += `<div class="header">
     <div class="header-left">
-      <h1>📦 ${typeLabel}</h1>
+      <h1>${typeLabel}</h1>
       <p>İrsaliye Pro — Eyüp</p>
     </div>
     <div class="header-right">
@@ -9411,7 +9413,7 @@ function generatePDF(id, type, mode) {
   // Info grid
   html += `<div class="info-grid">
     <div class="info-box"><div class="label">Tarih</div><div class="value">${esc(_trTarih(item.tarih)) || '—'}</div></div>
-    <div class="info-box"><div class="label">Durum</div><div class="value"><span class="status-badge status-${esc(item.durum || 'bekliyor')}">${item.durum === 'teslim' ? '✅ Teslim Edildi' : '⏳ Bekliyor'}</span></div></div>
+    <div class="info-box"><div class="label">Durum</div><div class="value"><span class="status-badge status-${esc(item.durum || 'bekliyor')}">${item.durum === 'teslim' ? 'Teslim Edildi' : 'Bekliyor'}</span></div></div>
     <div class="info-box"><div class="label">Model / Ürün</div><div class="value">${esc(item.model || item.urun) || '—'}</div></div>
     <div class="info-box"><div class="label">Atölye / Firma</div><div class="value">${esc(item.atolye || item.firma) || '—'}</div></div>`;
 
@@ -9419,7 +9421,7 @@ function generatePDF(id, type, mode) {
   if (item.teslimAlan) html += `<div class="info-box"><div class="label">Teslim Alan</div><div class="value">${esc(item.teslimAlan)}</div></div>`;
   if (item.termin) html += `<div class="info-box"><div class="label">Termin Tarihi</div><div class="value">${esc(_trTarih(item.termin))}</div></div>`;
   if ((type === 'fermuar' || type === 'dugme') && item.renk) {
-    html += `<div class="info-box" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="label">🎨 Renk</div><div class="value">${esc(item.renk)}</div></div>`;
+    html += `<div class="info-box" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="label">Renk</div><div class="value">${esc(item.renk)}</div></div>`;
   }
   html += `</div>`;
 
@@ -9434,7 +9436,7 @@ function generatePDF(id, type, mode) {
       const fontSize = sizeCount >= 5 ? '9px' : sizeCount >= 4 ? '10px' : '11px';
       const padding = sizeCount >= 5 ? '4px 6px' : sizeCount >= 4 ? '5px 7px' : '6px 8px';
 
-      html += `<div class="section-title" style="font-size:${sizeCount >= 5 ? '11px' : '12px'};">📦 Poşet Ölçüleri</div>`;
+      html += `<div class="section-title" style="font-size:${sizeCount >= 5 ? '11px' : '12px'};">Poşet Ölçüleri</div>`;
       html += `<table style="margin-bottom:${sizeCount >= 5 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Ölçü</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
       for (let k in item.sizes) {
         if (item.sizes[k] > 0) html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${sizeNames[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.sizes[k]}</td></tr>`;
@@ -9459,7 +9461,7 @@ function generatePDF(id, type, mode) {
         const fontSize = bantCount >= 3 ? '9px' : '10px';
         const padding = bantCount >= 3 ? '4px 6px' : '5px 7px';
 
-        html += `<div class="section-title" style="font-size:${bantCount >= 3 ? '11px' : '12px'};">🎀 Bant & Kılçık</div>`;
+        html += `<div class="section-title" style="font-size:${bantCount >= 3 ? '11px' : '12px'};">Bant & Kılçık</div>`;
         html += `<table style="margin-bottom:${bantCount >= 3 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Ürün</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
         for (let k in item.bant) {
           if (item.bant[k] > 0) html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bantNames[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.bant[k]}</td></tr>`;
@@ -9472,7 +9474,7 @@ function generatePDF(id, type, mode) {
   if (type === 'fermuar' && item.beden) {
     if (item.hideBeden) {
       const grouped = groupFermuarBedenByCm(item.beden);
-      html += `<div class="section-title">🔗 Fermuar Detayları${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
+      html += `<div class="section-title">Fermuar Detayları${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
       html += `<table style="margin-bottom:10px;"><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
       grouped.forEach(g => { html += `<tr><td><b>${g.cm}</b> cm</td><td>${g.adet}</td></tr>`; });
       html += `</tbody></table><div class="total-row" style="font-size:14px;padding:8px 0;">Toplam Adet: ${item.totalAdet||0}</div>`;
@@ -9482,7 +9484,7 @@ function generatePDF(id, type, mode) {
       const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
       const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
 
-      html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">🔗 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
+      html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
       html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">CM</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
       sortBedenKeys(item.beden).forEach(k => {
         const bv=item.beden[k]||{}; html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${bv.cm??'-'} cm</td><td style="font-size:${fontSize};padding:${padding};">${bv.adet??0}</td></tr>`;
@@ -9492,7 +9494,7 @@ function generatePDF(id, type, mode) {
   }
 
   if (type === 'lastik') {
-    html += `<div class="section-title">📏 Lastik Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
+    html += `<div class="section-title">Lastik Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.cm||0}</div>
@@ -9507,7 +9509,7 @@ function generatePDF(id, type, mode) {
   }
 
   if (type === 'dugme') {
-    html += `<div class="section-title">🔘 Düğme Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
+    html += `<div class="section-title">Düğme Miktarı${item.renk ? ` <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.adet||0}</div>
@@ -9526,7 +9528,7 @@ function generatePDF(id, type, mode) {
     const fontSize = bedenCount >= 7 ? '9px' : bedenCount >= 5 ? '10px' : '11px';
     const padding = bedenCount >= 7 ? '4px 6px' : bedenCount >= 5 ? '5px 7px' : '6px 8px';
 
-    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">📦 Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
+    html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
     html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k => {
       html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bl[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${item.beden[k]}</td></tr>`;
@@ -9534,12 +9536,12 @@ function generatePDF(id, type, mode) {
     html += `</tbody></table><div class="total-row">Toplam Adet: ${item.total||0}</div>`;
     // Toptan sipariş için otomatik açıklama
     html += `<div class="note-box" style="background:#fef3c7;border-color:#fbbf24;margin-top:16px;">
-      ⚠️ <b>ÖNEMLİ:</b> Toptan siparişler yıkama talimatı ayrı dikilir, sarı renktedir. Bu adetlerde firmaya teslim etmeniz gerekir.
+      <b>ÖNEMLİ:</b> Toptan siparişler yıkama talimatı ayrı dikilir, sarı renktedir. Bu adetlerde firmaya teslim etmeniz gerekir.
     </div>`;
   }
 
   if (type === 'kordon' && korMetreMi(item)) {
-    html += `<div class="section-title">🪢 Kordon Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
+    html += `<div class="section-title">Kordon Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
@@ -9552,7 +9554,7 @@ function generatePDF(id, type, mode) {
     </div>`;
   }
   else if (type === 'kordon' && item.olcular && item.olcular.length) {
-    html += `<div class="section-title">🪢 Kordon Ölçüleri${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
+    html += `<div class="section-title">Kordon Ölçüleri${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
     const _bv = korBedenVar(item);
     html += `<table><thead><tr>${_bv?'<th>Beden</th>':''}<th>CM</th><th>Adet</th></tr></thead><tbody>`;
     item.olcular.forEach(o => {
@@ -9564,7 +9566,7 @@ function generatePDF(id, type, mode) {
   }
 
   if (type === 'dantel') {
-    html += `<div class="section-title">🕸️ Dantel Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
+    html += `<div class="section-title">Dantel Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
@@ -9578,7 +9580,7 @@ function generatePDF(id, type, mode) {
   }
 
   if (type === 'satenaskilik') {
-    html += `<div class="section-title">🪢 Saten Askılık Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
+    html += `<div class="section-title">Saten Askılık Miktarı${item.renk ? ` <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>
     <div style="display:grid;grid-template-columns:${item.renk?'1fr 1fr':'1fr'};gap:12px;">
       <div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;">
         <div style="font-size:32px;font-weight:800;color:#7c3aed;">${item.metre||0}</div>
@@ -9592,7 +9594,7 @@ function generatePDF(id, type, mode) {
   }
 
   if (item.aciklama || item.not) {
-    html += `<div class="note-box">📝 <b>Not:</b> ${esc(item.aciklama || item.not)}</div>`;
+    html += `<div class="note-box"><b>Not:</b> ${esc(item.aciklama || item.not)}</div>`;
   }
 
   // === Fotoğraflar PDF'te YOK — QR tarandığında viewer'da görüntülenecek ===
@@ -9602,11 +9604,11 @@ function generatePDF(id, type, mode) {
   if (_allPhotos.length > 0) {
     if (_uploadedPhotos.length > 0) {
       html += `<div style="margin-top:10px;padding:8px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-size:10px;color:#065f46;">
-        📸 ${_uploadedPhotos.length} kanıt fotoğrafı QR ile görüntülenebilir — telefon kamerasıyla tarayın
+        ${_uploadedPhotos.length} kanıt fotoğrafı QR ile görüntülenebilir — telefon kamerasıyla tarayın
       </div>`;
     } else {
       html += `<div style="margin-top:10px;padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:6px;font-size:10px;color:#92400e;">
-        ⚠️ ${_allPhotos.length} fotoğraf henüz buluta yüklenmemiş — yüklendikten sonra PDF'i yeniden oluşturun
+        ${_allPhotos.length} fotoğraf henüz buluta yüklenmemiş — yüklendikten sonra PDF'i yeniden oluşturun
       </div>`;
     }
   }
@@ -9644,13 +9646,13 @@ function generatePDF(id, type, mode) {
         controlsDiv.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;';
         controlsDiv.innerHTML = `
           <button class="pdf-dl-btn" style="background:#16a34a;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,0.3);display:flex;align-items:center;gap:6px;">
-            <span style="font-size:16px;">📥</span> PDF İndir
+            PDF İndir
           </button>
           <button class="pdf-print-btn" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(124,58,237,0.3);display:flex;align-items:center;gap:6px;">
-            <span style="font-size:16px;">🖨️</span> Yazdır
+            Yazdır
           </button>
           <button class="pdf-close-btn" style="background:#6b7280;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(107,115,128,0.3);">
-            ✕ Kapat
+            Kapat
           </button>
         `;
         printWindow.document.body.appendChild(controlsDiv);
@@ -9916,7 +9918,7 @@ function refreshLastikList(){
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.lastik,PAGE_SIZE);
   _subListPage.lastik=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">📐 ${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('lastikPagination',tbody,page,totalPages,total,start,end,'goToLastikPage');
 }
 
@@ -9957,7 +9959,7 @@ function refreshDugmeList(){
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.dugme,PAGE_SIZE);
   _subListPage.dugme=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${(+i.adet||0).toLocaleString('tr')} adet</td><td><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl) mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">🔘 ${(+i.adet||0).toLocaleString('tr')} adet</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  if(mobileEl) mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${(+i.adet||0).toLocaleString('tr')} adet</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('dugmePagination',tbody,page,totalPages,total,start,end,'goToDugmePage');
 }
 
@@ -10126,7 +10128,7 @@ function refreshKordonList(){
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.kordon,PAGE_SIZE);
   _subListPage.kordon=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${korMiktar(i)}</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${korMiktar(i)}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">🎨 ${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${korMiktar(i)}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('kordonPagination',tbody,page,totalPages,total,start,end,'goToKordonPage');
 }
 
@@ -10171,7 +10173,7 @@ function refreshDantelList(){
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.dantel,PAGE_SIZE);
   _subListPage.dantel=page;
   tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">🕸️ ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('dantelPagination',tbody,page,totalPages,total,start,end,'goToDantelPage');
 }
 
@@ -10449,7 +10451,7 @@ function refreshHome(){
 }
 
 function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
-  var icon = '☀️';
+  var icon = 'fa-sun';
   var title = 'Her şey yolunda!';
   var desc = '';
   var badgeVal = '100%';
@@ -10463,49 +10465,49 @@ function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
 
   // Durum analizi
   if(gecmis > 5){
-    icon = '⛈️';
+    icon = 'fa-cloud-bolt';
     title = 'Dikkat! Gecikme var';
     desc = gecmis + ' iş termin geçmiş. Acil aksiyonlar gerekiyor!';
-    badgeVal = '⚠️';
+    badgeVal = '!';
     badgeLbl = 'Kritik';
   } else if(gecmis > 0){
-    icon = '⛅';
+    icon = 'fa-cloud-sun';
     title = 'Birkaç gecikme var';
     desc = gecmis + ' iş termin geçmiş. Kontrol etmeyi unutmayın.';
     badgeVal = teslimRate + '%';
     badgeLbl = 'Teslim Oranı';
   } else if(bekliyor > 10){
-    icon = '📈';
+    icon = 'fa-chart-line';
     title = 'Yoğun bir hafta!';
     desc = 'Şu anda ' + bekliyor + ' iş bekliyor. Harika bir tempo!';
     badgeVal = bekliyor + '';
     badgeLbl = 'Bekleyen İş';
   } else if(todayCount > 5){
-    icon = '🔥';
+    icon = 'fa-fire';
     title = 'Bugün çok verimli!';
     desc = 'Bugün ' + todayCount + ' yeni iş oluşturuldu. Harika gidiyorsunuz!';
     badgeVal = todayCount + '';
     badgeLbl = 'Bugün';
   } else if(todayCount > 0){
-    icon = '✨';
+    icon = 'fa-star';
     title = 'Güzel bir gün!';
     desc = 'Bugün ' + todayCount + ' iş var, ' + bekliyor + ' iş bekliyor.';
     badgeVal = teslimRate + '%';
     badgeLbl = 'Teslim Oranı';
   } else if(bekliyor === 0 && total > 0){
-    icon = '🎉';
+    icon = 'fa-trophy';
     title = 'Tüm işler tamamlandı!';
     desc = 'Bekleyen iş yok. Harika bir performans!';
     badgeVal = '100%';
     badgeLbl = 'Tamamlandı';
   } else if(total === 0){
-    icon = '🌱';
+    icon = 'fa-seedling';
     title = 'Yeni başlangıç!';
     desc = 'İlk irsaliyenizi oluşturmaya hazır mısınız?';
     badgeVal = '0';
     badgeLbl = 'Kayıt';
   } else {
-    icon = '☀️';
+    icon = 'fa-sun';
     title = 'Her şey yolunda!';
     desc = bekliyor + ' iş bekliyor, tümü zamanında ilerliyor.';
     badgeVal = teslimRate + '%';
@@ -10519,7 +10521,7 @@ function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
   var badgeValEl = document.getElementById('dbStatusBadgeVal');
   var badgeLblEl = document.getElementById('dbStatusBadgeLbl');
 
-  if(iconEl) iconEl.textContent = icon;
+  if(iconEl) iconEl.innerHTML = '<i class="fas '+icon+'"></i>';
   if(titleEl) titleEl.textContent = title;
   if(descEl) descEl.textContent = desc;
   if(badgeValEl) badgeValEl.textContent = badgeVal;
@@ -10860,8 +10862,8 @@ MK._aksHtml = function(d){
       '<td><b>'+MK._esc(a.koliNo||'—')+'</b></td>'+
       '<td>'+MK._esc(a.termin||'—')+'</td>'+
       '<td class="c">'+MK._n(a.adet||0)+'</td>'+
-      '<td class="c">'+(a.fiyatKarti?'<span class="mk-rz ok">✓</span>':'<span class="mk-rz bek">—</span>')+'</td>'+
-      '<td class="c">'+(a.yikama?'<span class="mk-rz ok">✓</span>':'<span class="mk-rz bek">—</span>')+'</td>'+
+      '<td class="c">'+(a.fiyatKarti?'<span class="mk-rz ok"><i class="fas fa-check"></i></span>':'<span class="mk-rz bek">—</span>')+'</td>'+
+      '<td class="c">'+(a.yikama?'<span class="mk-rz ok"><i class="fas fa-check"></i></span>':'<span class="mk-rz bek">—</span>')+'</td>'+
     '</tr>';
   }).join('');
   return MK._blok('fa-tags','Aksesuar Takip', d.aksesuar.length+' kayıt',
@@ -11258,11 +11260,11 @@ function renderTerminAnalysis(){
     </div>
     <table style="width:100%;border-collapse:collapse;">
       <tbody>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">✅ Zamanında tamamlanan</td><td style="padding:10px;text-align:right;"><strong>${zamanindaTamam}</strong></td></tr>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">⏰ Geç tamamlanan</td><td style="padding:10px;text-align:right;"><strong style="color:#f59e0b">${gecTamam}</strong></td></tr>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">🕐 Bekleyen (zamanında)</td><td style="padding:10px;text-align:right;"><strong>${bekleyenZamaninda}</strong></td></tr>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">🚨 Geciken (bekleyen)</td><td style="padding:10px;text-align:right;"><strong style="color:#ef4444">${geciken}</strong></td></tr>
-        <tr><td style="padding:10px;">❓ Termin tarihi yok</td><td style="padding:10px;text-align:right;"><strong style="color:var(--text-muted)">${noTermin}</strong></td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">Zamanında tamamlanan</td><td style="padding:10px;text-align:right;"><strong>${zamanindaTamam}</strong></td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">Geç tamamlanan</td><td style="padding:10px;text-align:right;"><strong style="color:#f59e0b">${gecTamam}</strong></td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">Bekleyen (zamanında)</td><td style="padding:10px;text-align:right;"><strong>${bekleyenZamaninda}</strong></td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;">Geciken (bekleyen)</td><td style="padding:10px;text-align:right;"><strong style="color:#ef4444">${geciken}</strong></td></tr>
+        <tr><td style="padding:10px;">Termin tarihi yok</td><td style="padding:10px;text-align:right;"><strong style="color:var(--text-muted)">${noTermin}</strong></td></tr>
       </tbody>
     </table>`;
 }
@@ -11517,7 +11519,7 @@ function renderMonthlyCompare(){
 
   const diff = thisMonth.count - lastMonth.count;
   const diffPercent = lastMonth.count > 0 ? ((diff / lastMonth.count) * 100).toFixed(1) : 0;
-  const diffIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+  const diffIcon = '<i class="fas '+(diff > 0 ? 'fa-arrow-trend-up' : diff < 0 ? 'fa-arrow-trend-down' : 'fa-arrow-right')+'"></i>';
   const diffColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#6b7280';
 
   document.getElementById('compareThisMonth').innerHTML = `
@@ -12158,7 +12160,7 @@ function renderVerimlilik(){
   }).sort((a,b) => b.skor - a.skor);
 
   // Liderlik tablosu
-  const medals = ['🥇','🥈','🥉'];
+  const medals = ['1.','2.','3.'];
   document.getElementById('verimlilikScores').innerHTML = firms.slice(0,10).map((f,i) => `
     <div class="rep-perf-row" style="animation-delay:${i*0.05}s">
       <div class="rep-perf-rank">${medals[i]||`#${i+1}`}</div>
@@ -12401,7 +12403,7 @@ function filterRepTablo(val){
             <td class="rep-tbl-firm">${esc(i.atolye||i.firma||'—')}</td>
             <td class="rep-tbl-model">${esc(i.model||i.urun||'—')}</td>
             <td class="rep-tbl-qty">${qty||'—'}</td>
-            <td><span class="chip ${isDone?'chip-success':'chip-warning'}" style="font-size:11px;">${isDone?'✓ Teslim':'⏳ Bekliyor'}</span></td>
+            <td><span class="chip ${isDone?'chip-success':'chip-warning'}" style="font-size:11px;">${isDone?'Teslim':'Bekliyor'}</span></td>
             <td class="rep-tbl-termin ${isLate?'rep-tbl-late':isToday?'rep-tbl-today':''}">${esc(i.termin||'—')}</td>
           </tr>`;
         }).join('')}
@@ -12889,7 +12891,7 @@ function renderCalendar(){
       const t=ev._type||'standart';
       const color=typeColors[t]||'#a78bfa';
       if(ev._isTermin){
-        html+=`<div class="cal-ev cal-ev-termin" title="Termin: ${ev.no||''}">⏰${ev.no||''}</div>`;
+        html+=`<div class="cal-ev cal-ev-termin" title="Termin: ${ev.no||''}">${ev.no||''}</div>`;
       } else {
         html+=`<div class="cal-ev" style="background:${color}20;color:${color};" title="${getTypeLabel(t)}: ${ev.model||ev.urun||''}">${ev.no||''}</div>`;
       }
@@ -12951,7 +12953,7 @@ function showCalDay(dateStr){
         <div class="cal-ev-card-title">${esc(i.model||i.urun||'—')}</div>
         <div class="cal-ev-card-meta"><i class="fas fa-industry"></i> ${esc(i.atolye||i.firma||'—')}</div>
       </div>
-      <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" style="flex-shrink:0;font-size:11px;">${i.durum==='teslim'?'✓ Teslim':'⏳ Bekliyor'}</span>
+      <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" style="flex-shrink:0;font-size:11px;">${i.durum==='teslim'?'Teslim':'Bekliyor'}</span>
     </div>`;
   }
 
@@ -13390,7 +13392,7 @@ function updateSelDash(){
     let totalPoset=0;
     sizeKeys.forEach(sk=>standartItems.forEach(it=>totalPoset+=(+((it.sizes||{})[sk]||0))));
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-box">📦</span> Poşet Ölçüleri <span class="sd-total-badge">Toplam: '+totalPoset.toLocaleString('tr')+'</span></div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-box"><i class="fas fa-box"></i></span> Poşet Ölçüleri <span class="sd-total-badge">Toplam: '+totalPoset.toLocaleString('tr')+'</span></div>';
     html+='<div class="sd-size-grid">';
     sizeKeys.forEach(sk=>{
       const total=standartItems.reduce((s,it)=>s+(+((it.sizes||{})[sk]||0)),0);
@@ -13403,7 +13405,7 @@ function updateSelDash(){
     const tK=standartItems.reduce((s,it)=>s+(+((it.bant||{}).kilcik||0)),0);
     if(tG+tD+tK>0){
       html+='<div class="sd-section">';
-      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-bant">🎀</span> Bant & Kılçık <span class="sd-total-badge">Toplam: '+(tG+tD).toLocaleString('tr')+'</span></div>';
+      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-bant"><i class="fas fa-tape"></i></span> Bant & Kılçık <span class="sd-total-badge">Toplam: '+(tG+tD).toLocaleString('tr')+'</span></div>';
       html+='<div class="sd-size-grid">';
       if(tG>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Geniş Bant</div><div class="sd-size-value">${tG.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
       if(tD>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Dar Bant</div><div class="sd-size-value">${tD.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
@@ -13423,7 +13425,7 @@ function updateSelDash(){
     });
     const grand=Object.values(bedenTotals).reduce((s,v)=>s+v,0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar">🔗</span> Fermuar Bedenleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-fermuar"><i class="fas fa-link"></i></span> Fermuar Bedenleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
     html+='<div class="sd-size-grid">';
     beds.forEach(b=>{if(bedenTotals[b])html+=`<div class="sd-size-card"><div class="sd-size-name">${bedLabels[b]}</div><div class="sd-size-value">${bedenTotals[b].toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;});
     if(!grand)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam</div><div class="sd-size-value">0</div></div>`;
@@ -13435,7 +13437,7 @@ function updateSelDash(){
     const tM=lastikItems.reduce((s,it)=>s+(+it.metre||0),0);
     const tC=lastikItems.reduce((s,it)=>s+(+it.cm||0),0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-lastik">📏</span> Lastik</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-lastik"><i class="fas fa-ruler"></i></span> Lastik</div>';
     html+='<div class="sd-size-grid">';
     if(tM>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Metre</div><div class="sd-size-value">${tM.toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
     if(tC>0)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam CM</div><div class="sd-size-value">${tC.toLocaleString('tr')}</div><div class="sd-size-label">cm</div></div>`;
@@ -13446,7 +13448,7 @@ function updateSelDash(){
   if(dugmeItems.length>0){
     const tA=dugmeItems.reduce((s,it)=>s+(+it.adet||0),0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dugme">🔘</span> Düğme</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dugme"><i class="fas fa-circle-dot"></i></span> Düğme</div>';
     html+='<div class="sd-size-grid">';
     html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Düğme</div><div class="sd-size-value">${tA.toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;
     html+='</div></div>';
@@ -13463,7 +13465,7 @@ function updateSelDash(){
     });
     const grand=Object.values(bedenTotals).reduce((s,v)=>s+v,0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan">🚚</span> Toptan Bedenleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-toptan"><i class="fas fa-truck"></i></span> Toptan Bedenleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span></div>';
     html+='<div class="sd-size-grid">';
     beds.forEach(b=>{if(bedenTotals[b])html+=`<div class="sd-size-card"><div class="sd-size-name">${bedLabels[b]}</div><div class="sd-size-value">${bedenTotals[b].toLocaleString('tr')}</div><div class="sd-size-label">adet</div></div>`;});
     if(!grand)html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam</div><div class="sd-size-value">0</div></div>`;
@@ -13486,7 +13488,7 @@ function updateSelDash(){
     const cmVar=Object.keys(cmTotals).length>0;
     if(cmVar || metreTop>0){
       html+='<div class="sd-section">';
-      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-kordon">🪢</span> Kordon'
+      html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-kordon"><i class="fas fa-bezier-curve"></i></span> Kordon'
         +(cmVar?' Ölçüleri <span class="sd-total-badge">Toplam: '+grand.toLocaleString('tr')+'</span>':'')+'</div>';
       html+='<div class="sd-size-grid">';
       Object.entries(cmTotals).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).forEach(([cm,adet])=>{
@@ -13503,7 +13505,7 @@ function updateSelDash(){
   if(dantelItems.length>0){
     const tM=dantelItems.reduce((s,it)=>s+(+it.metre||0),0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dantel">🕸️</span> Dantel</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-dantel"><i class="fas fa-border-all"></i></span> Dantel</div>';
     html+='<div class="sd-size-grid">';
     html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Metre</div><div class="sd-size-value">${tM.toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
     html+='</div></div>';
@@ -13513,7 +13515,7 @@ function updateSelDash(){
   if(satenItems.length>0){
     const tM=satenItems.reduce((s,it)=>s+(+it.metre||0),0);
     html+='<div class="sd-section">';
-    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-saten">🪢</span> Saten Askılık</div>';
+    html+='<div class="sd-section-title"><span class="sd-title-icon sd-icon-saten"><i class="fas fa-bezier-curve"></i></span> Saten Askılık</div>';
     html+='<div class="sd-size-grid">';
     html+=`<div class="sd-size-card"><div class="sd-size-name">Toplam Metre</div><div class="sd-size-value">${tM.toLocaleString('tr')}</div><div class="sd-size-label">metre</div></div>`;
     html+='</div></div>';
@@ -13815,7 +13817,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <title>Hatalı QR Kod</title></head>
         <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fef2f2;margin:0;">
           <div style="text-align:center;padding:32px;max-width:360px;">
-            <div style="font-size:52px;margin-bottom:16px;">⚠️</div>
+            <div style="font-size:46px;margin-bottom:16px;opacity:.7;"><i class="fas fa-triangle-exclamation"></i></div>
             <div style="font-size:20px;font-weight:700;color:#dc2626;margin-bottom:8px;">QR Kod Hatalı</div>
             <div style="font-size:14px;color:#6b7280;">Bu QR kod okunamadı veya geçerliliğini yitirdi.<br>Yeni bir PDF oluşturup tekrar deneyin.</div>
           </div>
@@ -14126,7 +14128,7 @@ function togglePin(type,id){
   const idx=pins.indexOf(key);
   if(idx>=0){pins.splice(idx,1);if(typeof showToast==='function')showToast('Sabitleme kaldırıldı','info')}
   else{if(pins.length>=5){if(typeof showToast==='function')showToast('En fazla 5 sabit olabilir','warning');return}
-    pins.push(key);if(typeof showToast==='function')showToast('Sabitlendi ⭐','success')}
+    pins.push(key);if(typeof showToast==='function')showToast('Sabitlendi ','success')}
   localStorage.setItem('pinnedIrsaliye',JSON.stringify(pins));
   renderPinned();
   if(typeof renderIrsaliyeler==='function')renderIrsaliyeler();
@@ -14148,7 +14150,7 @@ function renderPinned(){
     return all.find(r=>r._type===t&&String(r.id)===String(id));
   }).filter(Boolean);
   if(cnt)cnt.textContent=items.length;
-  if(items.length===0){el.innerHTML='<div class="db-pinned-empty">Henüz sabitleme yok. Listeden ⭐ ile sabitleyebilirsin.</div>';return}
+  if(items.length===0){el.innerHTML='<div class="db-pinned-empty">Henüz sabitleme yok. Listeden yıldız simgesiyle sabitleyebilirsin.</div>';return}
   el.innerHTML=items.map(r=>`
     <div class="db-pinned-item" onclick="showPage('list')">
       <span class="no">${r.no||'#'+r.id}</span>
@@ -14204,19 +14206,19 @@ function closeShareMenu() {
 
 function buildShareText(item, type) {
   const typeLabels = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon',dantel:'Dantel'};
-  let text = `📋 *${typeLabels[type]||'İrsaliye'}*\n`;
+  let text = `*${typeLabels[type]||'İrsaliye'}*\n`;
   text += `━━━━━━━━━━━━━\n`;
-  if (item.no) text += `🔖 No: *${item.no}*\n`;
-  if (item.tarih) text += `📅 Tarih: ${item.tarih}\n`;
-  if (item.model || item.urun) text += `📦 Model: ${item.model || item.urun}\n`;
-  if (item.atolye || item.firma) text += `🏭 Atölye: ${item.atolye || item.firma}\n`;
-  if (item.termin) text += `⏰ Termin: ${item.termin}\n`;
-  text += `📊 Durum: ${item.durum === 'teslim' ? '✅ Teslim' : '⏳ Bekliyor'}\n`;
+  if (item.no) text += `No: *${item.no}*\n`;
+  if (item.tarih) text += `Tarih: ${item.tarih}\n`;
+  if (item.model || item.urun) text += `Model: ${item.model || item.urun}\n`;
+  if (item.atolye || item.firma) text += `Atölye: ${item.atolye || item.firma}\n`;
+  if (item.termin) text += `Termin: ${item.termin}\n`;
+  text += `Durum: ${item.durum === 'teslim' ? 'Teslim' : 'Bekliyor'}\n`;
 
   if (type === 'standart' && item.sizes) {
     const sn = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     const szs = Object.keys(item.sizes).filter(k => item.sizes[k] > 0).map(k => `${sn[k]||k}: ${item.sizes[k]}`);
-    if (szs.length) text += `\n📏 Ölçüler:\n  ${szs.join('\n  ')}\n`;
+    if (szs.length) text += `\nÖlçüler:\n  ${szs.join('\n  ')}\n`;
   }
   if ((type === 'fermuar' || type === 'toptan') && item.beden) {
     const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
@@ -14224,19 +14226,19 @@ function buildShareText(item, type) {
       const v = type === 'fermuar' ? (item.beden[k]?.adet ?? 0) : item.beden[k];
       return `${bl[k]||k}: ${v}`;
     }).filter(x => !x.endsWith(': 0'));
-    if (bds.length) text += `\n👕 Bedenler:\n  ${bds.join('\n  ')}\n`;
+    if (bds.length) text += `\nBedenler:\n  ${bds.join('\n  ')}\n`;
     const total = item.totalAdet || item.total || 0;
-    if (total) text += `\n📊 Toplam: *${total} adet*\n`;
+    if (total) text += `\nToplam: *${total} adet*\n`;
   }
-  if (type === 'lastik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.cm||0} cm × ${item.metre||0} m\n`; }
-  if (type === 'dugme') text += `\n🔘 ${item.adet||0} adet\n`;
-  if (type === 'satenaskilik') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `📏 ${item.metre||0} m\n`; }
-  if (type === 'kordon' && korMetreMi(item)) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Toplam: *${korMiktar(item)}*\n`; }
-  else if (type === 'kordon' && item.olcular) { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `\n🪢 Ölçüler:\n`+item.olcular.map(o=>`  • ${o.beden?(o.beden+' · '):''}${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `📊 Toplam: *${item.totalAdet||0} adet*\n`; }
-  if (type === 'dantel') { if(item.renk) text += `\n🎨 Renk: ${item.renk}\n`; text += `🕸️ ${item.metre||0} m\n`; }
-  if (item.teslimEden) text += `\n👤 Teslim Eden: ${item.teslimEden}`;
-  if (item.teslimAlan) text += `\n👤 Teslim Alan: ${item.teslimAlan}`;
-  if (item.aciklama || item.not) text += `\n\n📝 Not: ${item.aciklama || item.not}`;
+  if (type === 'lastik') { if(item.renk) text += `\nRenk: ${item.renk}\n`; text += `${item.cm||0} cm × ${item.metre||0} m\n`; }
+  if (type === 'dugme') text += `\n${item.adet||0} adet\n`;
+  if (type === 'satenaskilik') { if(item.renk) text += `\nRenk: ${item.renk}\n`; text += `${item.metre||0} m\n`; }
+  if (type === 'kordon' && korMetreMi(item)) { if(item.renk) text += `\nRenk: ${item.renk}\n`; text += `\nToplam: *${korMiktar(item)}*\n`; }
+  else if (type === 'kordon' && item.olcular) { if(item.renk) text += `\nRenk: ${item.renk}\n`; text += `\nÖlçüler:\n`+item.olcular.map(o=>`  • ${o.beden?(o.beden+' · '):''}${o.cm} cm: ${o.adet} adet`).join('\n')+`\n`; text += `Toplam: *${item.totalAdet||0} adet*\n`; }
+  if (type === 'dantel') { if(item.renk) text += `\nRenk: ${item.renk}\n`; text += `${item.metre||0} m\n`; }
+  if (item.teslimEden) text += `\nTeslim Eden: ${item.teslimEden}`;
+  if (item.teslimAlan) text += `\nTeslim Alan: ${item.teslimAlan}`;
+  if (item.aciklama || item.not) text += `\n\nNot: ${item.aciklama || item.not}`;
   text += `\n━━━━━━━━━━━━━\nİrsaliye Pro`;
   return text;
 }
@@ -14256,7 +14258,7 @@ function shareWhatsApp() {
   try{
     if(typeof _buildQrScanUrl === 'function'){
       const scanUrl = _buildQrScanUrl(currentShareItem, currentShareType);
-      if(scanUrl) text += '\n\n📱 Detaylar ve fotograflar:\n' + scanUrl;
+      if(scanUrl) text += '\n\nDetaylar ve fotograflar:\n' + scanUrl;
     }
   }catch(_){}
   // Atolye telefonu kayitliysa dogrudan o numaraya gonder
@@ -14294,7 +14296,7 @@ function shareCopy() {
   const text = buildShareText(currentShareItem, currentShareType).replace(/\*/g,'');
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => {
-      toast('Panoya kopyalandı ✓','success');
+      toast('Panoya kopyalandı','success');
       closeShareMenu();
     }).catch(() => { fallbackCopy(text); });
   } else { fallbackCopy(text); }
@@ -14304,7 +14306,7 @@ function fallbackCopy(text) {
   const ta = document.createElement('textarea');
   ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
   document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); toast('Panoya kopyalandı ✓','success'); }
+  try { document.execCommand('copy'); toast('Panoya kopyalandı','success'); }
   catch(e){ toast('Kopyalanamadı','error'); }
   ta.remove(); closeShareMenu();
 }
@@ -14349,7 +14351,7 @@ function bulkShareWhatsApp() {
   const checks = document.querySelectorAll('.bulk-check[data-id]:checked');
   if (!checks.length) return toast('En az 1 kayıt seçin','error');
   const typeLabel = {standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten Askılık',kordon:'Kordon',dantel:'Dantel'};
-  let text = `📋 *${checks.length} İrsaliye Detayı*\n━━━━━━━━━━━━━\n\n`;
+  let text = `*${checks.length} İrsaliye Detayı*\n━━━━━━━━━━━━━\n\n`;
   checks.forEach((cb, idx) => {
     const id = +cb.dataset.id; const type = cb.dataset.type;
     const key = type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
@@ -14360,14 +14362,14 @@ function bulkShareWhatsApp() {
     const head = item.model||item.urun||item.firma||'';
     if (head) text += ` — ${head}`;
     text += `\n`;
-    if (item.atolye) text += `🏭 Atölye: ${item.atolye}\n`;
-    if (item.firma && type!=='toptan') text += `🏢 Firma: ${item.firma}\n`;
+    if (item.atolye) text += `Atölye: ${item.atolye}\n`;
+    if (item.firma && type!=='toptan') text += `Firma: ${item.firma}\n`;
     // Ölçü / Beden / Adet detayları
     if (type === 'standart' && item.sizes) {
       const sn = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
       const szs = Object.keys(item.sizes).filter(k => item.sizes[k] > 0).map(k => `   • ${sn[k]||k}: *${item.sizes[k]} adet*`);
       if (szs.length) {
-        text += `📏 Ölçüler:\n${szs.join('\n')}\n`;
+        text += `Ölçüler:\n${szs.join('\n')}\n`;
         const tot = Object.values(item.sizes).reduce((a,b)=>a+(+b||0),0);
         if (tot) text += `   Σ Toplam: *${tot} adet*\n`;
       }
@@ -14379,38 +14381,38 @@ function bulkShareWhatsApp() {
         return {k:bl[k]||k, v: +v||0};
       }).filter(x => x.v > 0);
       if (bds.length) {
-        text += `👕 Bedenler:\n` + bds.map(b=>`   • ${b.k}: *${b.v} adet*`).join('\n') + `\n`;
+        text += `Bedenler:\n` + bds.map(b=>`   • ${b.k}: *${b.v} adet*`).join('\n') + `\n`;
         const total = item.totalAdet || item.total || bds.reduce((a,b)=>a+b.v,0);
         if (total) text += `   Σ Toplam: *${total} adet*\n`;
       }
     }
     if (type === 'lastik') {
-      text += `📏 Ölçü: *${item.cm||0} cm × ${item.metre||0} m*\n`;
-      if (item.adet) text += `🔢 Adet: *${item.adet}*\n`;
+      text += `Ölçü: *${item.cm||0} cm × ${item.metre||0} m*\n`;
+      if (item.adet) text += `Adet: *${item.adet}*\n`;
     }
     if (type === 'dugme') {
       if (item.cap) text += `⭕ Çap: ${item.cap}\n`;
-      text += `🔘 Adet: *${item.adet||0}*\n`;
+      text += `Adet: *${item.adet||0}*\n`;
     }
     if (type === 'satenaskilik') {
-      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
-      text += `📏 Metre: *${item.metre||0} m*\n`;
+      if (item.renk) text += `Renk: ${item.renk}\n`;
+      text += `Metre: *${item.metre||0} m*\n`;
     }
     if (type === 'kordon' && korMetreMi(item)) {
-      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
-      text += `🪢 *${korMiktar(item)}*\n`;
+      if (item.renk) text += `Renk: ${item.renk}\n`;
+      text += `*${korMiktar(item)}*\n`;
     }
     else if (type === 'kordon' && item.olcular) {
-      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
-      text += `🪢 Ölçüler:\n` + item.olcular.map(o=>`   • ${o.beden?(o.beden+' · '):''}${o.cm} cm: *${o.adet} adet*`).join('\n') + `\n`;
+      if (item.renk) text += `Renk: ${item.renk}\n`;
+      text += `Ölçüler:\n` + item.olcular.map(o=>`   • ${o.beden?(o.beden+' · '):''}${o.cm} cm: *${o.adet} adet*`).join('\n') + `\n`;
       text += `   Σ Toplam: *${item.totalAdet||0} adet*\n`;
     }
     if (type === 'dantel') {
-      if (item.renk) text += `🎨 Renk: ${item.renk}\n`;
-      text += `🕸️ *${item.metre||0} m*\n`;
+      if (item.renk) text += `Renk: ${item.renk}\n`;
+      text += `*${item.metre||0} m*\n`;
     }
-    if (item.termin) text += `⏰ Termin: ${item.termin}\n`;
-    if (item.durum) text += `📌 Durum: ${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}\n`;
+    if (item.termin) text += `Termin: ${item.termin}\n`;
+    if (item.durum) text += `Durum: ${item.durum==='teslim'?'Teslim':'Bekliyor'}\n`;
     text += `\n`;
   });
   text += `━━━━━━━━━━━━━\nİrsaliye Pro`;
@@ -14425,7 +14427,7 @@ function bulkShareWhatsApp() {
     if(it){ items.push({it, type}); if(it.atolye) atolyeSet.add(String(it.atolye).trim().toLowerCase()); }
   });
   if(typeof _buildQrScanUrl === 'function' && items.length){
-    text += '\n\n📱 Detaylar:';
+    text += '\n\nDetaylar:';
     items.forEach(({it,type})=>{
       try{ const u = _buildQrScanUrl(it, type); if(u) text += '\n• ' + (it.no||'-') + ': ' + u; }catch(_){}
     });
@@ -14469,30 +14471,30 @@ function _singleItemPdfHtml(item, type){
   const qrScanUrl=(typeof _buildQrScanUrl==='function')?_buildQrScanUrl(item,type):'';
   // Toplu PDF icin de yuksek cozunurluk + H seviyesi
   const qrDataUrl=(typeof _buildQrDataUrl==='function'&&qrScanUrl)?_buildQrDataUrl(qrScanUrl,{size:1024,correctLevel:'H'}):'';
-  const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;"><div style="font-size:8px;color:#7c3aed;margin-top:2px;font-weight:700;max-width:110px;margin-left:auto;line-height:1.25;">📷 QR'ı okutarak kanıt<br>fotoğraflarını görebilirsiniz</div></div>`:'';
+  const qrBlock=qrDataUrl?`<div style="margin-top:8px;text-align:right;"><img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;border:1px solid #e5e7eb;border-radius:5px;padding:2px;background:#fff;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;"><div style="font-size:8px;color:#7c3aed;margin-top:2px;font-weight:700;max-width:110px;margin-left:auto;line-height:1.25;">QR'ı okutarak kanıt<br>fotoğraflarını görebilirsiniz</div></div>`:'';
   let h=`<div class="irsaliye-page">
-  <div class="ph"><div class="ph-left"><h1>📦 ${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${esc(item.no)||'—'}</div>${qrBlock}</div></div>
+  <div class="ph"><div class="ph-left"><h1>${typeLabel}</h1><p>İrsaliye Pro — Eyüp</p></div><div class="ph-right"><div class="pno">${esc(item.no)||'—'}</div>${qrBlock}</div></div>
   <div class="ig">
     <div class="ib"><div class="il">Tarih</div><div class="iv">${esc(_trTarih(item.tarih))||'—'}</div></div>
-    <div class="ib"><div class="il">Durum</div><div class="iv"><span class="sb ${item.durum==='teslim'?'sb-teslim':'sb-bekliyor'}">${item.durum==='teslim'?'✅ Teslim':'⏳ Bekliyor'}</span></div></div>
+    <div class="ib"><div class="il">Durum</div><div class="iv"><span class="sb ${item.durum==='teslim'?'sb-teslim':'sb-bekliyor'}">${item.durum==='teslim'?'Teslim':'Bekliyor'}</span></div></div>
     <div class="ib"><div class="il">Model / Ürün</div><div class="iv">${esc(item.model||item.urun)||'—'}</div></div>
     <div class="ib"><div class="il">Atölye / Firma</div><div class="iv">${esc(item.atolye||item.firma)||'—'}</div></div>
     ${item.teslimEden?`<div class="ib"><div class="il">Teslim Eden</div><div class="iv">${esc(item.teslimEden)}</div></div>`:''}
     ${item.teslimAlan?`<div class="ib"><div class="il">Teslim Alan</div><div class="iv">${esc(item.teslimAlan)}</div></div>`:''}
     ${item.termin?`<div class="ib"><div class="il">Termin</div><div class="iv">${esc(_trTarih(item.termin))}</div></div>`:''}
-    ${((type==='fermuar'||type==='dugme'||type==='satenaskilik')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">🎨 Renk</div><div class="iv">${esc(item.renk)}</div></div>`:''}
+    ${((type==='fermuar'||type==='dugme'||type==='satenaskilik')&&item.renk)?`<div class="ib" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="il">Renk</div><div class="iv">${esc(item.renk)}</div></div>`:''}
   </div>`;
 
   if(type==='standart'&&item.sizes){
     const sn={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     const bn={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
     if(Object.values(item.sizes).some(v=>v>0)){
-      h+=`<div class="st">📦 Poşet Ölçüleri</div><table><thead><tr><th>Ölçü</th><th>Adet</th></tr></thead><tbody>`;
+      h+=`<div class="st">Poşet Ölçüleri</div><table><thead><tr><th>Ölçü</th><th>Adet</th></tr></thead><tbody>`;
       for(let k in item.sizes){if(item.sizes[k]>0)h+=`<tr><td><b>${sn[k]||k}</b></td><td>${item.sizes[k]}</td></tr>`;}
       h+=`</tbody></table><div class="tr2">Toplam Poşet: ${Object.values(item.sizes).reduce((a,b)=>a+b,0)}</div>`;
     }
     if(item.bant&&Object.values(item.bant).some(v=>v>0)){
-      h+=`<div class="st">🎀 Bant & Kılçık</div><table><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>`;
+      h+=`<div class="st">Bant & Kılçık</div><table><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>`;
       for(let k in item.bant){if(item.bant[k]>0)h+=`<tr><td><b>${bn[k]||k}</b></td><td>${item.bant[k]}</td></tr>`;}
       h+=`</tbody></table>`;
     }
@@ -14500,49 +14502,49 @@ function _singleItemPdfHtml(item, type){
   if(type==='fermuar'&&item.beden){
     if(item.hideBeden){
       const grouped=groupFermuarBedenByCm(item.beden);
-      h+=`<div class="st">🔗 Fermuar Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+      h+=`<div class="st">Fermuar Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
       h+=`<table><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>`;
       grouped.forEach(g=>{h+=`<tr><td><b>${g.cm}</b> cm</td><td>${g.adet}</td></tr>`;});
       h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
     } else {
       const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-      h+=`<div class="st">🔗 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+      h+=`<div class="st">Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
       h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
       sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};h+=`<tr><td><b>${bl[k]||k}</b></td><td>${bv.cm??'-'} cm</td><td>${bv.adet??0}</td></tr>`;});
       h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
     }
   }
   if(type==='lastik'){
-    h+=`<div class="st">📏 Lastik Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
+    h+=`<div class="st">Lastik Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.cm||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">CM</div></div><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div></div>`;
   }
   if(type==='dugme'){
-    h+=`<div class="st">🔘 Düğme Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">ADET</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
+    h+=`<div class="st">Düğme Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.adet||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">ADET</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='toptan'&&item.beden){
     const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-    h+=`<div class="st">📦 Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
+    h+=`<div class="st">Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><table><thead><tr><th>Beden</th><th>Adet</th></tr></thead><tbody>`;
     sortBedenKeys(item.beden).forEach(k=>{h+=`<tr><td><b>${bl[k]||k}</b></td><td>${item.beden[k]||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.total||0}</div>`;
   }
   if(type==='satenaskilik'){
-    h+=`<div class="st">🪢 Saten Askılık Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
+    h+=`<div class="st">Saten Askılık Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='dantel'){
-    h+=`<div class="st">🕸️ Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+    h+=`<div class="st">Dantel Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     h+=`<div style="display:grid;grid-template-columns:1fr ${item.renk?'1fr':''};gap:10px;"><div style="background:#f8f7fc;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:28px;font-weight:800;color:#7c3aed;">${item.metre||0}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">METRE</div></div>${item.renk?`<div style="background:#f3f0ff;border:1px solid #c4b5fd;border-left:4px solid #7c3aed;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#7c3aed;">${esc(item.renk)}</div><div style="font-size:12px;color:#6b7280;font-weight:600;">RENK</div></div>`:''}</div>`;
   }
   if(type==='kordon'&&korMetreMi(item)){
-    h+=`<div class="st">🪢 Kordon Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+    h+=`<div class="st">Kordon Miktarı${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     h+=`<div class="tr2">Toplam Metre: ${item.metre||0} m</div>`;
   }
   else if(type==='kordon'&&item.olcular&&item.olcular.length){
-    h+=`<div class="st">🪢 Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
+    h+=`<div class="st">Kordon Ölçüleri${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
     const _bv2=korBedenVar(item);
     h+=`<table><thead><tr>${_bv2?'<th>Beden</th>':''}<th>CM</th><th>Adet</th></tr></thead><tbody>`;
     item.olcular.forEach(o=>{h+=`<tr>${_bv2?`<td><b>${esc(o.beden||'-')}</b></td>`:''}<td><b>${o.cm||'-'} cm</b></td><td>${o.adet||0}</td></tr>`;});
     h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
   }
-  if(item.aciklama||item.not)h+=`<div class="nb">📝 <b>Not:</b> ${esc(item.aciklama||item.not)}</div>`;
+  if(item.aciklama||item.not)h+=`<div class="nb"><b>Not:</b> ${esc(item.aciklama||item.not)}</div>`;
 
   h+=`<div class="sigs">
     <div class="sb2">${item._signature?`<img src="${item._signature}" style="height:70px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`:'<div style="height:70px;"></div>'}<div class="sl">Teslim Eden${item.teslimEden?': '+esc(item.teslimEden):''}</div></div>
@@ -14773,10 +14775,10 @@ function _buildBulkHTML(items){
   .btn-close{background:#6b7280;color:#fff;}
 </style></head><body>
 <div class="no-print" id="bulkPdfControls">
-  <button class="btn-pdf" style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.body, '${pdfFilename}', document.getElementById('bulkPdfControls'))">📥 PDF İndir</button>
-  <button class="btn-pdf" style="background:#0891b2;" onclick="window.opener._shareElementAsImage(document.body, '${pdfFilename.replace(/\.pdf$/i,'')}.png', document.getElementById('bulkPdfControls'))">🖼️ Görsel</button>
-  <button class="btn-pdf" onclick="window.print()">🖨️ Yazdır</button>
-  <button class="btn-close" onclick="window.close()">✕ Kapat</button>
+  <button class="btn-pdf" style="background:#16a34a;" onclick="window.opener._downloadElementAsPDF(document.body, '${pdfFilename}', document.getElementById('bulkPdfControls'))">PDF İndir</button>
+  <button class="btn-pdf" style="background:#0891b2;" onclick="window.opener._shareElementAsImage(document.body, '${pdfFilename.replace(/\.pdf$/i,'')}.png', document.getElementById('bulkPdfControls'))">Görsel</button>
+  <button class="btn-pdf" onclick="window.print()">Yazdır</button>
+  <button class="btn-close" onclick="window.close()">Kapat</button>
 </div>
 ${pages}
 </body></html>`;
@@ -14827,7 +14829,7 @@ function exportBackup() {
   // Sayıları hesapla
   let total = 0;
   Object.values(backup.data).forEach(arr => { if (Array.isArray(arr)) total += arr.length; });
-  toast(`Yedekleme tamamlandı ✓ (${total} kayıt)`,'success');
+  toast(`Yedekleme tamamlandı (${total} kayıt)`,'success');
 }
 
 function importBackup() {
@@ -14856,7 +14858,7 @@ function importBackup() {
 
         let total = 0;
         Object.values(backup.data).forEach(arr => { if (Array.isArray(arr)) total += arr.length; });
-        toast(`Yedek yüklendi ✓ (${total} kayıt)`,'success');
+        toast(`Yedek yüklendi (${total} kayıt)`,'success');
         setTimeout(() => location.reload(), 1200);
       } catch(err) {
         toast('Yedek okunamadı: ' + err.message, 'error');
@@ -14868,7 +14870,7 @@ function importBackup() {
 }
 
 function clearAllData() {
-  if (!confirm('⚠️ TÜM VERİLER silinecek! Bu işlem GERİ ALINAMAZ!\n\nDevam etmek için Tamam\'a basın.')) return;
+  if (!confirm('TÜM VERİLER silinecek! Bu işlem GERİ ALINAMAZ!\n\nDevam etmek için Tamam\'a basın.')) return;
   if (!confirm('Son uyarı: Tüm irsaliyeler, atölyeler, stoklar ve ayarlar silinecek. Emin misiniz?')) return;
   // Firestore ile senkron key'ler — bos dizi yazarak bulutta da siliniyor
   const fsKeys = ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
@@ -14975,7 +14977,7 @@ function getStorageBreakdown(){
 function cleanupPhotosManual(){
   const b = getStorageBreakdown();
   if(b.uploadedCount === 0){
-    if(b.unuploadedCount > 0) toast('⚠️ '+b.unuploadedCount+' fotoğraf henüz buluta yüklenmemiş — silinirse kaybolur. Önce Fotoğraf sayfasından yükleyin.','error');
+    if(b.unuploadedCount > 0) toast(''+b.unuploadedCount+' fotoğraf henüz buluta yüklenmemiş — silinirse kaybolur. Önce Fotoğraf sayfasından yükleyin.','error');
     else toast('Temizlenecek yüklenmiş fotoğraf yok','info');
     return;
   }
@@ -14983,7 +14985,7 @@ function cleanupPhotosManual(){
   cleanupLocalStoragePhotos();
   const freed = Math.max(0, before - getStorageUsage());
   updateStorageDisplay();
-  toast('✓ '+b.uploadedCount+' fotoğrafın yerel kopyası temizlendi — '+formatBytes(freed)+' boşaldı (bulut kopyaları duruyor)','success');
+  toast(''+b.uploadedCount+' fotoğrafın yerel kopyası temizlendi — '+formatBytes(freed)+' boşaldı (bulut kopyaları duruyor)','success');
   if(b.unuploadedCount > 0) toast('ℹ️ '+b.unuploadedCount+' fotoğraf henüz yüklenmediği için tutuldu','info');
 }
 
@@ -15255,7 +15257,7 @@ function checkStorageQuota() {
   // dolduruyor ve altindaki onemli (orn. "Tekrar Dene") toast'lari gomuyor.
   if (pct > 80 && !window._quotaWarned) {
     window._quotaWarned = true;
-    toast(`⚠️ Depolama %${pct.toFixed(0)} dolu (${formatBytes(used)}). Yedek alın!`,'error');
+    toast(`Depolama %${pct.toFixed(0)} dolu (${formatBytes(used)}). Yedek alın!`,'error');
   }
   return { used, limit, pct };
 }
@@ -15297,7 +15299,7 @@ function installPWA() {
   }
   deferredPrompt.prompt();
   deferredPrompt.userChoice.then((result) => {
-    if (result.outcome === 'accepted') toast('Uygulama yüklendi ✓','success');
+    if (result.outcome === 'accepted') toast('Uygulama yüklendi','success');
     deferredPrompt = null;
     dismissPWA();
   });
@@ -15686,7 +15688,7 @@ function approveUser(idx){
   authSaveUsers(users);
   renderUserList();
   try{ if(typeof window._logAudit==='function') window._logAudit('user_approve', { by: (localStorage.getItem('irsaliye_last_user')||'?'), label: u.username }); }catch(_){}
-  toast(u.username+' onaylandı ✓ — artık giriş yapabilir','success');
+  toast(u.username+' onaylandı — artık giriş yapabilir','success');
 }
 
 function rejectUser(idx){
@@ -16412,7 +16414,7 @@ async function testGithubConnection(){
     const data = await res.json().catch(()=>({}));
     if(res.ok){
       const priv = data.private ? 'private' : 'public';
-      const perm = (data.permissions && (data.permissions.push || data.permissions.admin)) ? 'yazma yetkisi var ✓' : 'yazma yetkisi YOK ✗';
+      const perm = (data.permissions && (data.permissions.push || data.permissions.admin)) ? 'yazma yetkisi var ' : 'yazma yetkisi YOK ';
       result.innerHTML = `<span style="color:#10b981;"><i class="fas fa-circle-check"></i> Bağlantı başarılı — repo bulundu (${priv}), ${perm}</span>`;
     } else {
       const msg = (data && data.message) || ('HTTP ' + res.status);
@@ -16558,12 +16560,12 @@ async function generateQrForItem(id, type){
   if(photos.length && uploadedCount < photos.length){
     const missing = photos.length - uploadedCount;
     photoWarnHtml = `<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);font-size:12px;color:#f59e0b;">
-      ⚠️ ${missing} fotoğraf henüz buluta yüklenmemiş — QR'ı tarayan kişi göremeyecek.
+      ${missing} fotoğraf henüz buluta yüklenmemiş — QR'ı tarayan kişi göremeyecek.
       <button class="btn btn-sm btn-secondary" onclick="retryPhotoUpload(${JSON.stringify(id)},'${type}')" style="margin-left:8px;"><i class="fas fa-upload"></i> Şimdi Yükle</button>
     </div>`;
   } else if(uploadedCount > 0){
     photoWarnHtml = `<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);font-size:11px;color:#10b981;">
-      ✓ ${uploadedCount} fotoğraf buluta yüklü — tarayan kişi QR'dan ulaşabilecek
+      ${uploadedCount} fotoğraf buluta yüklü — tarayan kişi QR'dan ulaşabilecek
     </div>`;
   }
 
@@ -16832,7 +16834,7 @@ function refreshSignaturePage(){
   const sel = document.getElementById('sigWaybillSelect');
   const all = _getAllUnifiedWithType().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   sel.innerHTML = '<option value="">— İrsaliye seçin —</option>' + all.map(i=>{
-    const mark = (i._signature?'✍️':'') + (i._photo?'📸':'');
+    const mark = (i._signature?' · imzalı':'') + (i._photo?' · fotoğraflı':'');
     return `<option value="${i._type}|${i.id}">${i.no||'['+i.firma+']'} — ${TYPE_LABEL_MAP[i._type]} — ${i.model||i.urun||'-'} ${mark}</option>`;
   }).join('');
 
@@ -16916,9 +16918,9 @@ function renderSigWaybillList(){
     const date  = i.tarih || '-';
     const badges = [];
     badges.push(`<span class="sig-wb-badge type">${esc(TYPE_LABEL_MAP[i._type] || i._type)}</span>`);
-    if(i._signature) badges.push('<span class="sig-wb-badge signed">✍️ İmzalı</span>');
+    if(i._signature) badges.push('<span class="sig-wb-badge signed"><i class="fas fa-signature"></i> İmzalı</span>');
     const pc = _getPhotosArray(i).length;
-    if(pc) badges.push(`<span class="sig-wb-badge photo">📸 ${pc>1?pc+' Foto':'Fotoğraflı'}</span>`);
+    if(pc) badges.push(`<span class="sig-wb-badge photo"><i class="fas fa-camera"></i> ${pc>1?pc+' Foto':'Fotoğraflı'}</span>`);
     const quickActions = pc ? `
         <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation(); generatePDF(${JSON.stringify(i.id)},'${i._type}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
         <button class="btn btn-xs" onclick="event.stopPropagation(); shareIrsaliyeWhatsApp(${JSON.stringify(i.id)},'${i._type}')" title="WhatsApp'tan Gönder" style="background:#25D366;color:#fff;border:0;display:inline-flex;align-items:center;justify-content:center;">${_WA_ICON_SVG}</button>
@@ -17060,13 +17062,13 @@ function loadSigForWaybill(){
   const allUploaded = photos.length > 0 && photos.every(p => p.url);
   const anyUploaded = photos.some(p => p.url);
   const cloudStatus = allUploaded
-    ? ' • <span style="color:#10b981;">☁️ Tümü Yüklü</span>'
-    : (anyUploaded ? ' • <span style="color:#f59e0b;">⚠️ Bazıları yüklenmemiş</span>'
-    : (photos.length ? ' • <span style="color:#f59e0b;">⚠️ Bulut linki yok</span>' : ''));
+    ? ' • <span style="color:#10b981;">Tümü Yüklü</span>'
+    : (anyUploaded ? ' • <span style="color:#f59e0b;">Bazıları yüklenmemiş</span>'
+    : (photos.length ? ' • <span style="color:#f59e0b;">Bulut linki yok</span>' : ''));
   document.getElementById('sigSelectedInfo').innerHTML = `
     <i class="fas fa-check"></i> Seçili: <b style="color:var(--primary);">${item.no||''}</b> — ${item.model||item.urun||'-'} • ${item.atolye||item.firma||'-'} • ${item.tarih||'-'}
-    ${item._signature?' • <span style="color:#10b981;">✍️ İmzalı</span>':''}
-    ${photos.length?` • <span style="color:#10b981;">📸 ${photos.length} Fotoğraf</span>`:''}
+    ${item._signature?' • <span style="color:#10b981;">İmzalı</span>':''}
+    ${photos.length?` • <span style="color:#10b981;">${photos.length} Fotoğraf</span>`:''}
     ${cloudStatus}
   `;
   // Mevcut imzayı yükle
@@ -17234,7 +17236,7 @@ function loadPhotoFromFile(e){
   if(!files.length) return;
   const waybillId = _sigCurrentWaybill.id, waybillType = _sigCurrentWaybill.type;
   const total = files.length;
-  if(total > 1) toast('📤 ' + total + ' fotoğraf — biri bitmeden diğeri başlamadan sırayla yüklenecek','info');
+  if(total > 1) toast('' + total + ' fotoğraf — biri bitmeden diğeri başlamadan sırayla yüklenecek','info');
   (async () => {
     for(let i=0; i<files.length; i++){
       const dataUrl = await _readAndCompressPhotoFile(files[i]);
@@ -17975,7 +17977,7 @@ const _uploadsInFlight = new Set();
 // bir sonraki fotoğrafa geçmeden bunu await ederek sıralı (eş zamansız olmayan) yükleme yapabilir.
 function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
   const flightKey = `${id}__${type}__${photoIndex ?? 'main'}`;
-  if(_uploadsInFlight.has(flightKey)){ toast('⏳ Bu fotoğraf zaten yükleniyor…','info'); return Promise.resolve(); }
+  if(_uploadsInFlight.has(flightKey)){ toast('Bu fotoğraf zaten yükleniyor…','info'); return Promise.resolve(); }
   _uploadsInFlight.add(flightKey);
   _updateItem(id, type, (item)=>{
     if(photoIndex !== undefined && Array.isArray(item._photos) && item._photos[photoIndex]){
@@ -18011,14 +18013,14 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
     });
     if(ok){
       const num = (photoIndex !== undefined) ? ' (' + (photoIndex+1) + '. foto)' : '';
-      toast('✓ Fotoğraf buluta yüklendi' + num + ' — QR hazır','success');
+      toast('Fotoğraf buluta yüklendi' + num + ' — QR hazır','success');
       if(_sigCurrentWaybill && String(_sigCurrentWaybill.id) === String(id) && _sigCurrentWaybill.type === type){
         renderPhotoGallery();
         renderSigSavedList();
       }
     } else {
       console.warn('Upload başarılı ama _updateItem yazamadı:', id, type, photoIndex);
-      toast('⚠️ Yüklendi fakat kaydedilemedi — tekrar deneyin','error');
+      toast('Yüklendi fakat kaydedilemedi — tekrar deneyin','error');
     }
   }).catch(err=>{
     _uploadsInFlight.delete(flightKey);
@@ -18036,7 +18038,7 @@ function _uploadPhotoInBackground(id, type, dataUrl, photoIndex){
       return item;
     });
     const num = (photoIndex !== undefined) ? ' (' + (photoIndex+1) + '. foto)' : '';
-    toastAction('⚠️ Fotoğraf yüklenemedi' + num + ': ' + esc(msg), 'error', '⟳ Tekrar Dene', ()=>{
+    toastAction('Fotoğraf yüklenemedi' + num + ': ' + esc(msg), 'error', 'Tekrar Dene', ()=>{
       _uploadPhotoInBackground(id, type, dataUrl, photoIndex);
     });
     if(_sigCurrentWaybill && String(_sigCurrentWaybill.id) === String(id) && _sigCurrentWaybill.type === type){
@@ -18056,7 +18058,7 @@ function retryPhotoUpload(id, type, photoIndex){
   const dataUrl = (rawPhoto && typeof rawPhoto.data === 'string' && rawPhoto.data.startsWith('data:')) ? rawPhoto.data : '';
   if(!dataUrl){
     // Sayfa yenilenince base64 Firestore'dan dönen versiyona göre silinmiş olabilir
-    toast('⚠️ Fotoğraf verisi bulunamadı — bu fotoğrafı galeriden veya kameradan tekrar ekleyin', 'error');
+    toast('Fotoğraf verisi bulunamadı — bu fotoğrafı galeriden veya kameradan tekrar ekleyin', 'error');
     return;
   }
   toast('Yükleniyor...','info');
@@ -18131,7 +18133,7 @@ function saveManualPhotoUrl(rawUrl){
         <div style="margin-top:6px;font-size:11px;color:var(--text-muted);word-break:break-all;">${url}</div>
         <div style="margin-top:8px;"><a href="${url}" target="_blank" rel="noopener" style="color:var(--primary);font-size:12px;"><i class="fas fa-external-link-alt"></i> Linki Test Et (yeni sekmede resim açılmalı)</a></div>`;
     }
-    toast('✓ Fotoğraf linki kaydedildi — QR artık hazır','success');
+    toast('Fotoğraf linki kaydedildi — QR artık hazır','success');
     loadSigForWaybill();
     renderSigSavedList();
   }
@@ -18150,7 +18152,7 @@ function renderNewFormPhotoGallery(){
     <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);margin:2px;">
       <img src="${p.data}" style="width:80px;height:80px;object-fit:cover;display:block;" alt="foto ${i+1}">
       <div style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;border-radius:4px;padding:1px 4px;font-weight:700;">${i+1}</div>
-      <button onclick="removeNfPhotoAt(${i})" style="position:absolute;top:2px;right:2px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">✕</button>
+      <button onclick="removeNfPhotoAt(${i})" style="position:absolute;top:2px;right:2px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;"><i class="fas fa-xmark"></i></button>
     </div>
   `).join('');
 }
@@ -18271,7 +18273,7 @@ function cleanupLocalStoragePhotos(){
   });
 
   if(cleaned > 0){
-    console.log(`✅ ${cleaned} fotoğraf localStorage'den temizlendi`);
+    console.log(`${cleaned} fotoğraf localStorage'den temizlendi`);
   }
 }
 
@@ -18288,7 +18290,7 @@ function _uploadNfPhotosInBackground(savedId, type){
   _newFormPhotos = [];
   renderNewFormPhotoGallery();
   const total = photoCopies.length;
-  if(total > 1) toast('📤 ' + total + ' fotoğraf — sırayla yüklenecek','info');
+  if(total > 1) toast('' + total + ' fotoğraf — sırayla yüklenecek','info');
   // Sırayla (bir foto tamamen bitmeden diğeri başlamadan) yükle — eş zamanlı PUT'lar
   // GitHub'ın aynı branch'e commit çakışmasına (409) yol açıyordu, özellikle 5+ fotoda.
   (async () => {
@@ -18376,19 +18378,19 @@ function renderPhotoGallery(){
         const isFailed = !p.url && !p.uploading;
         const retryFn = isFailed ? ('retryPhotoUpload('+JSON.stringify(id)+',' + JSON.stringify(type) + ','+idx+')') : '';
         const statusBadge = p.url
-          ? `<div style="position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;">☁️</div>`
+          ? `<div style="position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;"><i class="fas fa-cloud"></i></div>`
           : p.uploading
-            ? `<div style="position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;">⏳</div>`
+            ? `<div style="position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,0.55);border-radius:3px;padding:1px 4px;"></div>`
             : `<div onclick="${retryFn}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:3px;">
-                 <span style="font-size:18px;">⚠️</span>
+                 <span style="font-size:18px;"><i class="fas fa-triangle-exclamation"></i></span>
                  <span style="font-size:9px;color:#fff;font-weight:700;text-align:center;line-height:1.2;">${hasData?'Tekrar\nYükle':'Yeniden\nÇek'}</span>
                </div>`;
         return `
         <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
-          ${imgSrc ? `<img src="${imgSrc}" onclick="openPhotoLightbox(${idx})" style="width:90px;height:90px;object-fit:cover;display:block;cursor:zoom-in;" alt="foto ${idx+1}">` : `<div style="width:90px;height:90px;background:#374151;display:flex;align-items:center;justify-content:center;font-size:22px;">🖼️</div>`}
+          ${imgSrc ? `<img src="${imgSrc}" onclick="openPhotoLightbox(${idx})" style="width:90px;height:90px;object-fit:cover;display:block;cursor:zoom-in;" alt="foto ${idx+1}">` : `<div style="width:90px;height:90px;background:#374151;display:flex;align-items:center;justify-content:center;font-size:22px;"><i class="fas fa-image"></i></div>`}
           <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;">${idx+1}</div>
           ${statusBadge}
-          <button onclick="removePhotoAt(${idx})" title="Bu fotoğrafı sil" style="position:absolute;top:3px;right:3px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">✕</button>
+          <button onclick="removePhotoAt(${idx})" title="Bu fotoğrafı sil" style="position:absolute;top:3px;right:3px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;"><i class="fas fa-xmark"></i></button>
         </div>`;
       }).join('')}
     </div>
@@ -18417,7 +18419,7 @@ function retryAllFailedPhotos(){
     toRetry.push({ photoIdx, dataUrl });
   });
   if(toRetry.length) toast('⟳ ' + toRetry.length + ' fotoğraf sırayla yeniden yükleniyor…','info');
-  if(noData) toast('⚠️ ' + noData + ' fotoğrafın verisi yok — galeriden veya kameradan tekrar ekleyin','error');
+  if(noData) toast('' + noData + ' fotoğrafın verisi yok — galeriden veya kameradan tekrar ekleyin','error');
   // Sırayla yükle (bkz. loadPhotoFromFile) — eş zamanlı gönderim GitHub'da 409 çakışmasına yol açıyordu.
   (async () => {
     for(let i=0; i<toRetry.length; i++){
@@ -18498,7 +18500,7 @@ function renderSigSavedList(){
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;color:var(--primary);font-size:13px;">${i.no||'-'}</div>
         <div style="font-size:11px;color:var(--text-muted);">${TYPE_LABEL_MAP[i._type]} • ${i.model||i.urun||'-'} • ${i.atolye||i.firma||'-'}</div>
-        <div style="font-size:10px;color:#3b82f6;margin-top:2px;">📸 ${photoCount} fotoğraf</div>
+        <div style="font-size:10px;color:#3b82f6;margin-top:2px;">${photoCount} fotoğraf</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-xs btn-secondary" onclick="editSigForItem('${i._type}',${i.id})"><i class="fas fa-pen"></i></button>
@@ -19185,9 +19187,9 @@ function printListPDF(){
   // Durum metni
   const durumText = (d, termin) => {
     const today = new Date().toISOString().split('T')[0];
-    if(d==='teslim') return '<span style="color:#16a34a;font-weight:600;">✓ Teslim</span>';
-    if(termin && termin<today && d==='bekliyor') return '<span style="color:#dc2626;font-weight:600;">⚠ Gecikmiş</span>';
-    return '<span style="color:#d97706;font-weight:600;">⏳ Bekliyor</span>';
+    if(d==='teslim') return '<span style="color:#16a34a;font-weight:600;">Teslim</span>';
+    if(termin && termin<today && d==='bekliyor') return '<span style="color:#dc2626;font-weight:600;">Gecikmiş</span>';
+    return '<span style="color:#d97706;font-weight:600;">Bekliyor</span>';
   };
 
   // Satırlar
@@ -19237,15 +19239,15 @@ function printListPDF(){
 
 </style></head><body>
 <div class="no-print">
-  <button onclick="window.print()">🖨️ Yazdır / PDF Kaydet</button>
-  <button class="close" onclick="window.close()">✕ Kapat</button>
+  <button onclick="window.print()">Yazdır / PDF Kaydet</button>
+  <button class="close" onclick="window.close()">Kapat</button>
 </div>
 <div class="header">
   <div>
-    <h1>📋 İrsaliye Listesi</h1>
+    <h1>İrsaliye Listesi</h1>
     <div class="company">${firmaAd}</div>
-    ${firmaTel?`<div style="font-size:10px;color:#555;">📞 ${firmaTel}</div>`:''}
-    ${firmaAdres?`<div style="font-size:10px;color:#555;">📍 ${firmaAdres}</div>`:''}
+    ${firmaTel?`<div style="font-size:10px;color:#555;">${firmaTel}</div>`:''}
+    ${firmaAdres?`<div style="font-size:10px;color:#555;">${firmaAdres}</div>`:''}
   </div>
   <div class="meta">
     <div><b>Yazdırma:</b> ${bugun}</div>
@@ -19739,7 +19741,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     // hint
     const hint = $('v8GoalHint');
     if(hint){
-      if(pct>=100) hint.textContent = '🎉 Tebrikler! Günlük hedefi geçtiniz.';
+      if(pct>=100) hint.textContent = 'Tebrikler! Günlük hedefi geçtiniz.';
       else if(pct>=70) hint.textContent = 'Çok yakınsın — '+(goal-today)+' irsaliye daha.';
       else if(today===0) hint.textContent = 'Bugüne henüz başlamadın. İlk irsaliyeni oluştur.';
       else hint.textContent = 'Hedefe ulaşmak için '+(goal-today)+' irsaliye daha.';
@@ -20028,7 +20030,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     setInterval(()=>{ if(qs('#page-home.active')) v8RenderAll(); }, 60000);
     // Initial tab styling
     setTimeout(()=>{ if(typeof v8SwitchTopTab==='function') v8SwitchTopTab('type'); }, 200);
-    console.log('%c✦ İrsaliye Pro v8 Premium Layer loaded ✦','background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;padding:4px 10px;border-radius:4px;font-weight:700;');
+    console.log('%cİrsaliye Pro v8 Premium Layer loaded ','background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;padding:4px 10px;border-radius:4px;font-weight:700;');
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', v8Init);
@@ -20486,7 +20488,7 @@ document.addEventListener('keydown', function(e){
       if(et) et.textContent = '1 saat hareketsizlik nedeniyle oturum kapandı. Lütfen tekrar giriş yapın.';
       if(errEl) errEl.classList.add('show');
     } catch(e){}
-    try { if(typeof toast === 'function') toast('Oturum zaman aşımına uğradı 🔒','info'); } catch(e){}
+    try { if(typeof toast === 'function') toast('Oturum zaman aşımına uğradı','info'); } catch(e){}
   }
   function startIdleWatch(){
     bumpExpiry();
@@ -20544,7 +20546,7 @@ document.addEventListener('keydown', function(e){
       if(document.getElementById('eggBox')) return;
       var box = document.createElement('div');
       box.id = 'eggBox';
-      box.innerHTML = '<span class="egg-crown">👑</span>'
+      box.innerHTML = '<span class="egg-crown"><i class="fas fa-crown"></i></span>'
                     + '<span class="egg-text">Adamsın Fuat Abi</span>'
                     + '<span class="egg-sub">İrsaliye Pro · gizli oda</span>';
       document.body.appendChild(box);
@@ -20725,10 +20727,10 @@ document.addEventListener('keydown', function(e){
   // ── Giriş / Kayıt Ol sekmeleri ───────────────────────────
   function computeGreet(){
     const h = new Date().getHours();
-    if(h < 6) return 'İyi geceler 🌙';
-    if(h < 12) return 'Günaydın ☀️';
-    if(h < 18) return 'İyi günler 🌤️';
-    return 'İyi akşamlar 🌆';
+    if(h < 6) return 'İyi geceler ';
+    if(h < 12) return 'Günaydın ';
+    if(h < 18) return 'İyi günler ';
+    return 'İyi akşamlar ';
   }
 
   const lgTabs      = document.getElementById('lgTabs');
@@ -21059,7 +21061,7 @@ function _parseViewerHash(){
       const data = JSON.parse(json);
       console.log('QR viewer: Parsed data successfully:', data);
       if(data && (data.app === 'irsaliyepro' || data.a === 'ip')) {
-        console.log('QR viewer: ✅ Valid irsaliyepro data found!');
+        console.log('QR viewer: Valid irsaliyepro data found!');
         return data;
       } else {
         console.warn('QR viewer: Data found but not irsaliyepro format');
@@ -21189,11 +21191,11 @@ async function _renderPublicViewerFromCloud(id, type, repoInfo){
     document.body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fef2f2;">
         <div style="text-align:center;max-width:400px;padding:20px;">
-          <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+          <div style="font-size:44px;margin-bottom:16px;opacity:.7;"><i class="fas fa-triangle-exclamation"></i></div>
           <div style="font-size:18px;font-weight:600;color:#dc2626;margin-bottom:8px;">İrsaliye Yüklenemedi</div>
           <div style="font-size:14px;color:#6b7280;margin-bottom:16px;">${safe}</div>
           <button onclick="window.location.reload()" style="background:#7c3aed;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
-            🔄 Tekrar Dene
+            Tekrar Dene
           </button>
         </div>
       </div>
@@ -21333,8 +21335,8 @@ function _renderPublicViewer(d){
 
   const typeLabel = TYPE_NAMES[d.type] || 'İrsaliye';
   const durumBadge = (d.durum === 'teslim')
-    ? '<span class="pv-badge pv-badge-ok">✓ Teslim Edildi</span>'
-    : '<span class="pv-badge pv-badge-wait">⏳ Bekliyor</span>';
+    ? '<span class="pv-badge pv-badge-ok">Teslim Edildi</span>'
+    : '<span class="pv-badge pv-badge-wait">Bekliyor</span>';
 
   let sizesHtml = '';
   if(d.sizes){
@@ -21342,13 +21344,13 @@ function _renderPublicViewer(d){
       .map(k => `<tr><td>${SIZE_NAMES[k]||k}</td><td>${d.sizes[k]}</td></tr>`).join('');
     if(rows){
       const total = Object.values(d.sizes).reduce((a,b)=>a+(+b||0),0);
-      sizesHtml += `<h3>📦 Poşet Ölçüleri</h3><table class="pv-tbl"><thead><tr><th>Ölçü</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table><div class="pv-total">Toplam: ${total}</div>`;
+      sizesHtml += `<h3>Poşet Ölçüleri</h3><table class="pv-tbl"><thead><tr><th>Ölçü</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table><div class="pv-total">Toplam: ${total}</div>`;
     }
   }
   if(d.bant){
     const rows = Object.keys(d.bant).filter(k => +d.bant[k] > 0)
       .map(k => `<tr><td>${BANT_NAMES[k]||k}</td><td>${d.bant[k]}</td></tr>`).join('');
-    if(rows) sizesHtml += `<h3>🎀 Bant & Kılçık</h3><table class="pv-tbl"><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>`;
+    if(rows) sizesHtml += `<h3>Bant & Kılçık</h3><table class="pv-tbl"><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
   if(d.beden){
     const rows = (window.sortBedenKeys ? window.sortBedenKeys(d.beden) : Object.keys(d.beden)).map(k => {
@@ -21356,10 +21358,10 @@ function _renderPublicViewer(d){
       if(typeof v === 'object') return `<tr><td>${BEDEN_NAMES[k]||k}</td><td>${v.cm||'-'} cm</td><td>${v.adet||0}</td></tr>`;
       return `<tr><td>${BEDEN_NAMES[k]||k}</td><td colspan="2">${v}</td></tr>`;
     }).join('');
-    if(rows) sizesHtml += `<h3>🔗 Beden Detayları</h3><table class="pv-tbl"><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>${d.total?`<div class="pv-total">Toplam Adet: ${d.total}</div>`:''}`;
+    if(rows) sizesHtml += `<h3>Beden Detayları</h3><table class="pv-tbl"><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>${d.total?`<div class="pv-total">Toplam Adet: ${d.total}</div>`:''}`;
   }
   if(d.cm || d.metre || d.adet){
-    sizesHtml += `<h3>📏 Detaylar</h3><table class="pv-tbl"><tbody>`;
+    sizesHtml += `<h3>Detaylar</h3><table class="pv-tbl"><tbody>`;
     if(d.cm)    sizesHtml += `<tr><td>CM</td><td>${d.cm}</td></tr>`;
     if(d.metre) sizesHtml += `<tr><td>Metre</td><td>${d.metre}</td></tr>`;
     if(d.adet)  sizesHtml += `<tr><td>Adet</td><td>${d.adet}</td></tr>`;
@@ -21381,7 +21383,7 @@ function _renderPublicViewer(d){
           <div class="pv-photo-item">
             <a href="${photo.url}" target="_blank" rel="noopener">
               <img src="${photo.url}" alt="Kanıt Fotoğrafı ${idx+1}" class="pv-photo" loading="lazy"
-                   onerror="this.parentNode.parentNode.innerHTML='<div class=&quot;pv-photo-error&quot;>⚠️ Fotoğraf yüklenemedi</div>';">
+                   onerror="this.parentNode.parentNode.innerHTML='<div class=&quot;pv-photo-error&quot;>Fotoğraf yüklenemedi</div>';">
             </a>
             ${timestamp ? `<div class="pv-photo-time">${timestamp}</div>` : ''}
           </div>
@@ -21390,7 +21392,7 @@ function _renderPublicViewer(d){
 
       return `
         <div class="pv-photo-wrap">
-          <h3>📸 Kanıt Fotoğrafları (${d.photos.length})</h3>
+          <h3>Kanıt Fotoğrafları (${d.photos.length})</h3>
           <div class="pv-photo-grid">${photosGrid}</div>
           <div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>
         </div>
@@ -21400,12 +21402,12 @@ function _renderPublicViewer(d){
     else if (d.photoUrl) {
       return `
         <div class="pv-photo-wrap">
-          <h3>📸 Ürün Fotoğrafı</h3>
+          <h3>Ürün Fotoğrafı</h3>
           <div class="pv-photo-grid">
             <div class="pv-photo-item">
               <a href="${d.photoUrl}" target="_blank" rel="noopener">
                 <img src="${d.photoUrl}" alt="Ürün fotoğrafı" class="pv-photo" loading="lazy"
-                     onerror="this.parentNode.parentNode.innerHTML='<div class=&quot;pv-photo-error&quot;>⚠️ Fotoğraf yüklenemedi</div>';">
+                     onerror="this.parentNode.parentNode.innerHTML='<div class=&quot;pv-photo-error&quot;>Fotoğraf yüklenemedi</div>';">
               </a>
             </div>
           </div>
@@ -21416,9 +21418,9 @@ function _renderPublicViewer(d){
     // Fotoğraf yok — açıklama göster
     return `
       <div class="pv-photo-wrap">
-        <h3>📸 Kanıt Fotoğrafları</h3>
+        <h3>Kanıt Fotoğrafları</h3>
         <div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;">
-          ⚠️ Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.<br>
+          Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.<br>
           <span style="font-size:11px;color:#6b7280;margin-top:4px;display:block;">Fotoğraf eklenip yüklendikten sonra QR'ı yeniden oluşturun.</span>
         </div>
       </div>
@@ -21487,7 +21489,7 @@ function _renderPublicViewer(d){
       <div class="pv-wrap">
         <div class="pv-header">
           <div class="pv-read-only"><i class="fas fa-eye"></i> Sadece Görüntüleme</div>
-          <h1>📦 ${typeLabel}</h1>
+          <h1>${typeLabel}</h1>
           <div class="pv-sub">İrsaliye Pro — Eyüp</div>
           <div class="pv-no-date">
             <div class="pv-no">${d.no||'—'}</div>
@@ -21503,10 +21505,10 @@ function _renderPublicViewer(d){
             ${d.teslimEden?`<div class="pv-info-item"><div class="pv-label">Teslim Eden</div><div class="pv-value">${d.teslimEden}</div></div>`:''}
             ${d.teslimAlan?`<div class="pv-info-item"><div class="pv-label">Teslim Alan</div><div class="pv-value">${d.teslimAlan}</div></div>`:''}
             ${d.termin?`<div class="pv-info-item"><div class="pv-label">Termin</div><div class="pv-value">${_trTarih(d.termin)}</div></div>`:''}
-            ${d.renk?`<div class="pv-info-item" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="pv-label">🎨 Renk</div><div class="pv-value">${d.renk}</div></div>`:''}
+            ${d.renk?`<div class="pv-info-item" style="grid-column:span 2;border-left:4px solid #7c3aed;"><div class="pv-label">Renk</div><div class="pv-value">${d.renk}</div></div>`:''}
           </div>
           ${sizesHtml}
-          ${d.aciklama?`<div class="pv-note">📝 <b>Not:</b> ${_escapeHtml(d.aciklama)}</div>`:''}
+          ${d.aciklama?`<div class="pv-note"><b>Not:</b> ${_escapeHtml(d.aciklama)}</div>`:''}
           ${photoHtml}
         </div>
         <div class="pv-footer">
@@ -21514,7 +21516,7 @@ function _renderPublicViewer(d){
         </div>
       </div>
       <div class="pv-print-bar">
-        <button onclick="window.print()" class="pv-print-btn">🖨️ PDF Kaydet / Yazdır</button>
+        <button onclick="window.print()" class="pv-print-btn">PDF Kaydet / Yazdır</button>
       </div>
     </body>
   </html>`;
@@ -21901,7 +21903,7 @@ function tkDeleteModel(id){
   try{ localStorage.setItem('telaKontrol', JSON.stringify(next)); }catch(e){}
   (async function(){
     try{ await window.syncDeleteWithTombstone('telaKontrol',[id],[id]); if(typeof window._updateCloudBadge==='function') window._updateCloudBadge('ok'); }
-    catch(err){ console.warn('[tk] silme err:', err); try{ if(typeof window._updateCloudBadge==='function') window._updateCloudBadge('err','tela silinemedi'); }catch(_){}; try{ if(typeof toast==='function') toast('⚠️ Buluta yazılamadı, Yenile ile tekrar deneyin','error'); }catch(_){} }
+    catch(err){ console.warn('[tk] silme err:', err); try{ if(typeof window._updateCloudBadge==='function') window._updateCloudBadge('err','tela silinemedi'); }catch(_){}; try{ if(typeof toast==='function') toast('Buluta yazılamadı, Yenile ile tekrar deneyin','error'); }catch(_){} }
   })();
   if(_tkCurrentDetailId===id){ tkCloseDetailModal(); }
   renderTelaKontrol();
@@ -22079,7 +22081,7 @@ AK.TYPES = {
 // Föy sırası. Dikimde lisans etiketi dokumanın hemen altında olmalı (ikisi de
 // yaka/marka etiketi), iç barkod bir altında, yıkama en sonda.
 AK.STAGE_ORDER = { dikim:['dokuma','lisansEtiketi','icbarkod','yikama'], utupaket:['fiyat','susKarti','kartArka','lisansKarti'] };
-AK.STAGE_LABEL = { dikim:'🧵 Dikim', utupaket:'📦 Ütü Paket' };
+AK.STAGE_LABEL = { dikim:'Dikim', utupaket:'Ütü Paket' };
 // Kanonik beden sırası (XXS→4XL). Aktif bedenler dosyalardan tespit edilir.
 AK.SIZES = [['xxs','XXS'],['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL'],['3xl','3XL'],['4xl','4XL']];
 AK._activeSizes = function(){
@@ -23257,7 +23259,7 @@ AK.applySummaryFiles = function(xlsFiles){
             '\nTablodaki modeller: '+Array.from(new Set(rows.map(function(r){return r.model;}))).slice(0,12).join(', '));
       return;
     }
-    if(typeof toast==='function') toast(applied.ok.join(' · ')+' — tablodan alındı ✓','success');
+    if(typeof toast==='function') toast(applied.ok.join(' · ')+' — tablodan alındı ','success');
   }).catch(function(err){ alert('Excel okunamadı: '+((err&&err.message)||err)); });
 };
 AK.onSummaryXlsx = function(fileList){ AK.applySummaryFiles(Array.prototype.slice.call(fileList||[])); };
@@ -23378,7 +23380,7 @@ AK.buildFoyHtml = function(c){
   var css='body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:#16223b;margin:0;background:#fff;} .wrap{max-width:800px;margin:0 auto;padding:26px;} .mast{display:flex;justify-content:space-between;border-bottom:2.5px solid #16223b;padding-bottom:10px;} .mb{font-family:Georgia,serif;font-weight:700;font-size:16px} .ms{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3f3fb0;font-weight:800} .mr{text-align:right;font-size:11px;line-height:1.6} h1{font-size:22px;margin:14px 0 2px} .mdl{font-family:ui-monospace,monospace;color:#16223b;font-weight:800;font-size:34px;letter-spacing:-1px;line-height:1.1;margin:2px 0 4px} .mdl .rk{display:block;font-size:15px;color:#3f3fb0;letter-spacing:0;font-weight:700} .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0} .chip{border:1px solid #dce2ec;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700} .chip.st{background:#ecebfb;border-color:#3f3fb0;color:#3f3fb0} .qty{border:1px solid #dce2ec;border-radius:10px;overflow:hidden;margin:12px 0} .qh{background:#f4f6fa;padding:7px 12px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #dce2ec} .qcells{display:grid;grid-template-columns:repeat(6,1fr)} .qc{padding:8px;text-align:center;border-left:1px solid #eee} .qc span{display:block;font-size:9px;font-weight:800;color:#667;text-transform:uppercase} .qc b{font-size:15px;font-family:ui-monospace,monospace} .qc.hi{background:#ecebfb;color:#3f3fb0} .qc.total{background:#16223b} .qc.total span{color:#aab} .qc.total b{color:#fff} .fsec{border:1px solid #dce2ec;border-radius:11px;overflow:hidden;margin-bottom:12px} .fsh{background:#f4f6fa;padding:8px 12px;font-size:13px;font-weight:800;border-bottom:1px solid #dce2ec} .fsh .fn{display:inline-flex;width:20px;height:20px;background:#16223b;color:#fff;border-radius:6px;align-items:center;justify-content:center;font-size:11px;margin-right:6px} .fsh .pg{background:#ecebfb;color:#3f3fb0;font-size:9px;padding:2px 7px;border-radius:5px;font-weight:800} .fimg{background:#fff;padding:10px;text-align:center;border-top:1px solid #f0f0f0} .fimg img{max-width:100%;max-height:360px} .fchk{padding:7px 12px;font-size:11px;color:#667;border-top:1px solid #eee} .fchk span{display:inline-block;width:13px;height:13px;border:1.5px solid #bbb;border-radius:4px;vertical-align:middle;margin-right:6px} .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px;padding-top:14px;border-top:2px solid #16223b} .sb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667;font-weight:800} .sl{margin-top:26px;border-top:1.3px solid #bbb} .no-print{margin:14px auto;max-width:800px;padding:0 26px;display:flex;gap:8px} .no-print button{padding:10px 18px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px} @media print{.no-print{display:none}}';
   var today=new Date().toLocaleDateString('tr-TR');
   var mdlH = c.model || AK.state.model;   // rengin kendi modeli öncelikli
-  var body='<div class="no-print" id="akCtl"><button style="background:#16a34a;color:#fff" onclick="window.opener&&window.opener._downloadElementAsPDF(document.getElementById(\'sheet\'),\''+esc(c.po||'')+'_'+esc(c.renk||'renk')+'.pdf\',document.getElementById(\'akCtl\'))">📥 PDF İndir</button><button style="background:#3f3fb0;color:#fff" onclick="window.print()">🖨️ Yazdır</button></div>'+
+  var body='<div class="no-print" id="akCtl"><button style="background:#16a34a;color:#fff" onclick="window.opener&&window.opener._downloadElementAsPDF(document.getElementById(\'sheet\'),\''+esc(c.po||'')+'_'+esc(c.renk||'renk')+'.pdf\',document.getElementById(\'akCtl\'))">PDF İndir</button><button style="background:#3f3fb0;color:#fff" onclick="window.print()">Yazdır</button></div>'+
     '<div class="wrap" id="sheet"><div class="mast"><div><div class="mb">İrsaliye Pro</div><div class="ms">Aksesuar Kontrol</div></div><div class="mr">Model: <b>'+esc(mdlH||'—')+'</b><br>PO: <b>'+esc(c.po||'—')+'</b><br>Tarih: <b>'+today+'</b></div></div>'+
     '<div class="mdl">'+esc(mdlH||'')+'<span class="rk">'+esc(c.renk||'')+'</span></div>'+
     '<h1 style="font-size:15px;font-weight:700;color:#667;margin:2px 0 6px;">Aksesuar Kontrol Föyü</h1>'+
@@ -23674,7 +23676,7 @@ AK._finalizeRec = function(recBase, cap){
   if(recs.length>cap) recs=recs.slice(0,cap);
   AK.saveRecs(recs); AK.renderRecords(); AK._pruneBlobs();
   if(!AK._ghReady()){
-    if(typeof toast==='function') toast('☁️ Bulut yükleme kapalı — bu föy yalnızca bu cihazda açılır. Başka cihazdan erişim için Ayarlar › GitHub Bulut Yükleme\'yi doldur.','info');
+    if(typeof toast==='function') toast('Bulut yükleme kapalı — bu föy yalnızca bu cihazda açılır. Başka cihazdan erişim için Ayarlar › GitHub Bulut Yükleme\'yi doldur.','info');
     return;
   }
   AK._ensureUploaded(recBase.zipKeys).then(function(urls){
@@ -23784,7 +23786,7 @@ AK.generateAll = function(mode){
   }
   // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk varsa güncellenir
   withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice() }, 300); });
-  if(typeof toast==='function') toast(mode==='save'?(withFiles.length+' renk kaydedildi ✓'):(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı ✓'),'success');
+  if(typeof toast==='function') toast(mode==='save'?(withFiles.length+' renk kaydedildi '):(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı '),'success');
 };
 
 // Kayıt tekilleştirme: aynı model+PO+renk TEK kayıt olsun. Aşama (Dikim/Ütü Paket)
@@ -23826,7 +23828,7 @@ AK.generate = function(id, mode){
   }
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
   AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice(), types:have.map(function(f){return f.type;}) }, 200);
-  if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi ✓ (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu ✓'),'success');
+  if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu '),'success');
 };
 
 AK._esc = function(s){ return (''+(s==null?'':s)).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];}); };
@@ -23888,8 +23890,8 @@ AK.renderRecords = function(){
     '<div class="ak-recbar">'+
       '<div class="ak-recsearch"><i class="fas fa-magnifying-glass"></i><input id="akRecQ" class="form-input" placeholder="Model · PO · renk · atölye ara…" value="'+AK._esc(f.q)+'" oninput="AK._recFilter.q=this.value; AK._recFilter.page=1; AK._renderRecList();"></div>'+
       '<select class="form-input ak-recsel" title="Kayıttan yazdırınca hangi aşama föyü çıksın" onchange="AK.setAsama(this.value);">'+
-        '<option value="dikim"'+(AK.state.asama==='dikim'?' selected':'')+'>🧵 Dikim föyü</option>'+
-        '<option value="utupaket"'+(AK.state.asama==='utupaket'?' selected':'')+'>📦 Ütü Paket föyü</option>'+
+        '<option value="dikim"'+(AK.state.asama==='dikim'?' selected':'')+'>Dikim föyü</option>'+
+        '<option value="utupaket"'+(AK.state.asama==='utupaket'?' selected':'')+'>Ütü Paket föyü</option>'+
       '</select>'+
       '<button class="btn btn-xs btn-primary" id="akRecBulkBtn" style="display:none;" onclick="AK.printSelected()"><i class="fas fa-print"></i> Yazdır</button>'+
       '<button class="btn btn-xs btn-secondary" id="akRecSelClear" style="display:none;" onclick="AK.clearRecSel()" title="Seçimi temizle"><i class="fas fa-xmark"></i></button>'+
@@ -23954,7 +23956,7 @@ AK._delRecsSynced = function(remaining, delIds){
   if(ids.length && typeof window.syncDeleteWithTombstone==='function'){
     window.syncDeleteWithTombstone(AK.LS_REC, ids, ids).catch(function(e){
       console.warn('[AK] silme senkron hatası',e);
-      if(typeof toast==='function') toast('⚠️ Silme buluta yazılamadı — Yenile ile tekrar deneyin','error');
+      if(typeof toast==='function') toast('Silme buluta yazılamadı — Yenile ile tekrar deneyin','error');
     });
   } else {
     AK.saveRecs(remaining); // tombstone yoksa normal senkron (en azından bu cihazda silinsin)

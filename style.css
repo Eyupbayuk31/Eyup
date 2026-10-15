@@ -5884,7 +5884,7 @@ tr:hover .table-actions-more{
 }
 
 /* ============================================
-   🎯 MOBIL & MASAÜSTÜ OPTİMİZASYON (v15)
+   MOBIL & MASAÜSTÜ OPTİMİZASYON (v15)
    ============================================ */
 
 /* ---------- Genel iyileştirmeler ---------- */
@@ -6623,7 +6623,7 @@ body::after{
   z-index: 1;
 }
 .db-greeting::after{
-  content: '✦';
+  content: '';
   font-family: var(--font-serif);
   font-style: italic;
   font-size: 18px;
@@ -8505,8 +8505,8 @@ body:has(#loginOverlay:not([style*="display:none"]):not([style*="display: none"]
   transition: all var(--transition-fast, 150ms);
 }
 #loginCard .remember .checkbox-fake::after {
-  content: '✓';
-  font-size: 12px; font-weight: 900;
+  content: '\f00c'; font-family: 'Font Awesome 6 Free';
+  font-size: 10px; font-weight: 900;
   color: #fff;
   opacity: 0;
   transform: scale(0.5);
@@ -9497,8 +9497,8 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--type-color, var(--primary)) !important;
 }
 .uni-mobile-card .bulk-check:checked::after {
-  content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 12px; font-weight: 900; line-height: 1;
+  content: '\f00c'; font-family: 'Font Awesome 6 Free'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 10px; font-weight: 900; line-height: 1;
 }
 
 /* ── Card dropdown — glassmorphism ── */
@@ -16768,3 +16768,57 @@ html[data-tasarim="yeni"] #cloudSyncBadge{
   padding:6px 11px !important; border-radius:999px !important;
 }
 html[data-tasarim="yeni"] #cloudSyncBadge:not([data-durum="ok"]):not([data-durum="sync"]){ color:#fca5a5 !important; border-color:rgba(239,68,68,.45); }
+
+/* ── Raporlar sekmeleri: sığmayınca yazılar kesiliyordu (butonlar daralıyordu).
+   Butonlar daralmaz; geniş ekranda iki satıra iner, telefonda yana kayar. ── */
+.rep-tab-btn{ flex:0 0 auto !important; overflow:visible !important; }
+@media (min-width:769px){
+  .rep-tab-bar{ flex-wrap:wrap !important; row-gap:6px !important; }
+}
+@media (max-width:768px){
+  .rep-tabs-wrap{
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 28px), transparent 100%);
+            mask-image:linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 28px), transparent 100%);
+  }
+}
+
+/* ── Boş durum: ikon görünmüyordu (eski "yazıya kırpılmış geçiş" kuralı ile
+   sonraki daire kuralı çakışıyor, ikon rengi şeffaf kalıyordu). ── */
+.empty-state i{
+  -webkit-background-clip:border-box !important; background-clip:border-box !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+.empty-state .es-btn{ margin-top:14px; display:inline-flex; align-items:center; gap:7px; }
+/* Yeni tasarım: girişteki işaret kutusu gibi — çerçeveli kare, etrafında dönen ince halka */
+html[data-tasarim="yeni"] .empty-state{
+  border:1px dashed color-mix(in srgb, var(--primary) 30%, var(--border)) !important;
+  background:radial-gradient(420px 180px at 50% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 70%) !important;
+  padding:44px 20px !important;
+}
+html[data-tasarim="yeni"] .empty-state i{
+  position:relative; width:64px !important; height:64px !important; line-height:64px !important;
+  border-radius:18px !important; font-size:26px !important; opacity:1 !important;
+  color:var(--primary-light, var(--primary)) !important;
+  background:color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--primary) 45%, transparent), 0 10px 30px -12px color-mix(in srgb, var(--primary) 50%, transparent);
+  animation:t2Suz 5s ease-in-out infinite alternate !important;
+  margin-bottom:16px !important;
+}
+@keyframes t2Suz{ from{ transform:translateY(0); } to{ transform:translateY(-6px); } }
+html[data-tasarim="yeni"] .empty-state p{ font-size:15px !important; font-weight:600 !important; color:var(--text-main) !important; opacity:.85; }
+@media (prefers-reduced-motion: reduce){ html[data-tasarim="yeni"] .empty-state i{ animation:none !important; } }
+
+/* ── Arama kutuları: telefonda genel .form-input dolgusu ikonun yerini ezip
+   büyüteç yazının üstüne biniyordu. ── */
+.ft-search-box .form-input, .ft-search-box input{ padding-left:40px !important; }
+.ft-search-box i{ left:14px !important; z-index:1; }
+.search-bar input, #page-list .search-bar input{ padding-left:44px !important; }
+.search-bar i{ left:16px !important; z-index:1; pointer-events:none; }
+/* Boş durum düğmesindeki ikon büyük daire stilini almasın */
+.empty-state .es-btn i, html[data-tasarim="yeni"] .empty-state .es-btn i{
+  all:unset; font-family:"Font Awesome 6 Free"; font-weight:900; font-size:12px; line-height:1;
+  -webkit-text-fill-color:currentColor !important; color:inherit !important; animation:none !important;
+  width:auto !important; height:auto !important; box-shadow:none !important; background:none !important; margin:0 !important;
+}
+html .empty-state .es-btn{ height:auto !important; min-height:0 !important; width:auto !important; padding:9px 18px !important; border-radius:10px !important; font-size:13px !important; line-height:1.2 !important; }
+html[data-tasarim] .empty-state .es-btn i, html .empty-state .es-btn i{ font-size:12px !important; width:auto !important; height:auto !important; line-height:1 !important; animation:none !important; box-shadow:none !important; background:none !important; margin:0 !important; border-radius:0 !important; }
