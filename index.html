@@ -2289,26 +2289,26 @@ if(typeof Chart==='undefined'){
     </div>
 
     <!-- Modal: Model Detay ("ayrı sayfa gibi") — cm cm beden satırları burada -->
-    <div class="modal-overlay" id="ftDetailModal" onclick="if(event.target===this)ftCloseDetailModal()">
+    <div class="modal-overlay ft-detail-overlay" id="ftDetailModal" onclick="if(event.target===this)ftCloseDetailModal()">
       <div class="modal ft-detail-modal">
         <div class="ft-detail-head">
           <div class="ft-detail-head-l">
             <div class="ft-detail-model" id="ftDetailModel">—</div>
             <div class="ft-detail-meta" id="ftDetailMeta"></div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="ft-detail-acts">
             <button class="btn btn-sm btn-primary tkg-ac" onclick="takipGelenAc('fermuarTakip',_ftCurrentDetailId)" title="Gelen malı bedenler için tek seferde gir"><i class="fas fa-truck-ramp-box"></i> Gelen Gir</button>
             <button class="btn btn-sm ft-act-kes" onclick="ftIrsaliyeKes(_ftCurrentDetailId)"><i class="fas fa-file-export"></i> İrsaliye Kes</button>
-            <button class="btn btn-sm btn-secondary" onclick="ftEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
-            <button onclick="ftCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
+            <button class="btn btn-sm btn-secondary" onclick="ftEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/<wbr>Termin</button>
           </div>
+          <button onclick="ftCloseDetailModal()" class="ft-x" aria-label="Kapat"><i class="fas fa-times"></i></button>
         </div>
 
         <div class="ft-detail-kpis" id="ftDetailKpis"></div>
 
         <!-- cm satırı ekleme formu -->
         <div class="ft-addrow">
-          <div class="ft-addrow-title"><i class="fas fa-ruler"></i> Yeni Beden / CM Ekle</div>
+          <div class="ft-addrow-title" onclick="takipFormAc(this)"><i class="fas fa-ruler"></i> Yeni Beden / CM Ekle<i class="fas fa-chevron-down ft-addrow-ok"></i></div>
           <div class="ft-addrow-grid">
             <select class="form-input" id="ftRowBeden">
               <option value="">Beden —</option>
@@ -2480,25 +2480,25 @@ if(typeof Chart==='undefined'){
     </div>
 
     <!-- Modal: Kordon Model Detay — cm cm satırlar -->
-    <div class="modal-overlay" id="ktDetailModal" onclick="if(event.target===this)ktCloseDetailModal()">
+    <div class="modal-overlay ft-detail-overlay" id="ktDetailModal" onclick="if(event.target===this)ktCloseDetailModal()">
       <div class="modal ft-detail-modal">
         <div class="ft-detail-head">
           <div class="ft-detail-head-l">
             <div class="ft-detail-model" id="ktDetailModel">—</div>
             <div class="ft-detail-meta" id="ktDetailMeta"></div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="ft-detail-acts">
             <button class="btn btn-sm btn-primary tkg-ac" onclick="takipGelenAc('kordonTakip',_ktCurrentDetailId)" title="Gelen malı ölçüler için tek seferde gir"><i class="fas fa-truck-ramp-box"></i> Gelen Gir</button>
             <button class="btn btn-sm ft-act-kes" onclick="ktIrsaliyeKes(_ktCurrentDetailId)"><i class="fas fa-file-export"></i> İrsaliye Kes</button>
-            <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/Termin</button>
-            <button onclick="ktCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
+            <button class="btn btn-sm btn-secondary" onclick="ktEditModelMeta()"><i class="fas fa-pen"></i> Tedarikçi/<wbr>Termin</button>
           </div>
+          <button onclick="ktCloseDetailModal()" class="ft-x" aria-label="Kapat"><i class="fas fa-times"></i></button>
         </div>
 
         <div class="ft-detail-kpis" id="ktDetailKpis"></div>
 
         <div class="ft-addrow">
-          <div class="ft-addrow-title"><i class="fas fa-ruler"></i> <span id="ktAddTitle">Yeni Beden / CM Ekle</span></div>
+          <div class="ft-addrow-title" onclick="takipFormAc(this)"><i class="fas fa-ruler"></i> <span id="ktAddTitle">Yeni Beden / CM Ekle</span><i class="fas fa-chevron-down ft-addrow-ok"></i></div>
           <div class="ft-addrow-grid kt-addrow-adet" id="ktAddGrid">
             <select class="form-input" id="ktRowBeden">
               <option value="">Beden —</option>
@@ -4249,23 +4249,23 @@ if(typeof Chart==='undefined'){
     </div>
 
     <!-- Modal: Tela Detay — top tela satırları -->
-    <div class="modal-overlay" id="tkDetailModal" onclick="if(event.target===this)tkCloseDetailModal()">
+    <div class="modal-overlay ft-detail-overlay" id="tkDetailModal" onclick="if(event.target===this)tkCloseDetailModal()">
       <div class="modal ft-detail-modal">
         <div class="ft-detail-head">
           <div class="ft-detail-head-l">
             <div class="ft-detail-model" id="tkDetailModel">—</div>
             <div class="ft-detail-meta" id="tkDetailMeta"></div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div class="ft-detail-acts">
             <button class="btn btn-sm btn-secondary" onclick="tkEditModelMeta()"><i class="fas fa-pen"></i> Bilgiler</button>
-            <button onclick="tkCloseDetailModal()" class="ft-x"><i class="fas fa-times"></i></button>
           </div>
+          <button onclick="tkCloseDetailModal()" class="ft-x" aria-label="Kapat"><i class="fas fa-times"></i></button>
         </div>
 
         <div class="ft-detail-kpis" id="tkDetailKpis"></div>
 
         <div class="ft-addrow">
-          <div class="ft-addrow-title"><i class="fas fa-arrow-up-from-bracket"></i> Tela Ver (Atölyeye Çıkış)</div>
+          <div class="ft-addrow-title" onclick="takipFormAc(this)"><i class="fas fa-arrow-up-from-bracket"></i> Tela Ver (Atölyeye Çıkış)<i class="fas fa-chevron-down ft-addrow-ok"></i></div>
           <div class="tk-addrow-grid">
             <select class="form-input" id="tkRowCm" title="Tela eni" onchange="tkUpdateStokHint()"></select>
             <select class="form-input" id="tkRowRenk" title="Tela rengi" onchange="tkUpdateStokHint()">
@@ -6367,8 +6367,19 @@ function ftDeleteModel(id){
 
 // ── Model Detay ("ayrı sayfa gibi") — cm cm beden satırları ──
 let _ftCurrentDetailId=null;
+// Telefonda satır ekleme formu katlanır: başlığa dokununca açılır/kapanır.
+// Masaüstünde form her zaman açık (CSS), bu sınıf orada etkisizdir.
+function takipFormAc(baslik){
+  var kutu=baslik&&baslik.closest('.ft-addrow'); if(!kutu) return;
+  var acik=kutu.classList.toggle('acik');
+  if(acik){ var ilk=[].slice.call(kutu.querySelectorAll('input')).filter(function(e){ return e.offsetParent!==null; })[0]; if(ilk) setTimeout(function(){ ilk.focus(); },50); }
+}
+function _takipFormKapat(modalId){
+  var k=document.querySelector('#'+modalId+' .ft-addrow'); if(k) k.classList.remove('acik');
+}
 function ftOpenDetailModal(id){
   _ftCurrentDetailId=id;
+  _takipFormKapat('ftDetailModal');
   ftRenderDetail();
   document.getElementById('ftDetailModal').classList.add('show');
   setTimeout(()=>{ const el=document.getElementById('ftRowCm'); if(el) el.focus(); },100);
@@ -6420,12 +6431,12 @@ function ftRenderDetail(){
       <div class="ft-row">
         <span class="ft-row-beden">${z.beden?esc(z.beden):'—'}</span>
         <span class="ft-row-cm">${z.cm!=null?z.cm+' cm':'—'}</span>
-        <span>${z.renk?esc(z.renk):'—'}</span>
-        <span>${(+z.siparisAdet||0).toLocaleString('tr')}</span>
-        <span class="pos">${zg.toLocaleString('tr')}</span>
-        <span class="neg">${zk.toLocaleString('tr')}</span>
-        <span class="${zb>0?'bad':''}">${zb>0?zb.toLocaleString('tr'):'—'}</span>
-        <span class="ft-row-stok ${stokCls}">${zs.toLocaleString('tr')}</span>
+        <span class="ft-row-renk">${z.renk?esc(z.renk):'—'}</span>
+        <span class="ft-c-sip" data-l="Sipariş">${(+z.siparisAdet||0).toLocaleString('tr')}</span>
+        <span class="pos ft-c-gel" data-l="Gelen">${zg.toLocaleString('tr')}</span>
+        <span class="neg ft-c-kul" data-l="Kullanılan">${zk.toLocaleString('tr')}</span>
+        <span class="${zb>0?'bad':''} ft-c-eks" data-l="Eksik">${zb>0?zb.toLocaleString('tr'):'—'}</span>
+        <span class="ft-row-stok ${stokCls}" data-l="Stok">${zs.toLocaleString('tr')}</span>
         <span class="ft-row-acts">
           <button class="btn btn-xs btn-primary" onclick="ftOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
           <button class="btn btn-xs btn-secondary" onclick="takipRowEdit('fermuarTakip',${m.id},${z.id})" title="Satırı düzenle (beden / cm / renk / sipariş)"><i class="fas fa-pen"></i></button>
@@ -7253,6 +7264,7 @@ function ktDeleteModel(id){
 let _ktCurrentDetailId=null;
 function ktOpenDetailModal(id){
   _ktCurrentDetailId=id;
+  _takipFormKapat('ktDetailModal');
   ktRenderDetail();
   document.getElementById('ktDetailModal').classList.add('show');
   setTimeout(()=>{ const el=document.getElementById('ktRowCm'); if(el) el.focus(); },100);
@@ -7324,12 +7336,12 @@ function ktRenderDetail(){
       <div class="ft-row ${metreMi?'km-row':''}">
         ${metreMi?'':`<span class="ft-row-beden">${z.beden?esc(z.beden):'—'}</span>`}
         ${metreMi?'':`<span class="ft-row-cm">${z.cm!=null?z.cm+' cm':'—'}</span>`}
-        <span${metreMi?' class="ft-row-beden"':''}>${z.renk?esc(z.renk):'—'}</span>
-        <span>${S(z.siparisAdet)}</span>
-        <span class="pos">${S(zg)}</span>
-        <span class="neg">${S(zk)}</span>
-        <span class="${zb>0?'bad':''}">${zb>0?S(zb):'—'}</span>
-        <span class="ft-row-stok ${stokCls}">${S(zs)}</span>
+        <span class="ft-row-renk${metreMi?' km-renk':''}">${z.renk?esc(z.renk):'—'}</span>
+        <span class="ft-c-sip" data-l="Sipariş${metreMi?' (m)':''}">${S(z.siparisAdet)}</span>
+        <span class="pos ft-c-gel" data-l="Gelen">${S(zg)}</span>
+        <span class="neg ft-c-kul" data-l="Kullanılan">${S(zk)}</span>
+        <span class="${zb>0?'bad':''} ft-c-eks" data-l="Eksik">${zb>0?S(zb):'—'}</span>
+        <span class="ft-row-stok ${stokCls}" data-l="Stok">${S(zs)}</span>
         <span class="ft-row-acts">
           <button class="btn btn-xs btn-primary" onclick="ktOpenReceiveModal(${m.id},${z.id})" title="Teslimat Gir"><i class="fas fa-truck-ramp-box"></i></button>
           <button class="btn btn-xs btn-secondary" onclick="takipRowEdit('kordonTakip',${m.id},${z.id})" title="Satırı düzenle (cm / renk / sipariş)"><i class="fas fa-pen"></i></button>
@@ -21871,6 +21883,7 @@ function tkDeleteModel(id){
 }
 function tkOpenDetailModal(id){
   _tkCurrentDetailId=id;
+  _takipFormKapat('tkDetailModal');
   ['tkRowTop','tkRowAtolye'].forEach(function(f){ var el=document.getElementById(f); if(el) el.value=''; });
   var rr=document.getElementById('tkRowRenk'); if(rr) rr.value='Beyaz';
   tkRenderDetail();
@@ -22602,6 +22615,14 @@ AK._extractEntries = function(file){
   return file.slice(0,8).arrayBuffer().then(function(head){
     var b=new Uint8Array(head);
     var isZip=(b[0]===0x50&&b[1]===0x4B);
+    // Arşivsiz tek dosya (ör. ayrı gelen 2019142_WashingInstruction...pdf).
+    // Eskiden bu da RAR motoruna gidiyordu; PDF arşiv olmadığı için içinden
+    // hiçbir şey çıkmıyor, yıkama BOŞ görünüyordu. Dosyanın kendisi tek giriş olur.
+    var isPdf=(b[0]===0x25&&b[1]===0x50&&b[2]===0x44&&b[3]===0x46);           // %PDF
+    var isImg=(b[0]===0x89&&b[1]===0x50&&b[2]===0x4E&&b[3]===0x47)||(b[0]===0xFF&&b[1]===0xD8); // PNG / JPEG
+    if(!isZip && (isPdf || isImg || /\.(pdf|png|jpe?g)$/i.test(file.name||''))){
+      return file.arrayBuffer().then(function(ab){ return [{name:file.name||'dosya.pdf', bytes:new Uint8Array(ab)}]; });
+    }
     if(isZip){
       return file.arrayBuffer().then(function(ab){ return AK.loadLibs().then(function(){ return JSZip.loadAsync(new Uint8Array(ab)); }); }).then(function(zip){
         var names=Object.keys(zip.files).filter(function(n){ return !zip.files[n].dir; });
@@ -22799,9 +22820,9 @@ AK.renderColors = function(){
       '<span class="ak-tot"><em>Σ</em> '+tot.toLocaleString('tr')+'</span></div>'+
       '<div class="ak-drop'+((c.zipNames&&c.zipNames.length)?' loaded':'')+'" onclick="this.querySelector(\'input\').click()"><i class="fas '+((c.zipNames&&c.zipNames.length)?'fa-circle-check':'fa-file-zipper')+'"></i>'+
         ((c.zipNames&&c.zipNames.length)
-          ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv ekle (yıkama ayrıysa)</div>')
-          : 'ZIP / RAR + Excel dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Hepsini birden bırakabilirsin: ana arşiv, ayrı yıkama arşivi ve adetler için özet tablo (SummaryTable .xlsx)</div>')+
-        '<input type="file" accept=".zip,.rar,.7z,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
+          ? ('<b>'+c.zipNames.length+' arşiv yüklendi</b><div style="font-size:11px;opacity:.8;margin-top:3px;">'+c.zipNames.join(' · ')+'</div><div style="font-size:11px;margin-top:4px;text-decoration:underline;">+ Başka arşiv / PDF ekle (yıkama ayrıysa)</div>')
+          : 'ZIP / RAR / PDF + Excel dosyalarını seç / sürükle<div style="font-size:11px;opacity:.75;margin-top:3px;">Hepsini birden bırakabilirsin: ana arşiv, ayrı yıkama (arşiv ya da tek PDF) ve adetler için özet tablo (SummaryTable .xlsx)</div>')+
+        '<input type="file" accept=".zip,.rar,.7z,.pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv" multiple onchange="AK.onZip('+c.id+', this.files); this.value=\'\';"></div>'+
         ((c.zipNames&&c.zipNames.length)?'<div style="text-align:right;margin-top:4px;"><button class="btn btn-xs btn-secondary" onclick="AK.clearZips('+c.id+')"><i class="fas fa-rotate-left"></i> Arşivleri temizle</button></div>':'')+
       matchHtml+
       '<div class="ak-libbar">'+
