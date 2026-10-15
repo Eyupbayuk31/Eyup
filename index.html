@@ -3695,6 +3695,7 @@ if(typeof Chart==='undefined'){
               <button class="s-mode-btn" onclick="setMode('dark')" data-mode-btn="dark"><i class="fas fa-moon"></i> Karanlık</button>
               <button class="s-mode-btn" onclick="setMode('light')" data-mode-btn="light"><i class="fas fa-sun"></i> Aydınlık</button>
               <button class="s-mode-btn active" onclick="setMode('auto')" data-mode-btn="auto"><i class="fas fa-circle-half-stroke"></i> Otomatik</button>
+              <button class="s-mode-btn" onclick="setMode('saat')" data-mode-btn="saat" title="07:00–19:00 aydınlık, akşam ve gece karanlık"><i class="fas fa-clock"></i> Saate göre</button>
             </div>
           </div>
         </div>
@@ -4800,7 +4801,9 @@ function refreshAtolyeList(){
   document.getElementById('atolyeCount').textContent=list.length;
   const el=document.getElementById('atolyeList');
   const pagEl=document.getElementById('atolyePagination');
-  if(!list.length){el.innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Henüz atölye eklenmedi.</p></div>';if(pagEl)pagEl.innerHTML='';return;}
+  if(!list.length){el.innerHTML=_t2Rehber({ic:'fa-industry', bas:'İlk atölyeni ekle', alt:'İrsaliyeler atölyeye göre filtrelenir; telefon girersen QR ve PDF\'leri WhatsApp\'tan tek tıkla gönderirsin.',
+      adim:['Yukarıya atölye adını yaz','Varsa WhatsApp numarasını ekle','<b>Ekle</b> de — irsaliye keserken listeden seç'],
+      btn:'Atölye adını yaz', fn:"var e=document.querySelector('#page-atolye input');if(e){e.focus();e.scrollIntoView({block:'center'});}"});if(pagEl)pagEl.innerHTML='';return;}
   // Arama filtresi — ad veya telefona göre
   const q=(document.getElementById('atolyeSearch')?.value||'').trim().toLocaleLowerCase('tr');
   const filtered = q ? list.filter(a=>((a.name||'').toLocaleLowerCase('tr').includes(q) || (a.telefon||'').toLocaleLowerCase('tr').includes(q))) : list;
@@ -6282,7 +6285,9 @@ function renderFermuarTakip(){
     countEl.textContent = n.toLocaleString('tr')+' model'+(q?' ('+esc(q)+')':'');
     countEl.classList.toggle('on', n>0);
   }
-  if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-link"></i><p>Henüz fermuar modeli yok. <b>Yeni Model</b> ile ekleyin: model kodu, tedarikçi, termin girin — sonra cm cm satın alma adetlerini o modelin içinde girersiniz.</p></div>'; return; }
+  if(!all.length){ grid.innerHTML=_t2Rehber({ic:'fa-link', bas:'İlk fermuar modelini ekle', alt:'Tedarikçiden gelen fermuarı beden beden takip et, eksik kalanı tek dokunuşla atölyeye bildir.',
+      adim:['Model kodu, tedarikçi ve termini gir','Modelin içinde beden / cm / satın alma adedini ekle','Mal geldikçe <b>Gelen Gir</b> — eksikler kendiliğinden hesaplanır'],
+      btn:'Yeni Fermuar Modeli', fn:'ftOpenOrderModal()'}); return; }
   if(!tabModels.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-check-double"></i><p>'+(_ftViewTab==='done'?'Henüz tamamlanan model yok.':'Aktif model yok — hepsi tamamlanmış.')+'</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
 
@@ -7238,7 +7243,9 @@ function renderKordonTakip(){
     countEl.textContent = n.toLocaleString('tr')+' model'+(q?' ('+esc(q)+')':'');
     countEl.classList.toggle('on', n>0);
   }
-  if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-bezier-curve"></i><p>Henüz kordon modeli yok. <b>Yeni Model</b> ile ekleyin: model kodu, tedarikçi, termin girin — sonra cm cm satın alma adetlerini o modelin içinde girersiniz.</p></div>'; return; }
+  if(!all.length){ grid.innerHTML=_t2Rehber({ic:'fa-bezier-curve', bas:'İlk kordon modelini ekle', alt:'Beden/cm ile adet ya da ham kordonu metre olarak takip et.',
+      adim:['Model kodunu, ölçü tipini (adet / metre) ve termini gir','Ölçüleri veya renk + metreyi ekle','Mal geldikçe <b>Gelen Gir</b> — eksikler kendiliğinden hesaplanır'],
+      btn:'Yeni Kordon Modeli', fn:'ktOpenOrderModal()'}); return; }
   if(!tabModels.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-check-double"></i><p>'+(_ktViewTab==='done'?'Henüz tamamlanan model yok.':'Aktif model yok — hepsi tamamlanmış.')+'</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
 
@@ -10363,6 +10370,7 @@ function refreshHome(){
     if(awOverdueN) p.push('<b class="kt">'+awOverdueN+'</b> termini geçen');
     if(awTomorrowN) p.push('<b class="yb">'+awTomorrowN+'</b> yarın bitiyor');
     if(awStockN) p.push('<b class="ks">'+awStockN+'</b> kritik stok');
+    try{ var tu=_t2TakipUyari(); if(tu.length) p.push('<a href="javascript:void(0)" onclick="toggleNotifPanel()" class="t2-oz-link"><b class="kt">'+tu.length+'</b> modelde eksik malzeme</a>'); }catch(_){}
     oz.innerHTML = p.length ? p.join('<span class="ay">·</span>') : '<span class="iy">Bugün acil bir iş yok</span>';
   })();
 
@@ -12561,6 +12569,11 @@ window._temaCozumle = function(secilen, mod){
     var koyuIster = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     return window._temaEsi(secilen, koyuIster?'koyu':'acik');
   }
+  // Saate göre: gündüz (07:00–19:00) aydınlık, akşam/gece karanlık
+  if(mod==='saat'){
+    var sa=new Date().getHours();
+    return window._temaEsi(secilen, (sa>=7 && sa<19) ? 'acik' : 'koyu');
+  }
   return secilen;
 };
 // Seçilen tema + görünüm modundan gerçekte uygulanacak temayı hesaplar ve uygular
@@ -12609,6 +12622,29 @@ function _t2BaslikIzle(){
 // ── Sayılar sayarak gelsin (yalnız tam sayılar; "5.020" gibi). Sayfa
 // açılırken bir kez çalışır; arada metin dışarıdan değişirse hemen bırakır. ──
 var _T2_SAYI_SEC='.db-kpi-value, #awOverdue, #awTomorrow, #awWeekDone, #awStock, .ft-kpi-val, .ft-stock-num, .ls-num, .rep-kpi-val, .ft-dkpi b';
+// Fermuar / kordon: termini geçen ya da 2 gün içinde dolan ve eksiği olan modeller
+function _t2TakipUyari(){
+  var bugun=new Date().toISOString().split('T')[0], out=[];
+  [['fermuarTakip','fermuar','ftOpenDetailModal'],['kordonTakip','kordon','ktOpenDetailModal']].forEach(function(k){
+    (getData(k[0])||[]).forEach(function(m){
+      if(m.tamamlandi || !m.termin) return;
+      var eks=_ftModelBekleyen(m); if(!(eks>0)) return;
+      var g=Math.round((new Date(m.termin+'T00:00:00')-new Date(bugun+'T00:00:00'))/86400000);
+      if(isNaN(g) || g>2) return;
+      out.push({m:m, tur:k[1], ac:k[2], eks:eks, g:g, metre:(k[1]==='kordon' && m.birim==='metre')});
+    });
+  });
+  return out.sort(function(a,b){ return a.g-b.g; });
+}
+// Boş ekran rehberi: ne işe yaradığı + 3 adım + tek düğme
+function _t2Rehber(o){
+  return '<div class="t2-rehber" style="grid-column:1/-1;">'+
+    '<div class="t2r-ust"><span class="t2r-ic"><i class="fas '+o.ic+'"></i></span><div>'+
+      '<div class="t2r-bas">'+o.bas+'</div><div class="t2r-alt">'+o.alt+'</div></div></div>'+
+    '<ol class="t2r-adim">'+o.adim.map(function(a,i){ return '<li><b>'+(i+1)+'</b><span>'+a+'</span></li>'; }).join('')+'</ol>'+
+    '<button class="btn btn-primary t2r-btn" onclick="'+o.fn+'"><i class="fas fa-plus"></i> '+o.btn+'</button>'+
+  '</div>';
+}
 function _t2HareketYok(){
   var k=document.documentElement;
   return k.getAttribute('data-tasarim')!=='yeni' || k.getAttribute('data-perf')==='lite' ||
@@ -13738,6 +13774,16 @@ function checkNotifications(){
   if(yaklasan.length){
     notifs.push({type:'warning',icon:'fas fa-clock',text:`<strong>${yaklasan.length} irsaliyenin</strong> termini yaklaşıyor (3 gün içinde)`,items:yaklasan.slice(0,5).map(i=>`${i.no} — ${i.model||i.urun||''} (${i.termin})`).join('<br>')});
   }
+
+  // Fermuar / kordon: termini yaklaşan ya da geçen ve eksiği olan modeller
+  try{
+    const ne=(g)=> g<0 ? (-g)+' gün geçti' : g===0 ? 'termin bugün' : g===1 ? 'termin yarın' : 'termine '+g+' gün';
+    const takip=_t2TakipUyari().map(x=>({g:x.g, html:`<a href="javascript:void(0)" class="t2-nlink" onclick="showPage('${x.tur}-takip');${x.ac}(${x.m.id});document.getElementById('notifPanel').classList.remove('show');"><b>${esc(x.m.modelKodu||'—')}</b> · ${x.eks.toLocaleString('tr')} ${x.metre?'m':'adet'} ${x.tur} eksik · <span class="${x.g<0?'kt':x.g<=1?'yb':''}">${ne(x.g)}</span></a>`}));
+    if(takip.length){
+      const gec=takip.filter(x=>x.g<0).length;
+      notifs.unshift({type:gec?'danger':'warning', icon:'fas fa-link', text:`<strong>${takip.length} modelde</strong> eksik malzeme var, termin ${gec?'geçti / yaklaşıyor':'yaklaşıyor'}`, items:takip.slice(0,6).map(x=>x.html).join('<br>')});
+    }
+  }catch(_){}
 
   // Low stock alerts
   const stoklar=getData('stoklar');
@@ -15923,13 +15969,13 @@ function settingsChangePassword(){
 // ─────────────────────────────────────────────────────────
 
 function setMode(mode){
-  if(['light','dark','auto'].indexOf(mode)<0) mode='auto';
+  if(['light','dark','auto','saat'].indexOf(mode)<0) mode='auto';
   document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(b=>b.classList.toggle('active', b.dataset.modeBtn===mode));
   setConfig('colorMode',mode);
   // Tema SİLİNMİYOR — aynı ailenin istenen yarısına geçiliyor
   var uygulanan=window._temaUygula();
   var t=(window.V9_THEMES||[]).filter(function(x){ return x.id===uygulanan; })[0];
-  toast('Görünüm: '+(mode==='dark'?'Karanlık':mode==='light'?'Aydınlık':'Otomatik')+(t?(' · '+t.name):''),'success');
+  toast('Görünüm: '+(mode==='dark'?'Karanlık':mode==='light'?'Aydınlık':mode==='saat'?'Saate göre':'Otomatik')+(t?(' · '+t.name):''),'success');
 }
 // İşletim sistemi gece moduna geçerse Otomatik'teki tema da anında dönsün
 try{
@@ -15940,6 +15986,20 @@ try{
     else if(_mq.addListener) _mq.addListener(_mqDinle);
   }
 }catch(_){}
+
+// Saate göre modunda saat 07:00 / 19:00'u geçince tema kendiliğinden döner.
+// Geçişte renkler bir anda değil, yumuşakça kayar.
+setInterval(function(){
+  try{
+    if(getConfig('colorMode','')!=='saat') return;
+    var once=document.documentElement.getAttribute('data-theme');
+    var simdi=window._temaCozumle(getConfig('theme','default'),'saat');
+    if(once===simdi) return;
+    document.documentElement.classList.add('t2-tema-gecis');
+    window._temaUygula();
+    setTimeout(function(){ document.documentElement.classList.remove('t2-tema-gecis'); }, 1300);
+  }catch(_){}
+}, 60000);
 
 // ── Performans modu ────────────────────────────────────────────────────────
 // Zayıf iş bilgisayarlarında arayüz takılıyordu: 57 sürekli animasyon,
@@ -22121,7 +22181,9 @@ function renderTelaKontrol(){
   }
   var countEl=document.getElementById('tkCount'); if(countEl){ countEl.textContent=list.length.toLocaleString('tr')+' model'; countEl.classList.toggle('on',!!q); }
   var grid=document.getElementById('tkGrid'); if(!grid) return;
-  if(!all.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-layer-group"></i><p>Henüz tela modeli yok. “Yeni Model” ile ekleyin.</p></div>'; return; }
+  if(!all.length){ grid.innerHTML=_t2Rehber({ic:'fa-layer-group', bas:'İlk tela modelini ekle', alt:'Hangi modele kaç top tela verildiğini, hangi atölyeye çıktığını tek yerde gör.',
+      adim:['Model kodu, renk ve adedi gir','Modelin içinde en (150 / 180), renk, top ve atölye seçip <b>Ver</b>','Verilen tela Genel Stok\'tan kendiliğinden düşer'],
+      btn:'Yeni Tela Modeli', fn:'tkOpenModelModal()'}); return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
   grid.innerHTML=list.map(function(m){
     var ver=_tkVerilen(m);
