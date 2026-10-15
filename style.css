@@ -17024,3 +17024,17 @@ html[data-tasarim="yeni"] :is(.btn, .export-btn, .ft-pdf-chip, .type-chip, .fsel
   html[data-tasarim="yeni"] .t2-ilerleme{ display:none; }
 }
 html[data-tasarim="yeni"][data-perf="lite"] .t2-ilerleme{ display:none; }
+
+/* ── Telefonda pencere / yan menü açıkken yüzen öğeler araya girmesin ──
+   Yüzen alt menü pencerelerin Kaydet/İptal düğmelerini ve yan menünün altını
+   örtüyordu. */
+@media (max-width:768px){
+  html[data-tasarim="yeni"] body:has(.modal-overlay.show) :is(.bottom-nav, #cloudSyncBadge, .fab, .v8-scroll-top, #v8ScrollTop),
+  html[data-tasarim="yeni"] body:has(.sidebar.open) :is(.bottom-nav, #cloudSyncBadge, .fab, .v8-scroll-top, #v8ScrollTop){
+    display:none !important;
+  }
+}
+/* Logodaki dikey iplikler sabit mor renkteydi — temanın açık tonundan alsın */
+:is(.t2-mark, .lg-mark) :is(.lgm-d1, .lgm-d2, .lgm-d3){
+  stroke:color-mix(in srgb, var(--primary-light, var(--primary)) 70%, #fff) !important;
+}
