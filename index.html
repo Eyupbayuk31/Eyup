@@ -1132,16 +1132,18 @@
           el.style.cssText = 'position:fixed;bottom:74px;left:10px;z-index:99998;font-size:11px;font-weight:700;padding:5px 10px;border-radius:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;font-family:system-ui;';
           el.onclick = function(){
             if(!window._fs){ location.reload(); return; }
-            toast('☁️ Buluttan eşitleniyor…');
+            toast('Buluttan eşitleniyor…');
             try{ bootRead(); }catch(e){}
           };
           document.body.appendChild(el);
         }
-        if(state === 'ok'){ el.style.background='#065f46'; el.style.color='#d1fae5'; el.textContent='☁️ bağlı'; el.title='Bulut senkron aktif — tıkla: şimdi eşitle'; }
-        else if(state === 'sync'){ el.style.background='#92400e'; el.style.color='#fde68a'; el.textContent='☁️ kaydediliyor…'; el.title='Değişiklikler buluta yazılıyor — uygulamayı birkaç saniye açık tutun'; }
-        else if(state === 'err'){ el.style.background='#7c2d12'; el.style.color='#fed7aa'; el.textContent='☁️ hata'; el.title=(detail||'yazma/dinleme hatası')+' — tıkla: yeniden eşitle'; }
-        else { el.style.background='#7f1d1d'; el.style.color='#fecaca'; el.textContent='☁️ BAĞLI DEĞİL'; el.title=(detail||'SDK yüklenemedi')+' — tıkla: sayfayı yenile'; }
+        if(state === 'ok'){ el.style.background='#065f46'; el.style.color='#d1fae5'; el.textContent='bağlı'; el.title='Bulut senkron aktif — tıkla: şimdi eşitle'; }
+        else if(state === 'sync'){ el.style.background='#92400e'; el.style.color='#fde68a'; el.textContent='kaydediliyor…'; el.title='Değişiklikler buluta yazılıyor — uygulamayı birkaç saniye açık tutun'; }
+        else if(state === 'err'){ el.style.background='#7c2d12'; el.style.color='#fed7aa'; el.textContent='hata'; el.title=(detail||'yazma/dinleme hatası')+' — tıkla: yeniden eşitle'; }
+        else { el.style.background='#7f1d1d'; el.style.color='#fecaca'; el.textContent='bağlı değil'; el.title=(detail||'SDK yüklenemedi')+' — tıkla: sayfayı yenile'; }
       }
+      // Durum noktası CSS'ten (#cloudSyncBadge::before) — emoji yok
+      var _place=place; place=function(){ _place(); var e=document.getElementById('cloudSyncBadge'); if(e) e.setAttribute('data-durum', state); };
       if(document.body){ place(); }
       else { document.addEventListener('DOMContentLoaded', place, { once:true }); }
     }
@@ -1149,7 +1151,7 @@
 
     // ── Baslat
     async function boot(){
-      if(!window._isViewerUrl) toast('☁️ Data Sunucusuna bağlandı');
+      if(!window._isViewerUrl) toast('Bulut sunucusuna bağlandı');
       try {
         await bootRead();
       } finally {
@@ -1553,9 +1555,11 @@ if(typeof Chart==='undefined'){
     <div class="db-hero-left">
       <div class="db-greeting" id="dbGreeting">Hoş Geldiniz</div>
       <div class="db-date" id="dbDate"></div>
+      <div class="t2-ozet" id="t2Ozet"></div>
     </div>
     <div class="db-hero-right">
-      <span class="db-live-badge"><span class="db-live-dot"></span>Canli</span>
+      <div class="t2-saat" id="t2Saat" aria-label="Saat">--:--</div>
+      <span class="db-live-badge"><span class="db-live-dot"></span>Canlı</span>
       <button class="btn btn-sm btn-secondary" onclick="refreshHome()" title="Yenile"><i class="fas fa-sync-alt"></i></button>
     </div>
   </div>
@@ -10267,7 +10271,7 @@ function refreshHome(){
   var dayNames=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
   var monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   var hr=now.getHours();
-  var greetTxt=hr<12?'Günaydın \u2600\uFE0F':'Hoş Geldiniz \uD83D\uDC4B';
+  var greetTxt = hr<6 ? 'İyi geceler' : hr<12 ? 'Günaydın' : hr<18 ? 'İyi günler' : 'İyi akşamlar';
   var elGr=document.getElementById('dbGreeting');
   var elDt=document.getElementById('dbDate');
   if(elGr)elGr.textContent=greetTxt;
@@ -10327,6 +10331,14 @@ function refreshHome(){
   sv('awTomorrow', awTomorrowN);
   sv('awWeekDone', awWeekDoneN);
   sv('awStock',    awStockN);
+  (function(){
+    var oz=document.getElementById('t2Ozet'); if(!oz) return;
+    var p=[];
+    if(awOverdueN) p.push('<b class="kt">'+awOverdueN+'</b> termini geçen');
+    if(awTomorrowN) p.push('<b class="yb">'+awTomorrowN+'</b> yarın bitiyor');
+    if(awStockN) p.push('<b class="ks">'+awStockN+'</b> kritik stok');
+    oz.innerHTML = p.length ? p.join('<span class="ay">·</span>') : '<span class="iy">Bugün acil bir iş yok</span>';
+  })();
 
   // 7 gunluk aktivite grafigi
   var days7=[],day7Labels=[],day7Data=[];
@@ -10519,7 +10531,7 @@ function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
 function runBootSequence(username){
   var splash = document.getElementById('bootSplash');
   if(!splash){
-    if(typeof toast==='function') toast('Hoş geldin, '+(username||'')+' 👋','success');
+    if(typeof toast==='function') toast('Hoş geldin, '+(username||''),'success');
     return;
   }
   var steps = Array.prototype.slice.call(splash.querySelectorAll('.boot-step'));
@@ -10563,7 +10575,7 @@ function runBootSequence(username){
   setTimeout(function(){
     splash.classList.add('hide');
     setTimeout(function(){ splash.style.display='none'; splash.setAttribute('aria-hidden','true'); }, 500);
-    if(typeof toast==='function') toast('Hoş geldin, '+(username||'')+' 👋','success');
+    if(typeof toast==='function') toast('Hoş geldin, '+(username||''),'success');
   }, totalMs+220); // ~2.3sn
 }
 window.runBootSequence = runBootSequence;
@@ -12565,11 +12577,16 @@ function _tasarimButonlari(){
   var v=document.documentElement.getAttribute('data-tasarim')||'yeni';
   document.querySelectorAll('.s-tasarim-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tasarimBtn===v); });
 }
+function _t2SaatYaz(){
+  var el=document.getElementById('t2Saat'); if(!el) return;
+  var d=new Date(), p=function(n){ return String(n).padStart(2,'0'); };
+  el.textContent=p(d.getHours())+':'+p(d.getMinutes());
+}
 function _t2TarihYaz(){
   var el=document.getElementById('t2TbTarih'); if(!el) return;
   try{ el.textContent=new Date().toLocaleDateString('tr-TR',{weekday:'long', day:'numeric', month:'long'}); }catch(_){}
 }
-document.addEventListener('DOMContentLoaded', function(){ _tasarimButonlari(); _t2TarihYaz(); setInterval(_t2TarihYaz, 60000); });
+document.addEventListener('DOMContentLoaded', function(){ _tasarimButonlari(); _t2TarihYaz(); _t2SaatYaz(); setInterval(function(){ _t2TarihYaz(); _t2SaatYaz(); }, 15000); });
 function setFontSize(val){
   val = Math.max(12, Math.min(20, parseInt(val,10)||14));
   // Uygulamadaki metinlerin çoğu sabit px boyutunda olduğundan body font-size
@@ -20551,11 +20568,11 @@ document.addEventListener('keydown', function(e){
     overlay.style.display = 'flex';
     document.body.classList.add('logged-out');
     const h = new Date().getHours();
-    let g = 'Hoş geldin 👋';
-    if(h < 6) g = 'İyi geceler 🌙';
-    else if(h < 12) g = 'Günaydın ☀️';
-    else if(h < 18) g = 'İyi günler 🌤️';
-    else g = 'İyi akşamlar 🌆';
+    let g = 'Hoş geldin';
+    if(h < 6) g = 'İyi geceler';
+    else if(h < 12) g = 'Günaydın';
+    else if(h < 18) g = 'İyi günler';
+    else g = 'İyi akşamlar';
     greet.textContent = g + ' — devam etmek için giriş yap';
     try {
       const last = localStorage.getItem(LAST_USER_KEY);
@@ -20784,7 +20801,7 @@ document.addEventListener('keydown', function(e){
           try { localStorage.setItem(LAST_USER_KEY, _pendingUsername); } catch(e){}
           if(typeof window._logAudit === 'function') window._logAudit('login', { by: _pendingUsername, label: _pendingUsername });
           hideLogin();
-          if(typeof toast === 'function') toast('Onaylandın! Hoş geldin, ' + _pendingUsername + ' 👋', 'success');
+          if(typeof toast === 'function') toast('Onaylandın. Hoş geldin, ' + _pendingUsername, 'success');
           backToLoginFromPending(true);
         }, 900);
       }
@@ -20936,7 +20953,7 @@ document.addEventListener('keydown', function(e){
           btn.innerHTML = '<span class="spinner"></span><span class="btn-text"><i class="fas fa-sign-in-alt"></i> Giriş Yap</span>';
           btn.style.background = '';
           if(typeof window.runBootSequence === 'function'){ window.runBootSequence(u); }
-          else if(typeof toast==='function'){ toast('Hoş geldin, ' + u + ' 👋', 'success'); }
+          else if(typeof toast==='function'){ toast('Hoş geldin, ' + u, 'success'); }
         }, 500);
       } else {
         btn.classList.remove('loading');
