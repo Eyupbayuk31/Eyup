@@ -1431,9 +1431,14 @@ if(typeof Chart==='undefined'){
       <div>
         <div class="logo-text"><span class="t2-lt1">İrsaliye</span> <em class="t2-lt2">Pro</em></div>
       </div>
+      <button type="button" class="t2-daralt" onclick="t2MenuDaralt()" title="Menüyü daralt / genişlet" aria-label="Menüyü daralt"><i class="fas fa-angles-left"></i></button>
     </div>
   </div>
   <nav>
+    <div class="nav-group t2-fav-grup" data-g="fav" hidden>
+      <div class="nav-section t2-fav-bas"><span>Sık kullanılanlar</span></div>
+      <div class="nav-items" id="t2FavListe"></div>
+    </div>
     <div class="nav-group" data-g="ana">
       <button type="button" class="nav-section" onclick="toggleNavGroup('ana')" aria-expanded="true">
         <span>Ana Menü</span><i class="fas fa-chevron-down nav-caret"></i>
@@ -1475,6 +1480,11 @@ if(typeof Chart==='undefined'){
     </div>
   </nav>
   <div class="sidebar-footer">
+    <div class="t2-profil">
+      <span class="t2-pr-av" id="t2PrAv">E</span>
+      <span class="t2-pr-tx"><b id="t2PrAd">—</b><small>Eyüp tarafından yapılmıştır</small></span>
+      <button type="button" class="t2-pr-cik" onclick="logout()" title="Çıkış yap" aria-label="Çıkış yap"><i class="fas fa-right-from-bracket"></i></button>
+    </div>
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır</span></div>
     <button onclick="logout()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.18)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">
       <i class="fas fa-right-from-bracket"></i> Çıkış Yap
@@ -4503,6 +4513,7 @@ function showPage(page){
   if(bIdx>=0){document.querySelectorAll('.bottom-nav a')[bIdx]?.classList.add('active');}
   try{ var _bn=document.getElementById('bottomNav'); if(_bn){ _bn.style.setProperty('--t2-i', Math.max(0,bIdx)); _bn.classList.toggle('t2-nav-yok', bIdx<0); } }catch(_){}
   try{ setTimeout(_t2BaslikIzle, 30); if(page==='list') _t2FiltreSay(); }catch(_){}
+  try{ _t2MenuKur(); _t2Profil(); }catch(_){}
   try{ _t2Ilerle(); setTimeout(function(){ _t2SayilariSay(document.getElementById('page-'+page)); }, 140); }catch(_){}
   
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
@@ -12604,6 +12615,96 @@ function setTheme(theme){
   try{ document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(function(b){
     b.classList.toggle('active', b.dataset.modeBtn===getConfig('colorMode','dark')); }); }catch(_){}
 }
+// ══ YAN MENÜ (yeni tasarım): daraltma, sık kullanılanlar, canlı rozetler, profil ══
+function t2MenuDaralt(){
+  var k=document.documentElement, ac=!k.classList.contains('t2-mini');
+  k.classList.toggle('t2-mini', ac);
+  try{ localStorage.setItem('t2_menu_mini', ac?'1':'0'); }catch(_){}
+}
+function _t2Favler(){ try{ return JSON.parse(localStorage.getItem('t2_menu_fav'))||[]; }catch(_){ return []; } }
+function t2FavDegis(page, ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  var f=_t2Favler(), i=f.indexOf(page);
+  if(i>=0) f.splice(i,1); else { if(f.length>=5){ if(typeof toast==='function') toast('En fazla 5 sık kullanılan olabilir','info'); return; } f.push(page); }
+  try{ localStorage.setItem('t2_menu_fav', JSON.stringify(f)); }catch(_){}
+  _t2MenuKur();
+}
+function _t2MenuKur(){
+  var nav=document.querySelector('#sidebar nav'); if(!nav) return;
+  var fav=_t2Favler();
+  nav.querySelectorAll('.nav-group:not(.t2-fav-grup) a[data-page]').forEach(function(a){
+    var ad=(a.querySelector('span')||{}).textContent||'';
+    a.setAttribute('data-ad', ad);
+    if(!a.querySelector('.t2-rozet')){ var r=document.createElement('em'); r.className='t2-rozet'; r.hidden=true; a.appendChild(r); }
+    var y=a.querySelector('.t2-yildiz');
+    if(!y){ y=document.createElement('button'); y.type='button'; y.className='t2-yildiz';
+      y.innerHTML='<i class="fas fa-star"></i>'; y.onclick=function(e){ t2FavDegis(a.dataset.page, e); }; a.appendChild(y); }
+    y.classList.toggle('on', fav.indexOf(a.dataset.page)>=0);
+    y.title = fav.indexOf(a.dataset.page)>=0 ? 'Sık kullanılanlardan çıkar' : 'Sık kullanılanlara ekle';
+  });
+  var grup=nav.querySelector('.t2-fav-grup'), liste=document.getElementById('t2FavListe');
+  if(grup && liste){
+    liste.innerHTML='';
+    fav.forEach(function(pg){
+      var asil=nav.querySelector('.nav-group:not(.t2-fav-grup) a[data-page="'+pg+'"]'); if(!asil) return;
+      var k=asil.cloneNode(true); k.classList.remove('active');
+      var yy=k.querySelector('.t2-yildiz'); if(yy) yy.onclick=function(e){ t2FavDegis(pg, e); };
+      liste.appendChild(k);
+    });
+    grup.hidden = !liste.children.length;
+  }
+  var akt=document.querySelector('.page.active'); var ap=akt?akt.id.replace(/^page-/,''):'';
+  // Menü ekrana sığmıyorsa açık sayfanın bölümü dışındakileri katla (kullanıcı başlığa basıp açabilir)
+  try{
+    if(document.documentElement.getAttribute('data-tasarim')==='yeni' && window.innerWidth>768 && !document.documentElement.classList.contains('t2-mini')){
+      var aktA=nav.querySelector('.nav-group:not(.t2-fav-grup) a[data-page="'+ap+'"]'), aktG=aktA?aktA.closest('.nav-group'):null;
+      if(nav.scrollHeight>nav.clientHeight+2){
+        nav.querySelectorAll('.nav-group:not(.t2-fav-grup)').forEach(function(g){
+          var kat=(g!==aktG); g.classList.toggle('kapali', kat);
+          var b=g.querySelector('.nav-section'); if(b) b.setAttribute('aria-expanded', kat?'false':'true');
+        });
+      }
+    }
+  }catch(_){}
+  nav.querySelectorAll('.t2-fav-grup a[data-page]').forEach(function(a){ a.classList.toggle('active', a.dataset.page===ap); });
+  _t2Rozetler();
+}
+function _t2Rozetler(){
+  var say={};
+  try{ say['fermuar-takip']=(getData('fermuarTakip')||[]).filter(function(m){ return !m.tamamlandi && _ftModelBekleyen(m)>0; }).length; }catch(_){}
+  try{ say['kordon-takip']=(getData('kordonTakip')||[]).filter(function(m){ return !m.tamamlandi && _ftModelBekleyen(m)>0; }).length; }catch(_){}
+  try{ say['list']=getUnifiedList().filter(function(i){ return i.durum==='bekliyor'; }).length; }catch(_){}
+  try{ say['stok']=(getData('stoklar')||[]).filter(function(s){ return s.minStok>0 && s.miktar<=s.minStok; }).length; }catch(_){}
+  var acil={'fermuar-takip':1,'kordon-takip':1,'stok':1};
+  document.querySelectorAll('#sidebar a[data-page] .t2-rozet').forEach(function(r){
+    var pg=r.parentElement.dataset.page, n=say[pg]||0;
+    r.hidden=!n; r.textContent = n>99 ? '99+' : n; r.classList.toggle('acil', !!acil[pg]);
+  });
+}
+// Daraltılmış menüde ikonun üstüne gelince adı balonda
+(function(){
+  var ip=null;
+  document.addEventListener('mouseover', function(e){
+    var a=e.target.closest && e.target.closest('#sidebar nav a[data-ad]');
+    if(!a || !document.documentElement.classList.contains('t2-mini') || window.innerWidth<=768){ if(ip) ip.classList.remove('on'); return; }
+    if(!ip){ ip=document.createElement('div'); ip.className='t2-ipucu'; document.body.appendChild(ip); }
+    var r=a.getBoundingClientRect(); ip.textContent=a.getAttribute('data-ad');
+    ip.style.left=(r.right+10)+'px'; ip.style.top=(r.top+r.height/2)+'px'; ip.classList.add('on');
+  });
+})();
+function _t2Profil(){
+  var ad=(document.getElementById('pdName')||{}).textContent||'', av=(document.getElementById('profileAvatar')||{}).textContent||'';
+  var a=document.getElementById('t2PrAd'), b=document.getElementById('t2PrAv');
+  if(a && ad) a.textContent=ad; if(b && av) b.textContent=av;
+}
+(function(){
+  try{ if(localStorage.getItem('t2_menu_mini')==='1') document.documentElement.classList.add('t2-mini'); }catch(_){}
+  document.addEventListener('DOMContentLoaded', function(){
+    _t2MenuKur(); _t2Profil();
+    setInterval(function(){ try{ _t2Rozetler(); _t2Profil(); }catch(_){} }, 20000);
+  });
+})();
+
 // ── Telefonda büyük başlık: sayfadaki başlık ekrandan çıkınca üst bara geçer ──
 var _t2Gozlemci=null;
 var _T2_BASLIK_SEC='.section-header h2, .ak-head h2, .rep-hero-title, .aks-title, .cal-ph-title, .db-greeting';
