@@ -17410,7 +17410,7 @@ html[data-tasarim="yeni"] .t2-sheet-bas{ font-family:var(--t2-serif); font-weigh
 .t2-tutamak{ display:none; }
 html[data-tasarim="yeni"] #t2FavListe > a{ cursor:grab; }
 html[data-tasarim="yeni"] #t2FavListe > a .t2-tutamak{
-  display:inline-flex; align-items:center; justify-content:center; width:10px; margin:0 -4px 0 -2px; font-size:10px;
+  display:inline-flex; align-items:center; justify-content:center; flex:0 0 12px !important; width:12px; min-width:0 !important; margin:0 -2px 0 -6px; font-size:10px;
   color:var(--text-muted); opacity:0; transition:opacity .15s;
 }
 html[data-tasarim="yeni"] #t2FavListe > a:hover .t2-tutamak{ opacity:.7; }
@@ -17423,6 +17423,15 @@ html[data-tasarim="yeni"] #t2FavListe.t2-siraliyor > a:not(.t2-surukle){ transit
 html[data-tasarim="yeni"] #t2FavListe.t2-siraliyor{ -webkit-user-select:none; user-select:none; }
 html[data-tasarim="yeni"].t2-mini #t2FavListe > a .t2-tutamak{ display:none; }
 @media (max-width:768px){ html[data-tasarim="yeni"] #t2FavListe > a .t2-tutamak{ opacity:.5; display:inline-flex; } }
-html[data-tasarim="yeni"] .sidebar nav #t2FavListe > a .t2-tutamak i{
-  all:unset; font-family:"Font Awesome 6 Free"; font-weight:900; font-size:10px; line-height:1; color:inherit;
+/* Tutamak ve yıldızın içindeki ikon, menü ikon kutusu stilini almasın */
+html[data-tasarim="yeni"] .sidebar nav a .t2-tutamak i,
+html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz i,
+html[data-tasarim="yeni"] .sidebar nav a:hover .t2-tutamak i,
+html[data-tasarim="yeni"] .sidebar nav a:hover .t2-yildiz i,
+html[data-tasarim="yeni"] .sidebar nav a.active .t2-tutamak i,
+html[data-tasarim="yeni"] .sidebar nav a.active .t2-yildiz i{
+  width:auto !important; min-width:0 !important; height:auto !important; padding:0 !important; margin:0 !important;
+  background:none !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; transform:none !important;
+  display:inline !important; font-size:10px !important; line-height:1 !important; color:inherit !important;
 }
+html[data-tasarim="yeni"] .sidebar nav a.active .t2-tutamak{ color:inherit; }
