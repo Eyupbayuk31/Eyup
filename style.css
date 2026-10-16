@@ -17549,3 +17549,149 @@ html .search-bar i, html .aks-search-box > i{ position:static !important; transf
   html[data-tasarim="yeni"] .sidebar nav a > i:first-child{ width:32px !important; height:32px !important; min-width:32px !important; }
   html[data-tasarim="yeni"] .sidebar nav .nav-section{ padding:12px 8px 6px !important; min-height:0 !important; }
 }
+
+/* ══════════ BÜYÜK PLAN · FAZ 2: tek tasarım dili ══════════ */
+html[data-tasarim="yeni"]{ --t2-acil:#ef4444; --t2-yakin:#f59e0b; --t2-tamam:#10b981; --t2-ikon-zemin:color-mix(in srgb, var(--primary) 16%, transparent); }
+
+/* 12) Renk disiplini — tür rozetleri sade; tür yalnız ikonda */
+html[data-tasarim="yeni"] .type-badge{
+  background:color-mix(in srgb, var(--text-muted) 10%, transparent) !important; color:var(--text-main) !important;
+  border:1px solid color-mix(in srgb, var(--text-muted) 18%, transparent) !important; text-transform:none !important; letter-spacing:0 !important;
+  font-size:11px !important; font-weight:700 !important; padding:3px 9px !important;
+}
+html[data-tasarim="yeni"] .type-badge i{ color:var(--primary-light, var(--primary)) !important; opacity:1 !important; }
+html[data-tasarim="yeni"] .v8-tl-line1 .type{ background:color-mix(in srgb, var(--text-muted) 10%, transparent) !important; color:var(--text-main) !important; border-color:transparent !important; }
+html[data-tasarim="yeni"] .v8-timeline-dot{ border-color:var(--primary) !important; background:transparent !important; }
+/* İkon kutuları: her sayfada aynı tema tonu (mavi/mor/yeşil karışıklığı yok) */
+html[data-tasarim="yeni"] :is(.rep-kpi-icon, .s-ico, #page-geridonusum .stat-icon, .rep-ins-ic){
+  background:var(--t2-ikon-zemin) !important; color:var(--primary-light, var(--primary)) !important; box-shadow:none !important;
+}
+html[data-tasarim="yeni"] .s-ico i{ color:var(--primary-light, var(--primary)) !important; }
+html[data-tasarim="yeni"] .rep-kpi-icon:has(.fa-exclamation-triangle){ background:color-mix(in srgb, var(--t2-acil) 16%, transparent) !important; color:#f87171 !important; }
+/* Başarı / tehlike düğmeleri: dolu doygun renk yerine sade */
+html[data-tasarim="yeni"] .btn-success{
+  background:color-mix(in srgb, var(--t2-tamam) 14%, transparent) !important; color:#34d399 !important;
+  border:1px solid color-mix(in srgb, var(--t2-tamam) 38%, transparent) !important; box-shadow:none !important;
+}
+html[data-tasarim="yeni"] .btn-success:hover{ background:color-mix(in srgb, var(--t2-tamam) 24%, transparent) !important; }
+
+/* 13) Silme düğmeleri: dolu kırmızı kutu yerine çizgili; üstüne gelince kırmızılaşır */
+html[data-tasarim="yeni"] :is(.btn-danger, .aks-btn-danger, .aks-delete-btn, .ft-btn-del, .t2-sil){
+  background:transparent !important; color:#f87171 !important; border:1px solid color-mix(in srgb, var(--t2-acil) 35%, var(--border)) !important;
+  box-shadow:none !important; background-image:none !important;
+}
+html[data-tasarim="yeni"] :is(.btn-danger, .aks-btn-danger, .aks-delete-btn, .ft-btn-del, .t2-sil):hover{
+  background:color-mix(in srgb, var(--t2-acil) 16%, transparent) !important; color:#fecaca !important; border-color:var(--t2-acil) !important;
+}
+html[data-tasarim="yeni"] :is(.btn-danger, .aks-btn-danger, .aks-delete-btn) i{ color:inherit !important; }
+html[data-tasarim="yeni"] .bulk-btn.danger{ background:rgba(239,68,68,.16) !important; }
+
+/* 14) Termin etiketi (tüm sayfalarda aynı) */
+.t2-termin{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; white-space:nowrap; color:var(--text-muted); }
+.t2-termin i{ font-size:10px; opacity:.8; }
+.t2-termin.gecti{ color:#f87171; font-weight:700; }
+.t2-termin.yakin{ color:#fbbf24; font-weight:700; }
+.t2-sonuk{ color:var(--text-muted); opacity:.6; }
+
+/* 16) Form alanları: ince sade çerçeve, odakta tema rengi */
+html[data-tasarim="yeni"] :is(.form-input, .form-select, textarea.form-input, select.form-input){
+  border:1px solid color-mix(in srgb, var(--text-muted) 22%, transparent) !important; border-radius:12px !important;
+  background:color-mix(in srgb, var(--bg-main) 45%, transparent) !important; box-shadow:none !important;
+  font-size:15px !important; padding:11px 14px !important; transition:border-color .15s, box-shadow .15s, background .15s;
+}
+html[data-tasarim="yeni"] :is(.form-input, .form-select):hover{ border-color:color-mix(in srgb, var(--text-muted) 38%, transparent) !important; }
+html[data-tasarim="yeni"] :is(.form-input, .form-select):focus, html[data-tasarim="yeni"] :is(.form-input, .form-select):focus-within{
+  border-color:var(--primary) !important; box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent) !important;
+  background:color-mix(in srgb, var(--bg-main) 70%, transparent) !important; outline:0 !important;
+}
+html[data-tasarim="yeni"] .form-input::placeholder{ color:color-mix(in srgb, var(--text-muted) 55%, transparent) !important; }
+html[data-tasarim="yeni"] .form-group > label{ font-size:12.5px !important; font-weight:700 !important; color:var(--text-main) !important; margin-bottom:6px !important; }
+
+/* 17) Sayfa başlıkları: tüm sayfalarda aynı yerleşim (ikon · başlık · açıklama · sağda düğmeler) */
+html[data-tasarim="yeni"] :is(.ak-head, .cal-page-header, .rep-hero, .aks-header){
+  background:transparent !important; border:0 !important; box-shadow:none !important; border-radius:0 !important;
+  padding:0 0 18px !important; margin:0 0 4px !important; display:flex !important; align-items:flex-start !important;
+  justify-content:space-between !important; gap:16px !important; flex-wrap:wrap; position:relative;
+}
+html[data-tasarim="yeni"] :is(.ak-head, .cal-page-header, .rep-hero, .aks-header)::before,
+html[data-tasarim="yeni"] :is(.ak-head, .cal-page-header, .rep-hero, .aks-header)::after{ display:none !important; }
+html[data-tasarim="yeni"] :is(.ak-htitle, .cal-ph-left, .rep-hero-left, .aks-title-group){ display:flex !important; align-items:center !important; gap:14px !important; }
+html[data-tasarim="yeni"] :is(.ak-hicon, .cal-ph-icon, .rep-hero-icon, .aks-icon-badge, .ft-page-badge){
+  width:46px !important; height:46px !important; min-width:46px !important; border-radius:14px !important; font-size:18px !important;
+  display:inline-flex !important; align-items:center !important; justify-content:center !important;
+}
+html[data-tasarim="yeni"] :is(.ak-head p, .cal-ph-sub, .rep-hero-sub, .aks-subtitle){ font-size:13.5px !important; margin-top:4px !important; }
+@media (min-width:769px){
+  html[data-tasarim="yeni"] #page-reports :is(.rep-range-strip, .rep-kpi-grid, .rep-insights, .rep-tabs-wrap, .rep-tab){ padding-left:0 !important; padding-right:0 !important; }
+}
+
+/* 18) Sayı kutuları: 0 olan tür filtreleri sönük */
+html[data-tasarim="yeni"] .type-filter-card.t2-sifir:not(.active), html[data-tasarim="yeni"] [data-type-filter].t2-sifir:not(.active){ opacity:.45; }
+
+/* 19) Bildirim balonları: bilgisayarda sağ alt, telefonda alt menünün üstü */
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .toast-container{ top:auto !important; bottom:24px !important; right:24px !important; flex-direction:column-reverse; }
+}
+html .aks-stat-mini small{ font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin-left:2px; }
+@media (max-width:768px){ html .aks-stat-mini{ flex-direction:column; gap:2px !important; } html .aks-stat-mini small{ margin:0; } }
+
+/* 15) Boş durumlar */
+html #page-geridonusum.gd-bos :is(.stats-grid, .search-bar, .section-header .btn-danger){ display:none !important; }
+html #page-geridonusum.gd-bos .card.table-desktop{ background:transparent !important; border:0 !important; box-shadow:none !important; }
+html #page-geridonusum.gd-bos .card.table-desktop thead{ display:none; }
+.t2-bos-kart{ display:flex; align-items:center; gap:16px; text-align:left; max-width:560px; margin:8px auto; padding:22px; border-radius:18px;
+  border:1px dashed color-mix(in srgb, var(--primary) 40%, var(--border)); background:color-mix(in srgb, var(--primary) 5%, transparent); }
+.t2-bos-kart b{ font-size:16px; color:var(--text-main); }
+.t2-bos-kart p{ margin:4px 0 0; font-size:13px; color:var(--text-muted); line-height:1.5; }
+.t2-bos-kart .t2r-ic{ flex-shrink:0; }
+#page-geridonusum #recycleEmpty{ padding:0 !important; }
+#page-geridonusum #recycleEmpty > .t2-bos-kart i{ font-size:inherit; opacity:1; display:inline; margin:0; }
+
+/* İrsaliyeler: tarih grubu başlıkları + sade kart (kartın tamamı dokunulabilir) */
+.t2-grup-bas{ display:flex; align-items:center; gap:8px; margin:14px 2px 8px; font-family:var(--t2-mono, monospace); font-size:11px;
+  font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--text-muted); }
+.t2-grup-bas::after{ content:''; flex:1; height:1px; background:var(--border); }
+.t2-grup-bas em, .t2-grup-tr em{ font-style:normal; font-size:10px; padding:1px 7px; border-radius:99px; background:color-mix(in srgb, var(--primary) 16%, transparent); color:var(--primary-light, var(--primary)); letter-spacing:0; }
+.t2-grup-bas:first-child{ margin-top:2px; }
+html table tr.t2-grup-tr td{ padding:14px 14px 6px !important; background:transparent !important; border-bottom:0 !important;
+  font-family:var(--t2-mono, monospace); font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--text-muted); }
+html table tr.t2-grup-tr td span{ margin-right:8px; }
+html table tr.t2-grup-tr:hover td{ background:transparent !important; }
+html .t2-no-td{ font-family:var(--t2-mono, monospace); font-weight:700; color:var(--primary-light, var(--primary)); white-space:nowrap; font-size:12.5px; }
+html .t2-model-td{ font-weight:700; white-space:nowrap; }
+html .t2-detay-td{ font-size:11.5px; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+html .t2-durum{ display:inline-flex !important; align-items:center; gap:5px; white-space:nowrap; font-size:11.5px !important; font-weight:700 !important; }
+html .t2-durum i{ font-size:10px; }
+html .t2-irs-tr{ cursor:default; }
+
+html .uni-mobile-card.t2-irs{ cursor:pointer; border-left:1px solid var(--border) !important; border-radius:16px !important; margin-bottom:10px !important; }
+html .uni-mobile-card.t2-irs .card-inner{ padding:12px 14px !important; display:flex; flex-direction:column; gap:4px; background:var(--bg-card) !important; }
+html .uni-mobile-card.t2-irs.teslim .card-inner{ background:color-mix(in srgb, var(--bg-card) 80%, transparent) !important; }
+html .uni-mobile-card.t2-irs:active .card-inner{ background:var(--bg-card-hover) !important; }
+.t2i-ust{ display:flex; align-items:center; gap:8px; }
+.t2i-ust .bulk-check{ margin:0; flex-shrink:0; }
+.t2i-no{ font-family:var(--t2-mono, monospace); font-size:12.5px; font-weight:700; color:var(--primary-light, var(--primary)); }
+.t2i-ust .t2-durum{ margin-left:auto; }
+.t2i-model{ font-size:16px; font-weight:800; color:var(--text-main); letter-spacing:.1px; margin-top:4px; }
+.t2i-atolye{ font-size:13px; color:var(--text-muted); }
+.t2i-atolye i{ font-size:11px; margin-right:3px; opacity:.8; }
+.t2i-detay{ font-size:12px; color:var(--text-muted); opacity:.85; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.t2i-alt{ display:flex; align-items:center; gap:12px; margin-top:6px; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--border) 70%, transparent); flex-wrap:wrap; }
+.t2i-tarih{ font-size:12px; color:var(--text-muted); white-space:nowrap; }
+.t2i-tarih i{ font-size:10.5px; margin-right:3px; }
+html .t2i-alt .action-btn-menu{ margin-left:auto; width:34px; height:34px; min-height:0; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--text-muted); padding:0; cursor:pointer; }
+html .t2-disa-liste{ display:none !important; }
+html .t2-disa-btn .t2-disa-ok{ font-size:9px; opacity:.7; margin-left:2px; }
+html .uni-mobile-card.t2-irs{ padding:0 !important; background:transparent !important; overflow:hidden; }
+html .uni-mobile-card.t2-irs .card-inner{ border:0 !important; border-radius:16px !important; margin:0 !important; box-shadow:none !important; }
+html .uni-mobile-card.t2-irs .action-btn-menu, html .uni-mobile-card.t2-irs .action-btn-menu i{ color:var(--text-muted) !important; background:transparent !important; }
+html .uni-mobile-card.t2-irs .bulk-check{ accent-color:var(--primary); }
+html .t2-durum::before{ display:none !important; }
+html #page-list .t2-no-td, html #page-list td.t2-no-td{ color:var(--primary-light, var(--primary)) !important; }
+@media (min-width:769px){ html .ls-strip .ls-card{ flex:0 0 auto !important; width:150px !important; max-width:170px; } }
+html #page-list .search-bar input, html body .search-bar input{ padding-left:0 !important; }
+html #page-list :is(.fsel-btn-label, .pdd-label){ text-align:left !important; flex:1 1 auto; justify-content:flex-start !important; }
+.t2-kv-k{ display:block; font-size:11px; font-weight:600; opacity:.8; margin-top:2px; }
+html[data-tasarim="yeni"] #page-geridonusum.gd-bos .card.table-desktop, html[data-tasarim="yeni"] #page-geridonusum.gd-bos .card.table-desktop::before, html[data-tasarim="yeni"] #page-geridonusum.gd-bos .card.table-desktop::after{
+  background:transparent !important; border:0 !important; box-shadow:none !important; outline:0 !important; }
