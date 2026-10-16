@@ -3976,12 +3976,12 @@ if(typeof Chart==='undefined'){
         <div class="form-group">
           <input type="text" id="sigSearchInput" class="form-input" placeholder="İrsaliye no, model veya atölye ara..." oninput="renderSigWaybillList()">
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <div class="t2-serit" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
           <button type="button" class="sig-filter-chip active" data-sigfilter="all" onclick="setSigFilter('all')">Tümü</button>
           <button type="button" class="sig-filter-chip" data-sigfilter="bekliyor" onclick="setSigFilter('bekliyor')">Bekleyen</button>
           <button type="button" class="sig-filter-chip" data-sigfilter="signed" onclick="setSigFilter('signed')">Fotoğraflı</button>
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <div class="t2-serit" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
           <button type="button" class="sig-type-chip active" data-sigtype="all" onclick="setSigTypeFilter('all')">Tüm Türler</button>
           <button type="button" class="sig-type-chip" data-sigtype="standart" onclick="setSigTypeFilter('standart')">Poşet</button>
           <button type="button" class="sig-type-chip" data-sigtype="fermuar" onclick="setSigTypeFilter('fermuar')">Fermuar</button>
@@ -12615,6 +12615,48 @@ function setTheme(theme){
   try{ document.querySelectorAll('.s-mode-btn:not(.s-perf-btn):not(.s-tasarim-btn)').forEach(function(b){
     b.classList.toggle('active', b.dataset.modeBtn===getConfig('colorMode','dark')); }); }catch(_){}
 }
+// ══ İŞLEM ÇUBUĞU: telefonda ikincil düğmeler "Diğer" menüsüne katlanır ══
+// Düğmeler yerinden oynatılmaz; telefonda gizlenir, menüde kopyaları asıllarını tıklar.
+var _T2_EYLEM_KAP='.ak-hbtns, .aks-header-right, .rep-hero-actions, .ft-toolbar-group, #page-geridonusum .section-header > div:last-child';
+function _t2EylemKur(){
+  document.querySelectorAll(_T2_EYLEM_KAP).forEach(function(k){
+    if(k.querySelector(':scope > .t2-diger')) return;
+    var ik=k.querySelectorAll(':scope > button:not(.btn-primary):not(.aks-btn-primary)');
+    if(ik.length<2) return;
+    ik.forEach(function(b){ b.classList.add('t2-katla'); });
+    var d=document.createElement('button'); d.type='button'; d.className='btn btn-secondary t2-diger';
+    d.innerHTML='<i class="fas fa-ellipsis"></i><span>Diğer</span>';
+    d.onclick=function(e){ e.stopPropagation(); _t2DigerAc(k); };
+    k.insertBefore(d, k.firstChild);
+  });
+}
+function _t2DigerAc(k){
+  _t2DigerKapat();
+  var ort=document.createElement('div'); ort.className='t2-sheet-ort'; ort.onclick=_t2DigerKapat;
+  var sh=document.createElement('div'); sh.className='t2-sheet'; sh.setAttribute('role','menu');
+  sh.innerHTML='<div class="t2-sheet-tut" aria-hidden="true"></div>';
+  k.querySelectorAll(':scope > .t2-katla').forEach(function(b){
+    var c=document.createElement('button'); c.type='button'; c.className='t2-sheet-o'+(b.classList.contains('btn-danger')||b.classList.contains('aks-btn-danger')?' tehlike':'');
+    var ic=b.querySelector('i'); c.innerHTML=(ic?ic.outerHTML:'')+'<span>'+(b.textContent||'').trim().replace(/\s+/g,' ')+'</span>';
+    c.onclick=function(){ _t2DigerKapat(); setTimeout(function(){ b.click(); }, 60); };
+    sh.appendChild(c);
+  });
+  document.body.appendChild(ort); document.body.appendChild(sh);
+  requestAnimationFrame(function(){ ort.classList.add('on'); sh.classList.add('on'); });
+  _t2SheetSurukle(sh, _t2DigerKapat);
+}
+function _t2DigerKapat(){
+  document.querySelectorAll('.t2-sheet-ort, .t2-sheet').forEach(function(e){ e.classList.remove('on'); setTimeout(function(){ e.remove(); }, 260); });
+}
+// Alttan açılan sayfayı aşağı çekince kapat
+function _t2SheetSurukle(sh, kapat, tut){
+  var y0=null, dy=0; tut=tut||sh;
+  tut.addEventListener('touchstart', function(e){ if(sh.scrollTop>0) return; y0=e.touches[0].clientY; dy=0; sh.style.transition='none'; }, {passive:true});
+  tut.addEventListener('touchmove', function(e){ if(y0===null) return; dy=Math.max(0, e.touches[0].clientY-y0); sh.style.transform='translateY('+dy+'px)'; }, {passive:true});
+  tut.addEventListener('touchend', function(){ if(y0===null) return; sh.style.transition=''; sh.style.transform=''; if(dy>90) kapat(); y0=null; });
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(_t2EylemKur, 400); });
+
 // ══ YAN MENÜ (yeni tasarım): daraltma, sık kullanılanlar, canlı rozetler, profil ══
 function t2MenuDaralt(){
   var k=document.documentElement, ac=!k.classList.contains('t2-mini');
