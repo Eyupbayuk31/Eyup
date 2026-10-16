@@ -17373,3 +17373,35 @@ html[data-tasarim="yeni"] .rep-range-btn{ font-family:var(--t2-mono) !important;
 .gs-ic.gs-ic-cmd{ background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))) !important; color:var(--on-primary, #fff) !important; }
 .gs-calis{ color:var(--primary) !important; }
 .gs-ornek span{ cursor:pointer; }
+
+/* ══ 6 · TELEFON HAREKETLERİ ══ */
+.t2-sheet-bas{ padding:2px 12px 10px; font-weight:800; font-size:16px; color:var(--text-main); }
+html[data-tasarim="yeni"] .t2-sheet-bas{ font-family:var(--t2-serif); font-weight:400; font-size:26px; letter-spacing:-.4px; }
+@media (max-width:768px){
+  /* Kart kaydırırken arkasında ne olacağını gösteren renk ve yazı */
+  html[data-tasarim="yeni"] .ft-card.t2-kay{ position:relative; z-index:2; }
+  html[data-tasarim="yeni"] .ft-card.t2-kay::after{
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:5; opacity:0; transition:opacity .15s;
+    display:flex; align-items:center; font-weight:800; font-size:14px; letter-spacing:.06em; text-transform:uppercase; padding:0 22px;
+  }
+  html[data-tasarim="yeni"] .ft-card.t2-kay[data-kay="gelen"]::after{ content:'Gelen gir  \2192'; opacity:1; justify-content:flex-start; color:#fff;
+    background:linear-gradient(90deg, rgba(16,185,129,.85), rgba(16,185,129,0) 70%); }
+  html[data-tasarim="yeni"] .ft-card.t2-kay[data-kay="pdf"]::after{ content:'\2190  PDF'; opacity:1; justify-content:flex-end; color:#fff;
+    background:linear-gradient(270deg, rgba(234,88,12,.85), rgba(234,88,12,0) 70%); }
+  html[data-tasarim="yeni"] #page-fermuar-takip .ft-card, html[data-tasarim="yeni"] #page-kordon-takip .ft-card{ touch-action:pan-y; -webkit-user-select:none; user-select:none; }
+
+  /* Pencereler alttan açılan sayfa: üstte tutamak, alt kenara yaslı */
+  html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere{ align-items:flex-end !important; padding:0 !important; }
+  html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere > .modal{
+    width:100% !important; max-width:100% !important; max-height:92vh !important; max-height:92dvh !important; margin:0 !important;
+    border-radius:24px 24px 0 0 !important; border-bottom:0 !important; padding-top:28px !important;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere.show > .modal{ animation:t2SayfaGel .35s cubic-bezier(.22,1,.36,1) both !important; }
+  html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere > .modal::before{
+    content:'' !important; position:absolute !important; top:10px !important; left:50% !important; right:auto !important; width:42px !important; height:5px !important;
+    margin-left:-21px; border-radius:3px; background:color-mix(in srgb, var(--text-muted) 45%, transparent) !important; opacity:1 !important; display:block !important; z-index:6;
+  }
+  html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere > .modal > div:last-child:has(> .btn-primary){ bottom:calc(-16px - env(safe-area-inset-bottom, 0px)); }
+}
+@keyframes t2SayfaGel{ from{ transform:translateY(100%); } to{ transform:none; } }
