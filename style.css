@@ -17405,3 +17405,24 @@ html[data-tasarim="yeni"] .t2-sheet-bas{ font-family:var(--t2-serif); font-weigh
   html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere > .modal > div:last-child:has(> .btn-primary){ bottom:calc(-16px - env(safe-area-inset-bottom, 0px)); }
 }
 @keyframes t2SayfaGel{ from{ transform:translateY(100%); } to{ transform:none; } }
+
+/* ── Sık kullanılanları sürükle-sırala ── */
+.t2-tutamak{ display:none; }
+html[data-tasarim="yeni"] #t2FavListe > a{ cursor:grab; }
+html[data-tasarim="yeni"] #t2FavListe > a .t2-tutamak{
+  display:inline-flex; align-items:center; justify-content:center; width:10px; margin:0 -4px 0 -2px; font-size:10px;
+  color:var(--text-muted); opacity:0; transition:opacity .15s;
+}
+html[data-tasarim="yeni"] #t2FavListe > a:hover .t2-tutamak{ opacity:.7; }
+html[data-tasarim="yeni"] #t2FavListe > a.t2-surukle{
+  position:relative; z-index:20; cursor:grabbing !important; transition:none !important;
+  box-shadow:0 14px 30px -10px rgba(0,0,0,.75), 0 0 0 1px color-mix(in srgb, var(--primary) 55%, transparent) !important;
+  background:color-mix(in srgb, var(--bg-main) 80%, var(--primary)) !important; scale:1.03;
+}
+html[data-tasarim="yeni"] #t2FavListe.t2-siraliyor > a:not(.t2-surukle){ transition:transform .15s; }
+html[data-tasarim="yeni"] #t2FavListe.t2-siraliyor{ -webkit-user-select:none; user-select:none; }
+html[data-tasarim="yeni"].t2-mini #t2FavListe > a .t2-tutamak{ display:none; }
+@media (max-width:768px){ html[data-tasarim="yeni"] #t2FavListe > a .t2-tutamak{ opacity:.5; display:inline-flex; } }
+html[data-tasarim="yeni"] .sidebar nav #t2FavListe > a .t2-tutamak i{
+  all:unset; font-family:"Font Awesome 6 Free"; font-weight:900; font-size:10px; line-height:1; color:inherit;
+}

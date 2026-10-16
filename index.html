@@ -12786,7 +12786,9 @@ function _t2MenuKur(){
     liste.innerHTML='';
     fav.forEach(function(pg){
       var asil=nav.querySelector('.nav-group:not(.t2-fav-grup) a[data-page="'+pg+'"]'); if(!asil) return;
-      var k=asil.cloneNode(true); k.classList.remove('active');
+      var k=asil.cloneNode(true); k.classList.remove('active'); k.setAttribute('draggable','false');
+      if(!k.querySelector('.t2-tutamak')){ var tt=document.createElement('span'); tt.className='t2-tutamak'; tt.title='Basılı tutup sürükle';
+        tt.innerHTML='<i class="fas fa-grip-vertical"></i>'; k.insertBefore(tt, k.firstChild); }
       var yy=k.querySelector('.t2-yildiz'); if(yy) yy.onclick=function(e){ t2FavDegis(pg, e); };
       liste.appendChild(k);
     });
@@ -12820,6 +12822,72 @@ function _t2Rozetler(){
     r.hidden=!n; r.textContent = n>99 ? '99+' : n; r.classList.toggle('acil', !!acil[pg]);
   });
 }
+// ── Sık kullanılanları sürükleyerek sırala ──
+// Fare: tutup çek. Dokunmatik: ~0,3 sn basılı tut, sonra sürükle.
+// Bırakınca sıra kaydedilir; sürükleme sonrası tıklama (sayfa açma) çalışmaz.
+(function(){
+  var s=null;
+  function liste(){ return document.getElementById('t2FavListe'); }
+  function baslat(a, y){
+    var l=liste(); if(!l) return;
+    s.aktif=true; s.l=l; s.y0=y; s.ilkTop=a.getBoundingClientRect().top;
+    a.classList.add('t2-surukle'); l.classList.add('t2-siraliyor');
+    try{ navigator.vibrate && navigator.vibrate(10); }catch(_){}
+  }
+  function tasi(y){
+    var a=s.a, l=s.l;
+    // İmlecin üstünde kalan (orta noktası imlecin üstünde olan) öğe sayısı = yeni sıra
+    a.style.transform='';
+    var kardes=[].slice.call(l.children).filter(function(x){ return x!==a; });
+    var idx=0; kardes.forEach(function(k){ var r=k.getBoundingClientRect(); if(r.top+r.height/2 < y) idx++; });
+    var hedef=kardes[idx]||null;
+    if(a.nextElementSibling!==hedef || (hedef===null && l.lastElementChild!==a)) l.insertBefore(a, hedef);
+    // Öğe parmağın / imlecin altında dursun
+    var r=a.getBoundingClientRect();
+    a.style.transform='translateY('+(y-(r.top+r.height/2))+'px)';
+  }
+  function bitir(){
+    if(!s) return;
+    clearTimeout(s.zaman);
+    if(s.aktif){
+      var a=s.a, l=s.l;
+      a.classList.remove('t2-surukle'); a.style.transform=''; l.classList.remove('t2-siraliyor');
+      var yeni=[].slice.call(l.children).map(function(x){ return x.dataset.page; }).filter(Boolean);
+      try{ localStorage.setItem('t2_menu_fav', JSON.stringify(yeni)); }catch(_){}
+      a.addEventListener('click', function engel(ev){ ev.stopPropagation(); ev.preventDefault(); }, {capture:true, once:true});
+      setTimeout(_t2MenuKur, 30);
+    }
+    s=null;
+  }
+  // Fare
+  document.addEventListener('mousedown', function(e){
+    if(e.button!==0) return;
+    var a=e.target.closest && e.target.closest('#t2FavListe > a'); if(!a || e.target.closest('.t2-yildiz')) return;
+    s={a:a, x0:e.clientX, y0:e.clientY, aktif:false};
+  });
+  document.addEventListener('mousemove', function(e){
+    if(!s || s.dokunma) return;
+    if(!s.aktif){ if(Math.abs(e.clientY-s.y0)<5) return; baslat(s.a, s.y0); }
+    e.preventDefault(); tasi(e.clientY);
+  });
+  document.addEventListener('mouseup', bitir);
+  // Bağlantının tarayıcıdaki kendi sürüklemesi araya girip fare olaylarını kesiyordu
+  document.addEventListener('dragstart', function(e){ if(e.target.closest && e.target.closest('#t2FavListe')) e.preventDefault(); }, true);
+  // Dokunmatik
+  document.addEventListener('touchstart', function(e){
+    var a=e.target.closest && e.target.closest('#t2FavListe > a'); if(!a || e.target.closest('.t2-yildiz') || e.touches.length!==1) return;
+    var y=e.touches[0].clientY;
+    s={a:a, y0:y, aktif:false, dokunma:true};
+    s.zaman=setTimeout(function(){ if(s && !s.aktif) baslat(a, y); }, 300);
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!s || !s.dokunma) return;
+    if(!s.aktif){ if(Math.abs(e.touches[0].clientY-s.y0)>8){ clearTimeout(s.zaman); s=null; } return; }
+    e.preventDefault(); tasi(e.touches[0].clientY);
+  }, {passive:false});
+  document.addEventListener('touchend', bitir);
+  document.addEventListener('touchcancel', bitir);
+})();
 // Daraltılmış menüde ikonun üstüne gelince adı balonda
 (function(){
   var ip=null;
