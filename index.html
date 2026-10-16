@@ -12657,6 +12657,103 @@ function _t2SheetSurukle(sh, kapat, tut){
 }
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(_t2EylemKur, 400); });
 
+// ══ TELEFON HAREKETLERİ (yeni tasarım) ══
+// Fermuar / Kordon kartı: sağa kaydır = Gelen gir, sola kaydır = PDF; uzun bas = hızlı menü.
+// Pencereler: alttan açılan sayfa, tutamaktan aşağı çekince kapanır.
+(function(){
+  function yeni(){ return document.documentElement.getAttribute('data-tasarim')==='yeni' && window.innerWidth<=768; }
+  function kartBilgi(kart){
+    var m=/\((\d+)\)/.exec(kart.getAttribute('onclick')||''); if(!m) return null;
+    var kordon=!!kart.closest('#page-kordon-takip');
+    return { id:+m[1], store:kordon?'kordonTakip':'fermuarTakip', pdf:kordon?'ktTekPdf':'ftTekPdf', detay:kordon?'ktOpenDetailModal':'ftOpenDetailModal',
+             kes:kordon?'ktIrsaliyeKes':'ftIrsaliyeKes', tamam:kordon?'ktToggleDone':'ftToggleDone' };
+  }
+  function hizliMenu(kart, b){
+    var ad=(kart.querySelector('.ft-model')||{}).textContent||'';
+    var secenek=[
+      ['fa-list','Detayı aç',function(){ window[b.detay](b.id); }],
+      ['fa-truck-ramp-box','Gelen gir',function(){ takipGelenAc(b.store, b.id); }],
+      ['fa-file-pdf','Teslim belgesi (PDF)',function(){ window[b.pdf](b.id); }],
+      ['fa-file-export','İrsaliye kes',function(){ window[b.kes](b.id); }],
+      ['fa-check-double','Tamamlandı olarak işaretle',function(){ window[b.tamam](b.id,true); }]
+    ];
+    _t2DigerKapat();
+    // Parmak kalkınca tarayıcı bir "tık" üretir; arka plana düşüp menüyü hemen kapatmasın
+    window._t2YutTik=true;
+    var ort=document.createElement('div'); ort.className='t2-sheet-ort';
+    ort.onclick=function(){ if(window._t2YutTik){ window._t2YutTik=false; return; } _t2DigerKapat(); };
+    var sh=document.createElement('div'); sh.className='t2-sheet';
+    sh.innerHTML='<div class="t2-sheet-tut"></div><div class="t2-sheet-bas">'+(typeof esc==='function'?esc(ad):ad)+'</div>';
+    secenek.forEach(function(o){ var c=document.createElement('button'); c.type='button'; c.className='t2-sheet-o';
+      c.innerHTML='<i class="fas '+o[0]+'"></i><span>'+o[1]+'</span>'; c.onclick=function(){ _t2DigerKapat(); setTimeout(o[2],60); }; sh.appendChild(c); });
+    document.body.appendChild(ort); document.body.appendChild(sh);
+    requestAnimationFrame(function(){ ort.classList.add('on'); sh.classList.add('on'); });
+    _t2SheetSurukle(sh, _t2DigerKapat);
+    try{ navigator.vibrate && navigator.vibrate(12); }catch(_){}
+  }
+  var d=null;
+  document.addEventListener('touchstart', function(e){
+    if(!yeni() || e.touches.length!==1) return;
+    var kart=e.target.closest && e.target.closest('#page-fermuar-takip .ft-card, #page-kordon-takip .ft-card');
+    if(!kart || e.target.closest('button, a, input, select, label')) { d=null; return; }
+    var b=kartBilgi(kart); if(!b) return;
+    var t=e.touches[0];
+    d={kart:kart, b:b, x0:t.clientX, y0:t.clientY, dx:0, yon:null, uzun:setTimeout(function(){ if(d && !d.yon){ d.yon='uzun'; hizliMenu(kart,b); } }, 520)};
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!d) return;
+    var t=e.touches[0], dx=t.clientX-d.x0, dy=t.clientY-d.y0;
+    if(!d.yon){
+      if(Math.abs(dx)>12 && Math.abs(dx)>Math.abs(dy)*1.4){ d.yon='yatay'; clearTimeout(d.uzun); d.kart.classList.add('t2-kay'); }
+      else if(Math.abs(dy)>10){ clearTimeout(d.uzun); d=null; return; }
+    }
+    if(d.yon==='yatay'){
+      d.dx=Math.max(-140, Math.min(140, dx));
+      d.kart.style.transform='translateX('+d.dx+'px)';
+      d.kart.setAttribute('data-kay', d.dx>40?'gelen':(d.dx<-40?'pdf':''));
+    }
+  }, {passive:true});
+  document.addEventListener('touchend', function(){
+    if(!d) return; clearTimeout(d.uzun);
+    var k=d.kart, b=d.b, dx=d.dx, yon=d.yon; d=null;
+    if(yon==='yatay'){
+      k.style.transition='transform .25s cubic-bezier(.22,1,.36,1)'; k.style.transform='';
+      setTimeout(function(){ k.style.transition=''; k.classList.remove('t2-kay'); k.removeAttribute('data-kay'); }, 260);
+      // Kaydırma bitince kartın kendi tıklaması (detay) çalışmasın
+      k.addEventListener('click', function engel(ev){ ev.stopPropagation(); ev.preventDefault(); }, {capture:true, once:true});
+      setTimeout(function(){ try{ k.click(); }catch(_){} }, 0);
+      if(dx>90) setTimeout(function(){ takipGelenAc(b.store, b.id); }, 120);
+      else if(dx<-90) setTimeout(function(){ window[b.pdf](b.id); }, 120);
+    } else if(yon==='uzun'){
+      k.addEventListener('click', function engel(ev){ ev.stopPropagation(); ev.preventDefault(); }, {capture:true, once:true});
+      setTimeout(function(){ window._t2YutTik=false; }, 450);
+    }
+  });
+  // Pencereler: üst kısımdan aşağı çekince kapat
+  var p=null;
+  document.addEventListener('touchstart', function(e){
+    if(!yeni()) return;
+    var md=e.target.closest && e.target.closest('.modal-overlay.show.t2-sayfa-pencere > .modal');
+    if(!md || md.scrollTop>0) return;
+    var r=md.getBoundingClientRect(), t=e.touches[0];
+    if(t.clientY-r.top>56 || e.target.closest('input, select, textarea, button')) return;
+    p={md:md, y0:t.clientY, dy:0}; md.style.transition='none';
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!p) return; p.dy=Math.max(0, e.touches[0].clientY-p.y0); p.md.style.transform='translateY('+p.dy+'px)';
+  }, {passive:true});
+  document.addEventListener('touchend', function(){
+    if(!p) return; var md=p.md, dy=p.dy; p=null;
+    md.style.transition='transform .25s cubic-bezier(.22,1,.36,1)'; md.style.transform='';
+    setTimeout(function(){ md.style.transition=''; }, 260);
+    if(dy>110){ var ov=md.parentElement; var x=ov.querySelector('.ft-x, .modal-close, [onclick*="Close"], [onclick*="close"]');
+      if(x) x.click(); else ov.click(); }
+  });
+  // Hangi pencereler alttan açılsın: tam ekran detay/gelen ekranları hariç hepsi
+  function isaretle(){ document.querySelectorAll('.modal-overlay:not(.ft-detail-overlay):not(#tkGelenModal)').forEach(function(o){ o.classList.add('t2-sayfa-pencere'); }); }
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(isaretle, 500); });
+})();
+
 // ══ YAN MENÜ (yeni tasarım): daraltma, sık kullanılanlar, canlı rozetler, profil ══
 function t2MenuDaralt(){
   var k=document.documentElement, ac=!k.classList.contains('t2-mini');
