@@ -8999,7 +8999,7 @@ function renderFilteredList(list){
     ? `<span class="chip chip-success clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Bekliyor yap"><i class="fas fa-check"></i> Teslim</span>`
     : `<span class="chip chip-warning clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Teslim edildi yap"><i class="fas fa-hourglass-half"></i> Bekliyor</span>`;
   const _termin=i=>{ if(!i.termin) return ''; const te=_t2Termin(i.termin, i.durum==='teslim');
-    return `<span class="t2-termin ${te.cls}" title="Termin: ${_t2Tarih(i.termin,true)}"><i class="fas fa-flag-checkered"></i> ${_t2Tarih(i.termin)}${te.t?' · '+te.t:''}</span>`; };
+    return `<span class="t2-termin ${te.cls}" title="Termin: ${_t2Tarih(i.termin,true)}"><i class="fas fa-flag-checkered"></i> ${_t2Tarih(i.termin)}${te.t?'<small><span class="t2-ayr"> · </span>'+te.t+'</small>':''}</span>`; };
 
   // Desktop table
   _sonG=null;
@@ -9013,7 +9013,7 @@ function renderFilteredList(list){
       <td>${i.atolye||i.firma||'-'}</td>
       <td class="t2-detay-td" title="${String(getItemDetail(i)).replace(/"/g,'&quot;')}">${getItemDetail(i)}</td>
       <td>${_durum(i)}</td>
-      <td style="white-space:nowrap;">${_termin(i)||'<span class="t2-sonuk">—</span>'}</td>
+      <td class="t2-termin-td">${_termin(i)||'<span class="t2-sonuk">—</span>'}</td>
       <td>
         <div class="table-actions">
           <button class="btn btn-xs tbl-act-view" onclick="showDetailUni(${i.id},'${i._type}')" title="Detay">
