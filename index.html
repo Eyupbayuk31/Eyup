@@ -19075,13 +19075,98 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 
+<script>
+// ══ KOMUT PALETİ: aramaya yazılan sözden iş çıkarır ══
+// Örnek: "C1801 pdf", "fermuar eksik", "ahmet irsaliye", "yeni kordon", "koyu tema".
+// Her komut {ad, alt, ic, skor, run}. Çalıştırılanlar "Son kullanılanlar"da durur.
+(function(){
+  var tl=function(v){ return (v==null?'':(''+v)).replace(/[İIıi]/g,'i').toLocaleLowerCase('tr'); };
+  var git=function(sayfa, fn, gecikme){ return function(){ try{ showPage(sayfa); }catch(_){} if(fn) setTimeout(fn, gecikme||250); }; };
+  var SABIT=[
+    {ad:'Yeni fermuar modeli', ek:'fermuar model ekle yeni takip', ic:'fa-link', run:git('fermuar-takip', function(){ ftOpenOrderModal(); })},
+    {ad:'Yeni kordon modeli',  ek:'kordon model ekle yeni takip',  ic:'fa-bezier-curve', run:git('kordon-takip', function(){ ktOpenOrderModal(); })},
+    {ad:'Yeni tela modeli',    ek:'tela model ekle yeni',          ic:'fa-layer-group', run:git('tela-kontrol', function(){ tkOpenModelModal(); })},
+    {ad:'Fermuar eksik listesi (PDF)', ek:'fermuar eksik pdf teslim liste', ic:'fa-file-pdf', run:git('fermuar-takip', function(){ ftOpenPdfModal(); })},
+    {ad:'Kordon eksik listesi (PDF)',  ek:'kordon eksik pdf teslim liste',  ic:'fa-file-pdf', run:git('kordon-takip', function(){ ktOpenPdfModal(); })},
+    {ad:'Yeni poşet irsaliyesi',   ek:'yeni irsaliye poset kes', ic:'fa-shopping-bag', run:git('new')},
+    {ad:'Yeni fermuar irsaliyesi', ek:'yeni irsaliye fermuar kes', ic:'fa-grip-lines', run:git('fermuar')},
+    {ad:'Yeni kordon irsaliyesi',  ek:'yeni irsaliye kordon kes', ic:'fa-bezier-curve', run:git('kordon')},
+    {ad:'Yeni lastik irsaliyesi',  ek:'yeni irsaliye lastik kes', ic:'fa-ruler', run:git('lastik')},
+    {ad:'Yeni düğme irsaliyesi',   ek:'yeni irsaliye dugme kes', ic:'fa-circle-dot', run:git('dugme')},
+    {ad:'Yeni stok kaydı',         ek:'stok ekle yeni malzeme', ic:'fa-warehouse', run:git('stok', function(){ openStokModal(); })},
+    {ad:'Hemen yedek al',          ek:'yedek backup al', ic:'fa-cloud-arrow-up', run:function(){ runManualBackup(); }},
+    {ad:'Karanlık görünüm',        ek:'koyu karanlik tema gece', ic:'fa-moon', run:function(){ setMode('dark'); }},
+    {ad:'Aydınlık görünüm',        ek:'acik aydinlik tema gunduz', ic:'fa-sun', run:function(){ setMode('light'); }},
+    {ad:'Görünüm: saate göre',     ek:'saat tema otomatik', ic:'fa-clock', run:function(){ setMode('saat'); }},
+    {ad:'Menüyü daralt / genişlet',ek:'menu daralt genislet kenar', ic:'fa-angles-left', run:function(){ t2MenuDaralt(); }},
+    {ad:'Klasik tasarıma dön',     ek:'klasik tasarim eski', ic:'fa-square', run:function(){ setTasarim('klasik'); }},
+    {ad:'Yeni tasarımı aç',        ek:'yeni tasarim', ic:'fa-wand-magic-sparkles', run:function(){ setTasarim('yeni'); }},
+    {ad:'Çıkış yap',               ek:'cikis oturum kapat logout', ic:'fa-right-from-bracket', run:function(){ logout(); }}
+  ];
+  function sozler(q){ return q.split(/\s+/).filter(Boolean); }
+  function hepsiVar(metin, kel){ var m=tl(metin); return kel.every(function(k){ return m.indexOf(k)>=0; }); }
+  window._t2Komutlar=function(q){
+    q=tl((q||'').trim()); var out=[]; if(!q) return out;
+    var kel=sozler(q);
+    SABIT.forEach(function(c){ if(hepsiVar(c.ad+' '+c.ek, kel)) out.push({ad:c.ad, alt:'Komut', ic:c.ic, skor:1500, run:c.run, anahtar:'s:'+c.ad}); });
+    // Model kodu + niyet: "c1801 pdf", "c1801 gelen", "c1801" (aç)
+    var niyetPdf=/(^|\s)(pdf|belge|teslim)(\s|$)/.test(q), niyetGel=/(^|\s)(gelen|geldi|teslimat)(\s|$)/.test(q);
+    var kodQ=kel.filter(function(k){ return !/^(pdf|belge|teslim|gelen|geldi|teslimat|ac|aç)$/.test(k); }).join(' ');
+    if(kodQ.length>=2){
+      [['fermuarTakip','fermuar','ftTekPdf','ftOpenDetailModal','fermuar-takip','fa-link'],
+       ['kordonTakip','kordon','ktTekPdf','ktOpenDetailModal','kordon-takip','fa-bezier-curve']].forEach(function(t){
+        (getData(t[0])||[]).forEach(function(m){
+          var kod=m.modelKodu||''; if(tl(kod).indexOf(kodQ)<0) return;
+          var eks=_ftModelBekleyen(m), bas=(tl(kod).indexOf(kodQ)===0)?60:0;
+          var alt=t[1].charAt(0).toUpperCase()+t[1].slice(1)+(eks>0?(' · '+eks.toLocaleString('tr')+' eksik'):' · tamam');
+          out.push({ad:kod+' — teslim belgesi (PDF)', alt:alt, ic:'fa-file-pdf', skor:(niyetPdf?1700:1300)+bas, anahtar:'p:'+t[0]+':'+m.id,
+            run:function(){ window[t[2]](m.id); }});
+          out.push({ad:kod+' — gelen gir', alt:alt, ic:'fa-truck-ramp-box', skor:(niyetGel?1700:1250)+bas, anahtar:'g:'+t[0]+':'+m.id,
+            run:git(t[4], function(){ window[t[3]](m.id); setTimeout(function(){ takipGelenAc(t[0], m.id); }, 200); })});
+          if(!niyetPdf && !niyetGel) out.push({ad:kod+' — detayı aç', alt:alt, ic:t[5], skor:1280+bas, anahtar:'d:'+t[0]+':'+m.id,
+            run:git(t[4], function(){ window[t[3]](m.id); })});
+        });
+      });
+    }
+    // Atölye + irsaliye: "ahmet irsaliye"
+    if(/(^|\s)(irsaliye|irs|kes)(\s|$)/.test(q)){
+      var ad=kel.filter(function(k){ return !/^(irsaliye|irs|kes|yeni)$/.test(k); }).join(' ');
+      if(ad) (getData('atolyeler')||[]).forEach(function(a){
+        if(tl(a.name).indexOf(ad)<0) return;
+        out.push({ad:a.name+' — yeni irsaliye', alt:'Atölye seçili olarak açılır', ic:'fa-industry', skor:1650, anahtar:'a:'+a.name,
+          run:git('new', function(){ window._atolyePickerTarget='iAtolye'; try{ pickAtolyeForTarget(a.name); }catch(_){} })});
+      });
+    }
+    return out;
+  };
+  // Son kullanılanlar (en fazla 6) — yalnız ad/anahtar saklanır, çalıştırırken yeniden kurulur
+  window._t2KomutKaydet=function(r){
+    try{ var l=JSON.parse(localStorage.getItem('t2_komut_son'))||[];
+      l=l.filter(function(x){ return x.anahtar!==r.anahtar; }); l.unshift({anahtar:r.anahtar, ad:r.ad, ic:r.ic, q:r._q||''});
+      localStorage.setItem('t2_komut_son', JSON.stringify(l.slice(0,6))); }catch(_){}
+  };
+  document.addEventListener('click', function(e){
+    var o=e.target.closest && e.target.closest('.gs-ornek span'); if(!o) return;
+    var inp=document.getElementById('gsInput'); if(!inp) return;
+    inp.value=o.textContent; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.focus();
+  });
+  window._t2SonKomutlar=function(){
+    var out=[]; try{ (JSON.parse(localStorage.getItem('t2_komut_son'))||[]).forEach(function(x,i){
+      var bul=window._t2Komutlar(x.q||x.ad).filter(function(c){ return c.anahtar===x.anahtar; })[0];
+      if(bul) out.push(Object.assign({}, bul, {alt:'Son kullanılan', skor:2000-i, _q:x.q}));
+    }); }catch(_){}
+    return out;
+  };
+})();
+</script>
+
 <!-- ==== GLOBAL SEARCH (Ctrl+K) ==== -->
 
 <div class="gs-overlay" id="gsOverlay" onclick="if(event.target===this)closeGlobalSearch()">
   <div class="gs-box">
     <div class="gs-head">
       <i class="fas fa-search"></i>
-      <input type="text" id="gsInput" class="gs-input" placeholder="Model kodu, irsaliye no, atölye, menü… ara" autocomplete="off">
+      <input type="text" id="gsInput" class="gs-input" placeholder="Ara ya da komut yaz: C1801 pdf · fermuar eksik · ahmet irsaliye" autocomplete="off">
       <span class="gs-count" id="gsCount"></span>
       <span class="gs-kbd gs-kbd-esc">Esc</span>
       <button type="button" class="gs-close" onclick="closeGlobalSearch()" aria-label="Kapat"><i class="fas fa-times"></i></button>
@@ -19232,9 +19317,14 @@ document.addEventListener('DOMContentLoaded', function(){
         rows.push({grup:'mod', skor, item:it, mod:m, ad});
       });
     });
+    // ── KOMUTLAR (en üstte)
+    try{
+      (q ? window._t2Komutlar(q).map(c=>Object.assign(c,{_q:q})) : window._t2SonKomutlar())
+        .forEach(c=>rows.push(Object.assign({grup:'cmd'}, c)));
+    }catch(e){}
     rows.sort((a,b)=>b.skor-a.skor);
-    // Boşken: yalnızca son 6 kayıt (sayfa/menü satırları da gösterilmez)
-    gsRows = q ? rows.slice(0, 60) : rows.filter(r=>r.grup==='son').slice(0, 6);
+    // Boşken: son kullanılan komutlar + son 6 kayıt
+    gsRows = q ? rows.slice(0, 60) : rows.filter(r=>r.grup==='cmd').concat(rows.filter(r=>r.grup==='son').slice(0, 6));
     gsIdx = 0;
     renderResults(q);
   }
@@ -19242,11 +19332,11 @@ document.addEventListener('DOMContentLoaded', function(){
   function renderResults(q){
     const host=document.getElementById('gsList');
     const say=document.getElementById('gsCount');
-    const sayilar={mk:0,page:0,irs:0,mod:0,son:0};
+    const sayilar={mk:0,page:0,irs:0,mod:0,son:0,cmd:0};
     gsRows.forEach(r=>sayilar[r.grup]++);
     // Filtre çipleri — yalnızca dolu gruplar. Boş aramada çip gösterilmez.
     const fil=document.getElementById('gsFilters');
-    const cips=[['all','Tümü',gsRows.length],['mk','Model',sayilar.mk],['irs','İrsaliye',sayilar.irs],
+    const cips=[['all','Tümü',gsRows.length],['cmd','Komut',sayilar.cmd],['mk','Model',sayilar.mk],['irs','İrsaliye',sayilar.irs],
                 ['mod','Takip & Stok',sayilar.mod],['page','Menü',sayilar.page]];
     fil.innerHTML = q ? cips.filter(([id,ad,n])=>id==='all'||n>0).map(([id,ad,n])=>
       '<button type="button" class="gs-chip'+(gsFiltre===id?' on':'')+'" onclick="window._gsFilt(\''+id+'\')">'+ad+
@@ -19258,16 +19348,24 @@ document.addEventListener('DOMContentLoaded', function(){
       host.innerHTML='<div class="gs-empty"><i class="fas fa-magnifying-glass"></i>'+
         '<div class="gs-empty-t">'+(q?'Sonuç bulunamadı':'Ne arıyorsun?')+'</div>'+
         '<div class="gs-empty-s">'+(q?'Başka bir kelime deneyin.':'Model kodu, irsaliye no, atölye ya da menü adı yazın.')+'</div>'+
-        '<div class="gs-ornek"><span>I6399AX</span><span>IRS-053</span><span>tela</span><span>ayarlar</span></div></div>';
+        '<div class="gs-ornek"><span>C1801 pdf</span><span>fermuar eksik</span><span>yeni kordon</span><span>koyu</span></div></div>';
       return;
     }
     let html='', sonGrup='';
-    const grupAd={mk:'Model kartı',page:'Menü',irs:'İrsaliyeler',mod:'Takip & Stok',son:'Son kayıtlar'};
+    const grupAd={cmd:(q?'Komutlar':'Son kullanılanlar'),mk:'Model kartı',page:'Menü',irs:'İrsaliyeler',mod:'Takip & Stok',son:'Son kayıtlar'};
     gorunen.forEach((r,i)=>{
       if(r.grup!==sonGrup){ html+='<div class="gs-group">'+grupAd[r.grup]+'</div>'; sonGrup=r.grup; }
       const aktif=(i===gsIdx)?' active':'';
       const sar=(ic)=>'<div class="gs-item'+aktif+(r.grup==='mk'?' gs-mk':'')+'" data-i="'+i+'" onclick="window._gsOpen('+i+')" onmouseenter="window._gsHover('+i+')">'+ic+'</div>';
 
+      // ── KOMUT
+      if(r.grup==='cmd'){
+        html+=sar('<div class="gs-ic gs-ic-cmd"><i class="fas '+(r.ic||'fa-bolt')+'"></i></div>'+
+          '<div class="gs-body"><div class="gs-title">'+_esc(r.ad)+'</div>'+
+          '<div class="gs-meta">'+_esc(r.alt||'')+'</div></div>'+
+          '<span class="gs-git gs-calis"><i class="fas fa-bolt"></i></span>');
+        return;
+      }
       // ── MODEL KARTI: en belirgin satır
       if(r.grup==='mk'){
         html+=sar('<div class="gs-ic gs-ic-mk"><i class="fas fa-cube"></i></div>'+
@@ -19318,6 +19416,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const r=gorunen[i]; if(!r) return;
     closeGlobalSearch();
     try{
+      if(r.grup==='cmd'){ window._t2KomutKaydet(r); setTimeout(()=>{ try{ r.run(); }catch(e){ console.warn(e); } }, 60); return; }
       if(r.grup==='mk'){ if(typeof MK!=='undefined') MK.ac(r.model); return; }
       if(r.grup==='page'){ if(typeof showPage==='function') showPage(r.sayfa); return; }
       if(r.grup==='mod'){
@@ -19363,7 +19462,7 @@ document.addEventListener('DOMContentLoaded', function(){
     else if(e.key==='Escape'){ closeGlobalSearch(); }
     else if(e.key==='Tab'){ // Tab: gruplar arası filtre gezinme
       e.preventDefault();
-      const sira=['all','page','irs','mod'];
+      const sira=['all','cmd','page','irs','mod'];
       gsFiltre=sira[(sira.indexOf(gsFiltre)+ (e.shiftKey?sira.length-1:1)) % sira.length];
       gsIdx=0; renderResults(q);
     }
