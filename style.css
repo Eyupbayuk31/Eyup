@@ -18194,3 +18194,120 @@ html .mk-kpi{ border:1px solid var(--border); border-radius:14px; }
   html #page-tela-kontrol #tkRefreshBtn{ min-height:46px; }
 }
 @media (max-width:768px){ html[data-tasarim="yeni"] .topbar-right > button.tb-ekle, html .topbar-right > .tb-ekle{ display:none !important; } }
+
+/* ══════════ PLAN 2 · FAZ B ══════════ */
+/* 8) Model Kartı: durum özeti, son modeller, telefonda tablolar kart */
+.mk-durum{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+.mk-dc{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; border:1px solid var(--border); background:color-mix(in srgb, var(--bg-card) 85%, transparent);
+  color:var(--text-main); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.mk-dc i{ font-size:12px; color:var(--primary-light, var(--primary)); }
+.mk-dc.acil{ border-color:rgba(239,68,68,.4); color:#fca5a5; } .mk-dc.acil i{ color:#f87171; }
+.mk-dc.yakin{ border-color:rgba(245,158,11,.35); }
+.mk-dc.tamam i{ color:#34d399; }
+.mk-son-liste{ padding:18px; border-radius:18px; border:1px solid var(--border); background:color-mix(in srgb, var(--bg-card) 85%, transparent); }
+.mk-son-bas{ font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px; }
+.mk-son-cips{ display:flex; flex-wrap:wrap; gap:8px; }
+.mk-son-c{ padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--text-main); font:inherit; font-weight:800; font-size:14px; cursor:pointer; }
+.mk-son-c:hover{ border-color:color-mix(in srgb, var(--primary) 55%, var(--border)); background:color-mix(in srgb, var(--primary) 8%, transparent); }
+@media (max-width:768px){
+  html .mk-t{ min-width:0 !important; }
+  html .mk-t thead{ display:none; }
+  html .mk-t, html .mk-t tbody{ display:block; }
+  html .mk-t tr{ display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; padding:12px; border-bottom:1px solid var(--border); }
+  html .mk-t td{ display:flex; flex-direction:column; padding:0 !important; border:0 !important; text-align:left !important; min-width:0; font-size:13.5px; }
+  html .mk-t td::before{ content:attr(data-l); font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:2px; }
+  html .mk-t td:first-child{ grid-column:1 / -1; font-size:15px; }
+  html .mk-t td:first-child::before{ display:none; }
+}
+html[data-tasarim="yeni"] .mk-search .form-input{ padding-left:40px !important; }
+@media (max-width:768px){ html .mk-t td{ overflow-wrap:anywhere; } .mk-durum{ gap:6px; } .mk-dc{ font-size:12.5px; padding:7px 10px; } }
+/* 9) Tür sayfalarının altındaki liste: son 5 kayıt + Tümü */
+html .t2-son-kayit .card-title{ display:flex; align-items:center; gap:8px; }
+.t2-sk-say{ font-style:normal; font-size:11px; padding:1px 8px; border-radius:99px; background:color-mix(in srgb, var(--primary) 16%, transparent); color:var(--primary-light, var(--primary)); }
+.t2-sk-tumu{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; border:0; background:transparent; color:var(--primary-light, var(--primary)); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; }
+html .t2-son-kayit tbody tr:nth-child(n+6), html .t2-son-kayit .table-mobile > *:nth-child(n+6){ display:none !important; }
+html .t2-son-kayit [id$="Pagination"]{ display:none !important; }
+/* Kısa ölçü kartları gereksiz uzamasın (Lastik, Düğme, Saten, Dantel) */
+@media (min-width:769px){
+  html :is(#page-lastik, #page-dugme, #page-satenaskilik, #page-dantel) > .grid-auto{ align-items:start; }
+}
+html .t2-tur-ozet{ margin-top:14px; }
+/* Fermuar irsaliyesi: tüm bedenler her zaman görünür; adet girilen satır vurgulu, boşlar sönük (PDF'e zaten çıkmaz) */
+html #page-fermuar tbody tr td:first-child{ font-weight:800; transition:color .15s, opacity .15s; }
+html #page-fermuar tbody tr:has(td:last-child input:placeholder-shown):not(:focus-within) td:first-child{ opacity:.55; }
+html #page-fermuar tbody tr:has(td:last-child input:not(:placeholder-shown)) td:first-child{ color:var(--primary-light, var(--primary)) !important; opacity:1; }
+html #page-fermuar tbody tr:has(td:last-child input:not(:placeholder-shown)){ background:color-mix(in srgb, var(--primary) 7%, transparent); }
+html #page-fermuar tbody td input.form-input{ width:100% !important; text-align:center; }
+/* 10) Tela Kontrol: kartta elde stok; tela verme formu iki satır */
+.t2-tk-elde{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); margin:2px 0 4px; }
+.t2-tk-elde i{ font-size:11px; }
+.t2-tk-elde .var{ color:#34d399; font-weight:700; } .t2-tk-elde .yok{ color:#f87171; font-weight:700; } .t2-tk-elde .ay{ opacity:.5; }
+@media (min-width:769px){
+  html .tk-addrow-grid{ grid-template-columns:140px 1fr 140px !important; grid-template-areas:"en renk top" "atl atl ver"; }
+  html .tk-addrow-grid #tkRowCm{ grid-area:en; } html .tk-addrow-grid #tkRowRenk{ grid-area:renk; } html .tk-addrow-grid #tkRowTop{ grid-area:top; }
+  html .tk-addrow-grid #tkRowAtolye{ grid-area:atl; } html .tk-addrow-grid > .btn{ grid-area:ver; justify-content:center; }
+}
+/* 11) Fermuar / Kordon detayı (bilgisayar): satır düğmeleri üstüne gelince; ekleme formu ferah */
+@media (min-width:769px){
+  html .ft-detail-overlay .ft-row-acts{ opacity:.35; transition:opacity .15s; }
+  html .ft-detail-overlay .ft-row:hover .ft-row-acts, html .ft-detail-overlay .ft-row:focus-within .ft-row-acts{ opacity:1; }
+  html .ft-detail-overlay .ft-row-acts .btn{ background:transparent !important; border:1px solid var(--border) !important; color:var(--text-muted) !important; box-shadow:none !important; }
+  html .ft-detail-overlay .ft-row-acts .btn:hover{ color:var(--text-main) !important; border-color:color-mix(in srgb, var(--primary) 50%, var(--border)) !important; }
+  html .ft-detail-overlay .ft-row-acts .btn-primary{ color:var(--primary-light, var(--primary)) !important; border-color:color-mix(in srgb, var(--primary) 45%, transparent) !important; }
+  html .ft-detail-overlay .ft-row-acts .btn-danger:hover{ color:#fca5a5 !important; border-color:#ef4444 !important; }
+  html .ft-detail-overlay .ft-addrow{ padding:14px 16px !important; }
+  html .ft-detail-overlay .ft-addrow .form-input{ min-height:44px; }
+}
+/* 13) PDF / Teslim Durumu: satırlar kart, seçili satır belirgin */
+html .ft-pdf-row{ border:1px solid var(--border) !important; margin-bottom:6px; background:color-mix(in srgb, var(--bg-main) 30%, transparent); }
+html .ft-pdf-row:has(.ft-pdf-chk:checked){ border-color:color-mix(in srgb, var(--primary) 60%, transparent) !important; background:color-mix(in srgb, var(--primary) 10%, transparent); }
+
+/* 14) Raporlar: içgörü kartları tek dil — kenar tema rengi, yalnız risk kırmızı */
+html[data-tasarim="yeni"] .rep-insight{ border-left:3px solid color-mix(in srgb, var(--primary) 60%, transparent) !important; }
+html[data-tasarim="yeni"] .rep-insight .rep-ins-ic{ background:var(--t2-ikon-zemin, color-mix(in srgb, var(--primary) 16%, transparent)) !important; color:var(--primary-light, var(--primary)) !important; }
+html[data-tasarim="yeni"] .rep-insight.rep-ins-r, html[data-tasarim="yeni"] .rep-insight.rep-ins-d{ border-left-color:#ef4444 !important; }
+@media (max-width:768px){
+  html[data-tasarim="yeni"] #page-reports .rep-kpi-grid{ display:grid !important; grid-template-columns:1fr 1fr !important; overflow:visible !important; -webkit-mask-image:none !important; mask-image:none !important; padding:0 16px !important; margin:0 0 12px !important; }
+  html[data-tasarim="yeni"] #page-reports .rep-kpi-grid > *{ max-width:none !important; min-width:0 !important; }
+  /* Tablo sekmesi: satırlar kart */
+  html #repTabloBody table, html #repTabloBody tbody{ display:block; min-width:0 !important; width:100%; }
+  html #repTabloBody thead{ display:none; }
+  html #repTabloBody tr.rep-tbl-row{ display:grid; grid-template-columns:auto 1fr auto; gap:4px 10px; padding:12px; border-bottom:1px solid var(--border); align-items:center; }
+  html #repTabloBody tr.rep-tbl-row td{ padding:0 !important; border:0 !important; min-width:0; }
+  html #repTabloBody .rep-tbl-idx{ display:none; }
+  html #repTabloBody .rep-tbl-no{ grid-column:1; font-weight:800; }
+  html #repTabloBody tr.rep-tbl-row td:nth-child(3){ grid-column:2; justify-self:start; }
+  html #repTabloBody tr.rep-tbl-row td:nth-child(8){ grid-column:3; grid-row:1; }
+  html #repTabloBody .rep-tbl-model{ grid-column:1 / -1; font-weight:800; font-size:15px; }
+  html #repTabloBody .rep-tbl-firm{ grid-column:1 / -1; color:var(--text-muted); font-size:12.5px; }
+  html #repTabloBody .rep-tbl-date{ grid-column:1 / 3; font-size:12px; color:var(--text-muted); }
+  html #repTabloBody .rep-tbl-date::before{ content:'Tarih '; }
+  html #repTabloBody .rep-tbl-termin{ grid-column:3; font-size:12px; text-align:right; }
+  html #repTabloBody .rep-tbl-termin::before{ content:'Termin '; color:var(--text-muted); font-weight:500; }
+  html #repTabloBody .rep-tbl-qty{ grid-column:1 / -1; font-size:12px; color:var(--text-muted); }
+  html #repTabloBody .rep-tbl-qty::before{ content:'Adet '; }
+}
+/* 15) Hakkında: sürüm ve yenilikler */
+.t2-yenilik{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.t2-yenilik li{ display:flex; flex-direction:column; gap:2px; padding:10px 12px 10px 14px; border-radius:12px; border-left:3px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  background:color-mix(in srgb, var(--bg-main) 35%, transparent); }
+.t2-yenilik b{ font-size:13.5px; } .t2-yenilik span{ font-size:12.5px; color:var(--text-muted); line-height:1.45; }
+.t2-surum .s-kbd-row b{ font-size:13px; }
+/* Kullanıcılar: kullanıcı satırı kart */
+html #page-settings [data-spanel="kullanicilar"] .s-card{ break-inside:avoid; }
+/* 16) Aksesuar Kontrol: yapışkan adım çubuğu */
+.t2-ak-adim{ position:sticky; top:72px; z-index:20; display:flex; align-items:center; gap:6px; padding:8px; margin:0 0 14px; border-radius:16px;
+  border:1px solid var(--border); background:color-mix(in srgb, var(--bg-main) 90%, transparent); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+.t2-aa{ flex:1 1 0; min-width:0; display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:12px; border:0; background:transparent; cursor:pointer; text-align:left; color:var(--text-main); font:inherit; }
+.t2-aa:hover{ background:color-mix(in srgb, var(--primary) 8%, transparent); }
+.t2-aa-n{ width:30px; height:30px; min-width:30px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
+  border:2px solid color-mix(in srgb, var(--text-muted) 40%, transparent); color:var(--text-muted); }
+.t2-aa.tamam .t2-aa-n{ border-color:transparent; background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))); color:var(--on-primary, #000); }
+.t2-aa-tx{ display:flex; flex-direction:column; min-width:0; } .t2-aa-tx b{ font-size:13px; } .t2-aa-tx small{ font-size:11.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.t2-aa-ok{ width:18px; height:2px; flex-shrink:0; background:var(--border); border-radius:2px; }
+@media (max-width:768px){
+  .t2-ak-adim{ top:62px; padding:6px; gap:2px; }
+  .t2-aa{ flex-direction:column; gap:4px; padding:6px 4px; text-align:center; align-items:center; }
+  .t2-aa-tx small{ display:none; } .t2-aa-ok{ width:10px; }
+}
+html .t2-ak-adim{ background:var(--bg-card-solid, var(--bg-main)) !important; box-shadow:0 10px 24px -14px rgba(0,0,0,.8); }
