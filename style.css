@@ -18311,3 +18311,48 @@ html #page-settings [data-spanel="kullanicilar"] .s-card{ break-inside:avoid; }
   .t2-aa-tx small{ display:none; } .t2-aa-ok{ width:10px; }
 }
 html .t2-ak-adim{ background:var(--bg-card-solid, var(--bg-main)) !important; box-shadow:0 10px 24px -14px rgba(0,0,0,.8); }
+
+/* ══════════ PLAN 2 · FAZ D ══════════ */
+/* 20) Yükleniyor: yeni cihazda bulut gelene kadar sayılar iskelet */
+@keyframes t2Isk{ 0%{ background-position:-200px 0; } 100%{ background-position:200px 0; } }
+html.t2-yukleniyor :is(.t2-kpi b, .ft-kpi-val, .rep-kpi-val, .ls-num, .t2-yap-liste, #t2Ozet, .t2a-sayi b){
+  color:transparent !important; border-radius:8px; min-width:40px; display:inline-block;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--text-muted) 10%, transparent) 0, color-mix(in srgb, var(--text-muted) 22%, transparent) 50%, color-mix(in srgb, var(--text-muted) 10%, transparent) 100%) !important;
+  background-size:400px 100% !important; animation:t2Isk 1.2s linear infinite;
+}
+html.t2-yukleniyor .t2-yap-liste{ min-height:120px; display:block; }
+html.t2-yukleniyor .t2-yap-liste > *{ visibility:hidden; }
+
+/* 21) Klavyeyle gezerken her yerde aynı odak halkası */
+html[data-tasarim="yeni"] :is(button, a, [role="button"], .t2-kpi, .t2-aa, input[type=checkbox]):focus-visible{
+  outline:2px solid var(--primary-light, var(--primary)) !important; outline-offset:2px !important; box-shadow:none;
+}
+
+/* 22) Açık tema: zayıf kontrastlar */
+html.t2-acik[data-tasarim="yeni"]{ --text-muted:color-mix(in srgb, var(--text-main) 62%, var(--bg-main)); }
+html.t2-acik[data-tasarim="yeni"] .cal-day{ background:color-mix(in srgb, var(--text-main) 4%, #fff) !important; border-color:color-mix(in srgb, var(--text-main) 12%, transparent) !important; }
+html.t2-acik[data-tasarim="yeni"] .cal-day.cal-other-month{ opacity:.55; }
+html.t2-acik[data-tasarim="yeni"] .cal-ev.t2-cal-ev{ background:color-mix(in srgb, var(--primary) 18%, #fff) !important; }
+html.t2-acik[data-tasarim="yeni"] :is(.type-badge, .gs-badge, .t2tk-b, .t2-sira-btn){ border-color:color-mix(in srgb, var(--text-main) 18%, transparent) !important; }
+html.t2-acik[data-tasarim="yeni"] :is(.t2-kpi, .t2-atolye, .t2-sablon, .t2-yap-s + .t2-yap-s, .ft-card){ border-color:color-mix(in srgb, var(--text-main) 14%, transparent) !important; }
+
+/* 23) Üst çubukta sayfanın ana düğmesi (başlık ekrandan çıkınca) */
+.tb-eylem{ display:none; }
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .tb-eylem:not([hidden]){
+    display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:12px; cursor:pointer; flex-shrink:0;
+    border:1px solid color-mix(in srgb, var(--primary) 50%, var(--border)); background:color-mix(in srgb, var(--primary) 12%, transparent);
+    color:var(--text-main); font:inherit; font-size:13px; font-weight:800; animation:t2TbGel .2s ease-out;
+  }
+  html[data-tasarim="yeni"] .tb-eylem i{ color:var(--primary-light, var(--primary)); }
+  html[data-tasarim="yeni"] .tb-eylem span{ white-space:nowrap; }
+}
+@keyframes t2TbGel{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+/* Üst çubuk bilgisayarda da yapışkan (kaydırınca başlık + ana düğme elinin altında) */
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .topbar{ position:sticky !important; top:0 !important; z-index:60 !important;
+    background:color-mix(in srgb, var(--bg-main) 88%, transparent) !important; }
+}
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .topbar{ background:var(--bg-main) !important; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+}
