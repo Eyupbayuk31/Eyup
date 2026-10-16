@@ -17165,3 +17165,102 @@ html[data-tasarim="yeni"] .t2-rehber{ animation:t2Gel .5s cubic-bezier(.22,1,.36
 .t2-nlink .yb{ color:#f59e0b; font-weight:700; }
 
 .t2-oz-link{ color:inherit; text-decoration:none; } .t2-oz-link:hover{ text-decoration:underline; }
+
+/* ══ YAN MENÜ 2: sıkı yerleşim · daraltma · sık kullanılanlar · rozetler · profil ══ */
+.t2-daralt, .t2-profil, .t2-yildiz, .t2-rozet{ display:none; }
+.t2-fav-grup[hidden]{ display:none !important; }
+
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .sidebar{ overflow:hidden !important; display:flex !important; flex-direction:column !important; }
+  html[data-tasarim="yeni"] .sidebar .logo{ flex-shrink:0; padding:16px 14px 12px 18px !important; }
+  html[data-tasarim="yeni"] .sidebar .logo-inner{ display:flex; align-items:center; gap:12px; position:relative; }
+  html[data-tasarim="yeni"] .sidebar nav{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; padding:4px 12px 10px !important; scrollbar-width:thin; }
+  html[data-tasarim="yeni"] .sidebar nav .nav-section{ padding:10px 8px 4px !important; margin:0 !important; min-height:0 !important; }
+  html[data-tasarim="yeni"] .sidebar nav .nav-section::after{ display:none !important; }
+  html[data-tasarim="yeni"] .sidebar nav a{
+    min-height:34px !important; padding:4px 8px !important; margin:0 0 2px !important; gap:10px !important; font-size:13.5px !important;
+  }
+  html[data-tasarim="yeni"] .sidebar nav a > i:first-child{ width:26px !important; height:26px !important; min-width:26px; font-size:12.5px !important; border-radius:8px !important; display:inline-flex; align-items:center; justify-content:center; }
+  html[data-tasarim="yeni"] .sidebar nav a > span{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Seçili: sol kenarda altın çizgi, sağda boşluk */
+  html[data-tasarim="yeni"] .sidebar nav a.active{ margin-right:2px !important; }
+  html[data-tasarim="yeni"] .sidebar nav a.active::before{
+    content:''; position:absolute; left:-12px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0;
+    background:var(--primary-light, var(--primary)); box-shadow:0 0 10px var(--primary); display:block !important;
+  }
+
+  /* Daralt düğmesi */
+  html[data-tasarim="yeni"] .t2-daralt{
+    display:inline-flex; align-items:center; justify-content:center; margin-left:auto; flex-shrink:0;
+    width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:11px;
+    color:var(--text-muted); background:transparent; border:1px solid var(--t2-cizgi); transition:transform .3s, color .2s, border-color .2s;
+  }
+  html[data-tasarim="yeni"] .t2-daralt:hover{ color:var(--primary); border-color:color-mix(in srgb, var(--primary) 50%, var(--border)); }
+
+  /* Yıldız (sık kullanılan) ve canlı rozet */
+  html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz{
+    display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:auto; flex-shrink:0;
+    border:0; background:transparent; border-radius:6px; cursor:pointer; font-size:10px; color:var(--text-muted); opacity:0; transition:opacity .15s, color .15s;
+  }
+  html[data-tasarim="yeni"] .sidebar nav a:hover .t2-yildiz{ opacity:.7; }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz:hover{ opacity:1; color:var(--primary-light, var(--primary)); }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz.on{ color:var(--primary-light, var(--primary)); }
+  html[data-tasarim="yeni"] .sidebar nav .nav-group:not(.t2-fav-grup) a .t2-yildiz.on{ opacity:0; }
+  html[data-tasarim="yeni"] .sidebar nav .nav-group:not(.t2-fav-grup) a:hover .t2-yildiz.on{ opacity:1; }
+  html[data-tasarim="yeni"] .sidebar nav .t2-fav-grup a .t2-yildiz{ opacity:0; }
+  html[data-tasarim="yeni"] .sidebar nav .t2-fav-grup a:hover .t2-yildiz{ opacity:1; }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-rozet:not([hidden]){
+    display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:18px; padding:0 6px; border-radius:999px; flex-shrink:0;
+    font-style:normal; font-family:var(--t2-mono); font-size:10px; font-weight:700;
+    color:var(--text-main); background:color-mix(in srgb, var(--text-muted) 22%, transparent);
+  }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-rozet.acil:not([hidden]){ color:#fff; background:#dc2626; box-shadow:0 0 10px rgba(220,38,38,.5); }
+  html[data-tasarim="yeni"] .sidebar nav a.active .t2-rozet:not([hidden]){ background:rgba(0,0,0,.22); color:inherit; box-shadow:none; }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-rozet:not([hidden]) + .t2-yildiz{ margin-left:4px; }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-rozet:not([hidden]){ margin-left:auto; }
+
+  /* Alt profil satırı (eski yazı + uzun çıkış düğmesi yerine) */
+  html[data-tasarim="yeni"] .sidebar-footer{ flex-shrink:0; padding:10px 12px 12px !important; border-top:1px solid var(--t2-cizgi) !important; background:transparent !important; }
+  html[data-tasarim="yeni"] .sidebar-footer > .sf-row,
+  html[data-tasarim="yeni"] .sidebar-footer > button{ display:none !important; }
+  html[data-tasarim="yeni"] .t2-profil{ display:flex; align-items:center; gap:10px; padding:6px; border-radius:12px; }
+  html[data-tasarim="yeni"] .t2-profil:hover{ background:color-mix(in srgb, var(--primary) 7%, transparent); }
+  html[data-tasarim="yeni"] .t2-pr-av{
+    width:34px; height:34px; min-width:34px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:13px; color:var(--on-primary, #fff);
+    background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary)));
+  }
+  html[data-tasarim="yeni"] .t2-pr-tx{ display:flex; flex-direction:column; min-width:0; flex:1; line-height:1.2; }
+  html[data-tasarim="yeni"] .t2-pr-tx b{ font-size:13px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  html[data-tasarim="yeni"] .t2-pr-tx small{ font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  html[data-tasarim="yeni"] .t2-pr-cik{
+    width:32px; height:32px; min-width:32px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+    color:#f87171; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.28); font-size:13px;
+  }
+  html[data-tasarim="yeni"] .t2-pr-cik:hover{ background:rgba(239,68,68,.18); }
+
+  /* ── Daraltılmış menü (yalnız ikonlar) ── */
+  html[data-tasarim="yeni"].t2-mini .sidebar{ width:72px !important; }
+  html[data-tasarim="yeni"].t2-mini .main{ margin-left:72px !important; }
+  html[data-tasarim="yeni"] .main, html[data-tasarim="yeni"] .sidebar{ transition:width .3s cubic-bezier(.22,1,.36,1), margin-left .3s cubic-bezier(.22,1,.36,1) !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar .logo{ padding:16px 0 12px !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar .logo-inner{ flex-direction:column; gap:10px; justify-content:center; }
+  html[data-tasarim="yeni"].t2-mini .sidebar .logo-inner > div:not(.t2-mark){ display:none; }
+  html[data-tasarim="yeni"].t2-mini .t2-daralt{ margin:0; transform:rotate(180deg); }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav{ padding:4px 10px 10px !important; overflow:visible; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav .nav-section{ padding:8px 0 4px !important; justify-content:center; font-size:0 !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav .nav-section span, html[data-tasarim="yeni"].t2-mini .sidebar nav .nav-section i{ display:none !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav .nav-section::before{ content:''; display:block; width:24px; height:1px; margin:6px auto; background:var(--t2-cizgi); }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav .nav-group.kapali .nav-items{ display:block !important; max-height:none !important; opacity:1 !important; visibility:visible !important; overflow:visible !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a{ justify-content:center !important; padding:6px !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a > span, html[data-tasarim="yeni"].t2-mini .sidebar nav a .t2-yildiz{ display:none !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a .t2-rozet:not([hidden]){ position:absolute; top:1px; right:1px; min-width:16px; height:15px; padding:0 4px; font-size:9px; margin:0; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a.active::before{ left:-10px; }
+  html[data-tasarim="yeni"].t2-mini .t2-profil{ flex-direction:column; padding:4px 0; }
+  html[data-tasarim="yeni"].t2-mini .t2-pr-tx{ display:none; }
+}
+
+.t2-ipucu{ position:fixed; z-index:100002; pointer-events:none; padding:6px 10px; border-radius:8px; white-space:nowrap; font-size:12px; font-weight:600;
+  color:var(--text-main); background:color-mix(in srgb, var(--bg-main) 92%, var(--primary)); border:1px solid var(--t2-cizgi);
+  box-shadow:0 10px 24px -10px rgba(0,0,0,.7); opacity:0; transform:translate(-4px,-50%); transition:opacity .12s, transform .12s; }
+.t2-ipucu.on{ opacity:1; transform:translate(0,-50%); }
