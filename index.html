@@ -1888,10 +1888,13 @@ if(typeof Chart==='undefined'){
       <!-- Araç çubuğu: yenile + dışa aktarma -->
       <div class="export-bar">
         <button class="export-btn ex-refresh" id="listRefreshBtn" onclick="manualRefreshList()"><i class="fas fa-sync-alt"></i> Yenile<span id="listRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
-        <button class="export-btn" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV</button>
-        <button class="export-btn" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-        <button class="export-btn" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> Filtreli CSV</button>
-        <button class="export-btn ex-pdf" onclick="printListPDF()"><i class="fas fa-file-pdf"></i> PDF Yazdır</button>
+        <button type="button" class="export-btn t2-disa-btn" onclick="event.stopPropagation(); _t2DigerAc(this.nextElementSibling)"><i class="fas fa-file-export"></i> Dışa aktar <i class="fas fa-chevron-down t2-disa-ok"></i></button>
+        <div class="t2-disa-liste" hidden>
+          <button type="button" class="t2-menu-o" onclick="printListPDF()"><i class="fas fa-file-pdf"></i> PDF olarak yazdır</button>
+          <button type="button" class="t2-menu-o" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+          <button type="button" class="t2-menu-o" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV (tümü)</button>
+          <button type="button" class="t2-menu-o" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> CSV (yalnız filtrelenenler)</button>
+        </div>
       </div>
       </div><!-- /t2-filtre-kutu -->
 
@@ -3180,15 +3183,15 @@ if(typeof Chart==='undefined'){
         <div class="aks-quick-stats">
           <div class="aks-stat-mini">
             <i class="fas fa-box"></i>
-            <span id="aksesuarTotalCount">0</span>
+            <span id="aksesuarTotalCount">0</span><small>Toplam</small>
           </div>
           <div class="aks-stat-mini aks-stat-success">
             <i class="fas fa-check-circle"></i>
-            <span id="aksesuarCompleteCount">0</span>
+            <span id="aksesuarCompleteCount">0</span><small>Tamam</small>
           </div>
           <div class="aks-stat-mini aks-stat-warning">
             <i class="fas fa-clock"></i>
-            <span id="aksesuarPendingCount">0</span>
+            <span id="aksesuarPendingCount">0</span><small>Bekleyen</small>
           </div>
         </div>
       </div>
@@ -5902,6 +5905,7 @@ function deleteAllAksesuar(){
   const list = getData('aksesuarlar');
   if(!list.length){ toast('Silinecek kayıt yok','info'); return; }
   if(!confirm('TÜM aksesuar takip kayıtları ('+list.length+' adet) silinecek. Bu işlem tüm cihazlarda geçerli olur ve geri alınamaz. Emin misiniz?')) return;
+  if(!_t2SilOnay(list.length+' aksesuar kaydı tüm cihazlardan silinecek.')) return;
   const ids = list.map((a,i)=> String(a.id != null ? a.id : ('idx_'+i)));
   setData('aksesuarlar', []);
   renderAksesuarTable();
@@ -6368,7 +6372,7 @@ function renderFermuarTakip(){
       <div class="ft-card-meta">
         ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
         <div class="ft-card-termin ${terminCls}">
-          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(m.termin):'—'}${terminCls?' · GECİKTİ':''}
+          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(_t2Tarih(m.termin)):'—'}${terminCls?' · '+_t2Termin(m.termin).t:''}
         </div>
       </div>
 
@@ -6524,7 +6528,7 @@ function ftRenderDetail(){
   document.getElementById('ftDetailMeta').innerHTML =
     (m.renk?`<span><i class="fas fa-palette"></i> ${esc(m.renk)}</span>`:'')+
     `<span><i class="fas fa-truck-field"></i> ${m.tedarikci?esc(m.tedarikci):'Tedarikçi girilmedi'}</span>`+
-    `<span class="${terminCls}"><i class="fas fa-calendar-day"></i> ${m.termin?esc(m.termin):'Termin girilmedi'}${terminCls?' · GECİKTİ':''}</span>`;
+    `<span class="${terminCls}"><i class="fas fa-calendar-day"></i> ${m.termin?esc(_t2Tarih(m.termin,true)):'Termin girilmedi'}${terminCls?' · '+_t2Termin(m.termin).t:''}</span>`;
   // Satır formundaki renk alanı model rengini varsayılan gösterir (elle değiştirilebilir)
   var _rr=document.getElementById('ftRowRenk'); if(_rr){ _rr.placeholder=m.renk?('Renk ('+m.renk+')'):'Renk'; }
 
@@ -7328,7 +7332,7 @@ function renderKordonTakip(){
         <div class="kt-birim-rozet ${metreMi?'metre':'adet'}"><i class="fas ${metreMi?'fa-arrows-left-right':'fa-ruler'}"></i> ${metreMi?'Ham kordon · metre':'CM & Beden'}</div>
         ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
         <div class="ft-card-termin ${terminCls}">
-          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(m.termin):'—'}${terminCls?' · GECİKTİ':''}
+          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(_t2Tarih(m.termin)):'—'}${terminCls?' · '+_t2Termin(m.termin).t:''}
         </div>
       </div>
 
@@ -7486,7 +7490,7 @@ function ktRenderDetail(){
     `<span class="kt-birim-rozet ${metreMi?'metre':'adet'}"><i class="fas ${metreMi?'fa-arrows-left-right':'fa-ruler'}"></i> ${metreMi?'Ham kordon · metre':'CM & Beden'}</span>`+
     (m.renk?`<span><i class="fas fa-palette"></i> ${esc(m.renk)}</span>`:'')+
     `<span><i class="fas fa-truck-field"></i> ${m.tedarikci?esc(m.tedarikci):'Tedarikçi girilmedi'}</span>`+
-    `<span class="${terminCls}"><i class="fas fa-calendar-day"></i> ${m.termin?esc(m.termin):'Termin girilmedi'}${terminCls?' · GECİKTİ':''}</span>`;
+    `<span class="${terminCls}"><i class="fas fa-calendar-day"></i> ${m.termin?esc(_t2Tarih(m.termin,true)):'Termin girilmedi'}${terminCls?' · '+_t2Termin(m.termin).t:''}</span>`;
 
   // Satır ekleme formu birime göre şekillenir
   const grid=document.getElementById('ktAddGrid');
@@ -8569,7 +8573,8 @@ function renderTypeFilterBar(){
   ];
   
   // Tek satır: hem tür sayımı gösterir hem filtre görevi görür ("Tümü" dahil)
-  document.getElementById('listStats').innerHTML=types.map(t=>`
+  // Hiç kaydı olmayan türler gizlenir (seçili olan hariç) — 9 kutunun 7'si "0" görünmesin
+  document.getElementById('listStats').innerHTML=types.filter(t=>t.key==='all'||currentTypeFilter===t.key||(counts[t.key]||0)>0).map(t=>`
     <button type="button" class="ls-card ${currentTypeFilter===t.key?'active':''} ${t.key==='all'?'ls-card-all':''}" onclick="setTypeFilter('${t.key}')">
       <span class="ls-ic"><i class="${t.icon}"></i></span>
       <span class="ls-num">${counts[t.key]||0}</span>
@@ -8816,6 +8821,26 @@ function applyFilters(){
   renderFilteredList(list);
 }
 
+// ── Tarih yardımcıları (tasarım planı): "16 Eki", "3 gün geçti" ──
+var _T2_AYLAR=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+function _t2Gun(v){ if(!v) return null; var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v)); var d;
+  if(m) d=new Date(+m[1], +m[2]-1, +m[3]); else { m=/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/.exec(String(v)); d=m?new Date(+m[3], +m[2]-1, +m[1]):new Date(v); }
+  if(isNaN(d)) return null; d.setHours(0,0,0,0); return d; }
+function _t2Tarih(v, yilli){ var d=_t2Gun(v); if(!d) return v||'—';
+  var s=d.getDate()+' '+_T2_AYLAR[d.getMonth()]; if(yilli || d.getFullYear()!==new Date().getFullYear()) s+=' '+d.getFullYear(); return s; }
+function _t2GunFark(v){ var d=_t2Gun(v); if(!d) return null; var b=new Date(); b.setHours(0,0,0,0); return Math.round((d-b)/86400000); }
+// Termin etiketi: bitti=true ise renk/uyarı yok
+function _t2Termin(v, bitti){ var k=_t2GunFark(v); if(k===null||bitti) return {t:'', cls:'uzak', k:k};
+  if(k<0) return {t:Math.abs(k)+' gün geçti', cls:'gecti', k:k};
+  if(k===0) return {t:'bugün', cls:'gecti', k:k};
+  if(k===1) return {t:'yarın', cls:'yakin', k:k};
+  if(k<=3) return {t:k+' gün kaldı', cls:'yakin', k:k};
+  return {t:k+' gün kaldı', cls:'uzak', k:k}; }
+function _t2TarihGrubu(v){ var k=_t2GunFark(v); if(k===null) return 'Tarihsiz';
+  if(k===0) return 'Bugün'; if(k===-1) return 'Dün'; if(k>0) return 'İleri tarihli';
+  if(k>=-6) return 'Bu hafta'; var d=_t2Gun(v), b=new Date(); if(d.getMonth()===b.getMonth() && d.getFullYear()===b.getFullYear()) return 'Bu ay';
+  return _T2_AYLAR[d.getMonth()]+' '+d.getFullYear(); }
+
 function getTypeLabel(type){
   const map={standart:'Poşet',fermuar:'Fermuar',lastik:'Lastik',dugme:'Düğme',toptan:'Toptan',satenaskilik:'Saten',kordon:'Kordon',dantel:'Dantel'};
   return map[type]||type;
@@ -8864,18 +8889,34 @@ function renderFilteredList(list){
   }
   empty.style.display='none';
 
+  // Tarihe göre gruplar (yalnız tarih sıralamasında): Bugün · Dün · Bu hafta · Bu ay · Daha eski
+  const _srt=document.getElementById('filterSort')?.value||'newest';
+  const _grupla=(_srt==='newest'||_srt==='oldest');
+  const _grupAdi=i=>_t2TarihGrubu(i.tarih);
+  const _grupSay={}; if(_grupla) list.forEach(i=>{ const g=_grupAdi(i); _grupSay[g]=(_grupSay[g]||0)+1; });
+  let _sonG=null;
+  const _baslik=(i,masa)=>{ if(!_grupla) return ''; const g=_grupAdi(i); if(g===_sonG) return ''; _sonG=g;
+    return masa ? `<tr class="t2-grup-tr"><td colspan="10"><span>${g}</span><em>${_grupSay[g]}</em></td></tr>`
+                : `<div class="t2-grup-bas"><span>${g}</span><em>${_grupSay[g]}</em></div>`; };
+  const _durum=i=>i.durum==='teslim'
+    ? `<span class="chip chip-success clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Bekliyor yap"><i class="fas fa-check"></i> Teslim</span>`
+    : `<span class="chip chip-warning clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Teslim edildi yap"><i class="fas fa-hourglass-half"></i> Bekliyor</span>`;
+  const _termin=i=>{ if(!i.termin) return ''; const te=_t2Termin(i.termin, i.durum==='teslim');
+    return `<span class="t2-termin ${te.cls}" title="Termin: ${_t2Tarih(i.termin,true)}"><i class="fas fa-flag-checkered"></i> ${_t2Tarih(i.termin)}${te.t?' · '+te.t:''}</span>`; };
+
   // Desktop table
-  tbody.innerHTML=list.map(i=>`
-    <tr data-id="${i.id}" data-type="${i._type}" oncontextmenu="showContextMenu(event, ${i.id}, '${i._type}'); return false;">
+  _sonG=null;
+  tbody.innerHTML=list.map(i=>_baslik(i,true)+`
+    <tr data-id="${i.id}" data-type="${i._type}" class="t2-irs-tr" oncontextmenu="showContextMenu(event, ${i.id}, '${i._type}'); return false;" ondblclick="showDetailUni(${i.id},'${i._type}')">
       <td><input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()"></td>
       <td>${getTypeBadge(i._type)}</td>
-      <td style="font-weight:700;color:var(--primary);white-space:nowrap;">${i.no}</td>
-      <td style="white-space:nowrap;">${i.tarih}</td>
-      <td>${i.model||i.urun||'-'}</td>
+      <td class="t2-no-td">${i.no}</td>
+      <td style="white-space:nowrap;" title="${i.tarih||''}">${_t2Tarih(i.tarih)}</td>
+      <td class="t2-model-td">${i.model||i.urun||'-'}</td>
       <td>${i.atolye||i.firma||'-'}</td>
-      <td style="font-size:11px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getItemDetail(i)}</td>
-      <td><span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'} clickable" onclick="toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'Teslim':'Bekliyor'}</span></td>
-      <td style="white-space:nowrap;font-size:12px;">${i.termin||'-'}</td>
+      <td class="t2-detay-td" title="${String(getItemDetail(i)).replace(/"/g,'&quot;')}">${getItemDetail(i)}</td>
+      <td>${_durum(i)}</td>
+      <td style="white-space:nowrap;">${_termin(i)||'<span class="t2-sonuk">—</span>'}</td>
       <td>
         <div class="table-actions">
           <button class="btn btn-xs tbl-act-view" onclick="showDetailUni(${i.id},'${i._type}')" title="Detay">
@@ -8893,32 +8934,25 @@ function renderFilteredList(list){
     </tr>
   `).join('');
 
-  // Mobile cards - simplified without swipe
-  mobileEl.innerHTML=list.map(i=>`
-    <div class="uni-mobile-card type-${i._type}" data-id="${i.id}" data-type="${i._type}">
+  // Mobil kartlar: kartın tamamına dokununca detay açılır
+  _sonG=null;
+  mobileEl.innerHTML=list.map(i=>_baslik(i,false)+`
+    <div class="uni-mobile-card t2-irs type-${i._type}${i.durum==='teslim'?' teslim':''}" data-id="${i.id}" data-type="${i._type}"
+         onclick="if(!event.target.closest('.bulk-check,.chip,.action-btn-menu,.card-dropdown-menu'))showDetailUni(${i.id},'${i._type}')">
       <div class="card-inner">
-        <div class="mc-header">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()" onclick="event.stopPropagation()">
-            ${getTypeBadge(i._type)}
-            <span class="mc-title">${i.no}</span>
-          </div>
-          <span class="chip ${i.durum==='teslim'?'chip-success':'chip-warning'}" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')">${i.durum==='teslim'?'<i class="fas fa-check"></i>':'<i class="fas fa-hourglass-half"></i>'}</span>
+        <div class="t2i-ust">
+          <input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()" onclick="event.stopPropagation()" aria-label="Seç">
+          ${getTypeBadge(i._type)}
+          <span class="t2i-no">${i.no}</span>
+          ${_durum(i)}
         </div>
-        <div class="mc-meta" style="margin-top:6px;">
-          <span><i class="fas fa-cube"></i> ${i.model||i.urun||'-'}</span>
-          <span><i class="fas fa-industry"></i> ${i.atolye||i.firma||'-'}</span>
-          <span><i class="fas fa-calendar"></i> ${i.tarih}</span>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${getItemDetail(i)}</div>
-        ${i.termin?'<div style="font-size:11px;color:var(--text-dim);margin-top:2px;"><i class="fas fa-clock"></i> Termin: '+i.termin+'</div>':''}
-        <div class="mc-actions-new">
-          <button class="action-btn-primary" onclick="event.stopPropagation();showDetailUni(${i.id},'${i._type}')">
-            <i class="fas fa-eye"></i> Detay
-          </button>
-          <div class="action-btn-menu" onclick="event.stopPropagation();toggleCardMenu(this, ${i.id}, '${i._type}')">
-            <i class="fas fa-ellipsis-v"></i>
-          </div>
+        <div class="t2i-model">${i.model||i.urun||'-'}</div>
+        <div class="t2i-atolye"><i class="fas fa-industry"></i> ${i.atolye||i.firma||'-'}</div>
+        <div class="t2i-detay">${getItemDetail(i)}</div>
+        <div class="t2i-alt">
+          <span class="t2i-tarih"><i class="far fa-calendar"></i> ${_t2Tarih(i.tarih)}</span>
+          ${_termin(i)}
+          <button type="button" class="action-btn-menu" onclick="event.stopPropagation();toggleCardMenu(this, ${i.id}, '${i._type}')" aria-label="İşlemler"><i class="fas fa-ellipsis-vertical"></i></button>
         </div>
       </div>
       <div class="card-dropdown-menu">
@@ -9019,8 +9053,8 @@ function showDetailUni(id,type){
 
   // ── KÜNYE ALTI: tarih / termin / teslim bilgileri ────────────
   const kunye = [
-    kv('Tarih', esc(item.tarih||'')),
-    kv('Termin', item.termin?esc(item.termin):'', terminLate?'gec':''),
+    kv('Tarih', item.tarih?esc(_t2Tarih(item.tarih,true)):''),
+    kv('Termin', item.termin?esc(_t2Tarih(item.termin,true))+(item.durum!=='teslim'&&_t2Termin(item.termin).t?' <small class="t2-kv-k">'+_t2Termin(item.termin).t+'</small>':''):'', terminLate?'gec':''),
     kv('Teslim Eden', esc(item.teslimEden||'')),
     kv('Teslim Alan', esc(item.teslimAlan||'')),
     kv('Renk', item.renk?esc(item.renk):''),
@@ -10524,7 +10558,7 @@ function refreshHome(){
         var model=i.model||i.urun||'';
         tHtml+='<div class="db-termin-item"><div class="db-termin-dot" style="background:'+dotClr+'"></div>'
           +'<div class="db-termin-body"><div class="db-termin-no">'+no+' - '+model+'</div>'
-          +'<div class="db-termin-date">Termin: '+(i.termin||'')+'</div></div>'
+          +'<div class="db-termin-date">Termin: '+(i.termin?_t2Tarih(i.termin):'')+'</div></div>'
           +'<span class="db-termin-days '+cls+'">'+txt+'</span></div>';
       });
       tEl.innerHTML=tHtml;
@@ -12677,7 +12711,7 @@ function _t2DigerAc(k){
   var ort=document.createElement('div'); ort.className='t2-sheet-ort'; ort.onclick=_t2DigerKapat;
   var sh=document.createElement('div'); sh.className='t2-sheet'; sh.setAttribute('role','menu');
   sh.innerHTML='<div class="t2-sheet-tut" aria-hidden="true"></div>';
-  k.querySelectorAll(':scope > .t2-katla, :scope > .modal-action-btn').forEach(function(b){
+  k.querySelectorAll(':scope > .t2-katla, :scope > .modal-action-btn, :scope > .t2-menu-o').forEach(function(b){
     if(b.style.display==='none' || b.hidden) return;
     var c=document.createElement('button'); c.type='button'; c.className='t2-sheet-o'+(b.classList.contains('btn-danger')||b.classList.contains('aks-btn-danger')?' tehlike':'');
     var ic=b.querySelector('i'); c.innerHTML=(ic?ic.outerHTML:'')+'<span>'+(b.textContent||'').trim().replace(/\s+/g,' ')+'</span>';
@@ -12988,12 +13022,19 @@ function _t2TakipUyari(){
   return out.sort(function(a,b){ return a.g-b.g; });
 }
 // Boş ekran rehberi: ne işe yaradığı + 3 adım + tek düğme
+// Toplu / kalıcı silmede ikinci onay: kullanıcı SİL yazmalı
+function _t2SilOnay(ne){
+  var y=prompt((ne||'Bu işlem geri alınamaz.')+'\n\nOnaylamak için SİL yazın:');
+  if(y===null) return false;
+  if(String(y).trim().toLocaleUpperCase('tr-TR')!=='SİL'){ toast('Onay metni eşleşmedi, silinmedi','info'); return false; }
+  return true;
+}
 function _t2Rehber(o){
   return '<div class="t2-rehber" style="grid-column:1/-1;">'+
     '<div class="t2r-ust"><span class="t2r-ic"><i class="fas '+o.ic+'"></i></span><div>'+
       '<div class="t2r-bas">'+o.bas+'</div><div class="t2r-alt">'+o.alt+'</div></div></div>'+
     '<ol class="t2r-adim">'+o.adim.map(function(a,i){ return '<li><b>'+(i+1)+'</b><span>'+a+'</span></li>'; }).join('')+'</ol>'+
-    '<button class="btn btn-primary t2r-btn" onclick="'+o.fn+'"><i class="fas fa-plus"></i> '+o.btn+'</button>'+
+    (o.btn?'<button class="btn btn-primary t2r-btn" onclick="'+o.fn+'"><i class="fas '+(o.btnIc||'fa-plus')+'"></i> '+o.btn+'</button>':'')+
   '</div>';
 }
 function _t2HareketYok(){
@@ -13493,10 +13534,16 @@ function renderRecycleBin(){
   const emptyEl=document.getElementById('recycleEmpty');
   const mobileEl=document.getElementById('recycleMobile');
 
+  // Kutu tamamen boşsa sayılar, arama ve "Tümünü Sil" gizlenir; yalnız açıklama kalır
+  const _bos=!getData('recycleBin').length, _pg=document.getElementById('page-geridonusum');
+  if(_pg) _pg.classList.toggle('gd-bos', _bos);
   if(!recycle.length){
     tbody.innerHTML='';
-    emptyEl.style.display='block';
-    mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-trash-restore"></i><p>Geri dönüşüm kutusu boş.</p></div>';
+    const _m=_bos
+      ? '<div class="t2-bos-kart"><span class="t2r-ic"><i class="fas fa-trash-arrow-up"></i></span><div><b>Geri dönüşüm kutusu boş</b><p>Sildiğin irsaliyeler önce buraya gelir; yanlışlıkla silersen buradan tek dokunuşla geri alırsın.</p></div></div>'
+      : '<div class="empty-state"><i class="fas fa-search"></i><p>Aramana uygun silinmiş kayıt yok.</p></div>';
+    emptyEl.innerHTML=_m; emptyEl.style.display='block';
+    mobileEl.innerHTML=_m;
     return;
   }
   emptyEl.style.display='none';
@@ -13612,6 +13659,7 @@ function emptyRecycleBin(){
   let recycle=getData('recycleBin');
   if(!recycle.length)return toast('Geri dönüşüm kutusu zaten boş','info');
   if(!confirm('Tüm silinen kayıtlar kalıcı olarak silinecek! Geri alınamaz. Emin misiniz?'))return;
+  if(!_t2SilOnay(recycle.length+' kayıt kalıcı olarak silinecek.'))return;
   const items = recycle.slice(); // kopyala
   setData('recycleBin',[]);
   _addTombstones(items.map(it => it && it.id).filter(id => id != null));
@@ -15665,6 +15713,10 @@ function goToListPage(p) {
         dataRows.forEach((r, i) => {
           r.style.display = (i >= start && i < end) ? '' : 'none';
         });
+        // Bu sayfada kaydı kalmayan tarih grubu başlığını gizle
+        let _gb=null, _gv=false;
+        allRows.forEach(r => { if(r.classList.contains('t2-grup-tr')){ if(_gb) _gb.style.display=_gv?'':'none'; _gb=r; _gv=false; } else if(r.style.display!=='none') _gv=true; });
+        if(_gb) _gb.style.display=_gv?'':'none';
 
         // Also paginate mobile cards
         if (mobileEl) {
@@ -19127,7 +19179,9 @@ function refreshTemplatesPage(){
   const countEl = document.getElementById('tplCount'); if(countEl) countEl.textContent = list.length;
   const host = document.getElementById('tplList');
   if(!list.length){
-    host.innerHTML = '<div class="empty-state"><i class="fas fa-clone"></i><p>Henüz şablon yok. Bir irsaliye detayından <b>"Şablon"</b> düğmesiyle ekleyebilirsiniz.</p></div>';
+    host.innerHTML = _t2Rehber({ic:'fa-clone', bas:'İlk şablonunu kaydet', alt:'Sık kestiğin irsaliyeleri şablon yap; bir dahakine tek dokunuşla doldur.',
+      adim:['İrsaliyeler listesinden bir irsaliyeyi aç','Alttaki <b>Şablon</b> düğmesine bas ve bir ad ver','Yeni irsaliyede şablonu seç, alanlar kendiliğinden dolsun'],
+      btn:'İrsaliyelere git', btnIc:'fa-list', fn:"showPage('list')"});
     return;
   }
   host.innerHTML = list.map(t=>{
