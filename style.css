@@ -17772,10 +17772,10 @@ html .t2-sayac input.form-input{ border:0 !important; box-shadow:none !important
   html .t2-sy-b{ width:42px; min-width:42px; }
   /* Telefonda Kaydet ekranın altında sabit (alt menünün hemen üstü) */
   html[data-tasarim="yeni"] :is(#page-new, #page-fermuar, #page-lastik, #page-dugme, #page-satenaskilik, #page-kordon, #page-dantel, #page-toptan).active > .section-header > .btn-primary{
-    position:fixed !important; left:16px; right:16px; bottom:calc(84px + env(safe-area-inset-bottom, 0px)); z-index:60; min-height:52px;
+    position:fixed !important; left:16px; right:16px; bottom:calc(104px + env(safe-area-inset-bottom, 0px)); z-index:60; min-height:52px;
     justify-content:center; font-size:16px !important; box-shadow:0 14px 30px -10px rgba(0,0,0,.7), 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent) !important;
   }
-  html[data-tasarim="yeni"] :is(#page-new, #page-fermuar, #page-lastik, #page-dugme, #page-satenaskilik, #page-kordon, #page-dantel, #page-toptan).active{ padding-bottom:84px; }
+  html[data-tasarim="yeni"] :is(#page-new, #page-fermuar, #page-lastik, #page-dugme, #page-satenaskilik, #page-kordon, #page-dantel, #page-toptan).active{ padding-bottom:110px; }
   body:has(.modal-overlay.show) :is(#page-new, #page-fermuar, #page-lastik, #page-dugme, #page-satenaskilik, #page-kordon, #page-dantel, #page-toptan) > .section-header > .btn-primary{ display:none !important; }
 }
 /* Tür şeridi: sağa kaydırılabildiği belli olsun */
@@ -18035,7 +18035,7 @@ html .modal-header .modal-close{ position:static !important; width:38px; height:
   background:transparent; color:var(--text-muted); font-size:20px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
 html .modal-header .modal-close:hover{ color:var(--text-main); border-color:color-mix(in srgb, var(--primary) 45%, var(--border)); }
 html #atolyePicker{ z-index:100005 !important; }
-body:has(#atolyePicker[style*="flex"]) .bottom-nav{ display:none !important; }
+body:has(#atolyePicker[style*="display: flex"]) .bottom-nav, body:has(#atolyePicker[style*="display:flex"]) .bottom-nav{ display:none !important; }
 
 /* ══ Kaydırma çubukları: Windows'taki oklu standart çubuk yerine ince, oksuz çubuk ══
    html{scrollbar-color} tüm öğelere miras geçince Chrome özel (::-webkit-scrollbar)
