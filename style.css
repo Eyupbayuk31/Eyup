@@ -18002,3 +18002,37 @@ html .t2-sablon-izgara{ display:grid !important; grid-template-columns:repeat(au
   background:color-mix(in srgb, var(--bg-main) 45%, transparent); border:1px dashed color-mix(in srgb, var(--text-muted) 25%, transparent); line-height:1.5; }
 .t2s-eylem{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:2px; }
 .t2s-eylem .btn{ justify-content:center; }
+
+/* ══════════ BÜYÜK PLAN · FAZ 4 ══════════ */
+/* 34) Telefon üst çubuğu: bulut durumu yenile düğmesinin köşesinde (ayrı rozet yok) */
+@media (max-width:768px){
+  html[data-tasarim="yeni"] .topbar-right > #cloudSyncBadge{ display:none !important; }
+  html[data-tasarim="yeni"] #tbYenile{ position:relative; }
+  html[data-tasarim="yeni"] #tbYenile[data-bulut]::after{ content:''; position:absolute; right:4px; bottom:4px; width:9px; height:9px; border-radius:50%;
+    border:2px solid var(--bg-main); background:#ef4444; }
+  html[data-tasarim="yeni"] #tbYenile[data-bulut="ok"]::after{ background:#34d399; }
+  html[data-tasarim="yeni"] #tbYenile[data-bulut="sync"]::after{ background:#fbbf24; animation:lgPulseDot 1.2s ease-in-out infinite; }
+}
+
+/* 35) Alt menü ortasında büyük "+" — hızlı işlemler */
+.t2-sh-k{ font-size:12px; font-weight:600; color:var(--text-muted); margin-left:6px; }
+@media (max-width:768px){
+  html[data-tasarim="yeni"] body .bottom-nav a.t2-nav-arti{ color:var(--on-primary, #000) !important; }
+  html[data-tasarim="yeni"] body .bottom-nav a.t2-nav-arti i{
+    width:50px; height:50px; border-radius:18px; display:inline-flex !important; align-items:center; justify-content:center; font-size:20px !important;
+    margin-top:-22px; color:var(--on-primary, #000) !important;
+    background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary)));
+    box-shadow:0 10px 22px -8px color-mix(in srgb, var(--primary) 80%, transparent), 0 0 0 4px color-mix(in srgb, var(--bg-main) 85%, transparent);
+  }
+  html[data-tasarim="yeni"] body .bottom-nav a.t2-nav-arti span{ color:var(--text-muted); margin-top:2px; }
+  html[data-tasarim="yeni"] body .bottom-nav a.t2-nav-arti:active i{ transform:scale(.94) !important; }
+}
+
+/* 36) Pencereler: başlık + kapat düğmesi her pencerede aynı; seçiciler alt menünün üstünde */
+html .modal-header{ display:flex !important; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+html .modal-header h3{ margin:0; min-width:0; }
+html .modal-header .modal-close{ position:static !important; width:38px; height:38px; min-width:38px; border-radius:11px; border:1px solid var(--border);
+  background:transparent; color:var(--text-muted); font-size:20px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+html .modal-header .modal-close:hover{ color:var(--text-main); border-color:color-mix(in srgb, var(--primary) 45%, var(--border)); }
+html #atolyePicker{ z-index:100005 !important; }
+body:has(#atolyePicker[style*="flex"]) .bottom-nav{ display:none !important; }

@@ -1143,7 +1143,10 @@
         else { el.style.background='#7f1d1d'; el.style.color='#fecaca'; el.textContent='bağlı değil'; el.title=(detail||'SDK yüklenemedi')+' — tıkla: sayfayı yenile'; }
       }
       // Durum noktası CSS'ten (#cloudSyncBadge::before) — emoji yok
-      var _place=place; place=function(){ _place(); var e=document.getElementById('cloudSyncBadge'); if(e){ e.setAttribute('data-durum', state); try{ window._t2RozetYerlestir && window._t2RozetYerlestir(); }catch(_){} } };
+      var _place=place; place=function(){ _place(); var e=document.getElementById('cloudSyncBadge'); if(e){ e.setAttribute('data-durum', state); try{ window._t2RozetYerlestir && window._t2RozetYerlestir(); }catch(_){} }
+        // Telefonda ayrı rozet yerine yenile düğmesinin köşesinde renkli nokta
+        var y=document.getElementById('tbYenile'); if(y){ y.setAttribute('data-bulut', state);
+          y.setAttribute('aria-label','Yenile — bulut: '+(state==='ok'?'bağlı':state==='sync'?'kaydediliyor':state==='err'?'hata':'bağlı değil')); } };
       if(document.body){ place(); }
       else { document.addEventListener('DOMContentLoaded', place, { once:true }); }
     }
@@ -4360,8 +4363,8 @@ if(typeof Chart==='undefined'){
   <div class="bottom-nav-inner">
     <span class="t2-nav-ind" aria-hidden="true"></span>
     <a class="active" onclick="showPage('home')" data-nav="home"><i class="fas fa-home"></i><span>Ana</span></a>
-    <a onclick="showPage('new')" data-nav="new"><i class="fas fa-plus-circle"></i><span>Yeni</span></a>
     <a onclick="showPage('list')" data-nav="list"><i class="fas fa-list"></i><span>Liste</span></a>
+    <a class="t2-nav-arti" onclick="t2HizliEkle()" data-nav="arti" role="button" aria-label="Hızlı işlem: yeni irsaliye, gelen gir, stok girişi"><i class="fas fa-plus"></i><span>Ekle</span></a>
     <a onclick="showPage('aksesuar')" data-nav="aksesuar"><i class="fas fa-tags"></i><span>Aksesuar</span></a>
     <a onclick="showPage('settings')" data-nav="settings"><i class="fas fa-cog"></i><span>Ayar</span></a>
   </div>
@@ -4473,7 +4476,7 @@ window.groupFermuarBedenByCm = groupFermuarBedenByCm;
 
 // ==================== NAVIGATION ====================
 const pageTitles={home:'Anasayfa',new:'Yeni İrsaliye',list:'İrsaliyeler',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',atolye:'Atölyeler',aksesuar:'Aksesuar Takip',akskontrol:'Aksesuar Kontrol',model:'Model Kartı','fermuar-takip':'Fermuar Takip','kordon-takip':'Kordon Takip','tela-kontrol':'Tela Kontrol',stok:'Genel Stok',takvim:'Takvim',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',reports:'Raporlar',geridonusum:'Geri Dönüşüm',settings:'Ayarlar',qr:'QR / Barkod',signature:'Fotoğraf',templates:'Şablonlar'};
-const bottomNavPages=['home','new','list','aksesuar','settings'];
+const bottomNavPages=['home','list','__arti','aksesuar','settings'];
 
 // Sayfa değişirken açık modal/panelleri kapat — yoksa modal yeni sayfanın
 // üstünde açık kalıp "iki sayfa iç içe" görünüyordu (login ve boot splash hariç).
@@ -6430,6 +6433,37 @@ document.addEventListener('click', function(e){
     return [ic, ad, function(){ b.click(); }, b.classList.contains('btn-danger')];
   }));
 });
+
+// ══ ALT MENÜ "+" : hızlı işlemler ══
+function t2HizliEkle(){
+  _t2SheetAc('Hızlı işlem', [
+    ['fa-file-circle-plus','Yeni irsaliye', function(){ showPage('new'); }],
+    ['fa-truck-ramp-box','Gelen gir (fermuar / kordon)', _t2GelenSec],
+    ['fa-boxes-stacked','Stok girişi', _t2StokSec],
+    ['fa-link','Yeni fermuar modeli', function(){ showPage('fermuar-takip'); setTimeout(function(){ ftOpenOrderModal(); },180); }],
+    ['fa-bezier-curve','Yeni kordon modeli', function(){ showPage('kordon-takip'); setTimeout(function(){ ktOpenOrderModal(); },180); }],
+    ['fa-clipboard-check','Aksesuar kontrol föyü', function(){ showPage('akskontrol'); }]
+  ]);
+}
+function _t2GelenSec(){
+  var l=[];
+  [['fermuarTakip','fa-link','fermuar'],['kordonTakip','fa-bezier-curve','kordon']].forEach(function(k){
+    (getData(k[0])||[]).forEach(function(m){ if(m.tamamlandi || !(m.sizes||[]).length) return; l.push({m:m, store:k[0], ic:k[1], tur:k[2], eks:_ftModelBekleyen(m)}); });
+  });
+  if(!l.length){ toast('Gelen girilecek aktif model yok','info'); return; }
+  l.sort(function(a,b){ return b.eks-a.eks; });
+  _t2SheetAc('Hangi model geldi?', l.slice(0,30).map(function(x){
+    return [x.ic, esc(x.m.modelKodu||'—')+' <small class="t2-sh-k">'+x.tur+(x.eks>0?' · '+x.eks.toLocaleString('tr')+' eksik':' · tam')+'</small>', function(){ takipGelenAc(x.store, x.m.id); }];
+  }));
+}
+function _t2StokSec(){
+  var l=(getData('stoklar')||[]).slice();
+  if(!l.length){ showPage('stok'); setTimeout(function(){ openStokModal(); },180); return; }
+  l.sort(function(a,b){ return getStockStatus(b.miktar,b.minStok).urgent-getStockStatus(a.miktar,a.minStok).urgent || String(a.ad).localeCompare(String(b.ad),'tr'); });
+  _t2SheetAc('Hangi malzemeye giriş?', l.slice(0,40).map(function(x){
+    return ['fa-plus', esc(x.ad)+' <small class="t2-sh-k">'+(+x.miktar||0).toLocaleString('tr-TR')+' '+esc(x.birim||'')+'</small>', function(){ stokHareket(x.id,'giris'); }];
+  }));
+}
 
 // ══ FERMUAR / KORDON TAKİP KARTI (ortak) ══
 // Ana sayı eksik adet; yüzdeli ilerleme, mini beden şeridi, 2 düğme + "..." menüsü.
@@ -12931,7 +12965,11 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(_t2EylemKur
   });
   // Hangi pencereler alttan açılsın: tam ekran detay/gelen ekranları hariç hepsi
   function isaretle(){ document.querySelectorAll('.modal-overlay:not(.ft-detail-overlay):not(#tkGelenModal)').forEach(function(o){ o.classList.add('t2-sayfa-pencere'); }); }
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(isaretle, 500); });
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(isaretle, 500);
+    // Sonradan eklenen pencereler de alttan açılan sayfa olsun
+    try{ new MutationObserver(function(m){ for(var i=0;i<m.length;i++){ if(m[i].addedNodes.length){ isaretle(); break; } } }).observe(document.body, {childList:true}); }catch(_){}
+  });
 })();
 
 // ══ YAN MENÜ (yeni tasarım): daraltma, sık kullanılanlar, canlı rozetler, profil ══
