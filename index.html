@@ -12788,7 +12788,7 @@ function _t2MenuKur(){
       var asil=nav.querySelector('.nav-group:not(.t2-fav-grup) a[data-page="'+pg+'"]'); if(!asil) return;
       var k=asil.cloneNode(true); k.classList.remove('active'); k.setAttribute('draggable','false');
       if(!k.querySelector('.t2-tutamak')){ var tt=document.createElement('span'); tt.className='t2-tutamak'; tt.title='Basılı tutup sürükle';
-        tt.innerHTML='<i class="fas fa-grip-vertical"></i>'; k.insertBefore(tt, k.firstChild); }
+        tt.innerHTML='<i class="fas fa-grip-vertical"></i>'; k.appendChild(tt); }
       var yy=k.querySelector('.t2-yildiz'); if(yy) yy.onclick=function(e){ t2FavDegis(pg, e); };
       liste.appendChild(k);
     });
