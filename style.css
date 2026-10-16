@@ -2457,7 +2457,7 @@ body::after{
   font:inherit; font-size:12px; font-weight:700; padding:0 26px 0 10px; cursor:pointer; outline:0;
   appearance:none; -webkit-appearance:none;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-size:4px 4px,4px 4px; background-position:right 12px center,right 16px center; background-repeat:no-repeat; }
+  background-size:4px 4px,4px 4px; background-position:right 17px center,right 12px center; background-size:5px 5px,5px 5px; background-repeat:no-repeat; }
 .aks-hazir-ay option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
 /* Telefonda buton yazısı kesiliyordu: buton esner, ay seçici kendi genişliğinde kalır */
 @media (max-width:640px){
@@ -14524,7 +14524,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .rep-filt-g select{ appearance:none; -webkit-appearance:none; background:transparent; border:0; outline:0;
   color:inherit; font:inherit; cursor:pointer; max-width:150px; padding-right:12px; text-overflow:ellipsis;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-size:4px 4px,4px 4px; background-position:right 2px center,right 6px center; background-repeat:no-repeat; }
+  background-size:4px 4px,4px 4px; background-position:right 7px center,right 2px center; background-size:5px 5px,5px 5px; background-repeat:no-repeat; }
 .rep-filt-g select option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
 .rep-filt-clear{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; cursor:pointer;
   border:1px solid color-mix(in oklab, var(--danger) 32%, var(--border)); background:color-mix(in oklab, var(--danger) 10%, transparent);
@@ -14539,7 +14539,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .mp-bar-g select,.mp-fire select{ appearance:none; -webkit-appearance:none; background:transparent; border:0; outline:0;
   color:var(--text); font:inherit; font-weight:700; cursor:pointer; padding-right:12px;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-size:4px 4px,4px 4px; background-position:right 2px center,right 6px center; background-repeat:no-repeat; }
+  background-size:4px 4px,4px 4px; background-position:right 7px center,right 2px center; background-size:5px 5px,5px 5px; background-repeat:no-repeat; }
 .mp-bar-g select option,.mp-fire select option{ background:var(--bg-card-solid,var(--bg-card)); color:var(--text); }
 .mp-chips{ display:flex; gap:6px; flex-wrap:wrap; }
 .mp-chip{ display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:20px; cursor:pointer;
@@ -14562,7 +14562,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .kr-g select{appearance:none;-webkit-appearance:none;background:transparent;border:0;outline:0;color:var(--text);
   font:inherit;font-weight:700;cursor:pointer;padding-right:12px;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-size:4px 4px,4px 4px;background-position:right 2px center,right 6px center;background-repeat:no-repeat;}
+  background-size:4px 4px,4px 4px;background-position:right 7px center,right 2px center; background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
 .kr-g select option{background:var(--bg-card-solid,var(--bg-card));color:var(--text);}
 .kr-head-note{font-size:10.5px;font-weight:600;color:var(--text-muted);}
 
@@ -17197,7 +17197,9 @@ html[data-tasarim="yeni"] .t2-rehber{ animation:t2Gel .5s cubic-bezier(.22,1,.36
   }
   html[data-tasarim="yeni"] .t2-daralt:hover{ color:var(--primary); border-color:color-mix(in srgb, var(--primary) 50%, var(--border)); }
 
-  /* Yıldız (sık kullanılan) ve canlı rozet */
+}
+/* Yıldız, rozet ve profil satırı: telefon menüsünde de */
+/* Yıldız (sık kullanılan) ve canlı rozet */
   html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz{
     display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:auto; flex-shrink:0;
     border:0; background:transparent; border-radius:6px; cursor:pointer; font-size:10px; color:var(--text-muted); opacity:0; transition:opacity .15s, color .15s;
@@ -17239,6 +17241,7 @@ html[data-tasarim="yeni"] .t2-rehber{ animation:t2Gel .5s cubic-bezier(.22,1,.36
   }
   html[data-tasarim="yeni"] .t2-pr-cik:hover{ background:rgba(239,68,68,.18); }
 
+@media (min-width:769px){
   /* ── Daraltılmış menü (yalnız ikonlar) ── */
   html[data-tasarim="yeni"].t2-mini .sidebar{ width:72px !important; }
   html[data-tasarim="yeni"].t2-mini .main{ margin-left:72px !important; }
@@ -17435,3 +17438,114 @@ html[data-tasarim="yeni"] .sidebar nav a.active .t2-yildiz i{
   display:inline !important; font-size:10px !important; line-height:1 !important; color:inherit !important;
 }
 html[data-tasarim="yeni"] .sidebar nav a.active .t2-tutamak{ color:inherit; }
+
+/* ══════════ BÜYÜK PLAN · FAZ 1: bozuk olanlar ══════════ */
+/* 1) Anasayfa alt ızgarası: satır içi sütunlar kalktı, telefonda alt alta */
+.db-bot-grid-v8{ grid-template-columns:1.1fr 1fr 1fr; }
+@media (max-width:1100px){ .db-bot-grid-v8{ grid-template-columns:1fr 1fr; } }
+@media (max-width:768px){ .db-bot-grid, .db-bot-grid-v8{ grid-template-columns:1fr !important; } }
+
+/* 3) Telefon menüsü ve bildirim paneli: arkası sızmasın */
+@media (max-width:768px){
+  html[data-tasarim="yeni"] .sidebar{
+    background:var(--bg-sidebar, var(--bg-card-solid, var(--bg-main))) !important;
+    background-image:linear-gradient(180deg, color-mix(in srgb, var(--primary) 6%, transparent), transparent 40%) !important;
+    display:flex !important; flex-direction:column !important; overflow:hidden !important;
+  }
+  html[data-tasarim="yeni"] .sidebar nav{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+  html[data-tasarim="yeni"] .sidebar .logo{ flex-shrink:0; }
+  html[data-tasarim="yeni"] .sidebar-footer{ flex-shrink:0; padding:10px 12px calc(12px + env(safe-area-inset-bottom, 0px)) !important; }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz{ opacity:.35; width:30px !important; height:30px !important; min-height:0 !important; min-width:0 !important; padding:0 !important; }
+  html[data-tasarim="yeni"] .sidebar nav a .t2-yildiz.on{ opacity:.9 !important; }
+  html[data-tasarim="yeni"] .sidebar nav .t2-fav-grup a .t2-yildiz{ display:none; }
+}
+html[data-tasarim="yeni"] .notif-panel{
+  background:var(--bg-card-solid, var(--bg-main)) !important;
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+
+/* 2) Aksesuar Takip: bilgisayarda sıkı tablo, telefonda kartlar */
+.aks-kartlar{ display:none; }
+html #page-aksesuar .aks-input{ font-size:13.5px !important; padding:7px 9px !important; min-height:34px; height:auto !important; border-radius:8px !important; }
+html #page-aksesuar .aks-table .aks-input:not(:focus){ border-color:transparent !important; background:transparent !important; box-shadow:none !important; }
+html #page-aksesuar .aks-table .aks-input:not(:focus):hover{ border-color:var(--border) !important; }
+html #page-aksesuar .aks-td{ padding:6px 8px !important; }
+html #page-aksesuar .aks-th-sticky-left{ min-width:170px !important; }
+html #page-aksesuar .aks-counter{ gap:4px; }
+html #page-aksesuar .aks-counter-btn{ width:26px !important; height:26px !important; font-size:10px !important; border-radius:7px !important; }
+html #page-aksesuar .aks-counter-value{ min-width:34px; font-size:14px; font-variant-numeric:tabular-nums; }
+html #page-aksesuar .aks-td-sticky-left{ box-shadow:6px 0 10px -6px rgba(0,0,0,.45) !important; }
+html #page-aksesuar .aks-td-sticky-right, html #page-aksesuar .aks-th-sticky-right{ box-shadow:-6px 0 10px -6px rgba(0,0,0,.45) !important; }
+@media (max-width:768px){
+  #page-aksesuar .aks-table-wrapper{ display:none !important; }
+  #page-aksesuar .aks-table-container{ border:0 !important; background:transparent !important; box-shadow:none !important; }
+  .aks-kartlar{ display:flex; flex-direction:column; gap:12px; }
+  .aks-kart{ border:1px solid var(--border); border-radius:16px; padding:12px; background:var(--bg-card); display:flex; flex-direction:column; gap:10px; }
+  .aks-kart.bitti{ opacity:.7; border-style:dashed; }
+  .aks-k-bas{ display:flex; align-items:center; gap:8px; }
+  html #page-aksesuar .aks-k-model{ flex:1; min-width:0; font-weight:800 !important; font-size:16px !important; letter-spacing:.2px; }
+  .aks-k-sil{ width:36px; height:36px; flex-shrink:0; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; }
+  .aks-k-sil:active{ color:#ef4444; border-color:#ef4444; }
+  .aks-k-alanlar{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .aks-k-alan{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .aks-k-alan > span{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+  html #page-aksesuar .aks-k-alan .aks-input{ border:1px solid var(--border) !important; background:color-mix(in srgb, var(--bg-main) 40%, transparent) !important; width:100%; }
+  .aks-k-kalemler{ display:grid; grid-template-columns:1fr 1fr; gap:6px; border-top:1px solid var(--border); padding-top:10px; }
+  .aks-k-kalem{ display:flex; flex-direction:column; gap:4px; padding:6px 8px; border-radius:10px; background:color-mix(in srgb, var(--bg-main) 35%, transparent); border:1px solid transparent; }
+  .aks-k-kalem.tam{ border-color:color-mix(in srgb, #10b981 45%, transparent); }
+  .aks-k-kalem.yok{ border-color:color-mix(in srgb, #ef4444 35%, transparent); }
+  .aks-k-kad{ font-size:11px; font-weight:700; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  html #page-aksesuar .aks-k-kalem .aks-counter{ justify-content:space-between; }
+  html #page-aksesuar .aks-k-kalem .aks-counter-btn{ width:30px !important; height:30px !important; }
+}
+
+/* 7) Arama kutuları: çerçeve dış kutuda, içteki alan çerçevesiz (çift çerçeve kalktı) */
+html .search-bar, html .aks-search-box{
+  border:1px solid var(--border) !important; border-radius:14px !important; padding:0 14px !important;
+  background:color-mix(in srgb, var(--bg-card) 85%, transparent) !important; min-height:46px; gap:10px;
+  transform:none !important; animation:none;
+}
+html .search-bar:focus-within, html .aks-search-box:focus-within{
+  border-color:var(--primary) !important; box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent) !important;
+}
+html .search-bar input, html .aks-search-box input{
+  border:0 !important; background:transparent !important; box-shadow:none !important; transform:none !important;
+  padding:12px 0 !important; border-radius:0 !important; min-width:0; flex:1; font-size:14px !important; outline:0 !important;
+}
+html .search-bar i, html .aks-search-box > i{ position:static !important; transform:none !important; margin:0 !important; font-size:14px !important; }
+@media (max-width:768px){ html .aks-search-box{ min-width:0 !important; width:100%; } }
+
+/* 5) İrsaliye detayı (telefon): Paylaş · PDF · Diğer — kalan işlemler alttan açılan menüde */
+.t2-modal-diger{ display:none !important; }
+@media (max-width:768px){
+  html[data-tasarim="yeni"] .modal-actions-new .modal-actions-secondary{ display:none !important; }
+  html[data-tasarim="yeni"] .modal-actions-new .modal-actions-primary{ display:grid !important; grid-template-columns:1fr 1fr auto; gap:8px; }
+  html[data-tasarim="yeni"] .modal-actions-new .t2-modal-diger{ display:flex !important; flex-direction:column; min-width:64px; }
+  html[data-tasarim="yeni"] .modal-actions-new .modal-action-btn{ padding:9px 8px !important; min-height:52px; }
+}
+
+/* 10) Raporlar (telefon): sayı şeridi ve içgörü kartları sayfa kenar boşluğuna hizalı */
+@media (max-width:768px){
+  html[data-tasarim="yeni"] #page-reports .rep-kpi-grid{ padding-left:16px !important; margin-left:0 !important; scroll-padding-left:16px; }
+  html #page-reports .rep-insights{ padding:0 16px 16px !important; }
+}
+
+/* 11) Ayarlar: kartlar yandakinin boyuna uzamaz (sütunlu akış), okunur not kutuları */
+@media (min-width:769px){
+  html #page-settings .s-panel.active{ display:block !important; columns:3 340px; column-gap:16px; }
+  html #page-settings .s-panel.active > *{ break-inside:avoid; -webkit-column-break-inside:avoid; margin:0 0 16px !important; width:100%; display:block; }
+}
+.s-not{
+  border-radius:10px; padding:10px 12px; margin-bottom:14px; font-size:12px; line-height:1.6;
+  color:var(--text-main); background:color-mix(in srgb, var(--primary) 9%, transparent);
+  border:1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+}
+.s-not b{ color:var(--primary-light, var(--primary)); }
+.s-not.tehlike{ background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.32); }
+.s-not.tehlike b{ color:#f87171; }
+.s-not code{ font-family:var(--t2-mono, monospace); font-size:11px; padding:1px 5px; border-radius:5px; background:rgba(0,0,0,.18); }
+@media (max-width:768px){
+  html[data-tasarim="yeni"] .sidebar nav a{ min-height:46px !important; padding:6px 10px !important; margin:0 0 2px !important; gap:12px !important; }
+  html[data-tasarim="yeni"] .sidebar nav a > i:first-child{ width:32px !important; height:32px !important; min-width:32px !important; }
+  html[data-tasarim="yeni"] .sidebar nav .nav-section{ padding:12px 8px 6px !important; min-height:0 !important; }
+}
