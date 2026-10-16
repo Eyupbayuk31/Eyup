@@ -18145,3 +18145,52 @@ html[data-tasarim="yeni"] .t2-pr-ayar.active{ color:var(--on-primary, #000); bor
   html[data-tasarim="yeni"].t2-mini .t2-profil{ gap:8px !important; }
   html[data-tasarim="yeni"].t2-mini .t2-pr-ayar, html[data-tasarim="yeni"].t2-mini .t2-pr-cik{ width:36px; height:36px; min-width:36px; }
 }
+
+/* ══════════ PLAN 2 · FAZ A ══════════ */
+/* 2) Bilgisayarda yüzen "+" yerine üst çubukta "Yeni" — içerik örtülmez */
+.tb-ekle{ display:none; }
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .fab{ display:none !important; }
+  html[data-tasarim="yeni"] .tb-ekle{
+    display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:12px; cursor:pointer; flex-shrink:0;
+    border:0; font:inherit; font-size:13.5px; font-weight:800; color:var(--on-primary, #000);
+    background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary)));
+    box-shadow:0 8px 20px -10px color-mix(in srgb, var(--primary) 80%, transparent);
+  }
+  html[data-tasarim="yeni"] .tb-ekle:hover{ filter:brightness(1.08); }
+}
+@media (min-width:769px) and (max-width:1180px){ html[data-tasarim="yeni"] .tb-ekle span{ display:none; } html[data-tasarim="yeni"] .tb-ekle{ width:42px; padding:0; justify-content:center; } }
+
+/* 3) Global arama: tür rozetleri tema rengi */
+html[data-tasarim="yeni"] .gs-item .gs-badge, html[data-tasarim="yeni"] .gs-item [class*="gs-tur"]{
+  background:color-mix(in srgb, var(--text-muted) 12%, transparent) !important; color:var(--text-main) !important; border-color:transparent !important; }
+html[data-tasarim="yeni"] .gs-item .type-badge{ background:color-mix(in srgb, var(--text-muted) 10%, transparent) !important; color:var(--text-main) !important; }
+html[data-tasarim="yeni"] .gs-item .gs-badge[style]{ color:var(--text-main) !important; border-color:color-mix(in srgb, var(--text-muted) 25%, transparent) !important; }
+html[data-tasarim="yeni"] .gs-item .gs-ic[style]{ background:var(--t2-ikon-zemin, color-mix(in srgb, var(--primary) 16%, transparent)) !important; color:var(--primary-light, var(--primary)) !important; }
+
+/* 4) Ayarlar (telefon): sekmeler kaydırılabilir ve kesilmez; 4'lü mod seçici 2x2; uzun düğme yazısı alt satıra iner */
+@media (max-width:768px){
+  html #page-settings .settings-tabs{ overflow-x:auto !important; flex-wrap:nowrap !important; scrollbar-width:none; padding-right:28px !important;
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent); }
+  html #page-settings .settings-tabs .s-tab{ flex:0 0 auto !important; white-space:nowrap; }
+  html #page-settings .s-mode-toggle{ display:grid !important; grid-template-columns:1fr 1fr; gap:6px !important; }
+  html #page-settings .s-mode-toggle .s-mode-btn{ white-space:nowrap; justify-content:center; min-height:42px; }
+  html #page-settings .s-body .btn{ white-space:normal !important; line-height:1.25; min-height:44px; text-align:center; }
+}
+/* 5) Model Kartı (telefon): sayı kutuları 2'li, son tek kutu tam genişlik (boş altın hücre kalmasın); tablolar yatay kaydırılabilir kapta */
+html .mk-kpis{ background:transparent !important; gap:8px !important; border:0 !important; border-radius:0 !important; }
+html .mk-kpi{ border:1px solid var(--border); border-radius:14px; }
+@media (max-width:768px){
+  html .mk-kpis{ grid-template-columns:1fr 1fr !important; }
+  html .mk-kpis > .mk-kpi:last-child:nth-child(odd){ grid-column:1 / -1; }
+  html .mk-tw{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  html .mk-t{ min-width:520px; }
+}
+/* 6) Tela Kontrol (telefon): tek Yenile düğmesi için yarı boş kutu yerine Yenile + Yeni Model yan yana */
+@media (max-width:768px){
+  html #page-tela-kontrol .ft-toolbar{ display:grid !important; grid-template-columns:auto 1fr; gap:8px !important; }
+  html #page-tela-kontrol .ft-toolbar-group{ width:auto !important; padding:0 !important; border:0 !important; background:transparent !important; box-shadow:none !important; }
+  html #page-tela-kontrol .ft-toolbar > .btn-primary{ width:100%; justify-content:center; min-height:46px; }
+  html #page-tela-kontrol #tkRefreshBtn{ min-height:46px; }
+}
+@media (max-width:768px){ html[data-tasarim="yeni"] .topbar-right > button.tb-ekle, html .topbar-right > .tb-ekle{ display:none !important; } }

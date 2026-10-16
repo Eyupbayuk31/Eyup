@@ -1528,6 +1528,9 @@ if(typeof Chart==='undefined'){
         <span class="tb-search-ph">Model, irsaliye veya menü ara…</span>
         <span class="tb-search-kbd">Ctrl K</span>
       </button>
+      <button type="button" class="tb-ekle" onclick="t2HizliEkle()" title="Hızlı işlem: yeni irsaliye, gelen gir, stok girişi (N)" aria-label="Hızlı işlem">
+        <i class="fas fa-plus"></i><span>Yeni</span>
+      </button>
       <!-- Masaüstüne kurulan PWA'da tarayıcının yenile tuşu yok; güncelleme
            gelince ya da ekran takılınca buradan yenilenir. -->
       <button type="button" class="tb-yenile" id="tbYenile" onclick="uygulamayiYenile()"
@@ -5103,7 +5106,7 @@ function _stokUyariPanelHtml(list, cats){
 function _stokTableRows(list){
   return list.map(s=>{
     const st = getStockStatus(s.miktar, s.minStok);
-    const updated = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('tr-TR') : '-';
+    const updated = s.updatedAt ? _t2Tarih(s.updatedAt) : '-';
     return `<tr>
       <td><b>${s.ad}</b>${s.not?'<div style="font-size:10px;color:var(--text-muted);">'+s.not+'</div>':''}</td>
       <td><span class="chip chip-info" style="font-size:10px;">${s.kategori}</span></td>
@@ -5218,7 +5221,7 @@ function renderStokList(){
   tbody.innerHTML = list.map(s => {
     const status = getStockStatus(s.miktar, s.minStok);
     const pct = s.minStok > 0 ? Math.min(100, Math.max(0, (s.miktar / (s.minStok * 2)) * 100)) : 100;
-    const dateStr = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('tr-TR') : '-';
+    const dateStr = s.updatedAt ? _t2Tarih(s.updatedAt) : '-';
     const actions = s._virtual
       ? `<td><button class="btn btn-xs btn-secondary" onclick="showPage('tela-kontrol')" title="Tela Kontrol'de yönet"><i class="fas fa-up-right-from-square"></i> Tela Kontrol</button></td>`
       : `<td><div style="display:flex;gap:3px;">
@@ -5245,7 +5248,7 @@ function renderStokList(){
   mobileEl.innerHTML = list.map(s => {
     const status = getStockStatus(s.miktar, s.minStok);
     const pct = s.minStok > 0 ? Math.min(100, Math.max(0, (s.miktar / (s.minStok * 2)) * 100)) : 100;
-    const dateStr = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('tr-TR') : '-';
+    const dateStr = s.updatedAt ? _t2Tarih(s.updatedAt) : '-';
     const mcActions = s._virtual
       ? `<div class="mc-actions"><button class="btn btn-xs btn-secondary" onclick="showPage('tela-kontrol')" style="flex:1;"><i class="fas fa-up-right-from-square"></i> Tela Kontrol'de yönet</button></div>`
       : `<div class="mc-actions">
@@ -6299,7 +6302,7 @@ function _ftTerminCls(termin){
   const today=new Date().toISOString().slice(0,10);
   return termin<today ? 'ft-termin-late' : '';
 }
-function _ftFmtDate(ds){ try{ return new Date(ds).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ds; } }
+function _ftFmtDate(ds){ try{ return _t2Tarih(ds); }catch(e){ return ds; } }
 
 // ── Manuel Yenile ──────────────────────────────────────────
 // Fermuar Takip sayfasi acikken bulut senkronu otomatik yeniden cizmez
@@ -8922,11 +8925,13 @@ function applyFilters(){
 
 // ── Tarih yardımcıları (tasarım planı): "16 Eki", "3 gün geçti" ──
 var _T2_AYLAR=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
-function _t2Gun(v){ if(!v) return null; var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v)); var d;
+function _t2Gun(v){ if(!v) return null; if(v instanceof Date || typeof v==='number' || /T\d{2}:/.test(String(v))){ var z=new Date(v); if(isNaN(z)) return null; z.setHours(0,0,0,0); return z; }
+  var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v)); var d;
   if(m) d=new Date(+m[1], +m[2]-1, +m[3]); else { m=/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/.exec(String(v)); d=m?new Date(+m[3], +m[2]-1, +m[1]):new Date(v); }
   if(isNaN(d)) return null; d.setHours(0,0,0,0); return d; }
 function _t2Tarih(v, yilli){ var d=_t2Gun(v); if(!d) return v||'—';
   var s=d.getDate()+' '+_T2_AYLAR[d.getMonth()]; if(yilli || d.getFullYear()!==new Date().getFullYear()) s+=' '+d.getFullYear(); return s; }
+function _t2TarihSaat(v){ var d=new Date(v); if(isNaN(d)) return v||'—'; return _t2Tarih(d)+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function _t2GunFark(v){ var d=_t2Gun(v); if(!d) return null; var b=new Date(); b.setHours(0,0,0,0); return Math.round((d-b)/86400000); }
 // Termin etiketi: bitti=true ise renk/uyarı yok
 function _t2Termin(v, bitti){ var k=_t2GunFark(v); if(k===null||bitti) return {t:'', cls:'uzak', k:k};
@@ -10134,8 +10139,8 @@ function refreshLastikList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.lastik,PAGE_SIZE);
   _subListPage.lastik=page;
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(_t2Tarih(i.tarih))}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.cm)||'-'} cm</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.cm)||'-'} cm / ${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(_t2Tarih(i.tarih))}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteLastik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('lastikPagination',tbody,page,totalPages,total,start,end,'goToLastikPage');
 }
 
@@ -10175,8 +10180,8 @@ function refreshDugmeList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.dugme,PAGE_SIZE);
   _subListPage.dugme=page;
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${(+i.adet||0).toLocaleString('tr')} adet</td><td><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl) mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${(+i.adet||0).toLocaleString('tr')} adet</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(_t2Tarih(i.tarih))}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${(+i.adet||0).toLocaleString('tr')} adet</td><td><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl) mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${(+i.adet||0).toLocaleString('tr')} adet</span><span><i class="fas fa-calendar"></i> ${esc(_t2Tarih(i.tarih))}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDugme(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('dugmePagination',tbody,page,totalPages,total,start,end,'goToDugmePage');
 }
 
@@ -10211,8 +10216,8 @@ function refreshToptanList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.toptan,PAGE_SIZE);
   _subListPage.toptan=page;
-  tbody.innerHTML=list.map(i=>`<tr><td>${esc(i.tarih)}</td><td style="font-weight:600;">${esc(i.firma)}</td><td>${esc(i.urun)||'-'}</td><td><span class="chip chip-info">${+i.total||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span style="font-weight:600;">${esc(i.firma)}</span><span class="chip chip-info">${+i.total||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span>${i.urun?'<span><i class="fas fa-cube"></i> '+esc(i.urun)+'</span>':''}</div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td>${esc(_t2Tarih(i.tarih))}</td><td style="font-weight:600;">${esc(i.firma)}</td><td>${esc(i.urun)||'-'}</td><td><span class="chip chip-info">${+i.total||0} adet</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span style="font-weight:600;">${esc(i.firma)}</span><span class="chip chip-info">${+i.total||0} adet</span></div><div class="mc-meta"><span><i class="fas fa-calendar"></i> ${esc(_t2Tarih(i.tarih))}</span>${i.urun?'<span><i class="fas fa-cube"></i> '+esc(i.urun)+'</span>':''}</div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteToptan(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('toptanPagination',tbody,page,totalPages,total,start,end,'goToToptanPage');
 }
 
@@ -10344,8 +10349,8 @@ function refreshKordonList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.kordon,PAGE_SIZE);
   _subListPage.kordon=page;
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${korMiktar(i)}</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${korMiktar(i)}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(_t2Tarih(i.tarih))}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td><span class="chip chip-info">${korMiktar(i)}</span></td><td><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span class="chip chip-info">${korMiktar(i)}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.renk)||'-'}</span><span><i class="fas fa-calendar"></i> ${esc(_t2Tarih(i.tarih))}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteKordon(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('kordonPagination',tbody,page,totalPages,total,start,end,'goToKordonPage');
 }
 
@@ -10389,8 +10394,8 @@ function refreshDantelList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.dantel,PAGE_SIZE);
   _subListPage.dantel=page;
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(_t2Tarih(i.tarih))}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'}</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span style="color:var(--primary);font-weight:600;">${esc(i.metre)} m</span><span><i class="fas fa-calendar"></i> ${esc(_t2Tarih(i.tarih))}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteDantel(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('dantelPagination',tbody,page,totalPages,total,start,end,'goToDantelPage');
 }
 
@@ -10430,8 +10435,8 @@ function refreshSatenaskilikList(){
   }
   const {items:list,page,totalPages,total,start,end}=paginateList(fullList,_subListPage.satenaskilik,PAGE_SIZE);
   _subListPage.satenaskilik=page;
-  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(i.tarih)}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'} / ${esc(i.metre)} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span><i class="fas fa-calendar"></i> ${esc(i.tarih)}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
+  tbody.innerHTML=list.map(i=>`<tr><td style="font-weight:700;color:var(--primary);">${esc(i.no)}</td><td>${esc(_t2Tarih(i.tarih))}</td><td>${esc(i.model)}</td><td>${esc(i.atolye)}</td><td>${esc(i.renk)||'-'}</td><td>${esc(i.metre)} m</td><td><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  if(mobileEl)mobileEl.innerHTML=list.map(i=>`<div class="mobile-card"><div class="mc-header"><span class="mc-title">${esc(i.no)}</span><span style="color:var(--primary);font-weight:700;">${esc(i.renk)||'-'} / ${esc(i.metre)} m</span></div><div class="mc-meta"><span><i class="fas fa-cube"></i> ${esc(i.model)}</span><span><i class="fas fa-industry"></i> ${esc(i.atolye)}</span><span><i class="fas fa-calendar"></i> ${esc(_t2Tarih(i.tarih))}</span></div><div class="mc-actions"><button class="btn btn-xs btn-danger" onclick="deleteSatenaskilik(${i.id})"><i class="fas fa-trash"></i> Sil</button></div></div>`).join('');
   _renderSubListPagination('satenaskilikPagination',tbody,page,totalPages,total,start,end,'goToSatenaskilikPage');
 }
 
@@ -10641,7 +10646,7 @@ function refreshHome(){
         rHtml+='<div class="db-recent-item">'
           +'<div class="db-recent-no" style="color:'+clr+'">'+no+'</div>'
           +'<div class="db-recent-body"><div class="db-recent-model">'+model+' <span style="font-size:10px;color:var(--text-dim)">'+atolye+'</span></div>'
-          +'<div class="db-recent-meta">'+(i.tarih||'')+'</div></div>'
+          +'<div class="db-recent-meta">'+(i.tarih?_t2Tarih(i.tarih):'')+'</div></div>'
           +'<span class="chip '+durum+'" style="font-size:10px;flex-shrink:0">'+durumTxt+'</span>'
           +'</div>';
       });
@@ -10881,6 +10886,8 @@ MK.topla = function(model){
   var K=MK._norm(model);
   var esit=function(x){ return MK._norm(x)===K; };
   var d={ kod:K, irsaliyeler:[], foyler:[], tela:[], fermuar:[], kordon:[], aksesuar:[] };
+  // Ekranda kullanıcının yazdığı biçim (boşluklu) görünsün; eşleştirme boşluksuz anahtarla yapılır
+  try{ var _bul=MK.tumModeller().filter(function(x){ return x.kod===K; })[0]; if(_bul&&_bul.ad) d.ad=String(_bul.ad).trim().replace(/\s+/g,' ').toLocaleUpperCase('tr'); }catch(e){}
   try{ d.irsaliyeler=(getUnifiedList()||[]).filter(function(i){ return esit(i.model)||esit(i.urun); }); }catch(e){}
   try{ d.foyler=(AK.recs()||[]).filter(function(r){ return esit(r.model); }); }catch(e){}
   try{ d.tela=(getData('telaKontrol')||[]).filter(function(t){ return esit(t.modelKodu); }); }catch(e){}
@@ -10986,7 +10993,7 @@ MK._kutu = function(ic,lbl,val,alt){
 MK._basHtml = function(d){
   var son=d.foyler.concat().sort(function(a,b){ return (b.ts||0)-(a.ts||0); })[0];
   return '<div class="mk-hero">'+
-    '<div class="mk-hero-l"><div class="mk-kod">'+MK._esc(d.kod)+'</div>'+
+    '<div class="mk-hero-l"><div class="mk-kod">'+MK._esc(d.ad||d.kod)+'</div>'+
       '<div class="mk-hero-sub">'+(d.polar.length?('PO: '+d.polar.slice(0,4).map(MK._esc).join(' · ')+(d.polar.length>4?' +'+(d.polar.length-4):'')):'PO kaydı yok')+'</div></div>'+
     '<div class="mk-hero-r">'+
       (son?'<span class="mk-son"><i class="fas fa-clock-rotate-left"></i> Son föy: '+MK._esc(son.tarih||'')+'</span>':'')+
@@ -11028,7 +11035,7 @@ MK._irsHtml = function(d){
     return '<tr class="mk-tik" onclick="showDetailUni('+i.id+',\''+MK._esc(i._type)+'\')">'+
       '<td><b>'+MK._esc(i.no||'—')+'</b></td>'+
       '<td>'+(typeof getTypeBadge==='function'?getTypeBadge(i._type):MK._esc(i._type))+'</td>'+
-      '<td>'+MK._esc(i.tarih||'—')+'</td>'+
+      '<td>'+MK._esc(i.tarih?_t2Tarih(i.tarih):'—')+'</td>'+
       '<td>'+MK._esc(i.atolye||i.firma||'—')+'</td>'+
       '<td>'+(typeof getItemDetail==='function'?MK._esc(getItemDetail(i,true)):'')+'</td>'+
       '<td class="c">'+(teslim?'<span class="mk-rz ok">Teslim</span>':'<span class="mk-rz bek">Bekliyor</span>')+'</td>'+
@@ -11050,7 +11057,7 @@ MK._foyHtml = function(d){
       '<td class="c">'+(r.asama==='utupaket'?'Ütü Paket':'Dikim')+'</td>'+
       '<td class="c">'+MK._n(tot)+'</td>'+
       '<td>'+MK._esc(r.atolye||'—')+'</td>'+
-      '<td>'+MK._esc(r.tarih||'')+'</td>'+
+      '<td>'+MK._esc(r.tarih?_t2Tarih(r.tarih):'')+'</td>'+
       '<td class="c"><button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();AK.regen('+rid+')" title="Föyü yeniden üret"><i class="fas fa-rotate"></i> Föy</button></td>'+
     '</tr>';
   }).join('');
@@ -11082,7 +11089,7 @@ MK._fermuarHtml = function(d){
     var kul=sz.reduce(function(s,x){ return s+((x.kullanimlar||[]).reduce(function(a,t){ return a+(parseInt(t.adet,10)||0); },0)); },0);
     return '<tr>'+
       '<td><b>'+MK._esc(f.tedarikci||'—')+'</b></td>'+
-      '<td>'+MK._esc(f.termin||'—')+'</td>'+
+      '<td>'+MK._esc(f.termin?_t2Tarih(f.termin):'—')+'</td>'+
       '<td class="c">'+sz.length+' ölçü</td>'+
       '<td class="c">'+MK._n(sip)+'</td>'+
       '<td class="c">'+MK._n(gel)+'</td>'+
@@ -12246,7 +12253,7 @@ function renderMalPoset(){
       <tbody>${serbest.slice().sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).map(i=>`
         <tr class="mp-row" onclick="showDetailUni(${i.id},'standart')">
           <td><b>${esc(i.no||'-')}</b></td>
-          <td>${esc(i.tarih||'-')}</td>
+          <td>${esc(i.tarih?_t2Tarih(i.tarih):'-')}</td>
           <td><b>${esc(i.atolye||'-')}</b></td>
           <td>${esc(i.model||'—')}</td>
           <td class="c"><b>${_n(_mpPosetHepsi(i))}</b></td>
@@ -12351,7 +12358,7 @@ function renderKritikAksiyon(){
         <div class="rep-kk-meta">
           <span><i class="fas fa-industry"></i> ${esc(item.atolye||item.firma||'—')}</span>
           ${qty ? `<span><i class="fas fa-box"></i> ${qty} adet</span>` : ''}
-          <span><i class="fas fa-calendar-xmark"></i> Termin: ${esc(item.termin||'—')}</span>
+          <span><i class="fas fa-calendar-xmark"></i> Termin: ${esc(item.termin?_t2Tarih(item.termin):'—')}</span>
           ${getTypeBadge ? getTypeBadge(item._type||'') : ''}
         </div>
       </div>
@@ -12657,12 +12664,12 @@ function filterRepTablo(val){
             <td class="rep-tbl-idx">${idx+1}</td>
             <td class="rep-tbl-no">${esc(i.no||'—')}</td>
             <td>${getTypeBadge ? getTypeBadge(i._type||'') : esc(getTypeLabel(i._type||''))}</td>
-            <td class="rep-tbl-date">${esc(i.tarih||'—')}</td>
+            <td class="rep-tbl-date">${esc(i.tarih?_t2Tarih(i.tarih):'—')}</td>
             <td class="rep-tbl-firm">${esc(i.atolye||i.firma||'—')}</td>
             <td class="rep-tbl-model">${esc(i.model||i.urun||'—')}</td>
             <td class="rep-tbl-qty">${qty||'—'}</td>
             <td><span class="chip ${isDone?'chip-success':'chip-warning'}" style="font-size:11px;">${isDone?'Teslim':'Bekliyor'}</span></td>
-            <td class="rep-tbl-termin ${isLate?'rep-tbl-late':isToday?'rep-tbl-today':''}">${esc(i.termin||'—')}</td>
+            <td class="rep-tbl-termin ${isLate?'rep-tbl-late':isToday?'rep-tbl-today':''}">${esc(i.termin?_t2Tarih(i.termin):'—')}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -13666,11 +13673,11 @@ function renderRecycleBin(){
 
   // Desktop
   tbody.innerHTML=recycle.map(r=>{
-    const delDate=r._deletedAt?new Date(r._deletedAt).toLocaleDateString('tr-TR')+' '+new Date(r._deletedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'-';
+    const delDate=r._deletedAt?_t2TarihSaat(r._deletedAt):'-';
     return `<tr>
       <td>${getTypeBadge(r._type||'standart')}</td>
       <td style="font-weight:700;color:var(--primary);">${r.no||'—'}</td>
-      <td>${r.tarih||'-'}</td>
+      <td>${r.tarih?_t2Tarih(r.tarih):'-'}</td>
       <td>${r.model||r.urun||'-'}</td>
       <td>${r.atolye||r.firma||'-'}</td>
       <td style="font-size:12px;color:var(--text-dim);white-space:nowrap;">${delDate}</td>
@@ -13683,7 +13690,7 @@ function renderRecycleBin(){
 
   // Mobile
   mobileEl.innerHTML=recycle.map(r=>{
-    const delDate=r._deletedAt?new Date(r._deletedAt).toLocaleDateString('tr-TR'):'-';
+    const delDate=r._deletedAt?_t2Tarih(r._deletedAt):'-';
     return `<div class="uni-mobile-card" style="border-left-color:#ef4444;">
       <div class="mc-header">
         <div style="display:flex;align-items:center;gap:8px;">
@@ -13854,7 +13861,7 @@ function _formatAuditTime(ts){
   if(diff < 3600000) return Math.floor(diff/60000) + ' dk önce';
   if(diff < 86400000) return Math.floor(diff/3600000) + ' sa önce';
   if(diff < 7*86400000) return Math.floor(diff/86400000) + ' gün önce';
-  return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  return _t2TarihSaat(d);
 }
 function _auditActionMeta(action){
   const map = {
@@ -19981,6 +19988,16 @@ function _syncIrsBar(page){
       b.classList.toggle('on',on); b.setAttribute('aria-selected',on);
     });
   });
+  _irsSeciliOrtala(page);
+}
+// Telefonda seçili tür şeridin ortasına kaysın (yarım "La…" görünmesin)
+function _irsSeciliOrtala(page){
+  setTimeout(function(){ try{
+    var pg=document.getElementById('page-'+page); if(!pg) return;
+    var rail=pg.querySelector('.irs-bar-rail'), on=rail&&rail.querySelector('.irs-t.on'); if(!rail||!on) return;
+    if(rail.scrollWidth<=rail.clientWidth+2) return;
+    var rr=rail.getBoundingClientRect(), orr=on.getBoundingClientRect(); rail.scrollLeft += (orr.left-rr.left) - (rail.clientWidth-orr.width)/2;
+  }catch(_){} }, 80);
 }
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(_injectIrsBar, 60); setTimeout(function(){ try{ _takipSiraButon(); }catch(_){} }, 80); });
 
@@ -20548,7 +20565,7 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
     if(days<7) return days+' gün önce';
     const weeks = Math.floor(days/7);
     if(weeks<5) return weeks+' hafta önce';
-    return d.toLocaleDateString('tr-TR');
+    return _t2Tarih(d);
   }
 
   /* ==================== Count-up animation ==================== */
@@ -22710,7 +22727,7 @@ function _tkVerilen(m,cm){ return _tkVermeler(m).filter(function(v){return cm==n
 function _tkVerilenByRenk(m,cm){ var map={}; _tkVermeler(m).forEach(function(v){ if(cm!=null && +v.cm!==+cm) return; var r=(v.renk||'—'); map[r]=(map[r]||0)+(+v.top||0); }); return map; }
 function _tkRenkOzet(map){ return Object.keys(map).filter(function(k){return map[k]>0;}).map(function(k){return map[k].toLocaleString('tr')+' '+k;}).join(' · '); }
 function _tkCikisAtolyeler(m){ var s={}; _tkVermeler(m).forEach(function(v){ if(v.atolye) s[v.atolye]=1; }); return Object.keys(s); }
-function _tkFmtDate(iso){ try{ return new Date(iso).toLocaleDateString('tr-TR'); }catch(e){ return iso||''; } }
+function _tkFmtDate(iso){ try{ return _t2Tarih(iso); }catch(e){ return iso||''; } }
 // Genel Stok'taki tela adedi (Top). cm zorunlu; renk verilirse cm+renk eşleşir,
 // verilmezse o en'in tüm renkleri toplanır. Eşleşen kalem yoksa null → "yok".
 function _telaGenelStok(cm, renk){
@@ -24845,7 +24862,7 @@ AK._renderRecList = function(){
         '<div class="ak-rec-s"><span class="ak-rec-tag"><i class="fas fa-hashtag"></i>'+AK._esc(r.po||'—')+'</span>'+
           (r.atolye?'<span class="ak-rec-tag"><i class="fas fa-industry"></i>'+AK._esc(r.atolye)+'</span>':'')+
           '<span class="ak-rec-tag"><i class="fas fa-layer-group"></i>'+tot.toLocaleString('tr')+'</span>'+
-          '<span class="ak-rec-tag"><i class="fas fa-calendar"></i>'+AK._esc(r.tarih||'')+'</span>'+
+          '<span class="ak-rec-tag"><i class="fas fa-calendar"></i>'+AK._esc(r.tarih?_t2Tarih(r.tarih):'')+'</span>'+
         '</div>'+
       '</div>'+
       '<div class="ak-rec-act">'+
