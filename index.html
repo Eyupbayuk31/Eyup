@@ -1170,8 +1170,8 @@
         if(!window._fs && !window._isViewerUrl){
           updateCloudBadge('off', window._fsLoadError);
           var why = window._fsLoadError ? (' Sebep: ' + window._fsLoadError) : '';
-          toast('Sunucu SDK yuklenemedi — kayitlar SADECE bu cihazda kalir!' + why, true);
-          toast('Firefox kullaniyorsaniz: adres cubugundaki kalkan simgesine tiklayip korumayi bu site icin kapatin, eklentileri (uBlock vb.) devre disi birakin, sayfayi yenileyin.', true);
+          toast('Sunucu SDK yüklenemedi — kayıtlar SADECE bu cihazda kalır!' + why, true);
+          toast('Firefox kullanıyorsanız: adres çubuğundaki kalkan simgesine tıklayıp korumayı bu site için kapatın, eklentileri (uBlock vb.) devre dışı bırakın, sayfayı yenileyin.', true);
         }
       }, 12000);
     }
@@ -1701,7 +1701,7 @@ if(typeof Chart==='undefined'){
 
   <div class="db-bot-grid">
     <div class="card">
-      <div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dagilimi</div>
+      <div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dağılımı</div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <div style="position:relative;width:170px;height:170px;flex-shrink:0;">
           <canvas id="homeChart"></canvas>
@@ -1710,7 +1710,7 @@ if(typeof Chart==='undefined'){
       </div>
     </div>
     <div class="card">
-      <div class="card-title"><i class="fas fa-bell" style="color:#f59e0b"></i> Termin Uyarilari</div>
+      <div class="card-title"><i class="fas fa-bell" style="color:#f59e0b"></i> Termin Uyarıları</div>
       <div id="dbTerminList"></div>
     </div>
     <div class="card">
@@ -1720,7 +1720,7 @@ if(typeof Chart==='undefined'){
   </div>
 
   <!-- V8: Timeline + Atölye compare + Top items -->
-  <div class="db-bot-grid" style="grid-template-columns:1.1fr 1fr 1fr;">
+  <div class="db-bot-grid db-bot-grid-v8">
     <div class="card">
       <div class="card-title"><i class="fas fa-stream"></i> Canlı Aktivite Akışı <span style="margin-left:auto;font-size:11px;color:var(--text-dim);font-weight:500" id="v8TlCount"></span></div>
       <div class="v8-timeline" id="v8TimelineList"></div>
@@ -3193,6 +3193,7 @@ if(typeof Chart==='undefined'){
         </div>
       </div>
 
+      <div class="aks-kartlar" id="aksesuarKartlar"></div>
       <div class="aks-table-container">
         <div class="aks-table-wrapper">
           <table class="aks-table">
@@ -3449,7 +3450,7 @@ if(typeof Chart==='undefined'){
             </div>
           </div>
           <div class="s-body">
-            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#ef4444;line-height:1.6;">
+            <div class="s-not tehlike">
               <b>Güvenlik:</b> Token sadece bu cihazın tarayıcısında saklanır, uygulama koduna asla gömülmez. Token başkasına verme — repo'nuza yazma yetkisi sağlar. Token'ı kaybederseniz GitHub'dan iptal edip yenisini girin.
             </div>
 
@@ -3503,8 +3504,8 @@ if(typeof Chart==='undefined'){
             </div>
           </div>
           <div class="s-body">
-            <div style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#0369a1;line-height:1.6;">
-              <b>ℹ️ Bilgi:</b> Sistem her gün uygulamayı ilk açtığınızda sessizce yedek alır. GitHub'da <code>backups/</code> klasörüne tarih adıyla yazılır. Aynı gün içinde tekrar açarsanız üzerine yazılır (bant genişliği boşa harcanmaz). Yedekler içindeki token/şifre alanları otomatik temizlenir.
+            <div class="s-not">
+              <b><i class="fas fa-circle-info"></i> Bilgi:</b> Sistem her gün uygulamayı ilk açtığınızda sessizce yedek alır. GitHub'da <code>backups/</code> klasörüne tarih adıyla yazılır. Aynı gün içinde tekrar açarsanız üzerine yazılır (bant genişliği boşa harcanmaz). Yedekler içindeki token/şifre alanları otomatik temizlenir.
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
               <button class="btn btn-primary" onclick="runManualBackup()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-cloud-arrow-up"></i> Hemen Yedek Al</button>
@@ -3557,8 +3558,8 @@ if(typeof Chart==='undefined'){
             </div>
           </div>
           <div class="s-body">
-            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#92400e;line-height:1.6;">
-              <b>ℹ️ Not:</b> Bir kayıt kalıcı olarak silindiğinde fotoğrafları otomatik olarak GitHub'dan da temizlenir. Bu panel, geçmişte birikmiş yetim dosyaları manuel temizlemek içindir. <b>Aktif veya Geri Dönüşüm'deki</b> hiçbir kayıtta referans almayan fotoğraflar tespit edilir.
+            <div class="s-not">
+              <b><i class="fas fa-circle-info"></i> Not:</b> Bir kayıt kalıcı olarak silindiğinde fotoğrafları otomatik olarak GitHub'dan da temizlenir. Bu panel, geçmişte birikmiş yetim dosyaları manuel temizlemek içindir. <b>Aktif veya Geri Dönüşüm'deki</b> hiçbir kayıtta referans almayan fotoğraflar tespit edilir.
             </div>
             <button class="btn btn-secondary" onclick="scanOrphanPhotos()" style="width:100%;justify-content:center;"><i class="fas fa-magnifying-glass"></i> Yetim Fotoları Tara</button>
             <div id="orphanPhotoStatus" style="font-size:12px;margin-top:10px;display:none;"></div>
@@ -4392,6 +4393,10 @@ if(typeof Chart==='undefined'){
         <button class="modal-action-btn primary" onclick="generatePDFFromModal()" id="modalPdfBtn">
           <i class="fas fa-file-pdf"></i>
           <span>PDF</span>
+        </button>
+        <button class="modal-action-btn secondary t2-modal-diger" type="button" onclick="event.stopPropagation(); _t2DigerAc(this.closest('.modal-actions-new').querySelector('.modal-actions-secondary'))" aria-label="Diğer işlemler">
+          <i class="fas fa-ellipsis"></i>
+          <span>Diğer</span>
         </button>
       </div>
       <div class="modal-actions-secondary">
@@ -5879,7 +5884,7 @@ function addNewAksesuarRow(){
 
   // Focus on model kodu input
   setTimeout(() => {
-    const input = document.querySelector(`#aksesuarTable input[data-id="${item.id}"][data-field="modelKodu"]`);
+    const input = document.querySelector(`#aksesuarKartlar input[data-id="${item.id}"][data-field="modelKodu"]`) || document.querySelector(`#aksesuarTable input[data-id="${item.id}"][data-field="modelKodu"]`);
     if(input) input.focus();
   }, 100);
 }
@@ -6001,13 +6006,17 @@ function renderAksesuarTable(){
   if(completeCount) completeCount.textContent = complete;
   if(pendingCount) pendingCount.textContent = pending;
 
+  const kartKap = document.getElementById('aksesuarKartlar');
   if(filteredList.length === 0){
     tbody.innerHTML = '';
+    if(kartKap) kartKap.innerHTML = '';
     empty.style.display = 'flex';
     return;
   }
 
   empty.style.display = 'none';
+  // Telefonda 17 sütunlu tablo yerine her model bir kart
+  if(kartKap) kartKap.innerHTML = window.matchMedia('(max-width:768px)').matches ? _aksKartlarHtml(filteredList, _isDone) : '';
 
   tbody.innerHTML = filteredList.map((item, index) => {
     const renderCounter = (field) => {
@@ -6067,6 +6076,39 @@ function renderAksesuarTable(){
     </tr>`;
   }).join('');
 }
+
+var AKS_KALEM_AD = {markaEtiketi:'Marka Etiketi', icBarkod:'İç Barkod', yikamaTalimati:'Yıkama Talimatı', yikamaToptan:'Yıkama (Toptan)',
+  ecom:'Ecom', istanbulSticker:'İstanbul Sticker', susEtiketi:'Süs Etiketi', susKarti:'Süs Kartı', lisansKarti:'Lisans Kartı'};
+function _aksKartlarHtml(liste, bitti){
+  var esc=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
+  var inp=function(it, f, ph, etiket, tip){
+    var v=it[f]; if(tip==='number') v=v||0;
+    return '<label class="aks-k-alan"><span>'+etiket+'</span><input class="aks-input" type="'+(tip||'text')+'" value="'+esc(v)+'" data-id="'+it.id+'" data-field="'+f+'" placeholder="'+ph+'"'+
+      ' onchange="updateAksesuarField('+it.id+',\''+f+'\','+(tip==='number'?'+this.value':'this.value')+')"'+(tip==='number'?' min="0" inputmode="numeric"':'')+'></label>';
+  };
+  return liste.map(function(it){
+    var kalem=_aksKalemleri(it).filter(function(k){ return AKS_KALEM_AD[k]; });
+    var adet=+it.adet||0;
+    var sayac=kalem.map(function(k){
+      var v=+it[k]||0, tam=adet>0 && v>=adet, yok=v===0;
+      return '<div class="aks-k-kalem'+(tam?' tam':yok?' yok':'')+'"><span class="aks-k-kad">'+AKS_KALEM_AD[k]+'</span>'+
+        '<div class="aks-counter"><button class="aks-counter-btn aks-counter-minus" onclick="decrementAksesuar('+it.id+',\''+k+'\')" aria-label="Azalt"><i class="fas fa-minus"></i></button>'+
+        '<span class="aks-counter-value">'+v+'</span>'+
+        '<button class="aks-counter-btn aks-counter-plus" onclick="incrementAksesuar('+it.id+',\''+k+'\')" aria-label="Artır"><i class="fas fa-plus"></i></button></div></div>';
+    }).join('');
+    var mus=(!aksMusteri() && it.musteri) ? '<span class="aks-mus">'+esc(it.musteri)+'</span>' : '';
+    return '<div class="aks-kart'+(bitti(it)?' bitti':'')+'">'+
+      '<div class="aks-k-bas"><input class="aks-input aks-k-model" type="text" value="'+esc(it.modelKodu)+'" data-id="'+it.id+'" data-field="modelKodu" placeholder="Model kodu" onchange="updateAksesuarField('+it.id+',\'modelKodu\',this.value)">'+mus+
+        '<button class="aks-k-sil" onclick="deleteAksesuar('+it.id+')" aria-label="Sil" title="Sil"><i class="fas fa-trash-can"></i></button></div>'+
+      '<div class="aks-k-alanlar">'+inp(it,'cikisDikim','Tarih + atölye','Çıkış (Dikim)')+inp(it,'termin','15.04.2026','Termin')+
+        inp(it,'koliNo','K-001','Koli No')+inp(it,'adet','0','Adet','number')+inp(it,'raf','A-12','Raf')+inp(it,'cikisUtupaket','Tarih','Çıkış (Ütüpaket)')+'</div>'+
+      (sayac?'<div class="aks-k-kalemler">'+sayac+'</div>':'')+
+    '</div>';
+  }).join('');
+}
+// Telefon ↔ bilgisayar genişliği değişince doğru görünümü çiz
+(function(){ try{ var mq=window.matchMedia('(max-width:768px)'), f=function(){ var pg=document.getElementById('page-aksesuar'); if(pg && pg.classList.contains('active')) renderAksesuarTable(); };
+  if(mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f); }catch(e){} })();
 
 function exportAksesuarToExcel(){
   const list = _aksMusteriSuz(getData('aksesuarlar'));   // seçili müşteri sekmesi
@@ -6926,7 +6968,7 @@ function _ftTeslimAc(seciliIds, onlyMissing){
       rows:_ftSizesSorted(m).map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }))
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
-  if(!w){ toast('Popup engellendi — izin verin','error'); return false; }
+  if(!w){ toast('Açılır pencere engellendi — izin verin','error'); return false; }
   toast('Teslim durumu hazırlandı','success');
   return true;
 }
@@ -7725,7 +7767,7 @@ function _ktTeslimAc(seciliIds, onlyMissing){
       rows:_ktSatirlar(m).map(z=>({beden:z.beden||'', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }; })
   });
   const w=_openHtmlWindow(html,'width=900,height=900');
-  if(!w){ toast('Popup engellendi — izin verin','error'); return false; }
+  if(!w){ toast('Açılır pencere engellendi — izin verin','error'); return false; }
   toast('Teslim durumu hazırlandı','success');
   return true;
 }
@@ -10395,7 +10437,7 @@ function refreshHome(){
     day7Data.push(allUnified.filter(function(i){return i.tarih===ds;}).length);
   }
   var total7=day7Data.reduce(function(a,b){return a+b;},0);
-  sv('db7dayTotal','Son 7 gun: '+total7+' kayit');
+  sv('db7dayTotal','Son 7 gün: '+total7+' kayıt');
 
   var ctx7=document.getElementById('db7dayChart');
   if(ctx7){
@@ -10412,7 +10454,7 @@ function refreshHome(){
   var rEl=document.getElementById('dbRecentList');
   if(rEl){
     if(!recentAll.length){
-      rEl.innerHTML='<div class="empty-state" style="padding:20px"><i class="fas fa-inbox"></i><p>Henuz kayit yok.</p></div>';
+      rEl.innerHTML='<div class="empty-state" style="padding:20px"><i class="fas fa-inbox"></i><p>Henüz kayıt yok.</p></div>';
     } else {
       var typeClr={standart:'#7c3aed',fermuar:'#3b82f6',lastik:'#10b981',dugme:'#f59e0b',toptan:'#ec4899'};
       var rHtml='';
@@ -10476,7 +10518,7 @@ function refreshHome(){
       var tHtml='';
       terminList.forEach(function(i){
         var cls=i._diff<0?'overdue':i._diff<=3?'soon':'ok';
-        var txt=i._diff<0?(Math.abs(i._diff)+'g gecti'):(i._diff+'g kaldi');
+        var txt=i._diff<0?(Math.abs(i._diff)+' gün geçti'):(i._diff===0?'bugün':(i._diff+' gün kaldı'));
         var dotClr=i._diff<0?'#ef4444':i._diff<=3?'#f59e0b':'#10b981';
         var no=i.no||i.noIRS||'-';
         var model=i.model||i.urun||'';
@@ -12635,7 +12677,8 @@ function _t2DigerAc(k){
   var ort=document.createElement('div'); ort.className='t2-sheet-ort'; ort.onclick=_t2DigerKapat;
   var sh=document.createElement('div'); sh.className='t2-sheet'; sh.setAttribute('role','menu');
   sh.innerHTML='<div class="t2-sheet-tut" aria-hidden="true"></div>';
-  k.querySelectorAll(':scope > .t2-katla').forEach(function(b){
+  k.querySelectorAll(':scope > .t2-katla, :scope > .modal-action-btn').forEach(function(b){
+    if(b.style.display==='none' || b.hidden) return;
     var c=document.createElement('button'); c.type='button'; c.className='t2-sheet-o'+(b.classList.contains('btn-danger')||b.classList.contains('aks-btn-danger')?' tehlike':'');
     var ic=b.querySelector('i'); c.innerHTML=(ic?ic.outerHTML:'')+'<span>'+(b.textContent||'').trim().replace(/\s+/g,' ')+'</span>';
     c.onclick=function(){ _t2DigerKapat(); setTimeout(function(){ b.click(); }, 60); };
@@ -13128,8 +13171,8 @@ function importData(e){
   reader.onload = async function(ev){
     let data;
     try{ data = JSON.parse(ev.target.result); }
-    catch(err){ toast('Gecersiz JSON dosyasi','error'); inputEl.value=''; return; }
-    if(!data || typeof data !== 'object'){ toast('Beklenmedik dosya icerigi','error'); inputEl.value=''; return; }
+    catch(err){ toast('Geçersiz JSON dosyası','error'); inputEl.value=''; return; }
+    if(!data || typeof data !== 'object'){ toast('Beklenmedik dosya içeriği','error'); inputEl.value=''; return; }
 
     // Sema kontrolu + ozet hazirla
     const summary = [];
@@ -13150,7 +13193,7 @@ function importData(e){
       return;
     }
     if(!totalRecords){
-      if(!confirm('Import edilecek hicbir kayit bulunamadi. Yine de devam edilsin mi? (yapilandirma alanlari yuklenebilir)')){ inputEl.value=''; return; }
+      if(!confirm('İçe aktarılacak hiçbir kayıt bulunamadı. Yine de devam edilsin mi? (yapılandırma alanları yüklenebilir)')){ inputEl.value=''; return; }
     }
 
     const onay = confirm(
@@ -13177,11 +13220,11 @@ function importData(e){
         if(data.config.fontSize){ setConfig('fontSize', data.config.fontSize); setFontSize(data.config.fontSize); }
       }
       const tail = snapPath ? (' (snapshot: '+snapPath+')') : '';
-      toast('Veriler basariyla iceri aktarildi — ' + totalRecords + ' kayit' + tail, 'success');
+      toast('Veriler başarıyla içeri aktarıldı — ' + totalRecords + ' kayıt' + tail, 'success');
       refreshAll();
     }catch(err){
       console.error('[import] write hatasi:', err);
-      toast('Import sirasinda hata: ' + (err.message||err) + (snapPath ? ' — snapshot mevcut: '+snapPath : ''), 'error');
+      toast('İçe aktarma sırasında hata: ' + (err.message||err) + (snapPath ? ' — snapshot mevcut: '+snapPath : ''), 'error');
     }finally{
       window._auditSilent = false;
       _logAudit('import', { label: totalRecords + ' kayit', details: 'Snapshot: ' + (snapPath||'-') });
@@ -13260,11 +13303,11 @@ async function restoreFromBackup(filename){
     }
     _logAudit('restore', { label: filename, details: written + ' kategori' });
     setMsg('<i class="fas fa-circle-check"></i> Geri yukleme tamamlandi: '+written+' kategori. '+(snap?('Snapshot: '+snap):''), '#10b981');
-    if(typeof toast === 'function') toast('Geri yukleme tamamlandi: '+filename,'success');
+    if(typeof toast === 'function') toast('Geri yükleme tamamlandı: '+filename,'success');
     if(typeof refreshAll === 'function') refreshAll();
   }catch(e){
     setMsg('<i class="fas fa-circle-xmark"></i> Geri yukleme hatasi: '+(e.message||e), '#ef4444');
-    if(typeof toast === 'function') toast('Geri yukleme hatasi: '+(e.message||e), 'error');
+    if(typeof toast === 'function') toast('Geri yükleme hatası: '+(e.message||e), 'error');
   }
 }
 
@@ -14734,8 +14777,8 @@ function shareWhatsApp() {
   }catch(_){}
   _openWhatsApp(waPhone, text);
   closeShareMenu();
-  if(waPhone) toast('WhatsApp aciliyor: ' + waPhone, 'success');
-  else toast('WhatsApp aciliyor — kisi secin','info');
+  if(waPhone) toast('WhatsApp açılıyor: ' + waPhone, 'success');
+  else toast('WhatsApp açılıyor — kişi seçin','info');
 }
 
 function shareEmail() {
@@ -14903,8 +14946,8 @@ function bulkShareWhatsApp() {
     }catch(_){}
   }
   _openWhatsApp(waPhone, text);
-  if(waPhone) toast(checks.length + ' kayit gonderiliyor: ' + waPhone, 'success');
-  else toast(checks.length + ' kayit detayli paylasiliyor — kisi secin', 'info');
+  if(waPhone) toast(checks.length + ' kayıt gönderiliyor: ' + waPhone, 'success');
+  else toast(checks.length + ' kayıt detaylı paylaşılıyor — kişi seçin', 'info');
 }
 
 // ==================== BULK PDF / PRINT (v16) ====================
@@ -15443,7 +15486,7 @@ function cleanupPhotosManual(){
   const freed = Math.max(0, before - getStorageUsage());
   updateStorageDisplay();
   toast(''+b.uploadedCount+' fotoğrafın yerel kopyası temizlendi — '+formatBytes(freed)+' boşaldı (bulut kopyaları duruyor)','success');
-  if(b.unuploadedCount > 0) toast('ℹ️ '+b.unuploadedCount+' fotoğraf henüz yüklenmediği için tutuldu','info');
+  if(b.unuploadedCount > 0) toast(b.unuploadedCount+' fotoğraf henüz yüklenmediği için tutuldu','info');
 }
 
 function displayErrorLog(){
@@ -17181,9 +17224,9 @@ function _openWhatsApp(phone, text){
 function shareIrsaliyeWhatsApp(id, type){
   try{ if(typeof event !== 'undefined' && event && event.stopPropagation) event.stopPropagation(); }catch(_){}
   const item = (typeof _findItemByIdType === 'function') ? _findItemByIdType(id, type) : null;
-  if(!item){ toast('Kayit bulunamadi','error'); return; }
+  if(!item){ toast('Kayıt bulunamadı','error'); return; }
   const url = (typeof _buildQrScanUrl === 'function') ? _buildQrScanUrl(item, type) : '';
-  if(!url){ toast('QR linki olusturulamadi','error'); return; }
+  if(!url){ toast('QR linki oluşturulamadı','error'); return; }
   _doShareWhatsApp(item, type, url);
 }
 
@@ -17226,9 +17269,9 @@ function _doShareWhatsApp(item, type, url){
 
   _openWhatsApp(waPhone, lines.join('\n'));
   if(!waPhone){
-    toast('Atolye telefonu kayitli degil — WhatsApp\'tan kisi secin', 'info');
+    toast('Atölye telefonu kayıtlı değil — WhatsApp\'tan kişi seçin', 'info');
   } else {
-    toast('WhatsApp aciliyor: ' + waPhone, 'success');
+    toast('WhatsApp açılıyor: ' + waPhone, 'success');
   }
 }
 
