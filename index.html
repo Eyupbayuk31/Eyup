@@ -1486,6 +1486,7 @@ if(typeof Chart==='undefined'){
     <div class="t2-profil">
       <span class="t2-pr-av" id="t2PrAv">E</span>
       <span class="t2-pr-tx"><b id="t2PrAd">—</b><small>Eyüp tarafından yapılmıştır</small></span>
+      <button type="button" class="t2-pr-ayar" id="t2PrAyar" onclick="showPage('settings')" title="Ayarlar" aria-label="Ayarlar"><i class="fas fa-gear"></i></button>
       <button type="button" class="t2-pr-cik" onclick="logout()" title="Çıkış yap" aria-label="Çıkış yap"><i class="fas fa-right-from-bracket"></i></button>
     </div>
     <div class="sf-row"><i class="fas fa-heart"></i><span>Eyüp tarafından yapılmıştır</span></div>
@@ -4516,6 +4517,7 @@ function showPage(page){
   const bIdx=bottomNavPages.indexOf(page);
   if(bIdx>=0){document.querySelectorAll('.bottom-nav a')[bIdx]?.classList.add('active');}
   try{ var _bn=document.getElementById('bottomNav'); if(_bn){ _bn.style.setProperty('--t2-i', Math.max(0,bIdx)); _bn.classList.toggle('t2-nav-yok', bIdx<0); } }catch(_){}
+  try{ var _ay=document.getElementById('t2PrAyar'); if(_ay) _ay.classList.toggle('active', page==='settings'); }catch(_){}
   try{ setTimeout(_t2BaslikIzle, 30); if(page==='list') _t2FiltreSay(); }catch(_){}
   try{ _t2MenuKur(); _t2Profil(); }catch(_){}
   try{ _t2Ilerle(); setTimeout(function(){ _t2SayilariSay(document.getElementById('page-'+page)); }, 140); }catch(_){}

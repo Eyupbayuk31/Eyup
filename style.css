@@ -18129,3 +18129,19 @@ html[data-tasarim="yeni"] .sidebar nav::-webkit-scrollbar{ width:0 !important; h
   html[data-tasarim="yeni"] .tb-search{ height:42px !important; border-radius:12px !important; }
   html[data-tasarim="yeni"] .sidebar .logo-text{ white-space:nowrap; font-size:23px !important; }
 }
+
+/* Daraltılmış menü: yalnız sık kullanılanlar (hiç yoksa tüm menü); ayarlar en altta */
+.t2-pr-ayar{ display:none; }
+html[data-tasarim="yeni"] .t2-pr-ayar{
+  display:inline-flex; width:32px; height:32px; min-width:32px; border-radius:9px; cursor:pointer; align-items:center; justify-content:center;
+  color:var(--text-muted); background:transparent; border:1px solid var(--t2-cizgi, var(--border)); font-size:13px; transition:color .15s, border-color .15s, background .15s;
+}
+html[data-tasarim="yeni"] .t2-pr-ayar:hover{ color:var(--primary-light, var(--primary)); border-color:color-mix(in srgb, var(--primary) 50%, var(--border)); }
+html[data-tasarim="yeni"] .t2-pr-ayar.active{ color:var(--on-primary, #000); border-color:transparent;
+  background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))); }
+@media (min-width:769px){
+  html[data-tasarim="yeni"].t2-mini .sidebar nav:has(#t2FavListe > a) > .nav-group:not(.t2-fav-grup){ display:none !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav .t2-fav-bas::before{ display:none !important; }
+  html[data-tasarim="yeni"].t2-mini .t2-profil{ gap:8px !important; }
+  html[data-tasarim="yeni"].t2-mini .t2-pr-ayar, html[data-tasarim="yeni"].t2-mini .t2-pr-cik{ width:36px; height:36px; min-width:36px; }
+}
