@@ -19308,32 +19308,34 @@ function refreshTemplatesPage(){
       btn:'İrsaliyelere git', btnIc:'fa-list', fn:"showPage('list')"});
     return;
   }
+  host.classList.add('t2-sablon-izgara');
   host.innerHTML = list.map(t=>{
     const d = t.data||{};
+    let ozet='—'; try{ ozet=getItemDetail(Object.assign({}, d, {_type:t.type}), true); }catch(_){}
+    const ad=esc(t.name||'Şablon');
     return `
-      <div class="tpl-card">
-        <div class="tpl-head">
-          <div>
-            <div class="tpl-name"><i class="fas fa-bookmark" style="color:var(--primary);margin-right:6px;"></i>${t.name}</div>
-            <div class="tpl-meta">
-              <span><i class="fas fa-tag"></i>${TYPE_LABEL_MAP[t.type]||t.type}</span>
-              ${d.model||d.urun?`<span><i class="fas fa-cube"></i>${d.model||d.urun}</span>`:''}
-              ${d.atolye||d.firma?`<span><i class="fas fa-industry"></i>${d.atolye||d.firma}</span>`:''}
-              <span><i class="fas fa-calendar"></i>${(t.createdAt||'').split('T')[0]||'-'}</span>
-              <span><i class="fas fa-rotate"></i>${t.usageCount||0} kez kullanıldı</span>
-            </div>
-          </div>
-          <span class="tpl-badge">Şablon</span>
-        </div>
-        <div class="tpl-actions">
-          <button class="btn btn-sm btn-primary" onclick="createFromTemplate(${t.tplId})"><i class="fas fa-plus"></i> Şablondan Oluştur</button>
-          <button class="btn btn-sm btn-secondary" onclick="renameTemplate(${t.tplId})"><i class="fas fa-pen"></i> Yeniden Adlandır</button>
-          <button class="btn btn-sm btn-secondary" onclick="useTemplateInForm(${t.tplId})"><i class="fas fa-pen-to-square"></i> Forma Doldur</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.tplId})"><i class="fas fa-trash"></i> Sil</button>
+      <div class="t2-sablon">
+        <div class="t2s-ust">${getTypeBadge(t.type)}<span class="t2s-kul">${t.usageCount||0} kez kullanıldı</span>
+          <button type="button" class="t2a-daha" onclick="_sablonMenu(${t.tplId})" aria-label="Diğer işlemler"><i class="fas fa-ellipsis"></i></button></div>
+        <div class="t2s-ad">${ad}</div>
+        <div class="t2s-bilgi">${d.model||d.urun?`<span><i class="fas fa-cube"></i> ${esc(d.model||d.urun)}</span>`:''}${d.atolye||d.firma?`<span><i class="fas fa-industry"></i> ${esc(d.atolye||d.firma)}</span>`:''}</div>
+        <div class="t2s-onizleme">${esc(ozet)}</div>
+        <div class="t2s-eylem">
+          <button class="btn btn-sm btn-primary" onclick="useTemplateInForm(${t.tplId})"><i class="fas fa-pen-to-square"></i> Forma doldur</button>
+          <button class="btn btn-sm btn-secondary" onclick="createFromTemplate(${t.tplId})"><i class="fas fa-plus"></i> Hemen oluştur</button>
         </div>
       </div>
     `;
   }).join('');
+}
+function _sablonMenu(tplId){
+  const t=(getData('waybillTemplates')||[]).find(x=>x.tplId===tplId); if(!t) return;
+  _t2SheetAc(t.name, [
+    ['fa-pen-to-square','Forma doldur', function(){ useTemplateInForm(tplId); }],
+    ['fa-plus','Şablondan hemen oluştur', function(){ createFromTemplate(tplId); }],
+    ['fa-pen','Yeniden adlandır', function(){ renameTemplate(tplId); }],
+    ['fa-trash-can','Şablonu sil', function(){ deleteTemplate(tplId); }, true]
+  ]);
 }
 
 function deleteTemplate(tplId){

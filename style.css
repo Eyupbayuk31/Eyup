@@ -17989,3 +17989,16 @@ html #page-settings .s-panel:not(.t2-gel-acik) .t2-gelismis{ display:none !impor
   html[data-tasarim="yeni"] #page-settings > .s-panel{ grid-column:2; grid-row:2; }
   html[data-tasarim="yeni"] #page-settings .s-panel.active{ columns:2 320px !important; }
 }
+
+/* 33) Şablonlar: önizlemeli kartlar */
+html .t2-sablon-izgara{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px; }
+.t2-sablon{ display:flex; flex-direction:column; gap:8px; padding:14px; border-radius:16px; border:1px solid var(--border); background:color-mix(in srgb, var(--bg-card) 85%, transparent); }
+.t2s-ust{ display:flex; align-items:center; gap:8px; }
+.t2s-kul{ font-size:11.5px; color:var(--text-muted); margin-left:auto; }
+.t2s-ad{ font-size:16px; font-weight:800; }
+.t2s-bilgi{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:var(--text-muted); }
+.t2s-bilgi i{ font-size:11px; margin-right:3px; }
+.t2s-onizleme{ font-family:var(--t2-mono, monospace); font-size:12px; padding:9px 10px; border-radius:10px; color:var(--text-main);
+  background:color-mix(in srgb, var(--bg-main) 45%, transparent); border:1px dashed color-mix(in srgb, var(--text-muted) 25%, transparent); line-height:1.5; }
+.t2s-eylem{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:2px; }
+.t2s-eylem .btn{ justify-content:center; }
