@@ -18036,3 +18036,96 @@ html .modal-header .modal-close{ position:static !important; width:38px; height:
 html .modal-header .modal-close:hover{ color:var(--text-main); border-color:color-mix(in srgb, var(--primary) 45%, var(--border)); }
 html #atolyePicker{ z-index:100005 !important; }
 body:has(#atolyePicker[style*="flex"]) .bottom-nav{ display:none !important; }
+
+/* ══ Kaydırma çubukları: Windows'taki oklu standart çubuk yerine ince, oksuz çubuk ══
+   html{scrollbar-color} tüm öğelere miras geçince Chrome özel (::-webkit-scrollbar)
+   stilini bırakıp oklu standart çubuğu çiziyordu. Webkit destekleyen tarayıcıda
+   standart özellikleri sıfırla; Firefox (webkit yok) kendi ince çubuğunu kullanmaya devam eder. */
+@supports selector(::-webkit-scrollbar){
+  html, html *{ scrollbar-color:auto !important; }
+  html :is(.ls-strip, .cal-detail-events, .sidebar nav, .rep-tablo-scroll, .irs-bar-rail){ scrollbar-width:auto !important; }
+}
+html ::-webkit-scrollbar{ width:10px; height:10px; }
+html ::-webkit-scrollbar-button{ display:none !important; width:0 !important; height:0 !important; }
+html ::-webkit-scrollbar-track, html ::-webkit-scrollbar-corner{ background:transparent !important; }
+html ::-webkit-scrollbar-thumb{
+  background:color-mix(in srgb, var(--primary) 38%, transparent) !important; border-radius:10px !important;
+  border:3px solid transparent !important; background-clip:padding-box !important; min-height:40px;
+}
+html ::-webkit-scrollbar-thumb:hover{ background:color-mix(in srgb, var(--primary) 65%, transparent) !important; background-clip:padding-box !important; }
+
+/* Yan menü: kaydırma çubuğu görünmez; daha fazlası olduğunda alt/üst kenar yumuşak söner */
+html[data-tasarim="yeni"] .sidebar nav{ scrollbar-width:none !important; }
+html[data-tasarim="yeni"] .sidebar nav::-webkit-scrollbar{ width:0 !important; height:0 !important; display:none !important; }
+@media (min-width:769px){
+  html[data-tasarim="yeni"] .sidebar nav{
+    -webkit-mask-image:linear-gradient(180deg, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+            mask-image:linear-gradient(180deg, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+  }
+  /* Daraltılmış menü: seçili öğe diğerleriyle aynı boyda — yalnız ikon kutusu dolar */
+  html[data-tasarim="yeni"].t2-mini .sidebar nav{ padding:4px 0 10px !important; overflow-y:auto !important; overflow-x:hidden !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a{ width:44px !important; height:44px !important; min-height:44px !important; margin:0 auto 4px !important; padding:0 !important;
+    border-radius:12px !important; justify-content:center !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a.active{ background:transparent !important; box-shadow:none !important; border-color:transparent !important; margin-right:auto !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a > i:first-child{ width:36px !important; height:36px !important; min-width:36px !important; font-size:14px !important; border-radius:11px !important; margin:0 !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a.active > i:first-child{
+    background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))) !important;
+    color:var(--on-primary, #000) !important; border-color:transparent !important; transform:none !important;
+    box-shadow:0 6px 16px -6px color-mix(in srgb, var(--primary) 75%, transparent) !important;
+  }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a:not(.active):hover{ transform:none !important; background:color-mix(in srgb, var(--primary) 9%, transparent) !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a.active::before{ left:-14px !important; top:10px !important; bottom:10px !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a .t2-rozet:not([hidden]){ top:0 !important; right:-2px !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav a .t2-tutamak{ display:none !important; }
+  html[data-tasarim="yeni"].t2-mini .sidebar nav .nav-section::before{ margin:8px auto !important; }
+
+  /* İrsaliye türü şeridi: bilgisayarda kaydırma yok, sığmayan alt satıra iner */
+  html .irs-bar-rail{ flex-wrap:wrap !important; overflow:visible !important; -webkit-mask-image:none !important; mask-image:none !important; padding-right:2px !important; }
+  html .irs-bar-rail .irs-t{ flex:1 1 150px; min-width:0; }
+}
+@media (min-width:769px){
+  html .irs-bar-rail{ display:grid !important; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px !important; }
+  html .irs-bar-rail .irs-t{ flex:none; width:auto; }
+  html .irs-bar-rail .irs-t-tx{ min-width:0; } html .irs-bar-rail .irs-t-tx b, html .irs-bar-rail .irs-t-tx em{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+}
+@media (min-width:1500px){ html .irs-bar-rail{ grid-template-columns:repeat(8, minmax(0,1fr)); } }
+/* İrsaliyeler tablosu: yana kaydırmadan sığsın */
+@media (min-width:769px){
+  html #page-list .table-wrap table th, html #page-list .table-wrap table td{ padding-left:10px !important; padding-right:10px !important; }
+  html #page-list .t2-detay-td{ max-width:150px; }
+  html #page-list td.t2-termin-td .t2-termin{ flex-wrap:wrap; white-space:normal; row-gap:0; }
+  html #page-list td.t2-termin-td .t2-termin small{ flex-basis:100%; font-size:11px; padding-left:15px; }
+  html #page-list td.t2-termin-td .t2-ayr{ display:none; }
+}
+.t2-termin small{ font-size:inherit; font-weight:inherit; }
+@media (min-width:769px){
+  html #page-list .table-wrap table{ width:100% !important; }
+  html #page-list td.t2-termin-td{ white-space:nowrap; min-width:120px; }
+  html #page-list td.t2-termin-td .t2-termin small{ white-space:nowrap; }
+}
+/* Satır işlemleri: gizliyken yer kaplamasın; satırın üstüne gelince göz düğmesinin solunda açılır */
+@media (min-width:769px){
+  html .table-desktop td:last-child{ position:relative; }
+  html .table-desktop .table-actions{ position:relative; justify-content:flex-end; }
+  html .table-desktop .table-actions-more{
+    position:absolute !important; right:calc(100% + 6px); top:50%; z-index:5;
+    transform:translate(6px,-50%) !important; padding:4px; border-radius:12px;
+    background:var(--bg-card-solid, var(--bg-card)); border:1px solid var(--border); box-shadow:0 10px 24px -10px rgba(0,0,0,.7);
+  }
+  html .table-desktop tr:hover .table-actions-more, html .table-desktop .table-actions:focus-within .table-actions-more{ transform:translate(0,-50%) !important; opacity:1 !important; pointer-events:auto !important; }
+  html #page-list .table-wrap table td:last-child, html #page-list .table-wrap table th:last-child{ width:56px; text-align:right; }
+}
+@media (min-width:769px){ html #page-list .table-wrap table tr.t2-grup-tr td{ text-align:left !important; width:auto !important; } }
+/* Dar bilgisayar ekranı: üst çubuk taşmasın — arama yalnız ikon, bulut rozeti nokta */
+@media (min-width:769px) and (max-width:1180px){
+  html[data-tasarim="yeni"] .tb-search .tb-search-ph, html[data-tasarim="yeni"] .tb-search .tb-search-kbd{ display:none !important; }
+  html[data-tasarim="yeni"] .tb-search{ width:42px !important; min-width:42px !important; padding:0 !important; justify-content:center !important; flex:0 0 auto !important; }
+  html[data-tasarim="yeni"] .topbar-right{ flex-shrink:0; }
+}
+@media (min-width:769px) and (max-width:1000px){
+  html[data-tasarim="yeni"] .topbar-right > #cloudSyncBadge{ font-size:0 !important; gap:0 !important; padding:0 !important; width:38px; height:38px; justify-content:center; }
+}
+@media (min-width:769px) and (max-width:1180px){
+  html[data-tasarim="yeni"] .tb-search{ height:42px !important; border-radius:12px !important; }
+  html[data-tasarim="yeni"] .sidebar .logo-text{ white-space:nowrap; font-size:23px !important; }
+}
