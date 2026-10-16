@@ -17368,3 +17368,8 @@ html[data-tasarim="yeni"] .rep-range-btn{ font-family:var(--t2-mono) !important;
   html[data-tasarim="yeni"] .aks-header-right > .aks-hazir-grup{ order:3; flex:1 1 100%; }
   html[data-tasarim="yeni"] :is(.ft-kpis, .rep-kpi-grid, .db-kpi-row, #actionWidgets) > *{ max-width:170px !important; }
 }
+
+/* ══ 5 · KOMUT PALETİ ══ */
+.gs-ic.gs-ic-cmd{ background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))) !important; color:var(--on-primary, #fff) !important; }
+.gs-calis{ color:var(--primary) !important; }
+.gs-ornek span{ cursor:pointer; }
