@@ -1585,30 +1585,17 @@ if(typeof Chart==='undefined'){
     </div>
   </div>
 
-  <!-- Aksiyon Widget'lari: tiklanabilir, filtrelenmis listeye gider -->
-  <div id="actionWidgets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px;">
-    <div onclick="goToOverdueList()" style="cursor:pointer;background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-      <div style="display:flex;align-items:center;gap:8px;color:#ef4444;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-circle-exclamation"></i> Termini Geçen</div>
-      <div id="awOverdue" style="font-size:28px;font-weight:800;color:#ef4444;margin-top:4px;line-height:1;">0</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Acil takip edin</div>
-    </div>
-    <div onclick="goToTomorrowList()" style="cursor:pointer;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(245,158,11,0.04));border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-      <div style="display:flex;align-items:center;gap:8px;color:#f59e0b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-clock"></i> Yarın Bitiyor</div>
-      <div id="awTomorrow" style="font-size:28px;font-weight:800;color:#f59e0b;margin-top:4px;line-height:1;">0</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Bugün hazırlayın</div>
-    </div>
-    <div onclick="goToWeekDoneList()" style="cursor:pointer;background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.04));border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-      <div style="display:flex;align-items:center;gap:8px;color:#10b981;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-circle-check"></i> Bu Hafta Teslim</div>
-      <div id="awWeekDone" style="font-size:28px;font-weight:800;color:#10b981;margin-top:4px;line-height:1;">0</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Tamamlanan iş</div>
-    </div>
-    <div onclick="goToCriticalStock()" style="cursor:pointer;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(59,130,246,0.04));border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:14px;transition:transform .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-      <div style="display:flex;align-items:center;gap:8px;color:#3b82f6;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;"><i class="fas fa-boxes-stacked"></i> Kritik Stok</div>
-      <div id="awStock" style="font-size:28px;font-weight:800;color:#3b82f6;margin-top:4px;line-height:1;">0</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">≤5 adet kalan</div>
-    </div>
+  <!-- Tek sayı şeridi: her kutu ilgili filtrelenmiş listeye gider -->
+  <div id="actionWidgets" class="t2-serit-kpi">
+    <button type="button" class="t2-kpi acil" onclick="goToOverdueList()"><span class="t2-kpi-l"><i class="fas fa-circle-exclamation"></i> Termini geçen</span><b id="awOverdue">0</b><small>Acil takip</small></button>
+    <button type="button" class="t2-kpi yakin" onclick="goToTomorrowList()"><span class="t2-kpi-l"><i class="fas fa-clock"></i> Yarın bitiyor</span><b id="awTomorrow">0</b><small>Bugün hazırla</small></button>
+    <button type="button" class="t2-kpi" onclick="goToBekleyenList()"><span class="t2-kpi-l"><i class="fas fa-hourglass-half"></i> Bekleyen</span><b id="awBekleyen">0</b><small>Teslim edilmedi</small></button>
+    <button type="button" class="t2-kpi tamam" onclick="goToWeekDoneList()"><span class="t2-kpi-l"><i class="fas fa-circle-check"></i> Bu hafta teslim</span><b id="awWeekDone">0</b><small>Tamamlanan iş</small></button>
+    <button type="button" class="t2-kpi" onclick="goToCriticalStock()"><span class="t2-kpi-l"><i class="fas fa-boxes-stacked"></i> Kritik stok</span><b id="awStock">0</b><small>Sınırın altında</small></button>
   </div>
 
+  <!-- Bugün yapılacaklar: termini gelen irsaliyeler, eksik malzemeli modeller, düşük stok -->
+  <div class="card t2-yap" id="t2Yap"></div>
 
   <!-- V8: Goal Ring + Gradient defs -->
   <svg width="0" height="0" style="position:absolute"><defs><linearGradient id="v8GoalGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="var(--primary-light)"/><stop offset="100%" stop-color="var(--primary)"/></linearGradient></defs></svg>
@@ -1694,13 +1681,12 @@ if(typeof Chart==='undefined'){
     </div>
   </div>
 
+  <div class="t2-grafik-sira">
   <div class="card" style="margin-bottom:14px;">
     <div class="card-title"><i class="fas fa-chart-bar"></i> Son 7 Günlük Aktivite <span id="db7dayTotal" style="margin-left:auto;font-size:12px;color:var(--text-muted);font-weight:500"></span></div>
     <canvas id="db7dayChart" height="150"></canvas>
   </div>
-
-  <div class="db-bot-grid">
-    <div class="card">
+    <div class="card t2-durum-kart">
       <div class="card-title"><i class="fas fa-chart-pie"></i> Durum Dağılımı</div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <div style="position:relative;width:170px;height:170px;flex-shrink:0;">
@@ -1709,6 +1695,9 @@ if(typeof Chart==='undefined'){
         <div id="dbPieLegend" style="flex:1;min-width:120px"></div>
       </div>
     </div>
+  </div>
+  <!-- "Bugün yapılacaklar" ve "Atölye Karşılaştırma" ile aynı bilgiyi veren kartlar (veri için DOM'da kalır) -->
+  <div class="db-bot-grid t2-gizli" aria-hidden="true">
     <div class="card">
       <div class="card-title"><i class="fas fa-bell" style="color:#f59e0b"></i> Termin Uyarıları</div>
       <div id="dbTerminList"></div>
@@ -1753,7 +1742,7 @@ if(typeof Chart==='undefined'){
           <div class="card-title"><i class="fas fa-info-circle"></i> Sevk Bilgileri</div>
           <div id="nSerbestMode" class="f-stock-mode"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" class="form-grid-2">
-            <div class="form-group"><label id="iModelLbl">Model Kodu *</label><input class="form-input" id="iModel" placeholder="Örn: MK-2024"></div>
+            <div class="form-group"><label id="iModelLbl">Model Kodu *</label><input class="form-input" id="iModel" placeholder="Örn: MK-2024" list="t2ModelOneri" autocomplete="off"><datalist id="t2ModelOneri"></datalist></div>
             <div class="form-group"><label>Tarih *</label><input class="form-input" id="iTarih" type="date"></div>
             <div class="form-group" style="grid-column:span 2;" class="form-grid-span2"><label id="iAtolyeLbl">Atölye *</label>
               <select class="form-input" id="iAtolye" style="display:none;"><option value="">Atölye Seçin</option></select>
@@ -1787,6 +1776,7 @@ if(typeof Chart==='undefined'){
             <div class="size-row"><label>50×70 Poşet</label><input class="form-input" type="number" id="s50" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
             <div class="size-row"><label>60×90 Poşet</label><input class="form-input" type="number" id="s60" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
             <div class="size-row"><label>100×100 Poşet</label><input class="form-input" type="number" id="s100" placeholder="0" min="0" oninput="_malOraniGoster()"></div>
+            <div class="t2-poset-ozet" id="t2PosetOzet" aria-live="polite"></div>
           </div>
           <div class="card">
             <div class="card-title"><i class="fas fa-tape"></i> Bant & Kılçık</div>
@@ -2316,6 +2306,7 @@ if(typeof Chart==='undefined'){
           <input class="form-input" id="ftSearch" placeholder="Model, renk veya tedarikçi ara..." autocomplete="off" oninput="renderFermuarTakip()">
         </div>
         <span class="ft-count-chip" id="ftCount">0 model</span>
+        <button type="button" class="t2-sira-btn" onclick="takipSiraDegis()"><i class="fas fa-arrow-down-wide-short"></i> Eksiğe göre</button>
       </div>
 
       <!-- Model kartı ızgarası -->
@@ -2499,6 +2490,7 @@ if(typeof Chart==='undefined'){
           <input class="form-input" id="ktSearch" placeholder="Model, renk veya tedarikçi ara..." autocomplete="off" oninput="renderKordonTakip()">
         </div>
         <span class="ft-count-chip" id="ktCount">0 model</span>
+        <button type="button" class="t2-sira-btn" onclick="takipSiraDegis()"><i class="fas fa-arrow-down-wide-short"></i> Eksiğe göre</button>
       </div>
 
       <div class="ft-grid" id="ktGrid"></div>
@@ -6318,7 +6310,7 @@ function renderFermuarTakip(){
 
   const q=(document.getElementById('ftSearch')?.value||'').trim().toLocaleLowerCase('tr');
   const list = q ? tabModels.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr').includes(q)) : tabModels.slice();
-  list.sort((a,b)=>_ftModelBekleyen(b)-_ftModelBekleyen(a) || (b.createdAt||'').localeCompare(a.createdAt||''));
+  _takipSirala(list);
 
   // KPI (görüntülenen sekmedeki modellerin toplamı)
   let tSip=0,tGel=0,tStok=0,tBek=0;
@@ -6348,63 +6340,118 @@ function renderFermuarTakip(){
   if(!tabModels.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-check-double"></i><p>'+(_ftViewTab==='done'?'Henüz tamamlanan model yok.':'Aktif model yok — hepsi tamamlanmış.')+'</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
 
-  grid.innerHTML=list.map(m=>{
-    const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
-    const pct = sip>0 ? Math.min(100, Math.round(gel/sip*100)) : (gel>0?100:0);
-    const sizeCount=(m.sizes||[]).length;
-    let durum, dCls;
-    const done=_ftIsCompleted(m);
-    if(!sizeCount){ durum='Beden girilmedi'; dCls='wait'; }
-    else if(done){ durum='Tamamlandı'; dCls='ok'; }
-    else if(sip>0 && gel>=sip && stok>0){ durum='Stokta · hazır'; dCls='ready'; }
-    else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
-    else { durum='Bekliyor'; dCls='wait'; }
-    const terminCls=_ftTerminCls(m.termin);
-    return `<div class="ft-card ft-card-${dCls}" onclick="ftOpenDetailModal(${m.id})">
-      <div class="ft-card-head">
-        <div class="ft-card-id">
-          <span class="ft-model">${esc(m.modelKodu)||'—'}</span>
-          <span class="ft-sub">${m.tedarikci?('<i class="fas fa-truck-field"></i> '+esc(m.tedarikci)):'<i class="fas fa-truck-field" style="opacity:.35"></i> Tedarikçi yok'}</span>
-        </div>
-        <span class="ft-badge ft-badge-${dCls}">${durum}</span>
-      </div>
-
-      <div class="ft-card-meta">
-        ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
-        <div class="ft-card-termin ${terminCls}">
-          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(_t2Tarih(m.termin)):'—'}${terminCls?' · '+_t2Termin(m.termin).t:''}
-        </div>
-      </div>
-
-      <div class="ft-stock ${stok<=0&&sizeCount?'ft-stock-zero':(sip>0&&stok<sip*0.15?'ft-stock-low':'')}">
-        <div class="ft-stock-num">${stok.toLocaleString('tr')}</div>
-        <div class="ft-stock-lbl">Eldeki Stok (adet)</div>
-      </div>
-
-      <div class="ft-prog ft-prog-${dCls}"><div class="ft-prog-fill" style="width:${pct}%"></div></div>
-      <div class="ft-mini">
-        <div><span>Sipariş</span><b>${sip.toLocaleString('tr')}</b></div>
-        <div><span>Gelen</span><b class="pos">${gel.toLocaleString('tr')}</b></div>
-        <div><span>Bekleyen</span><b>${bek>0?'<span class="bad">'+bek.toLocaleString('tr')+'</span>':bek.toLocaleString('tr')}</b></div>
-        <div><span>Beden</span><b>${sizeCount}</b></div>
-      </div>
-
-      <div class="ft-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-sm btn-primary ft-act-ana" onclick="ftOpenDetailModal(${m.id})"><i class="fas fa-list"></i> Detay / CM Gir</button>
-        <button class="btn btn-sm ft-act-ana ft-act-kes${stok>0?'':' stoksuz'}" onclick="ftIrsaliyeKes(${m.id})"
-                title="${stok>0?'Bu modeli irsaliye ekranına taşı — bedenler eldeki stokla dolar':'Eldeki stok yok — irsaliye ekranında elle girersiniz'}">
-          <i class="fas fa-file-export"></i> İrsaliye Kes</button>
-        ${done
-          ? `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ftToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
-          : `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ftToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
-        <button class="btn btn-sm btn-secondary ft-act-pdf" onclick="ftTekPdf(${m.id})" title="Bu modelin teslim durumu belgesi (PDF) — atölyeye gönder"><i class="fas fa-file-pdf"></i> PDF</button>
-        <button class="btn btn-sm btn-secondary ft-act-ikon" onclick="ftEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-sm btn-danger ft-act-ikon" onclick="ftDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
-      </div>
-    </div>`;
-  }).join('');
+  grid.innerHTML=list.map(m=>_takipKart(m,false)).join('');
 }
 
+
+// Detay penceresi (telefon): beden satırına dokununca işlemler alttan açılan menüde
+document.addEventListener('click', function(e){
+  if(window.innerWidth>768 || !e.target.closest) return;
+  var row=e.target.closest('.ft-detail-overlay .ft-row'); if(!row) return;
+  if(e.target.closest('.ft-row-acts, button, input, select, textarea, a')) return;
+  var btns=[].slice.call(row.querySelectorAll('.ft-row-acts button')); if(!btns.length) return;
+  var ad=[(row.querySelector('.ft-row-beden')||{}).textContent, (row.querySelector('.ft-row-cm')||{}).textContent, (row.querySelector('.ft-row-renk')||{}).textContent]
+    .map(function(x){ return (x||'').trim(); }).filter(function(x){ return x && x!=='—'; }).join(' · ');
+  _t2SheetAc(ad||'Satır', btns.map(function(b){
+    var ic=((b.querySelector('i')||{}).className||'').replace(/\bfas\b/,'').trim();
+    var ad=b.getAttribute('title')||'İşlem'; ad=ad.replace(/\s*\(.*\)$/,'');
+    return [ic, ad, function(){ b.click(); }, b.classList.contains('btn-danger')];
+  }));
+});
+
+// ══ FERMUAR / KORDON TAKİP KARTI (ortak) ══
+// Ana sayı eksik adet; yüzdeli ilerleme, mini beden şeridi, 2 düğme + "..." menüsü.
+function _takipSirala(list){
+  var sira=getConfig('takipSira','eksik');
+  if(sira==='termin') list.sort(function(a,b){ var ta=a.termin||'9999', tb=b.termin||'9999'; return ta.localeCompare(tb) || _ftModelBekleyen(b)-_ftModelBekleyen(a); });
+  else list.sort(function(a,b){ return _ftModelBekleyen(b)-_ftModelBekleyen(a) || (b.createdAt||'').localeCompare(a.createdAt||''); });
+  return list;
+}
+function takipSiraDegis(){
+  setConfig('takipSira', getConfig('takipSira','eksik')==='termin'?'eksik':'termin');
+  _takipSiraButon();
+  try{ if(typeof renderFermuarTakip==='function') renderFermuarTakip(); }catch(_){}
+  try{ if(typeof renderKordonTakip==='function') renderKordonTakip(); }catch(_){}
+}
+function _takipSiraButon(){
+  var t=getConfig('takipSira','eksik')==='termin';
+  document.querySelectorAll('.t2-sira-btn').forEach(function(b){
+    b.innerHTML='<i class="fas fa-arrow-down-wide-short"></i> '+(t?'Termine göre':'Eksiğe göre');
+    b.title=t?'Şu an en yakın termin üstte — eksiğe göre sıralamak için dokun':'Şu an en çok eksik üstte — termine göre sıralamak için dokun';
+  });
+}
+function _takipKart(m, kordon){
+  var P=kordon?'kt':'ft', store=kordon?'kordonTakip':'fermuarTakip';
+  var metreMi=kordon && typeof _ktMetreMi==='function' && _ktMetreMi(m);
+  var say=function(v){ return kordon ? _ktSayi(v, metreMi) : (+v||0).toLocaleString('tr'); };
+  var birim=metreMi?'metre':'adet';
+  var sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
+  var pct = sip>0 ? Math.min(100, Math.round(gel/sip*100)) : (gel>0?100:0);
+  var sizes=_ftSizesSorted(m), sizeCount=sizes.length, done=_ftIsCompleted(m);
+  var te=_t2Termin(m.termin, done||bek<=0);
+  var durum, dCls;
+  if(!sizeCount){ durum=kordon?(metreMi?'Metre girilmedi':'Ölçü girilmedi'):'Beden girilmedi'; dCls='wait'; }
+  else if(done){ durum='Tamamlandı'; dCls='ok'; }
+  else if(bek>0 && te.cls==='gecti'){ durum='Gecikti'; dCls='late'; }
+  else if(sip>0 && gel>=sip){ durum='Tam geldi'; dCls='ready'; }
+  else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
+  else { durum='Bekliyor'; dCls='wait'; }
+  var e=function(v){ return esc(v==null?'':String(v)); };
+  var bedenler=sizes.slice(0,12).map(function(z){
+    var ad=(metreMi?(z.renk||z.beden):(z.beden||(z.cm!=null&&z.cm!==''?z.cm+' cm':z.renk)))||'—';
+    var zs=+z.siparisAdet||0, zg=_ftGelen(z), fark=zg-zs, cls, deger;
+    if(!zs){ cls='bos'; deger='—'; }
+    else if(fark<0){ cls='eks'; deger='−'+say(-fark); }
+    else if(fark>0){ cls='faz'; deger='+'+say(fark); }
+    else { cls='tam'; deger='<i class="fas fa-check"></i>'; }
+    return '<span class="t2tk-b '+cls+'"><em>'+e(ad)+'</em><b>'+deger+'</b></span>';
+  }).join('')+(sizes.length>12?'<span class="t2tk-b bos"><em>+'+(sizes.length-12)+'</em></span>':'');
+  var alt=[];
+  if(m.renk) alt.push('<span class="ft-card-renk"><span class="ft-renk-dot" style="background:'+_ftRenkHex(m.renk)+'"></span>'+e(m.renk)+'</span>');
+  alt.push(m.tedarikci?'<span><i class="fas fa-truck-field"></i> '+e(m.tedarikci)+'</span>':'<span class="t2-sonuk"><i class="fas fa-truck-field"></i> Tedarikçi yok</span>');
+  if(kordon) alt.push('<span class="kt-birim-rozet '+(metreMi?'metre':'adet')+'"><i class="fas '+(metreMi?'fa-arrows-left-right':'fa-ruler')+'"></i> '+(metreMi?'Metre':'CM & beden')+'</span>');
+  return '<div class="ft-card t2-tk ft-card-'+dCls+'" onclick="'+P+'OpenDetailModal('+m.id+')">'+
+    '<div class="t2tk-ust"><span class="ft-model">'+(e(m.modelKodu)||'—')+'</span><span class="ft-badge ft-badge-'+dCls+'">'+durum+'</span></div>'+
+    '<div class="t2tk-bilgi">'+alt.join('')+'</div>'+
+    '<div class="t2tk-orta">'+
+      '<div class="t2tk-ana'+(bek>0?' eks':'')+'"><b>'+(bek>0?say(bek):(sizeCount?'<i class="fas fa-check"></i>':'—'))+'</b><span>'+(bek>0?birim+' eksik':(sizeCount?'eksik yok':'ölçü yok'))+'</span></div>'+
+      '<div class="t2tk-termin"><span class="t2-termin '+te.cls+'"><i class="fas fa-flag-checkered"></i> '+(m.termin?e(_t2Tarih(m.termin)):'Termin yok')+'</span>'+(te.t?'<small class="t2-termin '+te.cls+'">'+te.t+'</small>':'')+'</div>'+
+    '</div>'+
+    '<div class="t2tk-prog"><div class="ft-prog ft-prog-'+dCls+'"><div class="ft-prog-fill" style="width:'+pct+'%"></div></div><span>%'+pct+'</span></div>'+
+    '<div class="t2tk-sayi"><span>Sipariş <b>'+say(sip)+'</b></span><span>Gelen <b>'+say(gel)+'</b></span><span>Elde <b>'+say(stok)+'</b></span></div>'+
+    (bedenler?'<div class="t2tk-bedenler">'+bedenler+'</div>':'')+
+    '<div class="t2tk-eylem" onclick="event.stopPropagation()">'+
+      '<button class="btn btn-sm btn-primary" onclick="takipGelenAc(\''+store+'\','+m.id+')"><i class="fas fa-truck-ramp-box"></i> Gelen gir</button>'+
+      '<button class="btn btn-sm btn-secondary" onclick="'+P+'IrsaliyeKes('+m.id+')" title="'+(stok>0?'Bu modeli irsaliye ekranına taşı':'Eldeki stok yok — irsaliye ekranında elle girersiniz')+'"><i class="fas fa-file-export"></i> İrsaliye kes</button>'+
+      '<button class="btn btn-sm btn-secondary t2tk-daha" onclick="_takipMenu('+(kordon?1:0)+','+m.id+')" aria-label="Diğer işlemler" title="Diğer işlemler"><i class="fas fa-ellipsis"></i></button>'+
+    '</div>'+
+  '</div>';
+}
+// Alttan açılan seçenek menüsü (telefon) / ortada kart (bilgisayar)
+function _t2SheetAc(baslik, secenekler){
+  if(typeof _t2DigerKapat==='function') _t2DigerKapat();
+  window._t2YutTik=false;
+  var ort=document.createElement('div'); ort.className='t2-sheet-ort'; ort.onclick=_t2DigerKapat;
+  var sh=document.createElement('div'); sh.className='t2-sheet'; sh.setAttribute('role','menu');
+  sh.innerHTML='<div class="t2-sheet-tut" aria-hidden="true"></div>'+(baslik?'<div class="t2-sheet-bas">'+esc(baslik)+'</div>':'');
+  secenekler.forEach(function(o){ if(!o) return; var c=document.createElement('button'); c.type='button'; c.className='t2-sheet-o'+(o[3]?' tehlike':'');
+    c.innerHTML='<i class="fas '+o[0]+'"></i><span>'+o[1]+'</span>'; c.onclick=function(){ _t2DigerKapat(); setTimeout(o[2],60); }; sh.appendChild(c); });
+  document.body.appendChild(ort); document.body.appendChild(sh);
+  requestAnimationFrame(function(){ ort.classList.add('on'); sh.classList.add('on'); });
+  if(typeof _t2SheetSurukle==='function') _t2SheetSurukle(sh, _t2DigerKapat);
+}
+function _takipMenu(kordon, id){
+  var P=kordon?'kt':'ft', liste=kordon?_ktAll():_ftAll(), m=liste.find(function(x){ return x.id===id; }); if(!m) return;
+  var done=_ftIsCompleted(m);
+  _t2SheetAc(m.modelKodu, [
+    ['fa-list', kordon&&_ktMetreMi(m)?'Detay / metre gir':'Detay / CM gir', function(){ window[P+'OpenDetailModal'](id); }],
+    ['fa-file-pdf', 'Teslim durumu belgesi (PDF)', function(){ window[P+'TekPdf'](id); }],
+    done ? ['fa-rotate-left', 'Aktif listeye geri al', function(){ window[P+'ToggleDone'](id,false); }]
+         : ['fa-check-double', 'Tamamlandı olarak işaretle', function(){ window[P+'ToggleDone'](id,true); }],
+    ['fa-pen', 'Tedarikçi / termin düzenle', function(){ window[P+'EditModelMeta'](id); }],
+    ['fa-trash-can', 'Modeli sil', function(){ window[P+'DeleteModel'](id); }, true]
+  ]);
+}
 // ── Yeni Model (üst seviye: kod + tedarikçi + termin) ──
 let _ftEditModelId=null;
 function ftOpenOrderModal(){
@@ -7276,7 +7323,7 @@ function renderKordonTakip(){
 
   const q=(document.getElementById('ktSearch')?.value||'').trim().toLocaleLowerCase('tr');
   const list = q ? tabModels.filter(m=>((m.modelKodu||'')+' '+(m.tedarikci||'')+' '+(m.renk||'')).toLocaleLowerCase('tr').includes(q)) : tabModels.slice();
-  list.sort((a,b)=>_ftModelBekleyen(b)-_ftModelBekleyen(a) || (b.createdAt||'').localeCompare(a.createdAt||''));
+  _takipSirala(list);
 
   // Adet ve metre ayrı toplanır — iki birim toplanamaz
   const tGel=_ktToplamlar(tabModels,_ftModelGelen);
@@ -7306,63 +7353,7 @@ function renderKordonTakip(){
   if(!tabModels.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-check-double"></i><p>'+(_ktViewTab==='done'?'Henüz tamamlanan model yok.':'Aktif model yok — hepsi tamamlanmış.')+'</p></div>'; return; }
   if(!list.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen model yok.</p></div>'; return; }
 
-  grid.innerHTML=list.map(m=>{
-    const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
-    const pct = sip>0 ? Math.min(100, Math.round(gel/sip*100)) : (gel>0?100:0);
-    const sizeCount=(m.sizes||[]).length;
-    const metreMi=_ktMetreMi(m);
-    let durum, dCls;
-    const done=_ftIsCompleted(m);
-    if(!sizeCount){ durum=metreMi?'Metre girilmedi':'Ölçü girilmedi'; dCls='wait'; }
-    else if(done){ durum='Tamamlandı'; dCls='ok'; }
-    else if(sip>0 && gel>=sip && stok>0){ durum='Stokta · hazır'; dCls='ready'; }
-    else if(gel>0){ durum='Kısmi geldi'; dCls='partial'; }
-    else { durum='Bekliyor'; dCls='wait'; }
-    const terminCls=_ftTerminCls(m.termin);
-    return `<div class="ft-card ft-card-${dCls}" onclick="ktOpenDetailModal(${m.id})">
-      <div class="ft-card-head">
-        <div class="ft-card-id">
-          <span class="ft-model">${esc(m.modelKodu)||'—'}</span>
-          <span class="ft-sub">${m.tedarikci?('<i class="fas fa-truck-field"></i> '+esc(m.tedarikci)):'<i class="fas fa-truck-field" style="opacity:.35"></i> Tedarikçi yok'}</span>
-        </div>
-        <span class="ft-badge ft-badge-${dCls}">${durum}</span>
-      </div>
-
-      <div class="ft-card-meta">
-        <div class="kt-birim-rozet ${metreMi?'metre':'adet'}"><i class="fas ${metreMi?'fa-arrows-left-right':'fa-ruler'}"></i> ${metreMi?'Ham kordon · metre':'CM & Beden'}</div>
-        ${m.renk?`<div class="ft-card-renk"><span class="ft-renk-dot" style="background:${_ftRenkHex(m.renk)}"></span>${esc(m.renk)}</div>`:''}
-        <div class="ft-card-termin ${terminCls}">
-          <i class="fas fa-calendar-day"></i> Termin: ${m.termin?esc(_t2Tarih(m.termin)):'—'}${terminCls?' · '+_t2Termin(m.termin).t:''}
-        </div>
-      </div>
-
-      <div class="ft-stock ${stok<=0&&sizeCount?'ft-stock-zero':(sip>0&&stok<sip*0.15?'ft-stock-low':'')}">
-        <div class="ft-stock-num">${_ktSayi(stok, metreMi)}</div>
-        <div class="ft-stock-lbl">Eldeki Stok (${metreMi?'metre':'adet'})</div>
-      </div>
-
-      <div class="ft-prog ft-prog-${dCls}"><div class="ft-prog-fill" style="width:${pct}%"></div></div>
-      <div class="ft-mini">
-        <div><span>Sipariş</span><b>${_ktSayi(sip, metreMi)}</b></div>
-        <div><span>Gelen</span><b class="pos">${_ktSayi(gel, metreMi)}</b></div>
-        <div><span>Bekleyen</span><b>${bek>0?'<span class="bad">'+_ktSayi(bek, metreMi)+'</span>':_ktSayi(bek, metreMi)}</b></div>
-        <div><span>${metreMi?'Renk':'Ölçü'}</span><b>${sizeCount}</b></div>
-      </div>
-
-      <div class="ft-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-sm btn-primary ft-act-ana" onclick="ktOpenDetailModal(${m.id})"><i class="fas fa-list"></i> ${metreMi?'Detay / Metre Gir':'Detay / CM Gir'}</button>
-        <button class="btn btn-sm ft-act-ana ft-act-kes${stok>0?'':' stoksuz'}" onclick="ktIrsaliyeKes(${m.id})"
-                title="${stok>0?'Bu modeli irsaliye ekranına taşı — ölçüler eldeki stokla dolar':'Eldeki stok yok — irsaliye ekranında elle girersiniz'}">
-          <i class="fas fa-file-export"></i> İrsaliye Kes</button>
-        ${done
-          ? `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ktToggleDone(${m.id},false)" title="Aktif listeye geri al"><i class="fas fa-rotate-left"></i> Geri Al</button>`
-          : `<button class="btn btn-sm btn-secondary ft-act-genis" onclick="ktToggleDone(${m.id},true)" title="Tamamlandı olarak işaretle"><i class="fas fa-check-double"></i> Tamamla</button>`}
-        <button class="btn btn-sm btn-secondary ft-act-pdf" onclick="ktTekPdf(${m.id})" title="Bu modelin teslim durumu belgesi (PDF) — atölyeye gönder"><i class="fas fa-file-pdf"></i> PDF</button>
-        <button class="btn btn-sm btn-secondary ft-act-ikon" onclick="ktEditModelMeta(${m.id})" title="Tedarikçi/Termin düzenle"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-sm btn-danger ft-act-ikon" onclick="ktDeleteModel(${m.id})" title="Sil"><i class="fas fa-trash"></i></button>
-      </div>
-    </div>`;
-  }).join('');
+  grid.innerHTML=list.map(m=>_takipKart(m,true)).join('');
 }
 
 // ── Yeni Model ──
@@ -10356,6 +10347,40 @@ function _gotoListWith(filterFn, label){
     }catch(_){}
   }, 50);
 }
+// Anasayfa "Bugün yapılacaklar": en acil işler tek listede, her satır ilgili kayda gider
+function _t2YapilacakCiz(hepsi, bugun, yarin, stoklar){
+  var el=document.getElementById('t2Yap'); if(!el) return;
+  var e=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); };
+  var sat=[];
+  hepsi.filter(function(i){ return i.termin && i.durum!=='teslim' && i.termin<=yarin; }).forEach(function(i){
+    var te=_t2Termin(i.termin);
+    sat.push({k:te.k, cls:te.cls, ic:'fa-file-invoice', bas:(i.model||i.urun||i.no||'—'), alt:[i.no, i.atolye||i.firma].filter(Boolean).join(' · '),
+      sag:te.t, fn:"showDetailUni("+i.id+",'"+i._utype+"')"});
+  });
+  try{ _t2TakipUyari().forEach(function(u){
+    var te=_t2Termin(u.m.termin);
+    sat.push({k:u.g, cls:te.cls, ic:u.tur==='kordon'?'fa-bezier-curve':'fa-link', bas:u.m.modelKodu,
+      alt:(u.metre?u.eks.toLocaleString('tr-TR')+' m ':u.eks.toLocaleString('tr-TR')+' adet ')+u.tur+' eksik', sag:te.t,
+      fn:"showPage('"+(u.tur==='kordon'?'kordon-takip':'fermuar-takip')+"');"+u.ac+"("+u.m.id+")"});
+  }); }catch(_){}
+  (stoklar||[]).forEach(function(s){
+    var q=+s.miktar, min=+s.minStok||0; if(!(min>0) || isNaN(q) || q>=min) return;
+    sat.push({k:99, cls:q<=0?'gecti':'yakin', ic:'fa-boxes-stacked', bas:s.ad, alt:q.toLocaleString('tr-TR')+' '+(s.birim||'')+' kaldı · sınır '+min.toLocaleString('tr-TR'),
+      sag:q<=0?'tükendi':'düşük', fn:"showPage('stok')"});
+  });
+  sat.sort(function(a,b){ return a.k-b.k; });
+  window._t2YapOzet={n:sat.length, ilk:sat[0]||null};
+  var bas='<div class="card-title"><i class="fas fa-list-check"></i> Bugün yapılacaklar'+(sat.length?' <em class="t2-yap-say">'+sat.length+'</em>':'')+'</div>';
+  if(!sat.length){ el.innerHTML=bas+'<div class="t2-yap-bos"><i class="fas fa-circle-check"></i> Acil bir iş yok. Termini gelen irsaliye, eksik malzeme ya da düşük stok çıkınca burada görünür.</div>'; return; }
+  var GOS=6;
+  el.innerHTML=bas+'<div class="t2-yap-liste">'+sat.slice(0,GOS).map(function(r){
+    return '<button type="button" class="t2-yap-s '+r.cls+'" onclick="'+r.fn+'"><span class="t2-yap-ic"><i class="fas '+r.ic+'"></i></span>'+
+      '<span class="t2-yap-tx"><b>'+e(r.bas)+'</b><small>'+e(r.alt)+'</small></span><span class="t2-yap-sag">'+e(r.sag)+'</span><i class="fas fa-chevron-right t2-yap-ok"></i></button>';
+  }).join('')+'</div>'+(sat.length>GOS?'<button type="button" class="t2-yap-daha" onclick="this.parentNode.classList.add(\'acik\');this.remove()">'+(sat.length-GOS)+' iş daha</button><div class="t2-yap-liste t2-yap-ek">'+sat.slice(GOS).map(function(r){
+    return '<button type="button" class="t2-yap-s '+r.cls+'" onclick="'+r.fn+'"><span class="t2-yap-ic"><i class="fas '+r.ic+'"></i></span>'+
+      '<span class="t2-yap-tx"><b>'+e(r.bas)+'</b><small>'+e(r.alt)+'</small></span><span class="t2-yap-sag">'+e(r.sag)+'</span><i class="fas fa-chevron-right t2-yap-ok"></i></button>';
+  }).join('')+'</div>':'');
+}
 function goToOverdueList(){
   var today = new Date().toISOString().split('T')[0];
   _gotoListWith(function(i){ return i.termin && i.termin < today && i.durum!=='teslim'; }, 'Termini Geçen');
@@ -10369,6 +10394,9 @@ function goToWeekDoneList(){
   var wa = new Date(); wa.setDate(wa.getDate()-7);
   var ws = wa.toISOString().split('T')[0];
   _gotoListWith(function(i){ return i.durum==='teslim' && i.tarih && i.tarih >= ws; }, 'Bu Hafta Teslim');
+}
+function goToBekleyenList(){
+  _gotoListWith(function(i){ return i.durum==='bekliyor'; }, 'Bekleyen');
 }
 function goToCriticalStock(){
   showPage('stok');
@@ -10445,20 +10473,23 @@ function refreshHome(){
   var stoklar = getData('stoklar') || [];
   var awStockN = stoklar.filter(function(s){
     var qty = (s && (typeof s.miktar==='number'?s.miktar:parseFloat(s.miktar)));
-    return !isNaN(qty) && qty<=5;
+    var min = +(s && s.minStok) || 0;
+    return !isNaN(qty) && (min>0 ? qty<min : qty<=5);
   }).length;
+  sv('awBekleyen', bekliyor);
+  try{ _t2YapilacakCiz(allUnified, todayStr, tomorrowStr, stoklar); }catch(_e){ console.warn('[yapilacak]', _e); }
   sv('awOverdue',  awOverdueN);
   sv('awTomorrow', awTomorrowN);
   sv('awWeekDone', awWeekDoneN);
   sv('awStock',    awStockN);
   (function(){
     var oz=document.getElementById('t2Ozet'); if(!oz) return;
-    var p=[];
-    if(awOverdueN) p.push('<b class="kt">'+awOverdueN+'</b> termini geçen');
-    if(awTomorrowN) p.push('<b class="yb">'+awTomorrowN+'</b> yarın bitiyor');
-    if(awStockN) p.push('<b class="ks">'+awStockN+'</b> kritik stok');
-    try{ var tu=_t2TakipUyari(); if(tu.length) p.push('<a href="javascript:void(0)" onclick="toggleNotifPanel()" class="t2-oz-link"><b class="kt">'+tu.length+'</b> modelde eksik malzeme</a>'); }catch(_){}
-    oz.innerHTML = p.length ? p.join('<span class="ay">·</span>') : '<span class="iy">Bugün acil bir iş yok</span>';
+    // Sayılar alttaki şeritte; burada tek cümle: kaç iş var, en acili hangisi
+    var yo=window._t2YapOzet||{n:0};
+    if(!yo.n){ oz.innerHTML='<span class="iy">Bugün acil bir iş yok</span>'; return; }
+    var esc2=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+    oz.innerHTML='<a href="javascript:void(0)" class="t2-oz-link" onclick="var y=document.getElementById(\'t2Yap\'); if(y) y.scrollIntoView({behavior:\'smooth\',block:\'start\'})"><b class="kt">'+yo.n+'</b> iş seni bekliyor</a>'+
+      (yo.ilk?'<span class="ay">·</span>en acili <b>'+esc2(yo.ilk.bas)+'</b>'+(yo.ilk.sag?' <span class="'+(yo.ilk.cls==='gecti'?'kt':'yb')+'">('+esc2(yo.ilk.sag)+')</span>':''):'');
   })();
 
   // 7 gunluk aktivite grafigi
@@ -19816,7 +19847,48 @@ function _syncIrsBar(page){
     });
   });
 }
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(_injectIrsBar, 60); });
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(_injectIrsBar, 60); setTimeout(function(){ try{ _takipSiraButon(); }catch(_){} }, 80); });
+
+// ══ YENİ İRSALİYE FORMU: +/- sayaçlar · canlı poşet özeti · model önerisi ══
+(function(){
+  function sayacKur(){
+    document.querySelectorAll('.size-row input[type=number]').forEach(function(inp){
+      if(inp.closest('.t2-sayac')) return;
+      var k=document.createElement('div'); k.className='t2-sayac';
+      var eksi=document.createElement('button'), arti=document.createElement('button');
+      eksi.type=arti.type='button'; eksi.className='t2-sy-b'; arti.className='t2-sy-b';
+      eksi.innerHTML='<i class="fas fa-minus"></i>'; arti.innerHTML='<i class="fas fa-plus"></i>';
+      eksi.setAttribute('aria-label','Azalt'); arti.setAttribute('aria-label','Artır');
+      var degis=function(d){ var v=Math.max(0,(parseInt(inp.value,10)||0)+d); inp.value=v||''; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); };
+      eksi.onclick=function(){ degis(-1); }; arti.onclick=function(){ degis(1); };
+      inp.parentNode.insertBefore(k, inp); k.appendChild(eksi); k.appendChild(inp); k.appendChild(arti);
+      inp.setAttribute('inputmode','numeric');
+    });
+  }
+  function posetOzet(){
+    var el=document.getElementById('t2PosetOzet'); if(!el) return;
+    var v=function(id){ return parseInt((document.getElementById(id)||{}).value,10)||0; };
+    var top=['s30','s35','s40','s50','s60','s100'].reduce(function(a,id){ return a+v(id); },0), say=v('s30')+v('s35');
+    el.innerHTML = top ? '<span><b>'+top.toLocaleString('tr-TR')+'</b> poşet toplam</span><span class="ay">·</span><span>30×40 + 35×45: <b>'+say.toLocaleString('tr-TR')+'</b></span>' : '';
+    el.classList.toggle('dolu', !!top);
+  }
+  function modelOneri(){
+    var dl=document.getElementById('t2ModelOneri'); if(!dl) return;
+    var g={}, ekle=function(m){ m=String(m||'').trim(); if(m && !g[m.toLocaleUpperCase('tr-TR')]) g[m.toLocaleUpperCase('tr-TR')]=m; };
+    try{ (getData('irsaliyeler')||[]).slice(0,400).forEach(function(i){ ekle(i.model); }); }catch(_){}
+    ['fermuarTakip','kordonTakip','telaKontrol','aksesuarlar'].forEach(function(k){ try{ (getData(k)||[]).forEach(function(i){ ekle(i.modelKodu); }); }catch(_){} });
+    dl.innerHTML=Object.keys(g).slice(0,300).map(function(k){ return '<option value="'+g[k].replace(/"/g,'&quot;')+'">'; }).join('');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(sayacKur, 300);
+    var pg=document.getElementById('page-new');
+    if(pg) pg.addEventListener('input', function(e){ if(/^s\d+$/.test(e.target.id||'')) posetOzet(); });
+    var m=document.getElementById('iModel'); if(m) m.addEventListener('focus', modelOneri);
+  });
+  // Kayıttan sonra form temizlenince özet de sıfırlansın
+  document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('#page-new .btn-primary')) setTimeout(posetOzet, 400); });
+  window._t2PosetOzet=posetOzet;
+})();
 
 // ============ PDF YAZDIRMA (Liste) ============
 function printListPDF(){
@@ -23511,7 +23583,7 @@ AK.renderColors = function(){
         '<button class="ak-color-x" onclick="AK.removeColor('+c.id+')" title="Rengi sil" aria-label="Rengi sil"><i class="fas fa-xmark"></i></button>'+
       '</div>'+
       '<div class="ak-color-body">'+
-      '<div class="ak-adet"><div class="ak-adet-col"><span class="ak-adet-lbl">Adet · beden beden</span>'+
+      '<div class="ak-adet"><div class="ak-adet-col"><span class="ak-adet-lbl">Beden adetleri</span>'+
       '<div class="ak-bdgroup">'+beds+'</div></div>'+
       '<span class="ak-tot"><em>Σ</em> '+tot.toLocaleString('tr')+'</span></div>'+
       '<div class="ak-drop'+((c.zipNames&&c.zipNames.length)?' loaded':'')+'" onclick="this.querySelector(\'input\').click()"><i class="fas '+((c.zipNames&&c.zipNames.length)?'fa-circle-check':'fa-file-zipper')+'"></i>'+
