@@ -118,7 +118,13 @@
         sizesHtml += tbl('Bant & Kılçık',['Ürün','Adet'],rows2,total2);
       }
     }
-    if(d.beden){
+    if(d.beden && d.hideBeden){
+      var _gm = {};
+      Object.keys(d.beden).forEach(function(k){ var v=d.beden[k]||{}; if(typeof v!=='object') return; var c=(v.cm===0||v.cm)?v.cm:'-'; _gm[c]=(_gm[c]||0)+(+v.adet||0); });
+      var rowsG = Object.keys(_gm).filter(function(c){ return _gm[c]>0; }).sort(function(a,b){ return a==='-'?1:b==='-'?-1:parseFloat(a)-parseFloat(b); })
+        .map(function(c){ return '<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;font-weight:600;">'+c+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+_gm[c]+'</td></tr>'; }).join('');
+      sizesHtml += tbl('Fermuar Ölçüleri',['CM','Adet'],rowsG, d.total||d.totalAdet||null);
+    } else if(d.beden){
       var _bo = ['xxs','xs','s','m','l','xl','xxl','3xl','tek'];
       var rows3 = Object.keys(d.beden).sort(function(a,b){
         var ia=_bo.indexOf(String(a).toLowerCase()); var ib=_bo.indexOf(String(b).toLowerCase());
@@ -4632,7 +4638,7 @@ function showPage(page){
   
   document.getElementById('pageTitle').textContent=pageTitles[page]||page;
 
-  if(page==='fermuar'){ try{ ftRenderStockMode(); }catch(_){} }
+  if(page==='fermuar'){ try{ ftRenderStockMode(); }catch(_){} try{ _ferGizleCiz(); }catch(_){} }
   if(page==='kordon'){ try{ ktRenderStockMode(); }catch(_){} }
   if(page==='new'){ try{ nRenderSerbestMode(); _malOraniGoster(); }catch(_){} }
   if(page==='akskontrol'){ try{ setTimeout(window._t2AkAdimCiz, 100); }catch(_){} }
@@ -7510,10 +7516,12 @@ function _takipTeslimBelgesi(o){
     const gizli=m.rows.length-rows.length;
     // Renk sütunu yalnızca satırlarda modelden farklı renk varsa (metrede renk asıl ayırt edici)
     const renkSut = mm || m.rows.some(r=>r.renk && r.renk!==(m.renk||'—'));
-    const bas = (mm?'':'<th>Beden</th><th>CM</th>')+(renkSut?'<th>Renk</th>':'')+
+    // Beden adı hiç girilmemişse (PDF'ten gelen cm satırları) sütun hiç basılmaz
+    const bedenSut = !mm && m.rows.some(r=>r.beden && r.beden!=='—');
+    const bas = (mm?'':(bedenSut?'<th>Beden</th>':'')+'<th>CM</th>')+(renkSut?'<th>Renk</th>':'')+
       '<th class="n">Sipariş'+(mm?' (m)':'')+'</th><th class="n">Gelen</th><th class="d">Durum</th>';
     const satirlar=rows.map(r=>`<tr class="${r.eksik>0?'eks':'tam'}">
-      ${mm?'':`<td class="bd">${esc(r.beden||'—')}</td><td class="cm">${r.cm!=null?esc(String(r.cm))+' cm':'—'}</td>`}
+      ${mm?'':`${bedenSut?`<td class="bd">${esc(r.beden||'—')}</td>`:''}<td class="cm">${r.cm!=null?esc(String(r.cm))+' cm':'—'}</td>`}
       ${renkSut?`<td${mm?' class="bd"':''}>${esc(r.renk||'—')}</td>`:''}
       <td class="n">${S(r.siparis,mm)}</td><td class="n">${S(r.gelen,mm)}</td>
       <td class="d">${r.eksik>0?`<span class="rz eks">${S(r.eksik,mm)} ${BR} eksik</span>`:(fazla(r)>0?`<span class="rz tam">Tamam · <span class="fz">+${S(fazla(r),mm)} fazla</span></span>`:'<span class="rz tam">Tamam</span>')}</td>
@@ -7711,6 +7719,14 @@ window.ftConsumeForCut = function(model, beden, no){
 // olmayan model de yazılabilir (stok kontrolü açıkken ftValidateBeforeCut
 // engeller, kapalıyken "özel irsaliye" olarak kesilir).
 const _FT_BEDEN_KEYS=['xxs','xs','s','m','l','xl','xxl','3xl','tek'];
+// "PDF'de bedenleri gizle" açıkken formdaki beden adları soluk; başlık uyarır
+function _ferGizleCiz(){
+  const hb=document.getElementById('fHideBeden'); if(!hb) return;
+  const tb=hb.closest('.card') && hb.closest('.card').querySelector('table'); if(!tb) return;
+  tb.classList.toggle('fer-gizli', hb.checked);
+  const th=tb.querySelector('thead th'); if(th) th.textContent = hb.checked ? "Beden (PDF'de çıkmaz)" : 'Beden';
+}
+document.addEventListener('change', function(e){ if(e.target && e.target.id==='fHideBeden'){ window._ftOtoGizle=false; _ferGizleCiz(); } });
 const _FT_BEDEN_MAP={'XXS':'xxs','XS':'xs','S':'s','M':'m','L':'l','XL':'xl','XXL':'xxl','3XL':'3xl','TEK BEDEN':'tek','TEK':'tek'};
 let _ftAcHover=false;
 
@@ -7768,24 +7784,39 @@ function ftPickModel(id){
   // Stoğu olmayan (ör. henüz gelmemiş 59cm) beden forma HİÇ yansımaz —
   // "sadece adet girilen bedenler gözüksün" isteği. Kullanıcı isterse
   // manuel olarak diğerlerini de girebilir.
-  let filled=0, skipped=0, bedsiz=0;
+  let filled=0, skipped=0, bedsiz=0, yerlesen=0;
+  const dolu={}, bedensizler=[];
+  function yaz(key, z, stok){
+    const ec=document.getElementById('fer_'+key+'cm'); const ea=document.getElementById('fer_'+key+'a');
+    if(ec) ec.value=(z.cm!=null?z.cm:'');
+    if(ea) ea.value=stok;
+    dolu[key]=1; filled++;
+  }
   _ftSizesSorted(m).forEach(z=>{
     const stok=_ftStok(z);
     if(stok<=0){ skipped++; return; }               // stok yok → forma koyma
     const key=_FT_BEDEN_MAP[(z.beden||'').toString().trim().toLocaleUpperCase('tr')];
-    if(!key){ bedsiz++; return; }                   // beden adı eşleşmiyor (boş beden)
-    const ec=document.getElementById('fer_'+key+'cm'); const ea=document.getElementById('fer_'+key+'a');
-    if(ec) ec.value=(z.cm!=null?z.cm:'');
-    if(ea) ea.value=stok;
-    filled++;
+    if(!key){ bedensizler.push({z, stok}); return; } // beden adı yok (ör. PDF'ten gelen cm satırı)
+    yaz(key, z, stok);
   });
+  // Beden adı olmayan cm satırları formdaki boş satırlara cm sırasıyla yerleşir;
+  // PDF'de beden adı çıkmasın diye "bedenleri gizle" kendiliğinden işaretlenir.
+  const bosSlot=_FT_BEDEN_KEYS.filter(k=>!dolu[k]);
+  bedensizler.forEach((b,i)=>{ const key=bosSlot[i]; if(!key){ bedsiz++; return; } yaz(key, b.z, b.stok); yerlesen++; });
+  const hb=document.getElementById('fHideBeden');
+  if(hb){
+    if(yerlesen){ hb.checked=true; window._ftOtoGizle=true; }
+    else if(window._ftOtoGizle){ hb.checked=false; window._ftOtoGizle=false; }
+    try{ _ferGizleCiz(); }catch(_){}
+  }
   // Toplamı güncelle
   let t=0; _FT_BEDEN_KEYS.forEach(s=>{ t+=+(document.getElementById('fer_'+s+'a').value||0); });
   const tot=document.getElementById('ferToplam'); if(tot) tot.textContent=t;
   ftCloseModelAc();
   let msg=m.modelKodu+' seçildi · '+filled+' beden dolduruldu';
   if(skipped) msg+=' ('+skipped+' stoksuz atlandı)';
-  if(bedsiz) msg+=' ('+bedsiz+' bedensiz — manuel girin)';
+  if(yerlesen) msg+=' · beden adı yok, PDF\'de sadece cm çıkacak';
+  if(bedsiz) msg+=' ('+bedsiz+' satır sığmadı — manuel girin)';
   toast(msg, filled?'success':'info');
 }
 
@@ -10605,7 +10636,7 @@ function saveFermuar(){
   _uploadNfPhotosInBackground(item.id,'fermuar');
   ['fModel','fTarih','fAtolye','fTeslimEden','fTeslimAlan','fTermin','fAciklama','fRenk'].forEach(id=>document.getElementById(id).value='');
   _syncAtolyeLabel('fAtolye');
-  document.getElementById('fHideBeden').checked=false;
+  document.getElementById('fHideBeden').checked=false; window._ftOtoGizle=false; try{ _ferGizleCiz(); }catch(_){}
   sizes.forEach(s=>{document.getElementById('fer_'+s+'cm').value='';document.getElementById('fer_'+s+'a').value='';});
   document.getElementById('ferToplam').textContent='0';
   const today=new Date().toISOString().split('T')[0];document.getElementById('fTarih').value=today;
@@ -15459,11 +15490,18 @@ function buildShareText(item, type) {
   }
   if ((type === 'fermuar' || type === 'toptan') && item.beden) {
     const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-    const bds = sortBedenKeys(item.beden).map(k => {
-      const v = type === 'fermuar' ? (item.beden[k]?.adet ?? 0) : item.beden[k];
-      return `${bl[k]||k}: ${v}`;
-    }).filter(x => !x.endsWith(': 0'));
-    if (bds.length) text += `\nBedenler:\n  ${bds.join('\n  ')}\n`;
+    let bds;
+    if (type === 'fermuar' && item.hideBeden) {
+      bds = groupFermuarBedenByCm(item.beden).filter(g => g.adet > 0).map(g => `${g.cm} cm: ${g.adet}`);
+    } else {
+      bds = sortBedenKeys(item.beden).map(k => {
+        const bv = item.beden[k];
+        const v = type === 'fermuar' ? (bv?.adet ?? 0) : bv;
+        const cm = type === 'fermuar' && bv && (bv.cm === 0 || bv.cm) ? ` (${bv.cm} cm)` : '';
+        return +v ? `${bl[k]||k}${cm}: ${v}` : '';
+      }).filter(Boolean);
+    }
+    if (bds.length) text += `\n${type==='fermuar'&&item.hideBeden?'Ölçüler':'Bedenler'}:\n  ${bds.join('\n  ')}\n`;
     const total = item.totalAdet || item.total || 0;
     if (total) text += `\nToplam: *${total} adet*\n`;
   }
@@ -15613,12 +15651,16 @@ function bulkShareWhatsApp() {
     }
     if ((type === 'fermuar' || type === 'toptan') && item.beden) {
       const bl = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-      const bds = sortBedenKeys(item.beden).map(k => {
-        const v = type === 'fermuar' ? (item.beden[k] && item.beden[k].adet) : item.beden[k];
-        return {k:bl[k]||k, v: +v||0};
-      }).filter(x => x.v > 0);
+      const bds = (type === 'fermuar' && item.hideBeden)
+        ? groupFermuarBedenByCm(item.beden).map(g => ({k: g.cm+' cm', v: +g.adet||0})).filter(x => x.v > 0)
+        : sortBedenKeys(item.beden).map(k => {
+            const bv = item.beden[k];
+            const v = type === 'fermuar' ? (bv && bv.adet) : bv;
+            const cm = type === 'fermuar' && bv && (bv.cm === 0 || bv.cm) ? ` (${bv.cm} cm)` : '';
+            return {k:(bl[k]||k)+cm, v: +v||0};
+          }).filter(x => x.v > 0);
       if (bds.length) {
-        text += `Bedenler:\n` + bds.map(b=>`   • ${b.k}: *${b.v} adet*`).join('\n') + `\n`;
+        text += `${type==='fermuar'&&item.hideBeden?'Ölçüler':'Bedenler'}:\n` + bds.map(b=>`   • ${b.k}: *${b.v} adet*`).join('\n') + `\n`;
         const total = item.totalAdet || item.total || bds.reduce((a,b)=>a+b.v,0);
         if (total) text += `   Σ Toplam: *${total} adet*\n`;
       }
@@ -17382,7 +17424,7 @@ function _fillPageFromData(page, data){
         if(ea) ea.value = data.beden[s].adet||'';
       }
     });
-    const eh=document.getElementById('fHideBeden'); if(eh) eh.checked = !!data.hideBeden;
+    const eh=document.getElementById('fHideBeden'); if(eh) eh.checked = !!data.hideBeden; try{ _ferGizleCiz(); }catch(_){}
   }
   if(page==='toptan' && data.beden){
     ['xxs','xs','s','m','l','xl','xxl','3xl'].forEach(s=>{
@@ -17798,6 +17840,7 @@ function _buildQrPayload(item, type){
     sizes: item.sizes || undefined,
     bant: item.bant || undefined,
     beden: item.beden || undefined,
+    hideBeden: item.hideBeden || undefined,
     cm: item.cm || undefined,
     metre: item.metre || undefined,
     adet: item.adet || undefined,
@@ -19199,6 +19242,7 @@ function _buildViewerPayload(item, type){
     sizes: item.sizes,
     bant: item.bant,
     beden: item.beden,
+    hideBeden: item.hideBeden || undefined,
     cm: item.cm,
     metre: item.metre,
     adet: item.adet,
@@ -22771,7 +22815,7 @@ async function _renderPublicViewerFromCloud(id, type, repoInfo){
       tarih: item.tarih||'', termin: item.termin||'',
       teslimEden: item.teslimEden||'', teslimAlan: item.teslimAlan||'',
       durum: item.durum||'',
-      sizes: item.sizes, bant: item.bant, beden: item.beden,
+      sizes: item.sizes, bant: item.bant, beden: item.beden, hideBeden: item.hideBeden || undefined,
       cm: item.cm, metre: item.metre, adet: item.adet,
       total: item.total, totalAdet: item.totalAdet, renk: item.renk,
       aciklama: item.aciklama||item.not||'',
@@ -22850,7 +22894,11 @@ function _renderPublicViewer(d){
       .map(k => `<tr><td>${BANT_NAMES[k]||k}</td><td>${d.bant[k]}</td></tr>`).join('');
     if(rows) sizesHtml += `<h3>Bant & Kılçık</h3><table class="pv-tbl"><thead><tr><th>Ürün</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
-  if(d.beden){
+  if(d.beden && d.hideBeden && window.groupFermuarBedenByCm){
+    const rows = window.groupFermuarBedenByCm(d.beden).filter(g=>g.adet>0).map(g=>`<tr><td>${g.cm} cm</td><td>${g.adet}</td></tr>`).join('');
+    const top = d.total||d.totalAdet;
+    if(rows) sizesHtml += `<h3>Fermuar Ölçüleri</h3><table class="pv-tbl"><thead><tr><th>CM</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>${top?`<div class="pv-total">Toplam Adet: ${top}</div>`:''}`;
+  } else if(d.beden){
     const rows = (window.sortBedenKeys ? window.sortBedenKeys(d.beden) : Object.keys(d.beden)).map(k => {
       const v = d.beden[k];
       if(typeof v === 'object') return `<tr><td>${BEDEN_NAMES[k]||k}</td><td>${v.cm||'-'} cm</td><td>${v.adet||0}</td></tr>`;
