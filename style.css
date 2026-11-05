@@ -18500,3 +18500,9 @@ html .ft-imp-modal .ft-imp-kart .ft-imp-model.eksik{ border-color:var(--danger, 
 /* Fermuar irsaliyesi: "PDF'de bedenleri gizle" açıkken beden adları soluk */
 #page-fermuar .table-wrap table.fer-gizli tbody td:first-child{ opacity:.35 !important; }
 table.fer-gizli thead th:first-child{ font-size:11px; }
+/* Satın alma: model takipte varsa üç seçenek — RPT (varsayılan) tam satır */
+.ft-imp-mod{ flex-wrap:wrap; }
+.ft-imp-mod .ft-imp-rpt{ flex:1 1 100%; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 10px; }
+.ft-imp-mod .ft-imp-rpt small{ font-size:11.5px; font-weight:600; color:var(--text-muted); }
+.ft-imp-mod .ft-imp-rpt small b{ color:var(--text-main); }
+.ft-imp-uyari{ margin-top:8px; font-size:12px; font-weight:700; color:var(--warning, #f59e0b); }

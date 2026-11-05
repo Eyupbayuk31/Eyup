@@ -7171,13 +7171,34 @@ function ftImpDosyalar(files){
   });
   Promise.all(is).then(function(){ if(drop) drop.classList.remove('okunuyor'); });
 }
+// Tekrar sipariş (RPT) adı: "M1S10178" → "M1S10178 RPT", o da varsa "RPT 2", "RPT 3"…
+function _ftImpTaban(kod){ return String(kod||'').trim().replace(/\s+RPT(\s*\d+)?$/i,''); }
+function _ftImpRptAd(kod, list){
+  var taban=_ftImpTaban(kod), ad=taban+' RPT', n=1;
+  function var_(x){ var nx=_ftNormModel(x); return (list||_ftAll()).some(function(m){ return _ftNormModel(m.modelKodu)===nx; }); }
+  while(var_(ad)){ n++; ad=taban+' RPT '+n; }
+  return ad;
+}
+// Model + bütün RPT'leri (aynı belge daha önce RPT olarak girildiyse yakalamak için)
+function _ftImpAile(kod){
+  var t=_ftNormModel(_ftImpTaban(kod)); if(!t) return [];
+  return _ftAll().filter(function(m){ var n=_ftNormModel(m.modelKodu); return n===t || /^ RPT( ?\d+)?$/.test(n.slice(t.length)) && n.indexOf(t)===0; });
+}
+function _ftImpAyniMi(k, m){
+  return k.satirlar.length && (m.sizes||[]).length===k.satirlar.length && k.satirlar.every(function(z){ var s=(m.sizes||[]).find(function(x){ return _ftNum(x.cm)===+z.cm; }); return s && +s.siparisAdet===z.adet; });
+}
 function _ftImpEkle(bloklar, kaynak){
   bloklar.forEach(function(b){
     var k={id:Date.now()+Math.floor(Math.random()*1e6), kaynak:kaynak, model:b.model||'', satirlar:b.satirlar.map(function(z){ return {cm:z.cm, adet:z.adet}; }),
       pdfToplam:b.pdfToplam, renk:b.renk||'', mod:'ekle', dahil:true, tekrar:false};
     var m=_ftImpMevcut(k.model);
-    // Aynı PDF'i ikinci kez yüklediysen (adetler takiptekiyle birebir aynı) varsayılan olarak atla
-    if(m && k.satirlar.length && k.satirlar.every(function(z){ var s=(m.sizes||[]).find(function(x){ return _ftNum(x.cm)===+z.cm; }); return s && +s.siparisAdet===z.adet; })){ k.dahil=false; k.tekrar=true; }
+    // Model takipte varsa varsayılan: ayrı tekrar sipariş (RPT). Var olan modelin
+    // adetlerine yanlışlıkla eklenmesin.
+    if(m) k.mod='rpt';
+    // Aynı belgeyi ikinci kez yüklediysen (model ya da RPT'lerinden birinde
+    // adetler birebir aynı) varsayılan olarak atla
+    var ayni=_ftImpAile(k.model).find(function(x){ return _ftImpAyniMi(k, x); });
+    if(ayni){ k.dahil=false; k.tekrar=ayni.modelKodu; }
     _ftImp.kartlar.push(k);
   });
   _ftImpCiz();
@@ -7210,11 +7231,14 @@ function _ftImpKartHtml(k, i){
   var var_='';
   if(m){
     var_='<div class="ft-imp-var"><i class="fas fa-circle-info"></i><span><b>'+e(m.modelKodu)+'</b> takipte var · '+(m.sizes||[]).length+' satır · '+_ftModelSip(m).toLocaleString('tr')+' adet satın alma'+
-      (k.tekrar?'<br><b>Bu adetler zaten girilmiş</b>, o yüzden seçili değil.':'')+'</span></div>'+
+      (k.tekrar?'<br><b>Bu adetler '+e(k.tekrar)+' olarak zaten girilmiş</b>, o yüzden seçili değil.':'')+'</span></div>'+
       '<div class="ft-imp-mod" role="group" aria-label="Mevcut modele nasıl işlensin">'+
+        '<button type="button" class="ft-imp-rpt '+(k.mod==='rpt'?'aktif':'')+'" onclick="ftImpMod('+i+',\'rpt\')">RPT olarak ekle'+
+          '<small>Yeni sipariş: <b>'+e(_ftImpRptAd(k.model))+'</b></small></button>'+
         '<button type="button" class="'+(k.mod==='ekle'?'aktif':'')+'" onclick="ftImpMod('+i+',\'ekle\')">Üstüne ekle</button>'+
         '<button type="button" class="'+(k.mod==='yaz'?'aktif':'')+'" onclick="ftImpMod('+i+',\'yaz\')">Yerine yaz</button>'+
-      '</div>';
+      '</div>'+
+      (k.mod!=='rpt'?'<div class="ft-imp-uyari"><i class="fas fa-triangle-exclamation"></i> '+(k.mod==='yaz'?'Var olan satın alma adetleri silinip bu adetler yazılacak.':'Adetler var olan siparişin üstüne eklenecek.')+'</div>':'');
   }
   var satir=k.satirlar.map(function(z,j){
     return '<div class="ft-imp-satir">'+
@@ -7273,12 +7297,12 @@ function ftImpSatirEkle(i){
 function ftImpKartSil(i){ _ftImp.kartlar.splice(i,1); _ftImpCiz(); }
 function ftImpDahil(i,v){ var k=_ftImp.kartlar[i]; if(!k) return; k.dahil=!!v; _ftImpCiz(); }
 function ftImpMod(i,m){ var k=_ftImp.kartlar[i]; if(!k) return; k.mod=m; _ftImpCiz(); }
-function ftImpModel(i,v){ var k=_ftImp.kartlar[i]; if(!k) return; k.model=String(v||'').trim().toLocaleUpperCase('tr').replace(/İ/g,'I'); k.tekrar=false; _ftImpCiz(); }
+function ftImpModel(i,v){ var k=_ftImp.kartlar[i]; if(!k) return; k.model=String(v||'').trim().toLocaleUpperCase('tr').replace(/İ/g,'I'); k.tekrar=false; k.mod=_ftImpMevcut(k.model)?'rpt':'ekle'; _ftImpCiz(); }
 function ftImpKaydet(){
   var ted=document.getElementById('ftImpTed').value.trim();
   var termin=document.getElementById('ftImpTermin').value;
   var renk=document.getElementById('ftImpRenk').value.trim();
-  var list=_ftAll(), yeni=0, guncel=0, adet=0, sonId=null, sayac=0;
+  var list=_ftAll(), yeni=0, guncel=0, adet=0, sonId=null, sayac=0, rptler=[];
   var kartlar=_ftImp.kartlar.filter(function(k){ return k.dahil && k.model.trim(); });
   for(var a=0;a<kartlar.length;a++){
     var k=kartlar[a];
@@ -7286,7 +7310,12 @@ function ftImpKaydet(){
     if(!sat.length) continue;
     var n=_ftNormModel(k.model);
     var m=list.find(function(x){ return _ftNormModel(x.modelKodu)===n; });
-    if(!m){
+    if(m && k.mod==='rpt'){
+      // Tekrar sipariş: ayrı model. Tedarikçi/renk boşsa asıl modelden gelir.
+      var asil=m;
+      m={id:Date.now()+(sayac++), modelKodu:_ftImpRptAd(k.model, list), renk:renk||k.renk||asil.renk||'', tedarikci:ted||asil.tedarikci||'', termin:termin, sizes:[], createdAt:new Date().toISOString()};
+      list.unshift(m); yeni++; rptler.push(m.modelKodu);
+    } else if(!m){
       m={id:Date.now()+(sayac++), modelKodu:k.model.trim(), renk:renk||k.renk||'', tedarikci:ted, termin:termin, sizes:[], createdAt:new Date().toISOString()};
       list.unshift(m); yeni++;
     } else {
@@ -7309,7 +7338,7 @@ function ftImpKaydet(){
   document.getElementById('ftImpModal').classList.remove('show');
   if(typeof _ftViewTab!=='undefined' && _ftViewTab!=='active'){ try{ ftSetViewTab('active', document.getElementById('ftTabActive')); }catch(_){} }
   renderFermuarTakip();
-  var parca=[]; if(yeni) parca.push(yeni+' yeni model'); if(guncel) parca.push(guncel+' model güncellendi');
+  var parca=[]; if(rptler.length) parca.push(rptler.join(', ')+' açıldı'); if(yeni-rptler.length>0) parca.push((yeni-rptler.length)+' yeni model'); if(guncel) parca.push(guncel+' model güncellendi');
   toast(parca.join(', ')+' · '+adet.toLocaleString('tr')+' adet satın alma','success');
   if(yeni+guncel===1 && sonId!=null) setTimeout(function(){ ftOpenDetailModal(sonId); },150);
 }
