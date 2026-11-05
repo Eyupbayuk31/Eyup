@@ -2460,7 +2460,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
               <button type="button" class="ft-imp-link" onclick="ftImpIstemKopyala()"><i class="fas fa-copy"></i> Gemini komutunu kopyala</button>
             </div>
             <div class="ft-imp-yapistir" id="ftImpYapistir" hidden>
-              <textarea class="form-input" id="ftImpMetin" rows="7" placeholder="Model J5305&#10;58 cm 320&#10;59 cm 640&#10;60,5 cm 640&#10;TOPLAM 1.600"></textarea>
+              <textarea class="form-input" id="ftImpMetin" rows="7" placeholder="Gemini'nin yazdığı listeyi buraya yapıştır.&#10;&#10;Örnek:&#10;Model J5305&#10;58 cm 320&#10;60,5 cm 640" onpaste="setTimeout(function(){ ftImpMetinOku(true); },60)"></textarea>
               <button type="button" class="btn btn-secondary" onclick="ftImpMetinOku()"><i class="fas fa-arrow-down"></i> Oku</button>
             </div>
           </div>
@@ -7104,9 +7104,29 @@ function ftImpKapat(){
   _ftImp={kartlar:[]};
   document.getElementById('ftImpModal').classList.remove('show');
 }
+// "Yazıyı yapıştır": önce panodaki yazıyı doğrudan okumayı dener (Gemini'den
+// kopyalanan liste). İzin yoksa / pano boşsa yapıştırma kutusunu açar.
 function ftImpYapistirAc(){
-  var k=document.getElementById('ftImpYapistir'); k.hidden=!k.hidden;
-  if(!k.hidden) setTimeout(function(){ document.getElementById('ftImpMetin').focus(); },60);
+  var k=document.getElementById('ftImpYapistir');
+  function ac(t){
+    k.hidden=false;
+    var el=document.getElementById('ftImpMetin');
+    if(t) el.value=t;
+    setTimeout(function(){ el.focus(); },60);
+  }
+  if(!(navigator.clipboard && navigator.clipboard.readText)){ ac(); return; }
+  navigator.clipboard.readText().then(function(t){
+    t=String(t||'').trim();
+    var b=t?_ftImpCoz(t,''):[];
+    if(b.some(function(x){ return x.satirlar.length; })){
+      _ftImpEkle(b, 'Panodan yapıştırılan yazı');
+      k.hidden=true;
+      toast('Panodaki liste okundu','success');
+    } else {
+      ac(t);
+      if(t) toast('Panodaki yazıda cm / adet satırı bulunamadı','error');
+    }
+  }).catch(function(){ ac(); });
 }
 function ftImpIstemKopyala(){
   function ok(){ toast('Komut kopyalandı. Gemini\'ye fotoğrafla birlikte yapıştır.','success'); }
@@ -7121,10 +7141,11 @@ function ftImpIstemKopyala(){
     t.remove();
   }
 }
-function ftImpMetinOku(){
+function ftImpMetinOku(sessiz){
   var v=document.getElementById('ftImpMetin').value;
+  if(!v.trim()){ toast('Kutu boş. Gemini\'nin yazdığı listeyi kopyalayıp kutuya yapıştır.','error'); document.getElementById('ftImpMetin').focus(); return; }
   var b=_ftImpCoz(v, '');
-  if(!b.length || !b.some(function(x){ return x.satirlar.length; })){ toast('Yazıda cm / adet satırı bulunamadı','error'); return; }
+  if(!b.length || !b.some(function(x){ return x.satirlar.length; })){ if(!sessiz) toast('Yazıda cm / adet satırı bulunamadı','error'); return; }
   _ftImpEkle(b, 'Yapıştırılan yazı');
   document.getElementById('ftImpMetin').value='';
   document.getElementById('ftImpYapistir').hidden=true;
