@@ -1410,6 +1410,24 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
 }catch(e){ /* hata: aç (fail-open) — sonsuza dek gizli kalmasın */ } })();
 </script>
 
+<!-- Görünen ekran yüksekliği: bazı Android tarayıcıları 100vh/100dvh'yi adres
+     çubuğu gizliymiş gibi hesaplıyor; tam ekran pencerelerin alt çubuğu ekran
+     dışına düşüyordu. Gerçek yüksekliği ölçüp --t2-ekran-h'ye yazıyoruz. -->
+<script>
+(function(){
+  var r=document.documentElement, son=0;
+  function ayarla(){
+    var h=Math.round(window.innerHeight||0); if(!h || h===son) return;
+    son=h; r.style.setProperty('--t2-ekran-h', h+'px');
+  }
+  ayarla();
+  window.addEventListener('resize', ayarla, {passive:true});
+  window.addEventListener('orientationchange', function(){ setTimeout(ayarla, 250); });
+  window.addEventListener('pageshow', ayarla);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) setTimeout(ayarla, 100); });
+})();
+</script>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 

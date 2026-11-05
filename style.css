@@ -18478,3 +18478,22 @@ html .ft-imp-modal .ft-imp-alan span{ right:12px; }
 html .ft-imp-modal .ft-imp-kart .ft-imp-model.eksik{ border-color:var(--danger, #ef4444) !important; box-shadow:0 0 0 1px var(--danger, #ef4444) !important; }
 .ft-imp-oneri{ margin:8px 0 0 44px; font-size:12.5px; color:var(--danger, #ef4444); font-weight:600; }
 .ft-imp-oneri .ft-imp-cipler{ margin-top:6px; }
+
+/* ── Telefonda pencereler görünen ekrana sığsın ──
+   --t2-ekran-h: window.innerHeight (index.html başındaki küçük betik).
+   100vh/100dvh'yi adres çubuğunu hesaba katmadan veren tarayıcılarda
+   tam ekran pencerelerin alt çubuğu (Kaydet) ekranın altında kalıyordu. */
+@media (max-width:768px){
+  .modal-overlay{ bottom:auto !important; height:var(--t2-ekran-h, 100dvh) !important; }
+  .modal-overlay > .modal.tkg-modal{ height:100% !important; max-height:100% !important; }
+  html .modal-overlay > .modal{ max-height:calc(var(--t2-ekran-h, 100dvh) * .94) !important; }
+  html .modal-overlay > .modal.tkg-modal{ max-height:100% !important; }
+  html[data-tasarim="yeni"] .modal-overlay.t2-sayfa-pencere > .modal{ max-height:calc(var(--t2-ekran-h, 100dvh) * .92) !important; }
+  /* Tam ekran olanlar: kamera, fermuar/kordon detay, arama, açılır menü */
+  .akc-overlay .akc{ height:100% !important; max-height:100% !important; }
+  .ft-detail-overlay .ft-detail-modal{ height:100% !important; }
+  .gs-box{ max-height:var(--t2-ekran-h, 100dvh) !important; }
+  .sidebar{ height:var(--t2-ekran-h, 100dvh) !important; }
+}
+/* Satır kutusundaki "cm / adet" yazısı, kutuya dokununca kutunun altında kalmasın */
+.ft-imp-alan span{ z-index:2; }
