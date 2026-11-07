@@ -4233,6 +4233,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
           <div><h2>Aksesuar Kontrol</h2><p>DeFacto aksesuar arşivinden aşama &amp; renk bazlı kontrol föyü üret</p></div>
         </div>
         <div class="ak-hbtns">
+          <button class="btn btn-secondary btn-sm" id="akGorBtn" onclick="AKS.gorunumDegis()"><i class="fas fa-table-columns"></i> <span>Hepsi tek sayfada</span></button>
           <button class="btn btn-primary btn-sm" onclick="AK.generateAll()"><i class="fas fa-file-pdf"></i> Toplu PDF</button>
           <button class="btn btn-secondary btn-sm" onclick="AK.generateAll('print')"><i class="fas fa-print"></i> Toplu Yazdır</button>
           <button class="btn btn-secondary btn-sm" onclick="AK.generateAll('save')"><i class="fas fa-floppy-disk"></i> Toplu Kaydet</button>
@@ -4240,6 +4241,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </div>
       </div>
 
+      <!-- Adım adım sihirbaz (varsayılan). Arkadaki motor aynı: AK.* -->
+      <div id="akSih" class="aks" aria-live="polite"></div>
+
+      <div id="akKlasik">
       <!-- Gelen numune yöntemi: kağıda bant (eski, varsayılan) ya da kamerayla foto -->
       <div class="ak-gmod-bar">
         <div class="ak-gmod-l">
@@ -4284,6 +4289,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </div>
         <div id="akColors"></div>
       </div>
+      </div><!-- /akKlasik -->
 
       <div class="ak-card">
         <div class="ak-step"><span class="ak-n"><i class="fas fa-clock-rotate-left"></i></span> Kayıtlar</div>
@@ -25336,12 +25342,11 @@ AK.onZip = function(id, fileList){
   var xls   = all.filter(isXls);
   var files = all.filter(function(f){ return !isXls(f); });
   if(!files.length){   // sadece Excel → mevcut kartlara uygula
-    AK.applySummaryFiles(xls);
-    return;
+    return AK.applySummaryFiles(xls);
   }
   var host=document.querySelector('.ak-color[data-cid="'+id+'"] .ak-drop'); if(host) host.innerHTML='<i class="fas fa-spinner fa-spin"></i> İşleniyor…';
   if(!AK._merged) AK._merged={byColor:{},shared:[],detected:{po:'',model:''},sizes:[]};
-  AK._processFilesInto(files, AK._merged).then(function(){
+  return AK._processFilesInto(files, AK._merged).then(function(){
     if(AK._merged._modelChanged){
       AK._merged._modelChanged=false;
       // Eski modelin arşivleri, renk kartları ve model kodu da düşsün
@@ -25359,8 +25364,8 @@ AK.onZip = function(id, fileList){
     });
     AK.rebuildColors();
     // Arşivler işlendi, model/PO/renk belli → şimdi özet tablodan adetleri al
-    if(xls.length) AK.applySummaryFiles(xls);
     setTimeout(function(){ AK.libArkaPlanTara(); }, 400);   // etiketleri kütüphaneye al
+    if(xls.length) return AK.applySummaryFiles(xls);
   })
   .catch(function(e){ alert('Dosya açılamadı (ZIP/RAR): '+(e&&e.message||e)+'\n\nİnternet gerekiyor (RAR motoru yüklenir). Sorun sürerse ZIP olarak deneyin.'); AK.renderColors(); });
 };
@@ -26575,6 +26580,391 @@ AK.addCode = function(){
   try{ AK._tarandiSifirla(); setTimeout(function(){ AK.libArkaPlanTara(); }, 400); }catch(_){}
 };
 AK.delCode = function(code){ var m=AK.map(); delete m.png[code]; AK.saveMap(m); AK.renderCodeTable(); };
+
+/* ═════════════════════════════════════════════════
+   AKS — AKSESUAR KONTROL SİHİRBAZI
+   İlk kez kullanan için adım adım: atölye → aşama → dosyalar →
+   kontrol → föy. Kendi verisi yok; her şeyi AK.state ve AK.*
+   üzerinden yapar, bu yüzden "Hepsi tek sayfada" görünümüyle
+   aynı anda senkron kalır.
+   ═════════════════════════════════════════════════ */
+var AKS = { adim:1, enUzak:1, okunuyor:false, hata:'', bitti:'', asamaSecildi:false };
+window.AKS = AKS;
+AKS.ADIMLAR = [
+  {ad:'Atölye',   ic:'fa-industry'},
+  {ad:'Aşama',    ic:'fa-layer-group'},
+  {ad:'Dosyalar', ic:'fa-file-zipper'},
+  {ad:'Kontrol',  ic:'fa-list-check'},
+  {ad:'Föy',      ic:'fa-file-pdf'}
+];
+AKS._e = function(s){ return AK._esc(s); };
+AKS._n = function(v){ return (+v||0).toLocaleString('tr-TR'); };
+AKS.acikMi = function(){ return getConfig('akGorunum','sihirbaz')!=='klasik'; };
+
+// ── Görünüm: sihirbaz ↔ tek sayfa ────────────────────────────
+AKS.gorunumUygula = function(){
+  var pg=document.getElementById('page-akskontrol'); if(!pg) return;
+  var sih=AKS.acikMi();
+  pg.classList.toggle('ak-sih', sih);
+  var b=document.getElementById('akGorBtn');
+  if(b) b.innerHTML = sih ? '<i class="fas fa-table-columns"></i> <span>Hepsi tek sayfada</span>' : '<i class="fas fa-shoe-prints"></i> <span>Adım adım</span>';
+  if(sih) AKS.ciz(false);
+  else { try{ AK.renderColors(); }catch(_){} try{ window._t2AkAdimCiz && window._t2AkAdimCiz(); }catch(_){} }
+};
+AKS.gorunumDegis = function(){
+  setConfig('akGorunum', AKS.acikMi() ? 'klasik' : 'sihirbaz');
+  AKS.gorunumUygula();
+  window.scrollTo({top:0, behavior:'smooth'});
+};
+
+// ── Durum ────────────────────────────────────────────────────
+AKS._atolye = function(){ return (AK.state.atolye||'').trim(); };
+AKS._model  = function(){ return (AK.state.model||'').trim(); };
+AKS._dosyali = function(){ return AK.state.colors.filter(function(c){ return c.files && c.files.length; }); };
+AKS._arsivVar = function(){ return (AK._zipNames||[]).length>0 && AKS._dosyali().length>0; };
+AKS.tamam = function(n){
+  if(n===1) return !!AKS._atolye();
+  if(n===2) return AKS.asamaSecildi;
+  if(n===3) return AKS._arsivVar() && !!AKS._model();
+  if(n===4) return AKS.tamam(3);
+  return false;
+};
+// İleri gidilebilecek en uzak adım: önceki adımların hepsi tamam olmalı
+AKS._erisilir = function(n){ for(var i=1;i<n;i++){ if(!AKS.tamam(i)) return false; } return true; };
+
+AKS.git = function(n, yon){
+  n=Math.max(1, Math.min(5, n));
+  if(n>AKS.adim && !AKS._erisilir(n)) return;
+  var eski=AKS.adim; AKS.adim=n; AKS.enUzak=Math.max(AKS.enUzak, n);
+  if(n!==5) AKS.bitti='';
+  AKS.ciz(yon || (n>eski?'ileri':'geri'));
+  var k=document.getElementById('akSih'); if(k){ var r=k.getBoundingClientRect(); if(r.top<0) k.scrollIntoView({behavior:'smooth', block:'start'}); }
+  setTimeout(function(){ var f=document.querySelector('#akSih [data-oto-odak]'); if(f && window.innerWidth>768) f.focus(); }, 260);
+};
+AKS.ileri = function(){
+  if(AKS.adim===1 && !AKS._atolye()){ AKS._salla('Atölye seç ya da yaz'); return; }
+  if(AKS.adim===2 && !AKS.asamaSecildi){ AKS.asamaSecildi=true; }
+  if(AKS.adim===3){
+    if(!AKS._arsivVar()){ AKS._salla('Önce arşiv dosyalarını yükle'); return; }
+    if(!AKS._model()){ AKS._salla('Model kodunu yaz'); var mi=document.getElementById('aksModel'); if(mi) mi.focus(); return; }
+  }
+  AKS.git(AKS.adim+1,'ileri');
+};
+AKS.geri = function(){ AKS.git(AKS.adim-1,'geri'); };
+AKS._salla = function(msg){
+  var k=document.querySelector('#akSih .aks-kart'); if(k){ k.classList.remove('salla'); void k.offsetWidth; k.classList.add('salla'); }
+  if(msg) toast(msg,'info');
+};
+
+// ── Çizim ────────────────────────────────────────────────────
+AKS.ciz = function(yon){
+  var host=document.getElementById('akSih'); if(!host || !AKS.acikMi()) return;
+  var n=AKS.adim;
+  var cubuk=AKS.ADIMLAR.map(function(a,i){
+    var no=i+1, ok=no<n, on=no===n, git=no<=AKS.enUzak && (no<=n || AKS._erisilir(no));
+    return '<li class="aks-a'+(on?' on':'')+(ok&&!on?' ok':'')+'">'+
+      '<button type="button" '+(git&&!on?'onclick="AKS.git('+no+')"':'disabled')+' aria-current="'+(on?'step':'false')+'">'+
+      '<span class="aks-a-n">'+(ok&&!on?'<i class="fas fa-check"></i>':no)+'</span><span class="aks-a-t">'+a.ad+'</span></button></li>';
+  }).join('');
+  var ekran=AKS['_e'+n]();
+  var alt;
+  if(n===5){
+    alt='<button type="button" class="btn btn-secondary aks-geri" onclick="AKS.geri()"><i class="fas fa-arrow-left"></i> Geri</button>'+
+        '<span class="aks-alt-orta">Adım 5 / 5</span>'+
+        '<button type="button" class="btn btn-secondary aks-ileri" onclick="AKS.yeniFoy()"><i class="fas fa-rotate-right"></i> Yeni föy</button>';
+  } else {
+    var ileriYazi = n===4 && AKS._eksikVar() ? 'Eksiklerle devam' : 'Sonraki';
+    alt=(n>1?'<button type="button" class="btn btn-secondary aks-geri" onclick="AKS.geri()"><i class="fas fa-arrow-left"></i> Geri</button>':'<span></span>')+
+        '<span class="aks-alt-orta">Adım '+n+' / 5</span>'+
+        '<button type="button" class="btn btn-primary aks-ileri'+(AKS.tamam(n)||n===2||n===4?'':' pasif')+'" onclick="AKS.ileri()">'+ileriYazi+' <i class="fas fa-arrow-right"></i></button>';
+  }
+  host.innerHTML='<div class="aks-kart">'+
+      '<div class="aks-ilerleme"><span style="width:'+((n-1)/4*100)+'%"></span></div>'+
+      '<ol class="aks-adimlar">'+cubuk+'</ol>'+
+      '<div class="aks-ekran'+(yon?' gir-'+yon:'')+'">'+ekran+'</div>'+
+      '<div class="aks-alt">'+alt+'</div>'+
+    '</div>';
+  if(n===3) AKS._dropBagla();
+};
+AKS._soru = function(ic, baslik, alt){
+  return '<div class="aks-soru"><div class="aks-ikon"><i class="fas '+ic+'"></i></div><h3>'+baslik+'</h3>'+(alt?'<p>'+alt+'</p>':'')+'</div>';
+};
+
+// ── 1. Atölye ────────────────────────────────────────────────
+AKS._atolyeler = function(){
+  var son=[], gor={};
+  function ekle(a){ a=(a||'').trim(); var k=a.toLocaleLowerCase('tr'); if(a && !gor[k]){ gor[k]=1; son.push(a); } }
+  (getConfig('akSonAtolyeler',[])||[]).forEach(ekle);
+  (AK.recs()||[]).forEach(function(r){ ekle(r.atolye); });
+  var sonN=son.length;
+  (getData('atolyeler')||[]).map(function(a){ return a.name; }).sort(function(a,b){ return String(a).localeCompare(String(b),'tr'); }).forEach(ekle);
+  return {liste:son, sonN:sonN};
+};
+AKS._e1 = function(){
+  var v=AKS._atolye(), q=v.toLocaleLowerCase('tr'), r=AKS._atolyeler();
+  var secili=function(a){ return a.toLocaleLowerCase('tr')===q; };
+  var l=r.liste.map(function(a,i){ return {a:a, son:i<r.sonN}; });
+  if(q && !l.some(function(x){ return secili(x.a); })) l=l.filter(function(x){ return x.a.toLocaleLowerCase('tr').indexOf(q)>=0; });
+  var cip=function(x){
+    var bas=(x.a.trim()[0]||'?').toLocaleUpperCase('tr');
+    return '<button type="button" class="aks-cip'+(secili(x.a)?' on':'')+'" data-a="'+AKS._e(x.a)+'" onclick="AKS.atolyeSec(this.dataset.a)"><span class="aks-av">'+AKS._e(bas)+'</span>'+AKS._e(x.a)+(secili(x.a)?'<i class="fas fa-check"></i>':'')+'</button>';
+  };
+  var sonlar=l.filter(function(x){ return x.son; }).slice(0,8), digerleri=l.filter(function(x){ return !x.son; }).slice(0,24);
+  return AKS._soru('fa-industry','Föy hangi atölyeye gidiyor?','Listeden seç ya da adını yaz. Bir dahakine en üstte hazır gelir.')+
+    '<div class="aks-icerik aks-dar">'+
+      '<label class="aks-ara"><i class="fas fa-magnifying-glass"></i><input id="aksAtolye" class="form-input" value="'+AKS._e(v)+'" placeholder="Atölye adı" autocomplete="off" data-oto-odak '+
+        'oninput="AKS.atolyeYaz(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();AKS.ileri();}">'+
+        (v?'<button type="button" class="aks-ara-x" onclick="AKS.atolyeYaz(\'\',true)" aria-label="Temizle"><i class="fas fa-xmark"></i></button>':'')+'</label>'+
+      '<div id="aksAtolyeCip">'+
+      (sonlar.length?'<div class="aks-grup">Son kullanılanlar</div><div class="aks-cipler">'+sonlar.map(cip).join('')+'</div>':'')+
+      (digerleri.length?'<div class="aks-grup">Atölyeler</div><div class="aks-cipler">'+digerleri.map(cip).join('')+'</div>':'')+
+      (!sonlar.length && !digerleri.length && v?'<div class="aks-ipucu"><i class="fas fa-circle-plus"></i> <b>'+AKS._e(v)+'</b> listede yok, bu adla devam edilecek.</div>':'')+
+      '</div>'+
+    '</div>';
+};
+AKS._atolyeYaz = function(v){
+  AK.state.atolye=v; var i=document.getElementById('akAtolye'); if(i) i.value=v;
+};
+AKS.atolyeYaz = function(v, odakla){
+  AKS._atolyeYaz(v);
+  // Yazarken kutuyu yeniden çizme (imleç kaçar) — yalnız çipleri tazele
+  var tmp=document.createElement('div'); tmp.innerHTML=AKS._e1();
+  var yeni=tmp.querySelector('#aksAtolyeCip'), eski=document.getElementById('aksAtolyeCip');
+  if(yeni && eski) eski.innerHTML=yeni.innerHTML;
+  if(odakla){ AKS.ciz(false); var inp=document.getElementById('aksAtolye'); if(inp) inp.focus(); }
+};
+AKS.atolyeSec = function(a){
+  AKS._atolyeYaz(a);
+  AKS.ciz(false);
+  setTimeout(function(){ AKS.ileri(); }, 220);
+};
+AKS._atolyeHatirla = function(){
+  var a=AKS._atolye(); if(!a) return;
+  var l=(getConfig('akSonAtolyeler',[])||[]).filter(function(x){ return x.toLocaleLowerCase('tr')!==a.toLocaleLowerCase('tr'); });
+  l.unshift(a); setConfig('akSonAtolyeler', l.slice(0,8));
+};
+
+// ── 2. Aşama ─────────────────────────────────────────────────
+AKS._e2 = function(){
+  var kart=function(k, ic, ad, alt){
+    var on=AKS.asamaSecildi && AK.state.asama===k;
+    var kalem=AK.STAGE_ORDER[k].map(function(t){ var opt=!AK.TYPES[t].req;
+      return '<span class="aks-kalem'+(opt?' opt':'')+'"><i class="fas '+(AK._TYPE_ICON[t]||'fa-file')+'"></i>'+AKS._e(AK.TYPES[t].label)+(opt?' <em>ops.</em>':'')+'</span>'; }).join('');
+    return '<button type="button" class="aks-secim'+(on?' on':'')+'" onclick="AKS.asamaSec(\''+k+'\')">'+
+      '<span class="aks-secim-tik"><i class="fas fa-check"></i></span>'+
+      '<span class="aks-secim-ic"><i class="fas '+ic+'"></i></span>'+
+      '<span class="aks-secim-ad">'+ad+'</span><span class="aks-secim-alt">'+alt+'</span>'+
+      '<span class="aks-kalemler">'+kalem+'</span></button>';
+  };
+  return AKS._soru('fa-layer-group','Hangi aşamanın föyü?','Föyde hangi etiketlerin kontrol edileceği buna göre belirlenir.')+
+    '<div class="aks-icerik aks-secimler">'+
+      kart('dikim','fa-scissors','Dikim','Dikimde takılan etiketler')+
+      kart('utupaket','fa-box-open','Ütü Paket','Paketlemede takılan kartlar')+
+    '</div>';
+};
+AKS.asamaSec = function(k){
+  AKS.asamaSecildi=true; setConfig('akSonAsama', k);
+  AK.setAsama(k);        // renderColors → AKS.ciz çağrılır
+  AKS.ciz(false);
+  setTimeout(function(){ AKS.git(3,'ileri'); }, 260);
+};
+
+// ── 3. Dosyalar ──────────────────────────────────────────────
+AKS._e3 = function(){
+  var bas=AKS._soru('fa-file-zipper','Arşiv dosyalarını yükle','ZIP / RAR / PDF arşivi ve adetler için özet tablo (Excel). Hepsini birden seçebilirsin.');
+  var input='<input type="file" id="aksDosya" accept=".zip,.rar,.7z,.pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv" multiple hidden onchange="AKS.dosyalar(this.files); this.value=\'\';">';
+  if(AKS.okunuyor){
+    return bas+'<div class="aks-icerik aks-dar"><div class="aks-drop okunuyor"><div class="aks-donen"></div><b>Arşiv okunuyor…</b><span>Renkler, PO numaraları ve etiketler ayıklanıyor</span><div class="aks-belirsiz"><span></span></div></div></div>';
+  }
+  if(!AKS._arsivVar()){
+    return bas+'<div class="aks-icerik aks-dar">'+input+
+      '<label class="aks-drop" id="aksDrop" for="aksDosya" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}">'+
+        '<span class="aks-drop-ic"><i class="fas fa-cloud-arrow-up"></i></span>'+
+        '<b>Dosyaları buraya bırak</b><span>ya da <u>bilgisayardan / telefondan seç</u></span>'+
+        '<span class="aks-turler"><em>ZIP</em><em>RAR</em><em>PDF</em><em>Excel</em></span>'+
+      '</label>'+
+      (AKS.hata?'<div class="aks-uyari kotu"><i class="fas fa-circle-exclamation"></i><span>'+AKS._e(AKS.hata)+'</span></div>':'')+
+      '<button type="button" class="aks-link" onclick="AKS.gorunumDegis()"><i class="fas fa-keyboard"></i> Arşivim yok, renkleri elle gireceğim</button>'+
+    '</div>';
+  }
+  // Sonuç
+  var renkler=AKS._dosyali(), model=AKS._model();
+  var pos=[]; renkler.forEach(function(c){ if(c.po && pos.indexOf(c.po)<0) pos.push(c.po); });
+  var top=renkler.reduce(function(s,c){ return s+AK._adetTotal(c.adet); },0);
+  var adetsiz=renkler.filter(function(c){ return !AK._adetTotal(c.adet); }).length;
+  var eksik=renkler.filter(function(c){ return AK._missingFor(c).length; }).length;
+  var ok=!!model;
+  var bilgi=function(ic,l,v,k){ return '<div class="aks-bilgi'+(k?' '+k:'')+'"><i class="fas '+ic+'"></i><span>'+l+'</span><b>'+v+'</b></div>'; };
+  return '<div class="aks-sonuc">'+
+      '<svg class="aks-tik'+(ok?'':' uyar')+'" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="23"/>'+(ok?'<path d="M15 27l7.5 7.5L38 19"/>':'<path d="M26 15v14"/><path d="M26 37v.5"/>')+'</svg>'+
+      '<h3>'+(ok?'Başarılı':'Neredeyse tamam')+'</h3>'+
+      '<p>'+(ok?'Arşiv okundu. Aşağıdakiler doğruysa devam et.':'Arşivden model kodu okunamadı, aşağıya yaz.')+'</p>'+
+    '</div>'+
+    '<div class="aks-icerik aks-dar">'+input+
+      (ok?'':'<label class="aks-ara aks-model"><i class="fas fa-cube"></i><input id="aksModel" class="form-input" placeholder="Model kodu, ör. I6391AX" autocomplete="off" data-oto-odak oninput="AKS.modelYaz(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();AKS.ileri();}"></label>')+
+      '<div class="aks-bilgiler">'+
+        bilgi('fa-cube','Model', model?AKS._e(model):'—', model?'':'eks')+
+        bilgi('fa-palette','Renk', renkler.length+' renk')+
+        bilgi('fa-hashtag','PO', pos.length?AKS._e(pos.slice(0,3).join(', '))+(pos.length>3?' +'+(pos.length-3):''):'—')+
+        bilgi('fa-layer-group','Toplam adet', top?AKS._n(top):'Excel yok', top?'':'eks')+
+      '</div>'+
+      (adetsiz?'<div class="aks-uyari"><i class="fas fa-circle-info"></i><span>'+(adetsiz===renkler.length?'Adetler gelmedi. Özet tabloyu (Excel) ekleyebilir ya da sonraki adımda elle girebilirsin.':adetsiz+' rengin adedi yok, sonraki adımda girebilirsin.')+'</span></div>':'')+
+      (eksik?'<div class="aks-uyari"><i class="fas fa-triangle-exclamation"></i><span>'+eksik+' renkte eksik etiket var, sonraki adımda görürsün.</span></div>':'')+
+      '<div class="aks-dosyalar"><i class="fas fa-paperclip"></i> '+(AK._zipNames||[]).map(AKS._e).join(' · ')+'</div>'+
+      '<div class="aks-ikincil">'+
+        '<label class="btn btn-secondary btn-sm" for="aksDosya"><i class="fas fa-plus"></i> Dosya ekle</label>'+
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="AKS.bastan()"><i class="fas fa-rotate-left"></i> Baştan yükle</button>'+
+      '</div>'+
+    '</div>';
+};
+AKS.modelYaz = function(v){ AK.state.model=(v||'').trim(); var m=document.getElementById('akModel'); if(m) m.value=AK.state.model; };
+AKS._renkId = function(){ if(!AK.state.colors.length) AK.addColor(); return AK.state.colors[0].id; };
+AKS.dosyalar = function(files){
+  files=[].slice.call(files||[]); if(!files.length) return;
+  var arsiv=files.some(function(f){ return !/\.(xlsx|xls|csv)$/i.test(f.name||''); });
+  if(!arsiv && !AKS._arsivVar()){ AKS.hata='Sadece Excel seçildi. Önce arşivi (ZIP / RAR / PDF) yükle, Excel\'i birlikte ya da sonra ekleyebilirsin.'; AKS.ciz(false); return; }
+  AKS.hata=''; AKS.okunuyor=arsiv; if(arsiv) AKS.ciz(false);
+  var bitir=function(){ AKS.okunuyor=false; if(!AKS._arsivVar()) AKS.hata='Arşivden etiket çıkmadı. Doğru dosyayı seçtiğinden emin ol.'; AKS.ciz(false); };
+  var p; try{ p=AK.onZip(AKS._renkId(), files); }catch(e){ AKS.hata='Dosya açılamadı: '+(e&&e.message||e); bitir(); return; }
+  Promise.resolve(p).then(bitir, bitir);
+};
+AKS._dropBagla = function(){
+  var d=document.getElementById('aksDrop'); if(!d) return;
+  ['dragenter','dragover'].forEach(function(t){ d.addEventListener(t, function(e){ e.preventDefault(); d.classList.add('ustunde'); }); });
+  ['dragleave','drop'].forEach(function(t){ d.addEventListener(t, function(e){ e.preventDefault(); d.classList.remove('ustunde'); }); });
+  d.addEventListener('drop', function(e){ AKS.dosyalar(e.dataTransfer && e.dataTransfer.files); });
+};
+AKS.bastan = function(){
+  if(!confirm('Yüklenen arşivler ve renkler temizlensin mi?')) return;
+  AK.clearZips(); AK.state.model=''; var m=document.getElementById('akModel'); if(m) m.value='';
+  AKS.hata=''; AKS.enUzak=3; AKS.ciz(false);
+};
+
+// ── 4. Kontrol ───────────────────────────────────────────────
+AKS._eksikVar = function(){ return AKS._dosyali().some(function(c){ return AK._missingFor(c).length || !AK._adetTotal(c.adet); }); };
+AKS._acikAdet = {};
+AKS._e4 = function(){
+  var renkler=AKS._dosyali();
+  var hazir=renkler.filter(function(c){ return !AK._missingFor(c).length && AK._adetTotal(c.adet); }).length;
+  var satir=renkler.map(function(c){
+    var miss=AK._missingFor(c), top=AK._adetTotal(c.adet), hex=AK._colorHex(c.renk)||'var(--text-muted)';
+    var tamam=!miss.length && top>0;
+    var bedenler=AK._inputSizes(c).filter(function(b){ return +c.adet[b[0]]>0; }).map(function(b){ return '<span>'+b[1]+' <b>'+AKS._n(c.adet[b[0]])+'</b></span>'; }).join('');
+    var dokumaEks=miss.indexOf(AK.TYPES.dokuma.label)>=0;
+    var digerEks=miss.filter(function(m){ return m!==AK.TYPES.dokuma.label; });
+    var acik=AKS._acikAdet[c.id] || !top;
+    var adetGir = acik ? '<div class="aks-adetler">'+AK._inputSizes(c).map(function(b){
+        return '<label><span>'+b[1]+'</span><input class="form-input" type="number" min="0" inputmode="numeric" value="'+(c.adet[b[0]]||'')+'" oninput="AK.setAdet('+c.id+',\''+b[0]+'\',this.value);AKS._toplamYaz('+c.id+')"></label>';
+      }).join('')+'</div>' : '';
+    return '<div class="aks-renk'+(tamam?' tamam':' eksik')+'" data-cid="'+c.id+'" style="--rk:'+hex+'">'+
+      '<div class="aks-renk-ust">'+
+        '<span class="aks-sw"></span>'+
+        '<div class="aks-renk-ad"><b>'+AKS._e(c.renk||c.code||'Renk')+'</b><small>'+(c.po?'PO '+AKS._e(c.po):'PO yok')+'</small></div>'+
+        '<div class="aks-renk-top"><b id="aksTop'+c.id+'">'+(top?AKS._n(top):'—')+'</b><small>adet</small></div>'+
+        AKS._durumHtml(tamam)+
+      '</div>'+
+      (bedenler&&!acik?'<div class="aks-bedenler">'+bedenler+'</div>':'')+
+      adetGir+
+      ((miss.length||!top)?'<ul class="aks-sorun">'+
+        (!top?'<li class="aks-sorun-adet"><i class="fas fa-hashtag"></i> Beden adetlerini gir</li>':'')+
+        (dokumaEks?'<li><i class="fas fa-tag"></i> Dokuma etiketi arşivde yok <button type="button" class="btn btn-primary btn-xs" onclick="AK.openLib('+c.id+')"><i class="fas fa-plus"></i> Kütüphaneden ekle</button></li>':'')+
+        (digerEks.length?'<li><i class="fas fa-file-circle-xmark"></i> Arşivde yok: <b>'+AKS._e(digerEks.join(', '))+'</b>. Tedarikçiden iste ya da eksik dosyayı 3. adımda ekle.</li>':'')+
+      '</ul>':'')+
+      '<div class="aks-renk-alt">'+
+        (top?'<button type="button" class="aks-link" onclick="AKS._acikAdet['+c.id+']=!AKS._acikAdet['+c.id+'];AKS.ciz(false)"><i class="fas fa-pen"></i> '+(acik?'Adetleri kapat':'Adetleri düzenle')+'</button>':'<span></span>')+
+        '<button type="button" class="aks-link kirmizi" onclick="if(confirm(\'Bu renk föye alınmasın mı?\')){AK.removeColor('+c.id+');}"><i class="fas fa-xmark"></i> Bu rengi çıkar</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  return AKS._soru('fa-list-check','Renkleri kontrol et',
+      renkler.length+' renkten <b>'+hazir+'</b> tanesi hazır'+(hazir<renkler.length?', eksikleri buradan tamamla.':'. Her şey yerinde.'))+
+    '<div class="aks-icerik">'+satir+'</div>';
+};
+AKS._durumHtml = function(tamam){ return tamam?'<span class="aks-durum ok"><i class="fas fa-circle-check"></i> Hazır</span>':'<span class="aks-durum eks"><i class="fas fa-triangle-exclamation"></i> Eksik</span>'; };
+// Adet yazılırken ekran yeniden çizilmez (yoksa kutudan çıkınca "Sonraki"
+// tıklaması kaybolur); toplam, durum ve düğme yazısı yerinde güncellenir.
+AKS._toplamYaz = function(cid){
+  var c=AK._c(cid), el=document.getElementById('aksTop'+cid); if(!c||!el) return;
+  var t=AK._adetTotal(c.adet), tamam=!AK._missingFor(c).length && t>0;
+  el.textContent=t?AKS._n(t):'—';
+  var row=document.querySelector('.aks-renk[data-cid="'+cid+'"]');
+  if(row){
+    row.classList.toggle('tamam', tamam); row.classList.toggle('eksik', !tamam);
+    var d=row.querySelector('.aks-durum'); if(d) d.outerHTML=AKS._durumHtml(tamam);
+    var li=row.querySelector('.aks-sorun-adet'); if(li) li.hidden=t>0;
+    var ul=row.querySelector('.aks-sorun'); if(ul) ul.hidden=![].some.call(ul.children, function(x){ return !x.hidden; });
+  }
+  var b=document.querySelector('#akSih .aks-ileri'); if(b && AKS.adim===4) b.innerHTML=(AKS._eksikVar()?'Eksiklerle devam':'Sonraki')+' <i class="fas fa-arrow-right"></i>';
+};
+
+// ── 5. Föy ───────────────────────────────────────────────────
+AKS._e5 = function(){
+  var renkler=AKS._dosyali(), top=renkler.reduce(function(s,c){ return s+AK._adetTotal(c.adet); },0);
+  var foto=AK.gelenMod()==='foto';
+  if(AKS.bitti){
+    return '<div class="aks-sonuc"><svg class="aks-tik" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="23"/><path d="M15 27l7.5 7.5L38 19"/></svg>'+
+      '<h3>'+AKS._e(AKS.bitti)+'</h3><p>'+renkler.length+' renk kayıtlara eklendi. Aşağıdaki listeden tekrar yazdırabilirsin.</p></div>'+
+      '<div class="aks-icerik aks-dar aks-ortala">'+
+        '<button type="button" class="btn btn-primary aks-buyuk" onclick="AKS.yeniFoy()"><i class="fas fa-plus"></i> Yeni föy başlat</button>'+
+        '<button type="button" class="aks-link" onclick="AKS.bitti=\'\';AKS.ciz(false)"><i class="fas fa-file-pdf"></i> Aynı föyü tekrar oluştur</button>'+
+      '</div>';
+  }
+  var sat=function(l,v){ return '<div><span>'+l+'</span><b>'+v+'</b></div>'; };
+  return AKS._soru('fa-file-pdf','Föy hazır','Son bir kez göz at, sonra oluştur.')+
+    '<div class="aks-icerik aks-dar">'+
+      '<div class="aks-fis">'+
+        sat('Atölye', AKS._e(AKS._atolye()||'—'))+
+        sat('Aşama', AKS._e(AK._asamaAd()))+
+        sat('Model', AKS._e(AKS._model()||'—'))+
+        sat('Renk', renkler.map(function(c){ return AKS._e(c.renk||c.code||'?'); }).join(', '))+
+        sat('Toplam', AKS._n(top)+' adet')+
+      '</div>'+
+      '<div class="aks-numune"><span>Gelen numune</span><div class="aks-seg">'+
+        '<button type="button" class="'+(foto?'':'on')+'" onclick="AK.setGelenMod(\'yapistir\')"><i class="fas fa-paperclip"></i> Kağıda yapıştır</button>'+
+        '<button type="button" class="'+(foto?'on':'')+'" onclick="AK.setGelenMod(\'foto\')"><i class="fas fa-camera"></i> Kamerayla</button>'+
+      '</div></div>'+
+      '<button type="button" class="btn btn-primary aks-buyuk" data-oto-odak onclick="AKS.olustur()"><i class="fas fa-file-pdf"></i> Föyü oluştur</button>'+
+      '<div class="aks-ikincil">'+
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="AKS.olustur(\'print\')"><i class="fas fa-print"></i> Yazdır</button>'+
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="AKS.olustur(\'save\')"><i class="fas fa-floppy-disk"></i> Sadece kaydet</button>'+
+      '</div>'+
+    '</div>';
+};
+AKS.olustur = function(mod){
+  AKS._atolyeHatirla();
+  var r; try{ r=AK.generateAll(mod); }catch(e){ toast('Föy oluşturulamadı: '+(e&&e.message||e),'error'); return; }
+  Promise.resolve(r).then(function(){
+    AKS.bitti = mod==='save' ? 'Kaydedildi' : (mod==='print' ? 'Yazdırmaya gönderildi' : 'Föy oluşturuldu');
+    AKS.ciz(false);
+  });
+};
+AKS.yeniFoy = function(){
+  AK._merged=null; AK._zipNames=[]; AK._zipKeys=[]; AK.state.colors=[]; AK.state.model='';
+  var m=document.getElementById('akModel'); if(m) m.value='';
+  AK.addColor();
+  AKS.bitti=''; AKS.hata=''; AKS._acikAdet={}; AKS.enUzak=1;
+  AKS.git(1,'geri');
+};
+
+// AK ekranı yeniden çizdiğinde (arşiv okundu, dokuma eklendi, renk silindi…)
+// sihirbaz da tazelensin. Yazarken (1. adım) dokunulmaz.
+(function(){
+  var asil=AK.renderColors;
+  AK.renderColors=function(){ var r=asil.apply(this, arguments); try{ if(AKS.acikMi() && AKS.adim>=3) AKS.ciz(false); }catch(_){} return r; };
+  var asilAc=AK.onOpen;
+  AK.onOpen=function(){
+    var r=asilAc.apply(this, arguments);
+    try{
+      if(!AKS._ilk){
+        AKS._ilk=true;
+        var sa=getConfig('akSonAsama',''); if(sa && AK.STAGE_ORDER[sa]){ AK.setAsama(sa); AKS.asamaSecildi=true; }
+        var l=getConfig('akSonAtolyeler',[])||[]; if(!AKS._atolye() && l[0]) AKS._atolyeYaz(l[0]);
+      }
+      AKS.gorunumUygula();
+    }catch(_){}
+    return r;
+  };
+})();
 
 /* ═══════════════════════════════════════════════════════════════════
    AKC — GELEN NUMUNE KAMERASI
