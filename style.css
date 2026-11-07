@@ -19330,3 +19330,35 @@ html .aks-ileri:not(.pasif):hover i{ transform:translateX(3px); }
   .aks-ekran.gir-ileri, .aks-ekran.gir-geri, .aks-drop-ic, .aks-kart.salla{ animation:none; }
   .aks-tik circle, .aks-tik path{ animation:none; stroke-dashoffset:0; }
 }
+
+/* Sihirbaz: Yeni föy | Kayıtlar sekmeleri (tek sayfa görünümünde yok) */
+#page-akskontrol:not(.ak-sih) .aks-sekme{ display:none; }
+#page-akskontrol.ak-sih:not(.aks-kayitta) #akKayitKart{ display:none; }
+#page-akskontrol.ak-sih.aks-kayitta #akSih{ display:none; }
+html #page-akskontrol.ak-sih #akKayitKart{ max-width:860px; margin-left:auto; margin-right:auto; border-radius:24px; padding:20px 22px; }
+html #page-akskontrol.ak-sih #akKayitKart > .ak-step{ display:none; }
+.aks-sekme{ display:flex; width:max-content; max-width:100%; margin:0 auto 16px; padding:4px; gap:4px; border-radius:16px;
+  background:var(--glass); border:1px solid var(--border); }
+.aks-sekme button{ display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border:0; border-radius:12px; background:none; cursor:pointer;
+  font:inherit; font-size:14px; font-weight:800; color:var(--text-muted); transition:background .2s, color .2s; }
+.aks-sekme button:hover{ color:var(--text-main); }
+.aks-sekme button.on{ background:var(--primary); color:var(--on-primary, #fff); box-shadow:0 8px 20px -10px var(--primary-glow, transparent); }
+.aks-sekme b{ min-width:22px; height:20px; padding:0 6px; border-radius:99px; display:inline-grid; place-items:center; font-size:11.5px;
+  background:color-mix(in srgb, var(--text-muted) 18%, transparent); }
+.aks-sekme b:empty{ display:none; }
+.aks-sekme button.on b{ background:color-mix(in srgb, var(--on-primary, #fff) 24%, transparent); }
+
+/* Atölye öneri listesi (yazınca açılır) */
+.aks-ara-kap{ position:relative; }
+.aks-oneri{ margin-top:8px; padding:6px; border-radius:16px; background:var(--bg-card-solid, var(--bg-card)); border:1px solid var(--border);
+  box-shadow:0 22px 40px -22px rgba(0,0,0,.55); animation:aksOneri .18s ease-out; }
+@keyframes aksOneri{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+.aks-oneri-s{ display:flex; align-items:center; gap:12px; width:100%; padding:9px 10px; border:0; border-radius:11px; background:none; cursor:pointer;
+  font:inherit; font-size:14.5px; font-weight:600; color:var(--text-main); text-align:left; }
+.aks-oneri-s:hover, .aks-oneri-s.on{ background:color-mix(in srgb, var(--primary) 12%, transparent); }
+.aks-oneri-ad{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aks-oneri-ad mark{ background:none; color:var(--primary); font-weight:800; }
+.aks-oneri-s small{ font-size:11px; font-weight:700; color:var(--text-muted); }
+.aks-oneri-s.yeni{ color:var(--text-muted); border-top:1px dashed var(--border); border-radius:0 0 11px 11px; margin-top:2px; }
+.aks-oneri-s.yeni .aks-av{ background:transparent; border:1.5px dashed color-mix(in srgb, var(--primary) 50%, transparent); font-size:10px; }
+.aks-oneri-s.yeni b{ color:var(--text-main); }
