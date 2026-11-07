@@ -18980,3 +18980,16 @@ html #page-list .table-desktop .tbl-act-view{
   width:34px; height:34px; border-radius:10px !important; transition:background .15s, color .15s !important;
 }
 html #page-list .table-desktop tr.t2-irs-tr:hover .tbl-act-view{ background:var(--primary) !important; color:var(--on-primary, #fff) !important; border-color:var(--primary) !important; }
+
+
+/* ── Tela Raporu penceresi ── */
+.tk-rp-modal{ max-width:460px; }
+.tk-rp-alt{ margin:0 0 14px; font-size:12.5px; color:var(--text-muted); }
+.tk-rp-gor{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.tk-rp-gor button{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 8px; border-radius:12px; border:1px solid var(--glass-border); background:transparent; color:var(--text-main); font:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+.tk-rp-gor button small{ font-weight:500; font-size:11px; color:var(--text-muted); }
+.tk-rp-gor button.on{ border-color:var(--primary); background:color-mix(in srgb, var(--primary) 14%, transparent); }
+.tk-rp-ozel{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:-4px 0 12px; }
+.tk-rp-ozel[hidden]{ display:none; }
+.tk-rp-chk{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; margin:4px 0 10px; }
+.tk-rp-say{ font-size:13px; padding:10px 12px; border-radius:10px; background:color-mix(in srgb, var(--primary) 8%, transparent); color:var(--text-main); }
