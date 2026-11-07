@@ -18861,3 +18861,122 @@ html[data-tasarim="yeni"][data-theme="blossom"] .t2-grid{
 .s-yedek-durum.hata{ color:var(--danger, #ef4444); background:color-mix(in srgb, var(--danger, #ef4444) 10%, transparent); border:1px solid color-mix(in srgb, var(--danger, #ef4444) 35%, transparent); }
 .s-yedek-durum.hata b{ color:var(--danger, #ef4444); }
 .s-yedek-durum.hata div div{ color:var(--text-main); }
+
+/* ════════════════════════════════════════════════════════════
+   İRSALİYELER · sıkı üst kısım, aktif filtreler, tablo iyileştirmeleri
+   ════════════════════════════════════════════════════════════ */
+/* Tür çipleri (eski büyük kutular yerine) */
+#page-list #listStats{ gap:7px !important; margin-bottom:12px !important; padding:2px 2px 4px !important; }
+.t2-tur-cip{
+  display:inline-flex; align-items:center; gap:7px; flex-shrink:0; padding:7px 12px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--border); background:color-mix(in srgb, var(--bg-card-solid, var(--bg-card)) 70%, transparent);
+  font-family:inherit; font-size:12.5px; font-weight:700; color:var(--text-main); white-space:nowrap; transition:border-color .15s, background .15s;
+}
+.t2-tur-cip > i{ font-size:11px; color:var(--primary-light, var(--primary)); }
+.t2-tur-cip b{ font-size:11px; font-weight:800; padding:1px 7px; border-radius:99px; background:color-mix(in srgb, var(--text-muted) 14%, transparent); color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.t2-tur-cip:hover{ border-color:color-mix(in srgb, var(--primary) 55%, var(--border)); }
+.t2-tur-cip.active{ border-color:var(--primary); background:color-mix(in srgb, var(--primary) 14%, transparent); color:var(--primary-on-tint, var(--primary)); }
+.t2-tur-cip.active b{ background:var(--primary); color:var(--on-primary, #fff); }
+
+/* Tarih aralığı yalnız "Özel aralık" seçilince */
+#page-list #t2TarihAralik:not(.goster){ display:none !important; }
+
+/* Bilgisayar: arama + filtreler + yenile/dışa aktar tek satır */
+@media (min-width:769px){
+  html #page-list .t2-lst-arac{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
+  html #page-list .t2-lst-arac > .search-bar{ flex:1 1 240px; min-width:200px; margin:0 !important; }
+  html #page-list .t2-lst-arac .t2-filtre-kutu,
+  html #page-list .t2-lst-arac .filter-row,
+  html #page-list .t2-lst-arac .export-bar{ display:contents !important; }
+  html #page-list .t2-lst-arac .pdd,
+  html #page-list .t2-lst-arac #filterAtolyeBtn{ flex:0 0 auto !important; width:auto !important; min-width:148px; max-width:220px; margin:0 !important; }
+  html #page-list .t2-lst-arac .export-btn{ flex:0 0 auto; height:44px; margin:0 !important; }
+  html #page-list .t2-lst-arac #t2TarihAralik{ order:9; flex-basis:100%; margin:2px 0 0 !important; }
+}
+
+/* Aktif filtre çipleri + kayıt sayısı */
+#page-list #resultInfo{ display:none !important; }
+.t2-aktif-filtre{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:0 0 12px; min-height:28px; }
+.t2-af{
+  display:inline-flex; align-items:center; gap:6px; padding:4px 4px 4px 11px; border-radius:999px;
+  background:color-mix(in srgb, var(--primary) 12%, transparent); border:1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  font-size:12px; font-weight:700; color:var(--primary-on-tint, var(--primary)); max-width:100%;
+}
+.t2-af > i{ font-size:10.5px; opacity:.85; }
+.t2-af button{ width:22px; height:22px; border-radius:50%; border:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  background:transparent; color:inherit; font-size:11px; }
+.t2-af button:hover{ background:color-mix(in srgb, var(--primary) 22%, transparent); }
+.t2-af-temizle{ border:0; background:none; cursor:pointer; font-family:inherit; font-size:12px; font-weight:700; color:var(--text-muted); text-decoration:underline; padding:4px 6px; }
+.t2-af-say{ margin-left:auto; font-size:12.5px; color:var(--text-muted); }
+.t2-af-say b{ color:var(--text-main); font-variant-numeric:tabular-nums; }
+
+/* Tablo */
+#page-list tr.t2-irs-tr{ cursor:pointer; }
+#page-list table.t2-terminsiz th:nth-child(9), #page-list table.t2-terminsiz td:nth-child(9){ display:none; }
+html #page-list .table-desktop td.t2-detay-td{ max-width:360px !important; min-width:180px; white-space:normal !important; overflow:visible !important; text-overflow:clip !important; line-height:1.9; color:var(--text-main) !important; }
+.t2-dc{
+  display:inline-flex; align-items:baseline; gap:4px; margin:0 4px 0 0; padding:1px 7px; border-radius:7px; white-space:nowrap;
+  background:color-mix(in srgb, var(--text-muted) 9%, transparent); color:var(--text-main); font-size:11.5px; font-weight:700; line-height:1.6;
+  font-variant-numeric:tabular-nums;
+}
+.t2-dc em{ font-style:normal; font-weight:600; color:var(--text-muted); }
+.t2-dc.serbest{ background:color-mix(in srgb, var(--warning, #f59e0b) 16%, transparent); color:var(--warning, #f59e0b); }
+.t2-foto{ display:inline-flex; align-items:center; gap:3px; margin-left:7px; font-size:11px; font-weight:700; color:var(--text-muted); vertical-align:middle; }
+.t2-foto i{ font-size:10.5px; }
+.t2-foto.hata{ color:#f87171; }
+
+/* Durum etiketi: dokununca değiştiği belli olsun */
+html #page-list .t2-durum{ cursor:pointer; transition:box-shadow .15s, filter .15s; }
+html #page-list .t2-durum::after{
+  content:"\f021"; font-family:"Font Awesome 6 Free"; font-weight:900; font-size:9px;
+  max-width:0; opacity:0; overflow:hidden; transition:max-width .18s ease, opacity .18s ease;
+}
+@media (hover:hover){
+  html #page-list .t2-durum:hover{ box-shadow:0 0 0 2px color-mix(in srgb, currentColor 30%, transparent); }
+  html #page-list .t2-durum:hover::after{ max-width:12px; opacity:.85; }
+}
+
+/* Hızlı düğmeler göz düğmesinin soluna açılıyor: işlem sütunu kutuya yetecek
+   genişlikte olsun ki durum etiketinin üstüne binmesin */
+@media (min-width:769px){
+  html #page-list .table-desktop .table-actions{ min-width:226px; }
+  html #page-list .table-desktop .table-actions-more{ right:46px !important; }
+}
+
+/* ── İrsaliyeler listesi: satır tasarımı ── */
+/* Ay / gün başlığı: toplamla */
+html #page-list tr.t2-grup-tr td{ padding-top:16px !important; padding-bottom:8px !important; }
+html #page-list tr.t2-grup-tr td small, html #page-list .t2-grup-bas small{
+  margin-left:10px; font-size:11.5px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--text-muted); font-family:inherit;
+}
+/* Satır */
+html #page-list .table-desktop tbody tr.t2-irs-tr{ transition:background .15s; }
+html #page-list .table-desktop tbody tr.t2-irs-tr td{ padding-top:12px !important; padding-bottom:12px !important; vertical-align:middle; }
+html #page-list .table-desktop tbody tr.t2-irs-tr:hover{ background:color-mix(in srgb, var(--primary) 6%, transparent) !important; }
+html #page-list .table-desktop tbody tr.t2-irs-tr.bek td:first-child{ background-image:linear-gradient(var(--warning, #f59e0b), var(--warning, #f59e0b)) !important; background-size:3px 100% !important; background-repeat:no-repeat !important; background-position:left center !important; }
+html #page-list .table-desktop tbody tr.t2-irs-tr:hover td:first-child{ background-image:linear-gradient(var(--primary), var(--primary)) !important; background-size:3px 100% !important; background-repeat:no-repeat !important; background-position:left center !important; }
+/* Tarih: altında göreli zaman */
+html #page-list td.t2-tarih-td small{ display:block; font-size:11px; color:var(--text-muted); margin-top:1px; font-weight:500; }
+/* Atölye: baş harf yuvarlağı */
+html #page-list td.t2-atolye-td{ white-space:nowrap; font-weight:600; }
+.t2-av{
+  display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; margin-right:8px; vertical-align:middle;
+  background:color-mix(in srgb, var(--primary) 15%, transparent); color:var(--primary-on-tint, var(--primary)); font-size:11px; font-weight:800;
+}
+/* Tür etiketi: türün renginde */
+html #page-list .table-desktop .type-badge, html #page-list .t2-irs .type-badge{
+  --tr:#8b5cf6; background:color-mix(in srgb, var(--tr) 13%, transparent) !important; color:color-mix(in srgb, var(--tr) 80%, var(--text-main)) !important;
+  border:1px solid color-mix(in srgb, var(--tr) 28%, transparent) !important; box-shadow:none !important;
+  text-transform:none !important; letter-spacing:0 !important; font-size:11.5px !important; padding:3px 10px !important; border-radius:999px !important;
+}
+html #page-list .type-badge.standart{ --tr:#3b82f6; } html #page-list .type-badge.fermuar{ --tr:#8b5cf6; }
+html #page-list .type-badge.lastik{ --tr:#10b981; }  html #page-list .type-badge.dugme{ --tr:#ef4444; }
+html #page-list .type-badge.toptan{ --tr:#f97316; }  html #page-list .type-badge.satenaskilik{ --tr:#06b6d4; }
+html #page-list .type-badge.kordon{ --tr:#d946ef; }  html #page-list .type-badge.dantel{ --tr:#ec4899; }
+/* Göz düğmesi: sade, satırın üstüne gelince dolar */
+html #page-list .table-desktop .tbl-act-view{
+  background:transparent !important; color:var(--primary-on-tint, var(--primary)) !important;
+  border:1px solid color-mix(in srgb, var(--primary) 35%, var(--border)) !important; box-shadow:none !important;
+  width:34px; height:34px; border-radius:10px !important; transition:background .15s, color .15s !important;
+}
+html #page-list .table-desktop tr.t2-irs-tr:hover .tbl-act-view{ background:var(--primary) !important; color:var(--on-primary, #fff) !important; border-color:var(--primary) !important; }
