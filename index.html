@@ -2706,7 +2706,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       <div class="section-header">
         <div class="t2-at-baslik">
           <h2><i class="fas fa-industry"></i>Atölyeler</h2>
-          <img class="t2-at-dans" src="img/dans.gif" alt="" width="72" height="72" decoding="async" draggable="false">
+          <span class="t2-at-maskot" aria-hidden="true">
+            <picture class="t2-at-dans"><source srcset="img/dans.webp" type="image/webp"><img src="img/dans.gif" alt="" width="223" height="192" decoding="async" draggable="false"></picture>
+            <span class="kalp k1"></span><span class="kalp k2"></span><span class="kalp k3"></span>
+          </span>
         </div>
         <button class="btn btn-primary" onclick="atolyeFormAc()"><i class="fas fa-plus"></i> Yeni atölye</button>
       </div>
