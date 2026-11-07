@@ -2703,26 +2703,61 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
 
     <!-- ========== ATÖLYELER ========== -->
     <div class="page" id="page-atolye">
-      <div class="section-header"><h2><i class="fas fa-industry"></i>Atölyeler</h2></div>
-      <div class="card" style="margin-bottom:16px;">
+      <div class="section-header">
+        <div class="t2-at-baslik">
+          <h2><i class="fas fa-industry"></i>Atölyeler</h2>
+          <img class="t2-at-dans" src="img/dans.gif" alt="" width="72" height="72" decoding="async" draggable="false">
+        </div>
+        <button class="btn btn-primary" onclick="atolyeFormAc()"><i class="fas fa-plus"></i> Yeni atölye</button>
+      </div>
+
+      <!-- Yeni atölye: düğmeyle açılır, sayfada yer kaplamaz -->
+      <div class="card t2-at-form" id="atolyeFormKart" hidden>
         <div class="card-title"><i class="fas fa-plus"></i> Yeni Atölye Ekle</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:flex-end;">
-          <div class="form-group" style="margin-bottom:0;"><label>Atölye Adı *</label><input class="form-input" id="atolyeAdi" placeholder="Atölye adı"></div>
-          <div class="form-group" style="margin-bottom:0;"><label>Telefon (WhatsApp)</label><input class="form-input" id="atolyeTel" placeholder="05xx xxx xx xx" inputmode="tel"></div>
-          <div style="display:flex;gap:6px;"><button class="btn btn-primary" onclick="addAtolye()" style="flex:1;justify-content:center;"><i class="fas fa-plus"></i> Ekle</button></div>
+          <div class="form-group" style="margin-bottom:0;"><label>Atölye Adı *</label><input class="form-input" id="atolyeAdi" placeholder="Atölye adı" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addAtolye();}"></div>
+          <div class="form-group" style="margin-bottom:0;"><label>Telefon (WhatsApp)</label><input class="form-input" id="atolyeTel" placeholder="05xx xxx xx xx" inputmode="tel" onkeydown="if(event.key==='Enter'){event.preventDefault();addAtolye();}"></div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-primary" onclick="addAtolye()" style="flex:1;justify-content:center;"><i class="fas fa-plus"></i> Ekle</button>
+            <button class="btn btn-secondary" onclick="atolyeFormKapat()" type="button">Vazgeç</button>
+          </div>
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
           <i class="fas fa-circle-info"></i> Telefon kayıtlıysa QR'lar tek tıkla WhatsApp'tan o atölyeye gönderilir.
         </div>
       </div>
-      <div class="card">
-        <div class="card-title"><i class="fas fa-industry"></i> Atölyeler (<span id="atolyeCount">0</span>)</div>
-        <div style="position:relative;margin-bottom:12px;">
-          <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
-          <input class="form-input" id="atolyeSearch" placeholder="Atölye ara..." autocomplete="off" oninput="_atolyeSearchChanged()" style="padding-left:34px;">
+
+      <div id="atolyeBos"></div>
+      <div id="atolyeIcerik">
+        <div class="t2-at-ozet" id="atolyeOzet"></div>
+        <div class="card t2-at-top" id="atolyeTop"></div>
+        <div class="card t2-at-liste">
+          <div class="t2-at-arac">
+            <div class="t2-at-ara">
+              <i class="fas fa-search"></i>
+              <input class="form-input" id="atolyeSearch" placeholder="Atölye veya telefon ara..." autocomplete="off" oninput="_atolyeSearchChanged()">
+            </div>
+            <label class="t2-at-sirala" title="Sıralama">
+              <i class="fas fa-arrow-down-wide-short"></i>
+              <select id="atolyeSirala" onchange="atolyeSirala(this.value)" aria-label="Sıralama">
+                <option value="akilli">Önce işi olanlar</option>
+                <option value="top">En çok irsaliye kesilen</option>
+                <option value="son">En son sevk</option>
+                <option value="acik">En çok açık iş</option>
+                <option value="gec">Termini geçen</option>
+                <option value="az">A-Z</option>
+              </select>
+            </label>
+            <div class="t2-at-gor" role="group" aria-label="Görünüm">
+              <button type="button" data-g="tablo" onclick="atolyeGorunum('tablo')" title="Tablo"><i class="fas fa-table-list"></i></button>
+              <button type="button" data-g="kart" onclick="atolyeGorunum('kart')" title="Kart"><i class="fas fa-table-cells-large"></i></button>
+            </div>
+          </div>
+          <div class="t2-at-cipler" id="atolyeCip"></div>
+          <div class="t2-at-sayi"><span id="atolyeSayi"></span><span id="atolyeCount" hidden>0</span></div>
+          <div id="atolyeList"></div>
+          <div id="atolyePagination"></div>
         </div>
-        <div id="atolyeList"></div>
-        <div id="atolyePagination"></div>
       </div>
     </div>
 
@@ -4896,6 +4931,7 @@ function addAtolye(){
   setData('atolyeler',list);
   ['atolyeAdi','atolyeTel'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   loadAtolyeSelects();refreshAtolyeList();
+  try{ atolyeFormKapat(); }catch(_){}
   toast('Atölye eklendi');
 }
 
@@ -4917,89 +4953,276 @@ function updateAtolyeField(id, field, value){
   refreshAtolyeList();
 }
 
-const ATOLYE_PAGE_SIZE = 10;
+const ATOLYE_PAGE_SIZE = 12;
 let currentAtolyePage = 1;
-function _atolyeSearchChanged(){
-  currentAtolyePage = 1; // arama degisince ilk sayfaya don
-  refreshAtolyeList();
+let _atFiltre='hepsi', _atSirala='akilli', _atTopDonem='90';
+try{ _atSirala=getConfig('atolyeSirala','akilli'); _atTopDonem=String(getConfig('atolyeTopDonem','90')); }catch(_){}
+function _atKaydet(k,v){ try{ setConfig(k,v); }catch(_){} }
+// Bilgisayarda tablo (32 atölye tek ekranda), telefonda kart
+function _atGorunum(){
+  if(window.innerWidth<=768) return 'kart';
+  var g='tablo'; try{ g=getConfig('atolyeGorunum','tablo'); }catch(_){}
+  return g==='kart'?'kart':'tablo';
 }
+function _atolyeSearchChanged(){ currentAtolyePage = 1; refreshAtolyeList(); }
 function goToAtolyePage(p){
   currentAtolyePage = p;
   refreshAtolyeList();
   const card = document.getElementById('atolyeList');
   if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function refreshAtolyeList(){
-  const list=getData('atolyeler');
-  document.getElementById('atolyeCount').textContent=list.length;
-  const el=document.getElementById('atolyeList');
-  const pagEl=document.getElementById('atolyePagination');
-  if(!list.length){el.innerHTML=_t2Rehber({ic:'fa-industry', bas:'İlk atölyeni ekle', alt:'İrsaliyeler atölyeye göre filtrelenir; telefon girersen QR ve PDF\'leri WhatsApp\'tan tek tıkla gönderirsin.',
-      adim:['Yukarıya atölye adını yaz','Varsa WhatsApp numarasını ekle','<b>Ekle</b> de — irsaliye keserken listeden seç'],
-      btn:'Atölye adını yaz', fn:"var e=document.querySelector('#page-atolye input');if(e){e.focus();e.scrollIntoView({block:'center'});}"});if(pagEl)pagEl.innerHTML='';return;}
-  // Arama filtresi — ad veya telefona göre
-  const q=(document.getElementById('atolyeSearch')?.value||'').trim().toLocaleLowerCase('tr');
-  const filtered = q ? list.filter(a=>((a.name||'').toLocaleLowerCase('tr').includes(q) || (a.telefon||'').toLocaleLowerCase('tr').includes(q))) : list;
-  if(!filtered.length){el.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><p>"'+esc(q)+'" ile eşleşen atölye yok.</p></div>';if(pagEl)pagEl.innerHTML='';return;}
-
-  // Sayfalama — 10'ar goster
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ATOLYE_PAGE_SIZE));
-  if(currentAtolyePage > totalPages) currentAtolyePage = totalPages;
-  if(currentAtolyePage < 1) currentAtolyePage = 1;
-  const start = (currentAtolyePage - 1) * ATOLYE_PAGE_SIZE;
-  const shown = filtered.slice(start, start + ATOLYE_PAGE_SIZE);
-
-  // Her atölyenin iş özeti: açık iş, bu ayki sevk, termini geçen, son sevk
-  const ist=_atolyeIstatistik();
-  el.classList.add('t2-atolye-izgara');
-  el.innerHTML=shown.map(a=>{
-    const tel = (a.telefon||'').replace(/[^\d+]/g,'');
-    const normTel = tel ? _normalizePhoneForWa(tel) : '';
-    const k=ist[(a.name||'').toLocaleUpperCase('tr')]||{acik:0,ay:0,top:0,gec:0,son:''};
-    const ad=esc(a.name), adJs=String(a.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<div class="t2-atolye">
-      <div class="t2a-ust"><span class="t2a-ic"><i class="fas fa-industry"></i></span>
-        <div class="t2a-ad"><b>${ad}</b><small>${tel?'<i class="fas fa-phone"></i> '+esc(a.telefon):'<span class="t2-sonuk">Telefon yok</span>'}${k.son?' · son sevk '+_t2Tarih(k.son):''}</small></div>
-        <button type="button" class="t2a-daha" onclick="_atolyeMenu(${a.id})" aria-label="Diğer işlemler"><i class="fas fa-ellipsis"></i></button></div>
-      <div class="t2a-sayi">
-        <div><b>${k.acik}</b><span>Açık iş</span></div>
-        <div><b>${k.ay}</b><span>Bu ay sevk</span></div>
-        <div class="${k.gec?'gec':''}"><b>${k.gec}</b><span>Termini geçen</span></div>
-        <div><b>${k.top}</b><span>Toplam</span></div>
-      </div>
-      <div class="t2a-eylem">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="_atolyeIrsaliyeleri('${esc(adJs)}')"><i class="fas fa-list"></i> İrsaliyeleri</button>
-        ${normTel?`<button type="button" class="btn btn-sm t2a-wa" onclick="_openWhatsApp('${normTel}','')"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>`
-                 :`<button type="button" class="btn btn-sm btn-secondary" onclick="_atolyeTelefon(${a.id})"><i class="fas fa-phone"></i> Telefon ekle</button>`}
-      </div>
-    </div>`;
-  }).join('');
-
-  if(pagEl){
-    if(totalPages > 1){
-      renderPagination('atolyePagination', currentAtolyePage, totalPages, 'goToAtolyePage');
-      pagEl.insertAdjacentHTML('beforeend', `<div class="pagination-info">Gösterilen: ${start+1}-${Math.min(start+ATOLYE_PAGE_SIZE,filtered.length)} / Toplam: ${filtered.length} atölye</div>`);
-    } else {
-      pagEl.innerHTML='';
-    }
-  }
+function atolyeFormAc(){
+  const k=document.getElementById('atolyeFormKart'); if(!k) return;
+  try{ showPage('atolye'); }catch(_){}
+  k.hidden=false;
+  setTimeout(function(){ k.scrollIntoView({block:'center',behavior:'smooth'}); const e=document.getElementById('atolyeAdi'); if(e) e.focus(); },60);
 }
+function atolyeFormKapat(){
+  const k=document.getElementById('atolyeFormKart'); if(k) k.hidden=true;
+  ['atolyeAdi','atolyeTel'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+}
+function atolyeFiltre(f){ _atFiltre=(f===_atFiltre && f!=='hepsi')?'hepsi':f; currentAtolyePage=1; refreshAtolyeList(); }
+function atolyeFiltreTemizle(){ _atFiltre='hepsi'; const q=document.getElementById('atolyeSearch'); if(q) q.value=''; currentAtolyePage=1; refreshAtolyeList(); }
+function atolyeSirala(s){ _atSirala=s; _atKaydet('atolyeSirala',s); currentAtolyePage=1; refreshAtolyeList(); }
+function atolyeGorunum(g){ _atKaydet('atolyeGorunum',g); currentAtolyePage=1; refreshAtolyeList(); }
+function atolyeTopDonem(d){ _atTopDonem=String(d); _atKaydet('atolyeTopDonem',String(d)); refreshAtolyeList(); }
+try{
+  window.matchMedia('(max-width:768px)').addEventListener('change', function(){
+    const p=document.getElementById('page-atolye'); if(p && p.classList.contains('active')) refreshAtolyeList();
+  });
+}catch(_){}
 
+function _atSifir(){ return {acik:0,ay:0,top:0,gec:0,son:'',n30:0,n90:0,a30:0,a90:0,aTop:0}; }
+function _atGunFark(tarih){
+  if(!tarih) return null;
+  const d=new Date(tarih+'T12:00:00'); if(isNaN(d)) return null;
+  const b=new Date(); b.setHours(12,0,0,0);
+  return Math.round((b-d)/864e5);
+}
+function _atSonYazi(gun, son){
+  if(gun==null) return 'Hiç sevk yok';
+  if(gun<0) return _t2Tarih(son);
+  if(gun===0) return 'bugün';
+  if(gun===1) return 'dün';
+  if(gun<45) return gun+' gün önce';
+  if(gun<365) return Math.round(gun/30)+' ay önce';
+  return Math.round(gun/365)+' yıl önce';
+}
+const _atSayiYaz=function(n){ return (+n||0).toLocaleString('tr'); };
+// Bir kaydın adedi (türe göre alan değişiyor)
+function _atolyeAdet(i){
+  const n=function(v){ v=parseFloat(v); return isNaN(v)?0:v; };
+  if(i.totalAdet) return n(i.totalAdet);
+  if(i.total) return n(i.total);
+  if(i.adet) return n(i.adet);
+  if(i.sizes && typeof i.sizes==='object') return Object.values(i.sizes).reduce(function(t,v){ return t+n(v); },0);
+  return 0;
+}
 function _atolyeIstatistik(){
-  const out={}, bugun=new Date().toISOString().slice(0,10), ay=bugun.slice(0,7);
+  const out={}, simdi=new Date(), bugun=simdi.toISOString().slice(0,10), ay=bugun.slice(0,7);
+  const kes=function(g){ const d=new Date(simdi); d.setDate(d.getDate()-g); return d.toISOString().slice(0,10); };
+  const k30=kes(30), k90=kes(90);
   ['irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller'].forEach(function(k){
     (getData(k)||[]).forEach(function(i){
       const ad=(i.atolye||i.firma||'').toLocaleUpperCase('tr'); if(!ad) return;
-      const o=out[ad]||(out[ad]={acik:0,ay:0,top:0,gec:0,son:''});
-      o.top++; const bek=(i.durum||'bekliyor')!=='teslim';
+      const o=out[ad]||(out[ad]=_atSifir());
+      const adet=_atolyeAdet(i);
+      o.top++; o.aTop+=adet;
+      const bek=(i.durum||'bekliyor')!=='teslim';
       if(bek) o.acik++;
       if(i.tarih && i.tarih.slice(0,7)===ay) o.ay++;
+      if(i.tarih && i.tarih>=k30){ o.n30++; o.a30+=adet; }
+      if(i.tarih && i.tarih>=k90){ o.n90++; o.a90+=adet; }
       if(bek && i.termin && i.termin<bugun) o.gec++;
       if(i.tarih && i.tarih>o.son) o.son=i.tarih;
     });
   });
   return out;
 }
+function _atolyeSatirlar(){
+  const ist=_atolyeIstatistik();
+  return (getData('atolyeler')||[]).map(function(a){
+    const tel=(a.telefon||'').replace(/[^\d+]/g,'');
+    const k=ist[(a.name||'').toLocaleUpperCase('tr')]||_atSifir();
+    return {a:a, k:k, tel:tel, normTel:tel?_normalizePhoneForWa(tel):'', gun:_atGunFark(k.son)};
+  });
+}
+const _AT_FILTRELER=[
+  ['hepsi','Hepsi',function(r){ return true; }],
+  ['acik','Açık işi olan',function(r){ return r.k.acik>0; }],
+  ['gec','Termini geçen',function(r){ return r.k.gec>0; }],
+  ['telvar','Telefonu olan',function(r){ return !!r.tel; }],
+  ['telyok','Telefonu yok',function(r){ return !r.tel; }],
+  ['son30','Son 30 gün sevk',function(r){ return r.k.n30>0; }],
+  ['uzun','60+ gündür sevk yok',function(r){ return r.k.top===0 || (r.gun!=null && r.gun>=60); }]
+];
+function _atKarsilastir(){
+  const tr=function(a,b){ return String(a.a.name||'').localeCompare(String(b.a.name||''),'tr'); };
+  const son=function(a,b){ return String(b.k.son||'').localeCompare(String(a.k.son||'')); };
+  const f={
+    akilli:function(a,b){ return (b.k.gec-a.k.gec)||(b.k.acik-a.k.acik)||(b.k.top-a.k.top)||tr(a,b); },
+    top:function(a,b){ return (b.k.top-a.k.top)||son(a,b)||tr(a,b); },
+    son:function(a,b){ return son(a,b)||tr(a,b); },
+    acik:function(a,b){ return (b.k.acik-a.k.acik)||(b.k.top-a.k.top)||tr(a,b); },
+    gec:function(a,b){ return (b.k.gec-a.k.gec)||(b.k.acik-a.k.acik)||tr(a,b); },
+    az:tr
+  };
+  return f[_atSirala]||f.akilli;
+}
+
+// ── Üst özet: 4 kutu, dokununca o filtre ──
+function _atolyeOzetCiz(rows){
+  const el=document.getElementById('atolyeOzet'); if(!el) return;
+  const topl=function(f){ return rows.reduce(function(t,r){ return t+r.k[f]; },0); };
+  const acik=rows.filter(function(r){ return r.k.acik>0; }).length;
+  const gec=rows.filter(function(r){ return r.k.gec>0; }).length;
+  const telyok=rows.filter(function(r){ return !r.tel; }).length;
+  const son30=rows.filter(function(r){ return r.k.n30>0; }).length;
+  const kutu=function(f,ic,cls,sayi,etiket,alt){
+    return '<button type="button" class="t2-at-k '+cls+(_atFiltre===f?' aktif':'')+'" onclick="atolyeFiltre(\''+f+'\')">'+
+      '<span class="ic"><i class="fas '+ic+'"></i></span>'+
+      '<span class="tx"><b>'+sayi+'</b><span>'+etiket+'</span><small>'+alt+'</small></span></button>';
+  };
+  el.innerHTML =
+    kutu('hepsi','fa-industry','', rows.length, 'Atölye', son30+' tanesi son 30 günde sevk aldı')+
+    kutu('acik','fa-hourglass-half','', acik, 'Açık işi olan', _atSayiYaz(topl('acik'))+' açık irsaliye')+
+    kutu('gec','fa-clock','kirmizi'+(gec?'':' sakin'), gec, 'Termini geçen', gec?(_atSayiYaz(topl('gec'))+' irsaliye gecikmiş'):'Geciken yok')+
+    kutu('telyok','fa-phone-slash','sari'+(telyok?'':' sakin'), telyok, 'Telefonu yok', telyok?'WhatsApp\'tan gönderilemez':'Hepsinin telefonu var');
+}
+
+// ── En çok irsaliye kesilenler: ilk 5, yatay çubuk ──
+function _atolyeTopCiz(rows){
+  const el=document.getElementById('atolyeTop'); if(!el) return;
+  const d=_atTopDonem, nK=d==='30'?'n30':d==='90'?'n90':'top', aK=d==='30'?'a30':d==='90'?'a90':'aTop';
+  const l=rows.filter(function(r){ return r.k[nK]>0; }).sort(function(a,b){ return (b.k[nK]-a.k[nK])||(b.k[aK]-a.k[aK]); }).slice(0,5);
+  const toplam=rows.reduce(function(t,r){ return t+r.k[nK]; },0);
+  const mx=l.length?l[0].k[nK]:1;
+  const sec=function(v,ad){ return '<button type="button" class="'+(d===v?'aktif':'')+'" onclick="atolyeTopDonem(\''+v+'\')">'+ad+'</button>'; };
+  let govde;
+  if(!l.length){
+    govde='<div class="t2-at-top-bos">Bu dönemde hiçbir atölyeye irsaliye kesilmemiş.</div>';
+  } else {
+    const ilk5=l.reduce(function(t,r){ return t+r.k[nK]; },0);
+    govde='<div class="t2-at-bar-liste">'+l.map(function(r,i){
+      const yuzde=Math.max(6,Math.round(r.k[nK]/mx*100));
+      return '<button type="button" class="t2-at-bar" data-ad="'+esc(r.a.name)+'" onclick="_atolyeIrsaliyeleri(this.dataset.ad)" title="İrsaliyelerini göster">'+
+        '<span class="s">'+(i+1)+'</span>'+
+        '<span class="ad">'+esc(r.a.name)+'</span>'+
+        '<span class="yol"><span class="dolgu" style="width:'+yuzde+'%"></span></span>'+
+        '<span class="sy"><b>'+_atSayiYaz(r.k[nK])+'</b> irsaliye'+(r.k[aK]>0?'<small> · '+_atSayiYaz(r.k[aK])+' adet</small>':'')+'</span>'+
+      '</button>';
+    }).join('')+'</div>'+
+    '<div class="t2-at-top-alt">İlk '+l.length+' atölye, '+(d==='0'?'bugüne kadar':'bu dönemdeki')+' toplam '+_atSayiYaz(toplam)+' irsaliyenin <b>%'+Math.round(ilk5/toplam*100)+'</b>\'ini aldı.</div>';
+  }
+  el.innerHTML='<div class="t2-at-top-ust"><div class="card-title" style="margin:0;"><i class="fas fa-ranking-star"></i> En çok irsaliye kesilenler</div>'+
+    '<div class="t2-at-seg" role="group" aria-label="Dönem">'+sec('30','30 gün')+sec('90','90 gün')+sec('0','Tümü')+'</div></div>'+govde;
+}
+
+function _atolyeCipCiz(rows){
+  const el=document.getElementById('atolyeCip'); if(!el) return;
+  el.innerHTML=_AT_FILTRELER.map(function(f){
+    const n=rows.filter(f[2]).length;
+    return '<button type="button" class="t2-at-cip'+(_atFiltre===f[0]?' aktif':'')+(n?'':' bos')+'" onclick="atolyeFiltre(\''+f[0]+'\')">'+f[1]+'<i>'+n+'</i></button>';
+  }).join('');
+}
+
+function _atEylemHtml(r){
+  const ad=esc(r.a.name);
+  return '<button type="button" class="btn btn-sm btn-secondary" data-ad="'+ad+'" onclick="_atolyeIrsaliyeleri(this.dataset.ad)"><i class="fas fa-list"></i> İrsaliyeleri</button>'+
+    (r.normTel?'<button type="button" class="btn btn-sm t2a-wa" onclick="_openWhatsApp(\''+r.normTel+'\',\'\')"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>'
+              :'<button type="button" class="btn btn-sm btn-secondary" onclick="_atolyeTelefon('+r.a.id+')"><i class="fas fa-phone"></i> Telefon ekle</button>');
+}
+function _atKartHtml(r){
+  const a=r.a, k=r.k, ad=esc(a.name);
+  const sy=function(v,cls,et){ return '<div class="'+(cls||'')+(v?'':' sifir')+'"><b>'+_atSayiYaz(v)+'</b><span>'+et+'</span></div>'; };
+  return '<div class="t2-atolye'+(k.gec?' gecikti':'')+'">'+
+    '<div class="t2a-ust"><span class="t2a-ic"><i class="fas fa-industry"></i></span>'+
+      '<div class="t2a-ad"><b>'+ad+'</b>'+
+        '<small>Son sevk: '+(k.son?_atSonYazi(r.gun,k.son):'<span class="t2-sonuk">hiç yok</span>')+'</small>'+
+        '<small>'+(r.tel?'<i class="fas fa-phone"></i> '+esc(a.telefon):'<span class="t2-sonuk"><i class="fas fa-phone-slash"></i> Telefon yok</span>')+'</small></div>'+
+      '<button type="button" class="t2a-daha" onclick="_atolyeMenu('+a.id+')" aria-label="Diğer işlemler"><i class="fas fa-ellipsis"></i></button></div>'+
+    '<div class="t2a-sayi">'+sy(k.acik,'','Açık iş')+sy(k.gec,'gec','Geciken')+sy(k.ay,'','Bu ay')+sy(k.top,'','Toplam')+'</div>'+
+    '<div class="t2a-eylem">'+_atEylemHtml(r)+'</div></div>';
+}
+function _atTh(ad, anahtar, sinif){
+  const akt=_atSirala===anahtar;
+  return '<th class="'+(sinif||'')+'"><button type="button" class="t2-at-th'+(akt?' aktif':'')+'" onclick="atolyeSirala(\''+anahtar+'\')">'+ad+(akt?' <i class="fas fa-arrow-down"></i>':'')+'</button></th>';
+}
+function _atTabloHtml(rows){
+  const n=function(v,cls){ return '<td class="n '+(cls||'')+(v?'':' sifir')+'">'+_atSayiYaz(v)+'</td>'; };
+  return '<div class="t2-at-tablo-sar"><table class="t2-at-tablo"><thead><tr>'+
+    _atTh('Atölye','az','ad')+_atTh('Açık iş','acik','n')+_atTh('Geciken','gec','n')+'<th class="n"><span class="t2-at-th">Bu ay</span></th>'+_atTh('Toplam','top','n')+_atTh('Son sevk','son','son')+'<th class="eylem"></th>'+
+    '</tr></thead><tbody>'+rows.map(function(r){
+      const a=r.a, k=r.k, ad=esc(a.name);
+      return '<tr class="'+(k.gec?'gecikti':'')+'">'+
+        '<td class="ad"><div class="adk"><span class="t2a-ic sm"><i class="fas fa-industry"></i></span><div>'+
+          '<button type="button" class="t2-at-adbtn" data-ad="'+ad+'" onclick="_atolyeIrsaliyeleri(this.dataset.ad)" title="İrsaliyelerini göster">'+ad+'</button>'+
+          '<small>'+(r.tel?'<i class="fas fa-phone"></i> '+esc(a.telefon):'<span class="t2-sonuk"><i class="fas fa-phone-slash"></i> Telefon yok</span>')+'</small></div></div></td>'+
+        n(k.acik)+n(k.gec,'gec')+n(k.ay)+n(k.top)+
+        '<td class="son">'+(k.son?'<b>'+_atSonYazi(r.gun,k.son)+'</b><small>'+_t2Tarih(k.son,true)+'</small>':'<span class="t2-sonuk">Hiç sevk yok</span>')+'</td>'+
+        '<td class="eylem"><div>'+_atEylemHtml(r)+'<button type="button" class="t2a-daha" onclick="_atolyeMenu('+a.id+')" aria-label="Diğer işlemler"><i class="fas fa-ellipsis"></i></button></div></td>'+
+      '</tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+function refreshAtolyeList(){
+  const tum=getData('atolyeler')||[];
+  const cnt=document.getElementById('atolyeCount'); if(cnt) cnt.textContent=tum.length;
+  const el=document.getElementById('atolyeList');
+  const pagEl=document.getElementById('atolyePagination');
+  const icerik=document.getElementById('atolyeIcerik'), bos=document.getElementById('atolyeBos');
+  if(!el) return;
+  if(!tum.length){
+    if(icerik) icerik.hidden=true;
+    if(bos) bos.innerHTML=_t2Rehber({ic:'fa-industry', bas:'İlk atölyeni ekle', alt:'İrsaliyeler atölyeye göre filtrelenir; telefon girersen QR ve PDF\'leri WhatsApp\'tan tek tıkla gönderirsin.',
+      adim:['Sağ üstteki <b>Yeni atölye</b>ye bas','Atölye adını ve varsa WhatsApp numarasını yaz','<b>Ekle</b> de — irsaliye keserken listeden seç'],
+      btn:'Yeni atölye', fn:'atolyeFormAc()'});
+    if(pagEl) pagEl.innerHTML='';
+    return;
+  }
+  if(icerik) icerik.hidden=false;
+  if(bos) bos.innerHTML='';
+
+  const rows=_atolyeSatirlar();
+  _atolyeOzetCiz(rows); _atolyeTopCiz(rows); _atolyeCipCiz(rows);
+  const sel=document.getElementById('atolyeSirala'); if(sel && sel.value!==_atSirala) sel.value=_atSirala;
+  const gor=_atGorunum();
+  document.querySelectorAll('.t2-at-gor button').forEach(function(b){ b.classList.toggle('aktif', b.dataset.g===gor); });
+
+  const q=(document.getElementById('atolyeSearch')?.value||'').trim().toLocaleLowerCase('tr');
+  const sayiEl=document.getElementById('atolyeSayi');
+  const fn=(_AT_FILTRELER.find(function(f){ return f[0]===_atFiltre; })||_AT_FILTRELER[0])[2];
+  let liste=rows.filter(fn);
+  if(q) liste=liste.filter(function(r){ return (r.a.name||'').toLocaleLowerCase('tr').includes(q) || (r.a.telefon||'').toLowerCase().includes(q); });
+  liste.sort(_atKarsilastir());
+  if(sayiEl) sayiEl.textContent = liste.length===tum.length ? tum.length+' atölye' : liste.length+' atölye gösteriliyor · toplam '+tum.length;
+
+  el.classList.toggle('t2-atolye-izgara', gor==='kart');
+  if(!liste.length){
+    el.classList.remove('t2-atolye-izgara');
+    el.innerHTML='<div class="t2-at-bos"><i class="fas fa-filter"></i><p>'+(q?('"'+esc(q)+'" ile eşleşen atölye yok.'):'Bu filtreyle eşleşen atölye yok.')+'</p>'+
+      '<button type="button" class="btn btn-sm btn-secondary" onclick="atolyeFiltreTemizle()">Filtreleri temizle</button></div>';
+    if(pagEl) pagEl.innerHTML='';
+    return;
+  }
+  if(gor==='tablo'){
+    el.innerHTML=_atTabloHtml(liste);
+    if(pagEl) pagEl.innerHTML='';
+    return;
+  }
+  const totalPages=Math.max(1, Math.ceil(liste.length/ATOLYE_PAGE_SIZE));
+  if(currentAtolyePage>totalPages) currentAtolyePage=totalPages;
+  if(currentAtolyePage<1) currentAtolyePage=1;
+  const start=(currentAtolyePage-1)*ATOLYE_PAGE_SIZE;
+  el.innerHTML=liste.slice(start,start+ATOLYE_PAGE_SIZE).map(_atKartHtml).join('');
+  if(pagEl){
+    if(totalPages>1){
+      renderPagination('atolyePagination', currentAtolyePage, totalPages, 'goToAtolyePage');
+      pagEl.insertAdjacentHTML('beforeend','<div class="pagination-info">Gösterilen: '+(start+1)+'-'+Math.min(start+ATOLYE_PAGE_SIZE,liste.length)+' / Toplam: '+liste.length+' atölye</div>');
+    } else pagEl.innerHTML='';
+  }
+}
+
 function _atolyeIrsaliyeleri(ad){
   const u=ad.toLocaleUpperCase('tr');
   _gotoListWith(function(i){ return (i.atolye||i.firma||'').toLocaleUpperCase('tr')===u; }, ad);
