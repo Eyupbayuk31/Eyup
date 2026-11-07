@@ -14269,12 +14269,12 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-prog-fill{ height:100%; border-radius:5px; background:linear-gradient(90deg, var(--primary), var(--primary-light)); transition:width .5s cubic-bezier(.4,0,.2,1); }
 .ft-prog-ok .ft-prog-fill{ background:linear-gradient(90deg, var(--success), color-mix(in srgb, var(--success) 60%, var(--primary))); }
 .ft-prog-partial .ft-prog-fill{ background:linear-gradient(90deg, var(--warning), var(--primary)); }
-.ft-prog-ready .ft-prog-fill{ background:linear-gradient(90deg, #3b82f6, #60a5fa); }
+.ft-prog-ready .ft-prog-fill{ background:linear-gradient(90deg, var(--primary-dark, var(--primary)), var(--primary-light, var(--primary))); }
 /* "Stokta · kullanıma hazır": tam geldi ama elde stok var → mavi */
-.ft-card-ready::before{ background:linear-gradient(#3b82f6, #2563eb); }
-.ft-card-ready{ border-color:color-mix(in srgb, #3b82f6 24%, var(--border)); }
-.ft-card-ready:hover{ border-color:color-mix(in srgb, #3b82f6 42%, var(--border)); box-shadow:0 12px 30px -12px color-mix(in srgb, #3b82f6 42%, transparent); }
-.ft-badge-ready{ background:color-mix(in srgb, #3b82f6 18%, transparent); color:#60a5fa; }
+.ft-card-ready::before{ background:linear-gradient(var(--primary-light, var(--primary)), var(--primary-dark, var(--primary))); }
+.ft-card-ready{ border-color:color-mix(in srgb, var(--primary) 28%, var(--border)); }
+.ft-card-ready:hover{ border-color:color-mix(in srgb, var(--primary) 46%, var(--border)); box-shadow:0 12px 30px -12px color-mix(in srgb, var(--primary) 42%, transparent); }
+.ft-badge-ready{ background:color-mix(in srgb, var(--primary) 18%, transparent); color:var(--primary-light, var(--primary)); }
 .ft-mini{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px; padding-top:12px; border-top:1px solid color-mix(in srgb, var(--border) 70%, transparent); }
 .ft-mini div{ text-align:center; padding:7px 4px; border-radius:9px; background:color-mix(in srgb, var(--text-dim) 6%, transparent); }
 .ft-mini span{ display:block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); }
@@ -14424,7 +14424,7 @@ html{ scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) trans
 .ft-row span.pos{ color:var(--success); font-weight:700; font-variant-numeric:tabular-nums; }
 .ft-row span.neg{ color:var(--text-muted); font-variant-numeric:tabular-nums; }
 .ft-row span.bad{ color:var(--danger); font-weight:800; font-variant-numeric:tabular-nums; }
-.ft-row span.fz{ color:#3b82f6; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }   /* siparişten fazla gelen */
+.ft-row span.fz{ color:var(--primary-light, var(--primary)); font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }   /* siparişten fazla gelen */
 .ft-row-stok{ font-weight:900; font-variant-numeric:tabular-nums; color:var(--text-main); }
 .ft-row-stok.low{ color:var(--warning); }
 .ft-row-stok.zero{ color:var(--danger); }
@@ -17842,8 +17842,8 @@ html .t2tk-bilgi .ft-card-renk{ padding:0 !important; background:none !important
 html .t2tk-bilgi .kt-birim-rozet{ font-size:11px !important; padding:2px 8px !important; }
 .t2tk-orta{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
 .t2tk-ana{ display:flex; align-items:baseline; gap:8px; }
-.t2tk-ana b{ font-size:34px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; color:#34d399; }
-.t2tk-ana.eks b{ color:#f87171; }
+.t2tk-ana b{ font-size:34px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; color:var(--success); }
+.t2tk-ana.eks b{ color:var(--danger); }
 .t2tk-ana span{ font-size:12.5px; font-weight:700; color:var(--text-muted); }
 .t2tk-termin{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; text-align:right; }
 .t2tk-termin small{ font-size:11.5px; }
@@ -17857,15 +17857,15 @@ html .t2tk-prog .ft-prog{ flex:1; margin:0 !important; height:7px !important; }
   background:color-mix(in srgb, var(--bg-main) 35%, transparent); }
 .t2tk-b em{ font-style:normal; font-weight:700; color:var(--text-main); }
 .t2tk-b b{ font-weight:800; font-variant-numeric:tabular-nums; }
-.t2tk-b.tam b{ color:#34d399; } .t2tk-b.tam{ border-color:rgba(16,185,129,.3); }
-.t2tk-b.eks b{ color:#f87171; } .t2tk-b.eks{ border-color:rgba(239,68,68,.35); }
-.t2tk-b.faz b{ color:#60a5fa; }
+.t2tk-b.tam b{ color:var(--success); } .t2tk-b.tam{ border-color:color-mix(in srgb, var(--success) 34%, transparent); }
+.t2tk-b.eks b{ color:var(--danger); } .t2tk-b.eks{ border-color:color-mix(in srgb, var(--danger) 40%, transparent); }
+.t2tk-b.faz b{ color:var(--primary-light, var(--primary)); }
 .t2tk-b.bos b{ color:var(--text-muted); }
 .t2tk-eylem{ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-top:2px; }
 html .t2tk-eylem .btn{ justify-content:center; min-height:40px; white-space:nowrap; }
 html .t2tk-eylem .t2tk-daha{ width:44px; padding:0 !important; }
-html .ft-badge-late{ background:rgba(239,68,68,.16) !important; color:#f87171 !important; }
-html .ft-card.ft-card-late{ border-color:rgba(239,68,68,.35) !important; }
+html .ft-badge-late{ background:color-mix(in srgb, var(--danger) 16%, transparent) !important; color:var(--danger) !important; }
+html .ft-card.ft-card-late{ border-color:color-mix(in srgb, var(--danger) 40%, transparent) !important; }
 .t2-sira-btn{ display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--border);
   background:transparent; color:var(--text-muted); font:inherit; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
 .t2-sira-btn:hover{ color:var(--primary-light, var(--primary)); border-color:color-mix(in srgb, var(--primary) 45%, var(--border)); }
