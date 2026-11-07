@@ -4443,6 +4443,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <div class="ft-toolbar">
           <div class="ft-toolbar-group">
             <button class="btn btn-secondary" id="tkRefreshBtn" onclick="tkManualRefresh()"><i class="fas fa-sync-alt"></i> Yenile</button>
+            <button class="btn btn-secondary" onclick="tkRaporAc()"><i class="fas fa-file-lines"></i> Rapor</button>
           </div>
           <button class="btn btn-primary" onclick="tkOpenModelModal()"><i class="fas fa-plus"></i> Yeni Model</button>
         </div>
@@ -4480,6 +4481,38 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
     </div>
 
+    <!-- Modal: Tela Raporu (siyah-beyaz çıktı: kime ne kadar tela gitti) -->
+    <div class="modal-overlay" id="tkRaporModal" onclick="if(event.target===this)tkRaporKapat()">
+      <div class="modal tk-rp-modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <h3 style="font-weight:700;font-size:17px;"><i class="fas fa-file-lines" style="color:var(--primary);margin-right:7px;"></i>Tela Raporu</h3>
+          <button onclick="tkRaporKapat()" class="ft-x" aria-label="Kapat"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="tk-rp-alt">Siyah-beyaz yazıcıya uygun. Hangi modele, hangi atölyeye kaç top tela gitti.</p>
+        <div class="tk-rp-gor" role="group" aria-label="Rapor düzeni">
+          <button type="button" id="tkRpGorAtolye" onclick="tkRaporGor('atolye')">Atölyeye göre<small>kime ne gitti</small></button>
+          <button type="button" id="tkRpGorModel" onclick="tkRaporGor('model')">Modele göre<small>modele ne gitti</small></button>
+        </div>
+        <div class="form-group"><label for="tkRpModel">Model</label><select class="form-input" id="tkRpModel" onchange="tkRaporOnizle()"></select></div>
+        <div class="form-group"><label for="tkRpAtolye">Atölye</label><select class="form-input" id="tkRpAtolye" onchange="tkRaporOnizle()"></select></div>
+        <div class="form-group"><label for="tkRpDonem">Tarih</label>
+          <select class="form-input" id="tkRpDonem" onchange="tkRaporOnizle()">
+            <option value="hepsi">Tümü</option><option value="buay">Bu ay</option><option value="gecenay">Geçen ay</option><option value="son30">Son 30 gün</option><option value="ozel">Özel aralık</option>
+          </select>
+        </div>
+        <div class="tk-rp-ozel" id="tkRpOzel" hidden>
+          <input class="form-input" type="date" id="tkRpBas" onchange="tkRaporOnizle()" aria-label="Başlangıç">
+          <input class="form-input" type="date" id="tkRpSon" onchange="tkRaporOnizle()" aria-label="Bitiş">
+        </div>
+        <label class="tk-rp-chk"><input type="checkbox" id="tkRpDetay" onchange="tkRaporOnizle()"> Tek tek hareketleri tarihiyle göster</label>
+        <div class="tk-rp-say" id="tkRpSay"></div>
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <button class="btn btn-primary" style="flex:1;" id="tkRpAc" onclick="tkRaporOlustur()"><i class="fas fa-file-lines"></i> Raporu Aç</button>
+          <button class="btn btn-secondary" onclick="tkRaporKapat()">İptal</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Tela Detay — top tela satırları -->
     <div class="modal-overlay ft-detail-overlay" id="tkDetailModal" onclick="if(event.target===this)tkCloseDetailModal()">
       <div class="modal ft-detail-modal">
@@ -4489,6 +4522,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
             <div class="ft-detail-meta" id="tkDetailMeta"></div>
           </div>
           <div class="ft-detail-acts">
+            <button class="btn btn-sm btn-secondary" onclick="tkRaporAc(_tkCurrentDetailId)"><i class="fas fa-file-lines"></i> Rapor</button>
             <button class="btn btn-sm btn-secondary" onclick="tkEditModelMeta()"><i class="fas fa-pen"></i> Bilgiler</button>
           </div>
           <button onclick="tkCloseDetailModal()" class="ft-x" aria-label="Kapat"><i class="fas fa-times"></i></button>
@@ -20657,6 +20691,7 @@ document.addEventListener('DOMContentLoaded', function(){
     {ad:'Yeni fermuar modeli', ek:'fermuar model ekle yeni takip', ic:'fa-link', run:git('fermuar-takip', function(){ ftOpenOrderModal(); })},
     {ad:'Yeni kordon modeli',  ek:'kordon model ekle yeni takip',  ic:'fa-bezier-curve', run:git('kordon-takip', function(){ ktOpenOrderModal(); })},
     {ad:'Yeni tela modeli',    ek:'tela model ekle yeni',          ic:'fa-layer-group', run:git('tela-kontrol', function(){ tkOpenModelModal(); })},
+    {ad:'Tela raporu (kime ne gitti)', ek:'tela rapor kime ne gitti atolye pdf yazdir', ic:'fa-file-lines', run:git('tela-kontrol', function(){ tkRaporAc(); })},
     {ad:'Fermuar eksik listesi (PDF)', ek:'fermuar eksik pdf teslim liste', ic:'fa-file-pdf', run:git('fermuar-takip', function(){ ftOpenPdfModal(); })},
     {ad:'Kordon eksik listesi (PDF)',  ek:'kordon eksik pdf teslim liste',  ic:'fa-file-pdf', run:git('kordon-takip', function(){ ktOpenPdfModal(); })},
     {ad:'Yeni poşet irsaliyesi',   ek:'yeni irsaliye poset kes', ic:'fa-shopping-bag', run:git('new')},
@@ -24123,6 +24158,173 @@ function renderTelaKontrol(){
       '</div>'+
     '</div>';
   }).join('');
+}
+// ══ TELA RAPORU ═════════════════════════════════════════════════
+// Siyah-beyaz çıktı. İki düzen: atölyeye göre (kime ne gitti) / modele göre.
+// Tablo "pivot": satır = atölye ya da model, sütun = en + renk (150 Beyaz,
+// 180 Siyah…), son sütun toplam top. İstenirse tek tek hareketler tarihli.
+var _tkRp={gor:'atolye'};
+function tkRaporGor(g){
+  _tkRp.gor=g;
+  document.getElementById('tkRpGorAtolye').classList.toggle('on', g==='atolye');
+  document.getElementById('tkRpGorModel').classList.toggle('on', g==='model');
+}
+function tkRaporAc(modelId){
+  var tum=_tkAll(), kod=function(m){ return (m.modelKodu||'')+(m.renk?' · '+m.renk:''); };
+  var modeller=tum.filter(function(m){ return _tkVermeler(m).length || m.id===modelId; })
+    .sort(function(a,b){ return kod(a).localeCompare(kod(b),'tr'); });
+  var at={}; tum.forEach(function(m){ _tkVermeler(m).forEach(function(v){ if(v.atolye) at[v.atolye]=1; }); });
+  document.getElementById('tkRpModel').innerHTML='<option value="">Tüm modeller</option>'+modeller.map(function(m){ return '<option value="'+m.id+'">'+esc(kod(m))+'</option>'; }).join('');
+  document.getElementById('tkRpModel').value = modelId!=null ? String(modelId) : '';
+  document.getElementById('tkRpAtolye').innerHTML='<option value="">Tüm atölyeler</option>'+Object.keys(at).sort(function(a,b){ return a.localeCompare(b,'tr'); }).map(function(a){ return '<option value="'+esc(a)+'">'+esc(a)+'</option>'; }).join('');
+  document.getElementById('tkRpDonem').value='hepsi';
+  document.getElementById('tkRpBas').value=''; document.getElementById('tkRpSon').value='';
+  document.getElementById('tkRpDetay').checked=false;
+  tkRaporGor(modelId!=null ? 'model' : 'atolye');
+  tkRaporOnizle();
+  document.getElementById('tkRaporModal').classList.add('show');
+}
+function tkRaporKapat(){ document.getElementById('tkRaporModal').classList.remove('show'); }
+function _tkRpAralik(){
+  var d=document.getElementById('tkRpDonem').value, n=new Date(), bas=null, son=null;
+  var gun=function(y,m,g){ return new Date(y,m,g,0,0,0,0); };
+  if(d==='buay'){ bas=gun(n.getFullYear(),n.getMonth(),1); }
+  else if(d==='gecenay'){ bas=gun(n.getFullYear(),n.getMonth()-1,1); son=new Date(n.getFullYear(),n.getMonth(),1,0,0,0,0); }
+  else if(d==='son30'){ bas=gun(n.getFullYear(),n.getMonth(),n.getDate()-29); }
+  else if(d==='ozel'){
+    var b=document.getElementById('tkRpBas').value, e=document.getElementById('tkRpSon').value;
+    if(b) bas=new Date(b+'T00:00:00'); if(e){ son=new Date(e+'T00:00:00'); son.setDate(son.getDate()+1); }
+  }
+  return {bas:bas, son:son};   // [bas, son)
+}
+function _tkRpSatirlar(){
+  var mid=document.getElementById('tkRpModel').value, at=document.getElementById('tkRpAtolye').value, ar=_tkRpAralik(), out=[];
+  _tkAll().forEach(function(m){
+    if(mid && String(m.id)!==mid) return;
+    _tkVermeler(m).forEach(function(v){
+      if(at && (v.atolye||'')!==at) return;
+      var t=v.tarih?new Date(v.tarih):null;
+      if((ar.bas||ar.son) && !t) return;
+      if(ar.bas && t<ar.bas) return;
+      if(ar.son && t>=ar.son) return;
+      out.push({mid:m.id, kod:m.modelKodu||'—', mrenk:m.renk||'', madet:+m.adet||0, cm:+v.cm||0, renk:v.renk||'—', top:+v.top||0, atolye:v.atolye||'—', t:t?t.getTime():0});
+    });
+  });
+  return out;
+}
+function tkRaporOnizle(){
+  var ozel=document.getElementById('tkRpDonem').value==='ozel';
+  document.getElementById('tkRpOzel').hidden=!ozel;
+  var r=_tkRpSatirlar(), top=r.reduce(function(s,x){ return s+x.top; },0);
+  document.getElementById('tkRpSay').innerHTML = r.length ? '<b>'+r.length.toLocaleString('tr')+'</b> hareket · <b>'+top.toLocaleString('tr')+'</b> top tela' : 'Bu seçimde tela çıkışı yok';
+  document.getElementById('tkRpAc').disabled=!r.length;
+}
+function tkRaporOlustur(){
+  var r=_tkRpSatirlar(); if(!r.length){ toast('Bu seçimde tela çıkışı yok','error'); return; }
+  var modelSec=document.getElementById('tkRpModel'), atSec=document.getElementById('tkRpAtolye'), ar=_tkRpAralik();
+  var f=function(d){ return d.toLocaleDateString('tr-TR'); }, donem='';
+  if(ar.bas||ar.son){ var s2=ar.son?new Date(ar.son.getTime()-864e5):null; donem=(ar.bas?f(ar.bas):'…')+' – '+(s2?f(s2):f(new Date())); }
+  var html=_tkRaporHtml(r,{
+    gor:_tkRp.gor, detay:document.getElementById('tkRpDetay').checked,
+    model:modelSec.value?modelSec.options[modelSec.selectedIndex].text:'', atolye:atSec.value, donem:donem
+  });
+  var w=_openHtmlWindow(html,'width=900,height=900');
+  if(!w){ toast('Açılır pencere engellendi — izin verin','error'); return; }
+  tkRaporKapat();
+}
+function _tkRaporHtml(rows,o){
+  var S=function(n){ return (+n||0).toLocaleString('tr'); };
+  var now=new Date(), tarih=now.toLocaleDateString('tr-TR'), saat=now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  var tr=function(a,b){ return String(a).localeCompare(String(b),'tr'); };
+  var atolyeGor=o.gor==='atolye';
+  // sütunlar: en + renk kombinasyonları (150 Beyaz, 150 Siyah, 180 …)
+  var kombo={}; rows.forEach(function(x){ kombo[x.cm+'|'+x.renk]={cm:x.cm,renk:x.renk}; });
+  var cols=Object.keys(kombo).map(function(k){ return kombo[k]; }).sort(function(a,b){ return a.cm-b.cm || tr(a.renk,b.renk); });
+  var key=function(c){ return c.cm+'|'+c.renk; };
+  // gruplar
+  var gr={};
+  rows.forEach(function(x){
+    var gk=atolyeGor ? x.atolye : String(x.mid);
+    var g=gr[gk]||(gr[gk]={ad:atolyeGor?x.atolye:x.kod, alt:atolyeGor?'':[x.mrenk, x.madet?S(x.madet)+' adet':''].filter(Boolean).join(' · '), satir:{}, hareket:[], top:0});
+    var sk=atolyeGor ? x.mid+'|'+x.kod+'|'+x.mrenk : x.atolye;
+    var sr=g.satir[sk]||(g.satir[sk]={ad:atolyeGor?x.kod:x.atolye, alt:atolyeGor?x.mrenk:'', h:{}, top:0, son:0});
+    sr.h[x.cm+'|'+x.renk]=(sr.h[x.cm+'|'+x.renk]||0)+x.top; sr.top+=x.top; sr.son=Math.max(sr.son,x.t);
+    g.top+=x.top; g.hareket.push(x);
+  });
+  var gruplar=Object.keys(gr).map(function(k){ return gr[k]; }).sort(function(a,b){ return tr(a.ad,b.ad); });
+  var genel=0, genelH={};
+  rows.forEach(function(x){ genel+=x.top; genelH[x.cm+'|'+x.renk]=(genelH[x.cm+'|'+x.renk]||0)+x.top; });
+  var tarihYaz=function(ms){ return ms?new Date(ms).toLocaleDateString('tr-TR'):'—'; };
+  var hucre=function(v){ return '<td class="n">'+(v?S(v):'<span class="bos">–</span>')+'</td>'; };
+  var colBas=cols.map(function(c){ return '<th class="n">'+c.cm+' cm<br><span class="rn">'+esc(c.renk)+'</span></th>'; }).join('');
+  var ilkBas=atolyeGor?'Model':'Atölye';
+
+  var bloklar=gruplar.map(function(g){
+    var govde;
+    if(o.detay){
+      var h=g.hareket.slice().sort(function(a,b){ return a.t-b.t; });
+      govde='<table><thead><tr><th class="t">Tarih</th><th>'+ilkBas+'</th><th class="n">En</th><th>Renk</th><th class="n">Top</th></tr></thead><tbody>'+
+        h.map(function(x){ return '<tr><td class="t">'+tarihYaz(x.t)+'</td><td>'+esc(atolyeGor?x.kod+(x.mrenk?' · '+x.mrenk:''):x.atolye)+'</td><td class="n">'+x.cm+' cm</td><td>'+esc(x.renk)+'</td><td class="n b">'+S(x.top)+'</td></tr>'; }).join('')+
+        '</tbody><tfoot><tr><td colspan="4">Toplam</td><td class="n">'+S(g.top)+'</td></tr></tfoot></table>';
+    } else {
+      var sr=Object.keys(g.satir).map(function(k){ return g.satir[k]; }).sort(function(a,b){ return tr(a.ad,b.ad); });
+      var top={}; sr.forEach(function(r2){ Object.keys(r2.h).forEach(function(k){ top[k]=(top[k]||0)+r2.h[k]; }); });
+      govde='<table><thead><tr><th>'+ilkBas+'</th>'+colBas+'<th class="n">Toplam</th><th class="t">Son verilen</th></tr></thead><tbody>'+
+        sr.map(function(r2){ return '<tr><td class="ad">'+esc(r2.ad)+(r2.alt?' <span class="rn">'+esc(r2.alt)+'</span>':'')+'</td>'+cols.map(function(c){ return hucre(r2.h[key(c)]); }).join('')+'<td class="n b">'+S(r2.top)+'</td><td class="t">'+tarihYaz(r2.son)+'</td></tr>'; }).join('')+
+        '</tbody>'+(sr.length>1?'<tfoot><tr><td>Toplam</td>'+cols.map(function(c){ return hucre(top[key(c)]); }).join('')+'<td class="n">'+S(g.top)+'</td><td></td></tr></tfoot>':'')+'</table>';
+    }
+    return '<section class="g"><div class="g-ust"><div><div class="g-ad">'+esc(g.ad)+'</div>'+(g.alt?'<div class="g-alt">'+esc(g.alt)+'</div>':'')+'</div><div class="g-top">'+S(g.top)+' <span>top</span></div></div>'+govde+'</section>';
+  }).join('');
+
+  var genelBlok = '<section class="g genel"><div class="g-ust"><div class="g-ad">Genel toplam</div><div class="g-top">'+S(genel)+' <span>top</span></div></div>'+
+    '<table><thead><tr>'+cols.map(function(c){ return '<th class="n">'+c.cm+' cm<br><span class="rn">'+esc(c.renk)+'</span></th>'; }).join('')+'</tr></thead><tbody><tr>'+
+    cols.map(function(c){ return '<td class="n b">'+S(genelH[key(c)])+'</td>'; }).join('')+'</tr></tbody></table></section>';
+
+  var kunye=[o.model?'Model: <b>'+esc(o.model)+'</b>':'', o.atolye?'Atölye: <b>'+esc(o.atolye)+'</b>':'', o.donem?'Tarih: <b>'+esc(o.donem)+'</b>':'Tüm tarihler'].filter(Boolean).join('<span class="ay">/</span>');
+  var dosya='Tela_Raporu'+(o.model?'_'+o.model.split(' ')[0].replace(/[^\w-]+/g,''):'')+'.pdf';
+
+  return '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Tela Raporu — '+tarih+'</title><style>'+
+  '@page{size:A4;margin:12mm;}'+
+  '*{margin:0;padding:0;box-sizing:border-box;}'+
+  'html,body{background:#d4d4d4;}'+
+  'body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:#000;font-size:13px;line-height:1.35;padding:24px 0;}'+
+  '.sayfa{width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:14mm;box-shadow:0 4px 24px rgba(0,0,0,.2);}'+
+  '.ust{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:8px;border-bottom:3px solid #000;}'+
+  '.tur{font-size:11px;font-weight:800;letter-spacing:.16em;}'+
+  '.ust h1{font-size:30px;font-weight:900;line-height:1.05;margin-top:2px;}'+
+  '.kn{font-size:12.5px;margin:8px 0 14px;}.ay{margin:0 8px;}'+
+  '.ust-r{text-align:right;flex-shrink:0;}.ust-r .t{font-size:16px;font-weight:800;}.ust-r .s{font-size:11px;}'+
+  '.g{margin-bottom:18px;break-inside:avoid-page;}'+
+  '.g-ust{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;border-bottom:2px solid #000;}'+
+  '.g-ad{font-size:18px;font-weight:900;}.g-alt{font-size:11.5px;margin-top:1px;}'+
+  '.g-top{font-size:22px;font-weight:900;white-space:nowrap;}.g-top span{font-size:12px;font-weight:700;}'+
+  'table{width:100%;border-collapse:collapse;}'+
+  'th{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-align:left;padding:7px 8px;border-bottom:1.5px solid #000;vertical-align:bottom;}'+
+  'th .rn{font-weight:700;letter-spacing:0;text-transform:none;font-size:11px;}'+
+  'td{font-size:14px;padding:8px;border-bottom:1px solid #777;font-variant-numeric:tabular-nums;}'+
+  'th.n,td.n{text-align:right;}th.t,td.t{text-align:right;white-space:nowrap;width:1%;font-size:12px;}'+
+  'td.ad{font-weight:700;}td.ad .rn{font-weight:400;font-size:11.5px;margin-left:4px;}'+
+  'td.b{font-weight:900;}.bos{color:#555;}'+
+  'tfoot td{font-weight:900;border-top:2px solid #000;border-bottom:none;font-size:14px;}'+
+  '.genel{margin-top:6px;border-top:3px solid #000;padding-top:4px;}'+
+  'tr{break-inside:avoid;page-break-inside:avoid;}thead{display:table-header-group;}'+
+  '.ft{display:flex;justify-content:space-between;font-size:10px;margin-top:16px;padding-top:6px;border-top:1px solid #777;}'+
+  '.no-print{position:fixed;top:10px;right:10px;z-index:999;display:flex;gap:8px;}'+
+  '.no-print button{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;background:#222;box-shadow:0 2px 8px rgba(0,0,0,.25);}'+
+  '@media print{html,body{background:#fff;padding:0;}.sayfa{box-shadow:none;margin:0;width:auto;min-height:0;padding:0;}.no-print{display:none !important;}}'+
+  '</style></head><body>'+
+  '<div class="no-print" id="tkRpKontrol">'+
+    '<button onclick="window.opener._downloadElementAsPDF(document.querySelector(\'.sayfa\'),\''+dosya+'\',document.getElementById(\'tkRpKontrol\'))">PDF İndir</button>'+
+    '<button onclick="window.print()">Yazdır</button>'+
+    '<button style="background:#666;" onclick="window.close()">Kapat</button>'+
+  '</div>'+
+  '<div class="sayfa">'+
+    '<header class="ust"><div><div class="tur">TELA ÇIKIŞ RAPORU</div><h1>'+(atolyeGor?'Atölyeye göre':'Modele göre')+'</h1></div>'+
+    '<div class="ust-r"><div class="t">'+tarih+'</div><div class="s">'+saat+'</div></div></header>'+
+    '<div class="kn">'+kunye+'</div>'+
+    bloklar+(gruplar.length>1?genelBlok:'')+
+    '<div class="ft"><span>İrsaliye Pro</span><span>Oluşturma: '+tarih+' '+saat+'</span></div>'+
+  '</div></body></html>';
 }
 // Buluttan telaKontrol değişince: sayfa açıksa ve modal kapalıysa canlı tazele
 window._markTkRefresh = function(){
