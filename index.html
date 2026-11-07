@@ -11377,8 +11377,66 @@ function updateStatusCard(allData, todayCount, bekliyor, gecmis, teslimAy){
   if(badgeLblEl) badgeLblEl.textContent = badgeLbl;
 }
 
-// Giriş sonrası ~2.3sn'lik yükleme ekranı: adımları sırayla tamamlar,
-// arka planda dashboard'u hazırlar, sonra ana sayfaya geçer.
+// Giriş sonrası yükleme ekranı: dört adım, ilerleme bir FERMUARIN kapanmasıyla
+// gösterilir (kaydırıcı soldan sağa kayar, arkasında dişler kenetlenir, önünde
+// şeritler V şeklinde açık durur). Arka planda ana sayfa hazırlanır.
+function _bootZipKur(svg){
+  var NS='http://www.w3.org/2000/svg', cy=50, p=12, x0=20, x1=420, G=17, ADIM=6;
+  svg.innerHTML='';
+  function el(t,a,ust){ var e=document.createElementNS(NS,t); for(var k in a) e.setAttribute(k,a[k]); (ust||svg).appendChild(e); return e; }
+  var defs=el('defs',{});
+  var gd=el('linearGradient',{id:'bzDis',x1:'0',y1:'0',x2:'0',y2:'1'},defs);
+  el('stop',{offset:'0','class':'bz-s1'},gd); el('stop',{offset:'.5','class':'bz-s2'},gd); el('stop',{offset:'1','class':'bz-s3'},gd);
+  var gk=el('linearGradient',{id:'bzKay',x1:'0',y1:'0',x2:'1',y2:'1'},defs);
+  el('stop',{offset:'0','class':'bz-k1'},gk); el('stop',{offset:'.45','class':'bz-k2'},gk); el('stop',{offset:'1','class':'bz-k3'},gk);
+  var gp=el('linearGradient',{id:'bzParilti',x1:'0',y1:'0',x2:'1',y2:'0'},defs);
+  el('stop',{offset:'0','stop-color':'#fff','stop-opacity':'0'},gp); el('stop',{offset:'.5','stop-color':'#fff','stop-opacity':'.75'},gp); el('stop',{offset:'1','stop-color':'#fff','stop-opacity':'0'},gp);
+  var kp=el('clipPath',{id:'bzKapali'},defs); var kpr=el('rect',{x:'0',y:'0',width:'0',height:'112'},kp);
+
+  var bantU=el('path',{'class':'bz-bant'}), bantA=el('path',{'class':'bz-bant'});
+  var dikU=el('path',{'class':'bz-dikis'}), dikA=el('path',{'class':'bz-dikis'});
+  el('rect',{x:String(x0-12),y:String(cy-11),width:'6',height:'22',rx:'2','class':'bz-stop'});
+  var gA=el('g',{'class':'bz-disler'}), gU=el('g',{'class':'bz-disler'});
+  var ust=[], alt=[];
+  for(var x=x0; x<=x1; x+=p){
+    ust.push({x:x+3.5, e:el('rect',{x:String(x),y:String(cy-9),width:'7',height:'10',rx:'1.8',fill:'url(#bzDis)'},gU)});
+    alt.push({x:x+p/2+3.5, e:el('rect',{x:String(x+p/2),y:String(cy-1),width:'7',height:'10',rx:'1.8',fill:'url(#bzDis)'},gA)});
+  }
+  var parilti=el('g',{'clip-path':'url(#bzKapali)'});
+  el('rect',{x:'-70',y:String(cy-12),width:'70',height:'24',fill:'url(#bzParilti)','class':'bz-parilti'},parilti);
+
+  // Kaydırıcı: geniş (Y) ağzı sağda, açık tarafa bakar; kulp alttan sarkar
+  var kay=el('g',{'class':'bz-kay'});
+  var kulp=el('g',{'class':'bz-kulp'},kay);
+  el('path',{d:'M-4.5 12 h9 v6 q0 2 -1 3.2 l1.6 14.6 q.4 4 -3.6 4 h-3 q-4 0 -3.6 -4 l1.6 -14.6 q-1 -1.2 -1 -3.2 z',fill:'url(#bzKay)','class':'bz-kulp-g'},kulp);
+  el('rect',{x:'-1.9',y:'25',width:'3.8',height:'9',rx:'1.9','class':'bz-delik'},kulp);
+  el('path',{d:'M-15 -12.5 L9 -18 Q17 -19.5 17 -11 L17 11 Q17 19.5 9 18 L-15 12.5 Q-19 11.5 -19 7.5 L-19 -7.5 Q-19 -11.5 -15 -12.5 Z',fill:'url(#bzKay)','class':'bz-govde'},kay);
+  el('path',{d:'M-13 -9 L8 -13.5','class':'bz-yansima'},kay);
+  el('circle',{cx:'4',cy:'12',r:'2.6','class':'bz-pim'},kay);
+
+  function bosluk(x,sx){ var v=(x-sx-6)*0.21; return v<0?0:(v>G?G:v); }
+  function seritYol(sx, dis, ic, yon){ // yon: -1 üst, +1 alt
+    var a=[], b=[];
+    for(var x=4; x<=436; x+=ADIM){ var g=bosluk(x,sx)*yon; a.push(x+','+(cy+dis*yon+g).toFixed(2)); b.unshift(x+','+(cy+ic*yon+g).toFixed(2)); }
+    return 'M'+a.join(' L')+' L'+b.join(' L')+' Z';
+  }
+  function dikisYol(sx, d, yon){
+    var a=[]; for(var x=6; x<=434; x+=ADIM){ a.push(x+','+(cy+d*yon+bosluk(x,sx)*yon).toFixed(2)); }
+    return 'M'+a.join(' L');
+  }
+  return {
+    x0:x0-6, x1:x1-6,
+    ciz:function(sx, aci){
+      bantU.setAttribute('d', seritYol(sx, 29, 5, -1)); bantA.setAttribute('d', seritYol(sx, 29, 5, 1));
+      dikU.setAttribute('d', dikisYol(sx, 22, -1)); dikA.setAttribute('d', dikisYol(sx, 22, 1));
+      for(var i=0;i<ust.length;i++){ ust[i].e.setAttribute('transform','translate(0,'+(-bosluk(ust[i].x,sx)).toFixed(2)+')'); }
+      for(var j=0;j<alt.length;j++){ alt[j].e.setAttribute('transform','translate(0,'+bosluk(alt[j].x,sx).toFixed(2)+')'); }
+      kpr.setAttribute('width', Math.max(0,sx-10).toFixed(1));
+      kay.setAttribute('transform','translate('+sx.toFixed(2)+','+cy+')');
+      kulp.setAttribute('transform','rotate('+aci.toFixed(2)+' 0 12)');
+    }
+  };
+}
 function runBootSequence(username){
   var splash = document.getElementById('bootSplash');
   if(!splash){
@@ -11386,48 +11444,71 @@ function runBootSequence(username){
     return;
   }
   var steps = Array.prototype.slice.call(splash.querySelectorAll('.boot-step'));
-  var bar = document.getElementById('bootBarFill');
   var hint = document.getElementById('bootHint');
+  var pctEl = document.getElementById('bootPct');
   var hints = ['Kullanıcılar yükleniyor…','İrsaliyeler yükleniyor…','Atölyeler ve stok yükleniyor…','Panel hazırlanıyor…'];
-  steps.forEach(function(s){ s.classList.remove('active','done');
-    var st=s.querySelector('.bs-st'); if(st) st.textContent='bekliyor'; });
-  var pct0=document.getElementById('bootPct'); if(pct0) pct0.textContent='0%';
-  if(bar) bar.style.width='0%';
-  splash.classList.remove('hide');
+  var azHareket = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  steps.forEach(function(s){ s.classList.remove('active','done'); });
+  splash.classList.remove('hide','bitti');
+  if(pctEl) pctEl.textContent='0';
+  if(hint) hint.textContent='Bağlanılıyor…';
   splash.style.display='flex';
   splash.setAttribute('aria-hidden','false');
+  // Giriş animasyonları her açılışta baştan oynasın
+  splash.classList.remove('giris'); void splash.offsetWidth; splash.classList.add('giris');
+
+  function hintYaz(t){
+    if(!hint) return;
+    hint.classList.remove('deg'); void hint.offsetWidth;
+    hint.textContent=t; hint.classList.add('deg');
+  }
+
+  // Fermuar ve akıcı ilerleme (hedefe yumuşak yaklaşır; kulp hıza göre sallanır)
+  var svg=document.getElementById('bootZip'), zip=null;
+  try{ zip = svg ? _bootZipKur(svg) : null; }catch(_){ zip=null; }
+  var durum={hedef:0, deger:0, aci:0, son:0, calis:true};
+  function kare(t){
+    if(!durum.calis) return;
+    var once=durum.deger;
+    durum.deger = azHareket ? durum.hedef : durum.deger + (durum.hedef-durum.deger)*0.085;
+    if(Math.abs(durum.hedef-durum.deger)<0.05) durum.deger=durum.hedef;
+    var hiz=durum.deger-once;
+    var hedefAci = azHareket ? 0 : (-hiz*7 + Math.sin(t/420)*2.2);
+    durum.aci += (hedefAci-durum.aci)*0.14;
+    if(zip){ zip.ciz(zip.x0 + (zip.x1-zip.x0)*durum.deger/100, durum.aci); }
+    var n=Math.round(durum.deger);
+    if(n!==durum.son && pctEl){ pctEl.textContent=String(n); durum.son=n; }
+    requestAnimationFrame(kare);
+  }
+  requestAnimationFrame(kare);
 
   // Ana sayfayı arka planda hazırla
   try{ showPage('home'); }catch(_){}
 
-  var stepMs = 520;
+  var stepMs = 480, bas = 260;
   steps.forEach(function(step, idx){
     setTimeout(function(){
       if(idx>0){ steps[idx-1].classList.remove('active'); steps[idx-1].classList.add('done'); }
       step.classList.add('active');
-      var st=step.querySelector('.bs-st'); if(st) st.textContent='yükleniyor';
-      if(idx>0){ var ps=steps[idx-1].querySelector('.bs-st'); if(ps) ps.textContent='tamam'; }
-      if(hint) hint.textContent = hints[idx]||'';
-      var yuzde = Math.round(((idx+1)/steps.length)*100);
-      if(bar) bar.style.width = yuzde+'%';
-      var pct=document.getElementById('bootPct'); if(pct) pct.textContent=yuzde+'%';
+      hintYaz(hints[idx]||'');
+      durum.hedef = (idx+1)*25;
       if(idx===steps.length-1){ try{ refreshHome(); }catch(_){} }
-    }, idx*stepMs);
+    }, bas + idx*stepMs);
   });
 
-  var totalMs = steps.length*stepMs; // 4*520 = 2080ms
+  var totalMs = bas + steps.length*stepMs;
   setTimeout(function(){
     var last=steps[steps.length-1];
-    if(last){ last.classList.remove('active'); last.classList.add('done');
-      var ls=last.querySelector('.bs-st'); if(ls) ls.textContent='tamam'; }
-    if(hint) hint.textContent='Hazır';
-    var pct=document.getElementById('bootPct'); if(pct) pct.textContent='100%';
+    if(last){ last.classList.remove('active'); last.classList.add('done'); }
+    durum.hedef=100; durum.deger=Math.max(durum.deger, 99.4);
+    hintYaz('Hazır');
+    splash.classList.add('bitti');           // kaydırıcı "tık", dişlerde parıltı
   }, totalMs);
   setTimeout(function(){
     splash.classList.add('hide');
-    setTimeout(function(){ splash.style.display='none'; splash.setAttribute('aria-hidden','true'); }, 500);
+    setTimeout(function(){ durum.calis=false; splash.style.display='none'; splash.setAttribute('aria-hidden','true'); splash.classList.remove('bitti','giris'); }, 620);
     if(typeof toast==='function') toast('Hoş geldin, '+(username||''),'success');
-  }, totalMs+220); // ~2.3sn
+  }, totalMs + 640);
 }
 window.runBootSequence = runBootSequence;
 
@@ -21615,24 +21696,28 @@ ${filters.length?`<div class="filters"><b>Uygulanan Filtreler:</b> ${filters.joi
 <!-- ==================== GİRİŞ SONRASI YÜKLEME EKRANI ==================== -->
 <div id="bootSplash" style="display:none;" aria-hidden="true">
   <div class="lg-mesh" aria-hidden="true"></div>
+  <div class="boot-dokuma" aria-hidden="true"></div>
+  <div class="boot-isik" aria-hidden="true"></div>
   <div class="boot-inner">
     <div class="boot-brand">
       <span class="boot-logo">İ</span>
       <span class="boot-word">İrsaliye <em>Pro</em></span>
     </div>
 
-    <div class="boot-panel">
+    <!-- Fermuar: yükleme ilerledikçe kaydırıcı soldan sağa kayar, dişler kenetlenir -->
+    <div class="boot-sahne">
+      <svg id="bootZip" class="boot-zip" viewBox="0 0 440 112" aria-hidden="true"></svg>
       <div class="boot-steps" id="bootSteps">
-        <div class="boot-step" data-i="0"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">Kullanıcılar</span><span class="bs-st">bekliyor</span></div>
-        <div class="boot-step" data-i="1"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">İrsaliyeler</span><span class="bs-st">bekliyor</span></div>
-        <div class="boot-step" data-i="2"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">Atölyeler ve stok</span><span class="bs-st">bekliyor</span></div>
-        <div class="boot-step" data-i="3"><span class="bs-dot" aria-hidden="true"></span><span class="bs-tx">Panel</span><span class="bs-st">bekliyor</span></div>
+        <div class="boot-step" data-i="0"><span class="bs-dot"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.3 5 8.6 9.5 3.7"/></svg></span><span class="bs-tx">Kullanıcılar</span></div>
+        <div class="boot-step" data-i="1"><span class="bs-dot"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.3 5 8.6 9.5 3.7"/></svg></span><span class="bs-tx">İrsaliyeler</span></div>
+        <div class="boot-step" data-i="2"><span class="bs-dot"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.3 5 8.6 9.5 3.7"/></svg></span><span class="bs-tx">Atölye &amp; stok</span></div>
+        <div class="boot-step" data-i="3"><span class="bs-dot"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.3 5 8.6 9.5 3.7"/></svg></span><span class="bs-tx">Panel</span></div>
       </div>
-      <div class="boot-foot">
-        <span class="boot-hint" id="bootHint">Bağlanılıyor…</span>
-        <span class="boot-pct" id="bootPct">0%</span>
-      </div>
-      <div class="boot-bar"><div class="boot-bar-fill" id="bootBarFill"></div></div>
+    </div>
+
+    <div class="boot-foot">
+      <span class="boot-hint" id="bootHint">Bağlanılıyor…</span>
+      <span class="boot-pct" aria-hidden="true"><b id="bootPct">0</b><i>%</i></span>
     </div>
   </div>
 </div>

@@ -7858,93 +7858,165 @@ body::after{
   background:var(--bg-main,#0b0713);
   color:var(--text-main,#f1f0f5);
   font-family:var(--font-body,'Plus Jakarta Sans',system-ui,sans-serif);
-  isolation:isolate; opacity:1; transition:opacity .5s ease;
+  isolation:isolate; overflow:hidden; opacity:1; transition:opacity .55s ease .05s;
+  --bz-ana:var(--primary,#8b5cf6);
 }
 #bootSplash.hide{opacity:0; pointer-events:none;}
-#bootSplash .lg-mesh{position:absolute; inset:-10%; z-index:-1;}
-.boot-inner{width:min(92vw,380px); display:flex; flex-direction:column; align-items:center; gap:26px;}
+#bootSplash .lg-mesh{position:absolute; inset:-10%; z-index:-3;}
 
-/* Marka — girişle aynı tek satırlı yazım */
-.boot-brand{display:flex; align-items:center; gap:13px; opacity:0; animation:bootFade .5s ease .05s forwards;}
+/* ══ YÜKLEME EKRANI · "FERMUAR KAPANIYOR" ══════════════════════════════
+   Arka plan: çapraz dokuma deseni + fermuarın arkasında yavaş nefes alan ışık.
+   Ön plan: marka, fermuar (SVG, index.html'de JS ile çizilir), dört istasyon,
+   durum yazısı ve büyük yüzde. Renkler hep temadan (--primary). */
+.boot-dokuma{
+  position:absolute; inset:-20%; z-index:-2; opacity:.5; pointer-events:none;
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb,var(--bz-ana) 7%,transparent) 0 1px, transparent 1px 13px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb,var(--bz-ana) 5%,transparent) 0 1px, transparent 1px 13px);
+  -webkit-mask-image:radial-gradient(ellipse 55% 45% at 50% 50%, #000 0%, transparent 75%);
+          mask-image:radial-gradient(ellipse 55% 45% at 50% 50%, #000 0%, transparent 75%);
+  animation:bzDokuma 18s linear infinite;
+}
+@keyframes bzDokuma{ to{ transform:translate3d(26px,0,0); } }
+.boot-isik{
+  position:absolute; z-index:-1; pointer-events:none;
+  width:min(120vw,760px); aspect-ratio:2/1; left:50%; top:50%;
+  transform:translate(-50%,-46%);
+  background:radial-gradient(closest-side, color-mix(in srgb,var(--bz-ana) 26%,transparent), transparent 72%);
+  filter:blur(10px); opacity:.55; animation:bzNefes 3.2s ease-in-out infinite;
+}
+@keyframes bzNefes{ 50%{ opacity:.85; transform:translate(-50%,-46%) scale(1.06); } }
+
+.boot-inner{
+  width:min(92vw,460px); display:flex; flex-direction:column; align-items:stretch; gap:22px;
+  transition:transform .6s cubic-bezier(.6,0,.3,1), filter .6s ease, opacity .5s ease;
+}
+#bootSplash.hide .boot-inner{ transform:translateY(-22px) scale(.97); filter:blur(6px); opacity:0; }
+
+/* Marka — girişle aynı yazım; logo bitişte bir kez parlar */
+.boot-brand{display:flex; align-items:center; justify-content:center; gap:13px;}
 .boot-logo{
+  position:relative;
   width:46px; height:46px; border-radius:14px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
   font-family:var(--font-serif,'Instrument Serif',Georgia,serif); font-size:27px; line-height:1;
   color:var(--on-primary,#fff);
-  background:linear-gradient(150deg,color-mix(in srgb,var(--primary) 88%,#fff),var(--primary) 55%,var(--primary-dark));
-  box-shadow:0 10px 28px -10px var(--primary), inset 0 1px 0 color-mix(in srgb,#fff 30%,transparent);
+  background:linear-gradient(150deg,color-mix(in srgb,var(--bz-ana) 88%,#fff),var(--bz-ana) 55%,var(--primary-dark,var(--bz-ana)));
+  box-shadow:0 10px 28px -10px var(--bz-ana), inset 0 1px 0 color-mix(in srgb,#fff 30%,transparent);
 }
+.boot-logo::after{
+  content:''; position:absolute; inset:-6px; border-radius:18px; pointer-events:none;
+  border:1.5px solid var(--bz-ana); opacity:0;
+}
+#bootSplash.bitti .boot-logo::after{ animation:bzHalka .7s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes bzHalka{ from{ opacity:.9; transform:scale(.9); } to{ opacity:0; transform:scale(1.45); } }
 .boot-word{
   font-family:var(--font-serif,'Instrument Serif',Georgia,serif);
-  font-size:30px; line-height:1; letter-spacing:-.6px; color:var(--text-main);
+  font-size:32px; line-height:1; letter-spacing:-.6px; color:var(--text-main);
 }
-.boot-word em{font-style:italic; color:var(--primary);}
+.boot-word em{font-style:italic; color:var(--bz-ana);}
 
-/* Denetim paneli — tek çerçeve, ince ayırıcılar */
-.boot-panel{
-  width:100%; border:1px solid var(--border); border-radius:16px;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 5%,transparent),transparent);
-  overflow:hidden; opacity:0; animation:bootFade .5s ease .18s forwards;
+/* Fermuar */
+.boot-sahne{ position:relative; }
+.boot-zip{ display:block; width:100%; height:auto; overflow:visible; }
+.bz-s1{ stop-color:color-mix(in srgb,var(--bz-ana) 35%,#fff); }
+.bz-s2{ stop-color:var(--bz-ana); }
+.bz-s3{ stop-color:color-mix(in srgb,var(--bz-ana) 55%,#000); }
+.bz-k1{ stop-color:color-mix(in srgb,var(--bz-ana) 25%,#fff); }
+.bz-k2{ stop-color:color-mix(in srgb,var(--bz-ana) 85%,#fff); }
+.bz-k3{ stop-color:color-mix(in srgb,var(--bz-ana) 60%,#000); }
+.bz-bant{
+  fill:color-mix(in srgb,var(--bz-ana) 14%,var(--bg-card,#16121f));
+  stroke:color-mix(in srgb,var(--bz-ana) 26%,transparent); stroke-width:.8;
 }
-.boot-steps{display:flex; flex-direction:column;}
+.bz-dikis{ fill:none; stroke:color-mix(in srgb,var(--bz-ana) 45%,transparent); stroke-width:1; stroke-dasharray:3 3.5; stroke-linecap:round; }
+.bz-disler rect{ filter:drop-shadow(0 1px 0 rgba(0,0,0,.35)); }
+.bz-stop{ fill:color-mix(in srgb,var(--bz-ana) 55%,#000); }
+.bz-kay{ filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+.bz-govde{ stroke:color-mix(in srgb,var(--bz-ana) 40%,#000); stroke-width:.8; }
+.bz-kulp-g{ stroke:color-mix(in srgb,var(--bz-ana) 40%,#000); stroke-width:.8; }
+.bz-delik{ fill:var(--bg-main,#0b0713); }
+.bz-pim{ fill:color-mix(in srgb,var(--bz-ana) 50%,#000); }
+.bz-yansima{ fill:none; stroke:rgba(255,255,255,.55); stroke-width:1.4; stroke-linecap:round; }
+.bz-parilti{ opacity:0; }
+#bootSplash.bitti .bz-parilti{ animation:bzParilti .75s cubic-bezier(.4,0,.2,1) .05s forwards; }
+@keyframes bzParilti{ 0%{ opacity:1; transform:translateX(0); } 100%{ opacity:1; transform:translateX(520px); } }
+#bootSplash.bitti .bz-govde{ animation:bzTik .32s cubic-bezier(.3,1.6,.5,1); transform-box:fill-box; transform-origin:center; }
+@keyframes bzTik{ 40%{ transform:scale(1.14); } }
+
+/* İstasyonlar: fermuarın dört çeyreği */
+.boot-steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:6px; }
 .boot-step{
-  display:flex; align-items:center; gap:12px; padding:13px 16px;
-  border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);
-  opacity:.45; transition:opacity .3s ease, background .3s ease;
+  display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center;
+  opacity:.38; transition:opacity .35s ease, transform .35s ease;
 }
-.boot-step:last-child{border-bottom:0;}
-/* Durum noktası: bekleyen sönük halka, aktif amber nabız, biten dolu amber */
 .boot-step .bs-dot{
-  width:9px; height:9px; border-radius:50%; flex-shrink:0;
-  border:1.5px solid color-mix(in srgb,var(--text-dim) 55%,transparent);
-  background:transparent; transition:all .3s ease;
+  width:18px; height:18px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  border:1.5px solid color-mix(in srgb,var(--text-dim,#888) 60%,transparent);
+  transition:background .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.boot-step .bs-dot svg{ width:11px; height:11px; }
+.boot-step .bs-dot path{
+  fill:none; stroke:var(--on-primary,#fff); stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:12; stroke-dashoffset:12;
 }
 .boot-step .bs-tx{
-  flex:1; font-size:13.5px; font-weight:600; color:var(--text-muted);
-  transition:color .3s ease;
+  font-size:10.5px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; line-height:1.25;
+  color:var(--text-muted); transition:color .3s ease;
 }
-.boot-step .bs-st{
-  font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
-  color:var(--text-dim); transition:color .3s ease;
-}
-.boot-step.active{opacity:1; background:color-mix(in srgb,var(--primary) 7%,transparent);}
+.boot-step.active{ opacity:1; transform:translateY(-2px); }
 .boot-step.active .bs-dot{
-  border-color:var(--primary); background:var(--primary);
-  box-shadow:0 0 0 0 color-mix(in srgb,var(--primary) 55%,transparent);
-  animation:bootPulse 1.4s ease-out infinite;
+  border-color:var(--bz-ana);
+  background:radial-gradient(circle, var(--bz-ana) 0 3.5px, transparent 4.5px);
+  animation:bootPulse 1.2s ease-out infinite;
 }
-.boot-step.active .bs-tx{color:var(--text-main);}
-.boot-step.active .bs-st{color:var(--primary);}
-.boot-step.done{opacity:.8; background:transparent;}
-.boot-step.done .bs-dot{
-  border-color:color-mix(in srgb,var(--primary) 60%,transparent);
-  background:color-mix(in srgb,var(--primary) 60%,transparent);
-  animation:none; box-shadow:none;
-}
-.boot-step.done .bs-tx{color:var(--text-muted);}
-.boot-step.done .bs-st{color:color-mix(in srgb,var(--primary) 70%,var(--text-dim));}
-/* Alt bilgi: durum metni + yüzde */
+.boot-step.active .bs-tx{ color:var(--text-main); }
+.boot-step.done{ opacity:.9; }
+.boot-step.done .bs-dot{ background:var(--bz-ana); border-color:var(--bz-ana); animation:none; }
+.boot-step.done .bs-dot path{ animation:bzTikCiz .38s ease-out forwards; }
+.boot-step.done .bs-tx{ color:color-mix(in srgb,var(--bz-ana) 70%,var(--text-main)); }
+@keyframes bzTikCiz{ to{ stroke-dashoffset:0; } }
+@keyframes bootPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bz-ana) 55%,transparent);}70%{box-shadow:0 0 0 8px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
+
+/* Alt satır: durum yazısı + büyük yüzde */
 .boot-foot{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:12px 16px;
-  border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent);
-  background:color-mix(in srgb,var(--primary) 3%,transparent);
+  display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+  padding-top:14px; border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent);
 }
-.boot-pct{
-  font-family:ui-monospace,'JetBrains Mono',monospace;
-  font-size:12px; font-weight:800; color:var(--primary);
-  font-variant-numeric:tabular-nums;
+.boot-hint{
+  font-size:12.5px; color:var(--text-muted); letter-spacing:.2px; min-height:18px; padding-bottom:6px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.boot-step.done .bs-ok{opacity:1; transform:none;}
-@keyframes bootPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--primary) 55%,transparent);}70%{box-shadow:0 0 0 7px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
-/* İlerleme rayı — panelin içinde, kenardan kenara ince çizgi */
-.boot-bar{width:100%; height:2px; background:color-mix(in srgb,var(--border) 80%,transparent); overflow:hidden;}
-.boot-bar-fill{height:100%; width:0; background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 70%,transparent),var(--primary)); transition:width .45s cubic-bezier(.4,0,.2,1);}
-.boot-hint{font-size:12px; color:var(--text-muted); letter-spacing:.2px; min-height:16px;}
-@keyframes bootFade{to{opacity:1;}}
+.boot-hint.deg{ animation:bzYazi .38s cubic-bezier(.2,.7,.3,1); }
+@keyframes bzYazi{ from{ opacity:0; transform:translateY(8px); filter:blur(3px); } }
+.boot-pct{ display:flex; align-items:flex-start; line-height:.85; color:var(--text-main); }
+.boot-pct b{
+  font-family:var(--font-serif,'Instrument Serif',Georgia,serif); font-weight:400;
+  font-size:52px; letter-spacing:-1.5px; font-variant-numeric:tabular-nums; min-width:2ch; text-align:right;
+}
+.boot-pct i{ font-family:var(--font-serif,'Instrument Serif',Georgia,serif); font-size:22px; color:var(--bz-ana); margin:4px 0 0 3px; }
+
+/* Giriş koreografisi */
+#bootSplash.giris .boot-brand{ animation:bzGir .6s cubic-bezier(.2,.7,.3,1) both; }
+#bootSplash.giris .boot-zip{ animation:bzAc .75s cubic-bezier(.2,.7,.3,1) .08s both; }
+#bootSplash.giris .boot-step{ animation:bzGir .5s cubic-bezier(.2,.7,.3,1) both; }
+#bootSplash.giris .boot-step:nth-child(1){ animation-delay:.22s; }
+#bootSplash.giris .boot-step:nth-child(2){ animation-delay:.28s; }
+#bootSplash.giris .boot-step:nth-child(3){ animation-delay:.34s; }
+#bootSplash.giris .boot-step:nth-child(4){ animation-delay:.40s; }
+#bootSplash.giris .boot-foot{ animation:bzGir .55s cubic-bezier(.2,.7,.3,1) .3s both; }
+@keyframes bzGir{ from{ opacity:0; transform:translateY(12px); } }
+@keyframes bzAc{ from{ opacity:0; clip-path:inset(0 100% 0 0); } to{ opacity:1; clip-path:inset(0 0 0 0); } }
+
+@media (max-width:420px){
+  .boot-word{ font-size:28px; }
+  .boot-step .bs-tx{ font-size:9.5px; letter-spacing:.6px; }
+  .boot-pct b{ font-size:44px; }
+}
 @media(prefers-reduced-motion:reduce){
-  .boot-step.active .bs-dot{animation:none;}
-  .boot-brand,.boot-panel{animation:none; opacity:1;}
+  .boot-dokuma,.boot-isik,.boot-step.active .bs-dot{ animation:none; }
+  #bootSplash.giris *{ animation-duration:.01s !important; animation-delay:0s !important; }
+  #bootSplash.hide .boot-inner{ transform:none; filter:none; }
 }
 
 #loginOverlay {
