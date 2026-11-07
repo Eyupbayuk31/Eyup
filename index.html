@@ -4266,6 +4266,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </div>
       </div>
 
+      <div class="ak-gmod-bar" id="akFazlaBar"></div>
       <div class="t2-ak-adim" id="t2AkAdim" role="list"></div>
       <div class="ak-card">
         <div class="ak-step"><span class="ak-n">1</span> Model · Atölye · Aşama</div>
@@ -24391,6 +24392,15 @@ AK._inputSizes = function(c){
   return act.length ? act : [['xs','XS'],['s','S'],['m','M'],['l','L'],['xl','XL'],['xxl','XXL']];
 };
 // Toplam: girilen tüm bedenler (hangi beden olursa olsun)
+// Etiketçi her siparişe %7 fazla gönderiyor; föyde sipariş adedi değil, atölyeye
+// giden (fazlalı) adet yazılır ki "neden eksik gönderdiniz" sorusu çıkmasın.
+// Kesirli çıkan yukarı yuvarlanır (etiket bölünmez). Yüzde ayarlanabilir, 0 = ekleme.
+AK.fazlaYuzde = function(c){
+  if(c && c.fazla!=null) return Math.max(0, +c.fazla||0);   // kayıtta saklanan (yeniden basımda aynı kalsın)
+  var v=+getConfig('akFazlaYuzde',7); return isFinite(v) && v>=0 ? v : 7;
+};
+AK.fazlali = function(n, c){ n=parseInt(n,10)||0; var y=AK.fazlaYuzde(c); return y>0 ? Math.ceil(n*(100+y)/100-1e-9) : n; };
+AK._fazlaNot = function(c){ var y=AK.fazlaYuzde(c); return y>0 ? 'Adetlere %'+(Math.round(y*100)/100).toLocaleString('tr')+' etiketçi fazlası dahildir.' : ''; };
 AK._adetTotal = function(adet){ if(!adet) return 0; return Object.keys(adet).reduce(function(s,k){ return s+(parseInt(adet[k],10)||0); },0); };
 // Formda henüz görünmeyen bedenlerden birini elle ekle (ör. 3XL)
 AK._addSizeOpts = function(c){ var shown={}; AK._inputSizes(c).forEach(function(b){ shown[b[0]]=true; }); return AK.SIZES.filter(function(b){ return !shown[b[0]]; }); };
@@ -25641,9 +25651,9 @@ AK.buildFoyHtml = function(c){
   var files=(c.files||[]).filter(function(f){ return !AK.gizliMi(f) && order.indexOf(f.type)>=0; });
   files.sort(function(a,b){ return order.indexOf(a.type)-order.indexOf(b.type); });
   var foyBeds=AK._foySizes(c);
-  var tot=foyBeds.reduce(function(s,b){ return s+(parseInt(c.adet[b[0]],10)||0); },0);
+  var tot=foyBeds.reduce(function(s,b){ return s+AK.fazlali(c.adet[b[0]], c); },0);
   var bedCells=foyBeds.map(function(b){
-    return '<div class="qc'+(b[0]==='m'?' hi':'')+'"><span>'+b[1]+'</span><b>'+((parseInt(c.adet[b[0]],10)||0).toLocaleString('tr'))+'</b></div>';
+    return '<div class="qc'+(b[0]==='m'?' hi':'')+'"><span>'+b[1]+'</span><b>'+(AK.fazlali(c.adet[b[0]], c).toLocaleString('tr'))+'</b></div>';
   }).join('')+'<div class="qc total"><span>TOPLAM</span><b>'+tot.toLocaleString('tr')+'</b></div>';
   var tpH='';
   if(c.toptan && Object.keys(c.toptan).length){
@@ -25669,7 +25679,7 @@ AK.buildFoyHtml = function(c){
     '<div class="mdl">'+esc(mdlH||'')+'<span class="rk">'+esc(c.renk||'')+'</span></div>'+
     '<h1 style="font-size:15px;font-weight:700;color:#667;margin:2px 0 6px;">Aksesuar Kontrol Föyü</h1>'+
     '<div class="chips"><span class="chip st">'+AK.STAGE_LABEL[AK.state.asama]+'</span><span class="chip">Renk: '+esc(c.renk||'—')+'</span><span class="chip">PO: '+esc(c.po||'—')+'</span></div>'+
-    '<div class="qty"><div class="qh">Adet Dökümü — beden beden</div><div class="qcells">'+bedCells+'</div></div>'+tpH+
+    '<div class="qty"><div class="qh">Adet Dökümü — beden beden'+(AK._fazlaNot(c)?' <span style="font-weight:600;opacity:.75;">· '+AK._fazlaNot(c)+'</span>':'')+'</div><div class="qcells">'+bedCells+'</div></div>'+tpH+
     acc+
     '</div>';
   return '<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Aksesuar Kontrol — '+esc(mdlH)+' '+esc(c.renk)+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
@@ -25740,14 +25750,17 @@ AK._renderColorPage = function(pdf, c){
   y+=abH+5;
   // ---- adet dökümü ----
   var beds=AK._foySizes(c); // sadece adedi olan bedenler (XXS/3XL yoksa yazma)
-  var tot=beds.reduce(function(s,b){return s+(parseInt(c.adet[b[0]],10)||0);},0);
+  var tot=beds.reduce(function(s,b){return s+AK.fazlali(c.adet[b[0]], c);},0);
   pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5); pdf.setTextColor.apply(pdf,MUT);
-  T('ADET DÖKÜMÜ (beden beden)', M, y); y+=4;
+  T('ADET DÖKÜMÜ (beden beden)', M, y);
+  var fn=AK._fazlaNot(c);
+  if(fn){ pdf.setFont('helvetica','normal'); pdf.setFontSize(7.5); T(fn, M+cw, y, {align:'right'}); }
+  y+=4;
   var ncol=beds.length+1, colw=cw/ncol, bh=12;
   for(var k=0;k<beds.length;k++){ var bx=M+k*colw;
     pdf.setDrawColor(220,226,236); pdf.setLineWidth(0.3); pdf.rect(bx,y,colw,bh);
     pdf.setTextColor.apply(pdf,MUT); pdf.setFont('helvetica','bold'); pdf.setFontSize(7); T(beds[k][1], bx+colw/2, y+4, {align:'center'});
-    pdf.setTextColor.apply(pdf,INK); pdf.setFontSize(11); T(String(parseInt(c.adet[beds[k][0]],10)||0), bx+colw/2, y+9.6, {align:'center'});
+    pdf.setTextColor.apply(pdf,INK); pdf.setFontSize(11); T(String(AK.fazlali(c.adet[beds[k][0]], c)), bx+colw/2, y+9.6, {align:'center'});
   }
   var tx=M+beds.length*colw; pdf.setFillColor.apply(pdf,INK); pdf.rect(tx,y,colw,bh,'F');
   pdf.setTextColor(180,190,205); pdf.setFontSize(7); T('TOPLAM', tx+colw/2, y+4, {align:'center'});
@@ -26009,6 +26022,7 @@ AK._recBlob = function(r){
              || cols[0];
         // Kayıttaki ayarlar uygulanır (adet/renk/po föy o günkü haliyle çıksın)
         if(r.adet && Object.keys(r.adet).length) c.adet=r.adet;
+        if(r.fazla!=null) c.fazla=r.fazla;   // o gün hangi yüzdeyle basıldıysa aynısı
         if(r.renk) c.renk=r.renk;
         if(r.po) c.po=r.po;
         if(r.model) c.model=r.model;   // kayıttaki model korunsun (yeniden basımda aynı çıksın)
@@ -26069,7 +26083,7 @@ AK.generateAll = function(mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   // kayıtlar: renk başına 1 kayıt; aynı model+PO+renk varsa güncellenir
-  withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice() }, 300); });
+  withFiles.forEach(function(c){ var cm=c.model||AK.state.model; AK._finalizeRec({ fazla:AK.fazlaYuzde(c), id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)), zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:((cm||'foy')+'_'+(c.renk||'renk')+'_'+(c.po||'')).replace(/[^\w.\-]+/g,'_')+'.pdf', ts:Date.now(), model:cm, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice() }, 300); });
   if(typeof toast==='function') toast(mode==='save'?(withFiles.length+' renk kaydedildi '):(mode==='print'?'Toplu föy yazdırılıyor…':'Tüm renkler tek PDF olarak hazırlandı '),'success');
 };
 
@@ -26111,7 +26125,7 @@ AK.generate = function(id, mode){
     if(mode==='print') AK._printBlob(blob); else AK._openBlob(blob,fname);
   }
   var rid=(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
-  AK._finalizeRec({ id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice(), types:have.map(function(f){return f.type;}) }, 200);
+  AK._finalizeRec({ fazla:AK.fazlaYuzde(c), id:rid, zipKeys:AK._zipKeys.slice(), code:c.code||null, fname:fname, ts:Date.now(), model:cMdl, po:c.po||'', renk:c.renk||'', asama:AK.state.asama, atolye:AK.state.atolye||'', tarih:new Date().toLocaleDateString('tr-TR'), adet:JSON.parse(JSON.stringify(c.adet)), toptan:(c.toptan?JSON.parse(JSON.stringify(c.toptan)):null), gizliler:(c._gizliler||[]).slice(), types:have.map(function(f){return f.type;}) }, 200);
   if(typeof toast==='function') toast(mode==='save'?'Kayıt eklendi (aşağıda listede)':(mode==='print'?'Föy yazdırılıyor…':'Föy PDF oluşturuldu '),'success');
 };
 
@@ -26907,7 +26921,7 @@ AKS._e4 = function(){
       '<div class="aks-renk-ust">'+
         '<span class="aks-sw"></span>'+
         '<div class="aks-renk-ad"><b>'+AKS._e(c.renk||c.code||'Renk')+'</b><small>'+(c.po?'PO '+AKS._e(c.po):'PO yok')+'</small></div>'+
-        '<div class="aks-renk-top"><b id="aksTop'+c.id+'">'+(top?AKS._n(top):'—')+'</b><small>adet</small></div>'+
+        '<div class="aks-renk-top"><b id="aksTop'+c.id+'">'+(top?AKS._n(top):'—')+'</b><small id="aksFoy'+c.id+'">'+AKS._foySatir(c)+'</small></div>'+
         AKS._durumHtml(tamam)+
       '</div>'+
       (bedenler&&!acik?'<div class="aks-bedenler">'+bedenler+'</div>':'')+
@@ -26930,10 +26944,41 @@ AKS._e4 = function(){
 AKS._durumHtml = function(tamam){ return tamam?'<span class="aks-durum ok"><i class="fas fa-circle-check"></i> Hazır</span>':'<span class="aks-durum eks"><i class="fas fa-triangle-exclamation"></i> Eksik</span>'; };
 // Adet yazılırken ekran yeniden çizilmez (yoksa kutudan çıkınca "Sonraki"
 // tıklaması kaybolur); toplam, durum ve düğme yazısı yerinde güncellenir.
+// Etiketçi fazlası ayarı (föydeki adetlere eklenir)
+AKS._foyAdet = function(c){ return Object.keys(c.adet||{}).reduce(function(s,k){ return s+AK.fazlali(c.adet[k]); },0); };
+AKS.fazlaSec = function(ac){
+  var y=AK.fazlaYuzde();
+  if(ac){ setConfig('akFazlaYuzde', +getConfig('akFazlaSon',7)||7); }
+  else { if(y>0) setConfig('akFazlaSon', y); setConfig('akFazlaYuzde', 0); }
+  AKS._fazlaTazele();
+};
+AKS.fazlaYaz = function(v){
+  v=Math.max(0, Math.min(50, Math.round((parseFloat(String(v).replace(',','.'))||0)*100)/100));
+  setConfig('akFazlaYuzde', v); if(v>0) setConfig('akFazlaSon', v);
+  AKS._fazlaTazele();
+};
+AKS._fazlaTazele = function(){ AKS.fazlaBarCiz(); if(AKS.acikMi() && AKS.adim>=4) AKS.ciz(false); };
+AKS._fazlaKontrol = function(sinif){
+  var y=AK.fazlaYuzde(), son=+getConfig('akFazlaSon',7)||7;
+  return '<div class="'+sinif+'"><div class="aks-seg">'+
+    '<button type="button" class="'+(y>0?'on':'')+'" onclick="AKS.fazlaSec(1)">Ekle</button>'+
+    '<button type="button" class="'+(y>0?'':'on')+'" onclick="AKS.fazlaSec(0)">Ekleme</button></div>'+
+    (y>0?'<label class="aks-yuzde"><span>%</span><input type="number" min="0" max="50" step="0.5" inputmode="decimal" value="'+(Math.round(y*100)/100)+'" onchange="AKS.fazlaYaz(this.value)" aria-label="Fazla yüzdesi"></label>':'')+'</div>';
+};
+// "Hepsi tek sayfada" görünümü için ince şerit
+AKS.fazlaBarCiz = function(){
+  var el=document.getElementById('akFazlaBar'); if(!el) return;
+  var y=AK.fazlaYuzde();
+  el.innerHTML='<div class="ak-gmod-l"><i class="fas fa-percent"></i><div><b>Etiketçi fazlası</b><span>'+
+    (y>0?'Föydeki adetlere %'+(Math.round(y*100)/100).toLocaleString('tr')+' eklenir (etiketçi fazla gönderir).':'Föyde sipariş adedi olduğu gibi yazılır.')+'</span></div></div>'+
+    AKS._fazlaKontrol('ak-fazla-k');
+};
+AKS._foySatir = function(c){ var t=AK._adetTotal(c.adet); return t && AK.fazlaYuzde()>0 ? 'adet · föyde <b>'+AKS._n(AKS._foyAdet(c))+'</b>' : 'adet'; };
 AKS._toplamYaz = function(cid){
   var c=AK._c(cid), el=document.getElementById('aksTop'+cid); if(!c||!el) return;
   var t=AK._adetTotal(c.adet), tamam=!AK._missingFor(c).length && t>0;
   el.textContent=t?AKS._n(t):'—';
+  var fy=document.getElementById('aksFoy'+cid); if(fy) fy.innerHTML=AKS._foySatir(c);
   var row=document.querySelector('.aks-renk[data-cid="'+cid+'"]');
   if(row){
     row.classList.toggle('tamam', tamam); row.classList.toggle('eksik', !tamam);
@@ -26964,8 +27009,11 @@ AKS._e5 = function(){
         sat('Aşama', AKS._e(AK._asamaAd()))+
         sat('Model', AKS._e(AKS._model()||'—'))+
         sat('Renk', renkler.map(function(c){ return AKS._e(c.renk||c.code||'?'); }).join(', '))+
-        sat('Toplam', AKS._n(top)+' adet')+
+        sat('Toplam', AK.fazlaYuzde()>0
+          ? AKS._n(renkler.reduce(function(s,c){ return s+AKS._foyAdet(c); },0))+' adet <small class="aks-fis-k">'+AKS._n(top)+' + %'+(Math.round(AK.fazlaYuzde()*100)/100).toLocaleString('tr')+'</small>'
+          : AKS._n(top)+' adet')+
       '</div>'+
+      '<div class="aks-numune"><span>Etiketçi fazlası <small>adetlere eklenir</small></span>'+AKS._fazlaKontrol('aks-fazla-k')+'</div>'+
       '<div class="aks-numune"><span>Gelen numune</span><div class="aks-seg">'+
         '<button type="button" class="'+(foto?'':'on')+'" onclick="AK.setGelenMod(\'yapistir\')"><i class="fas fa-paperclip"></i> Kağıda yapıştır</button>'+
         '<button type="button" class="'+(foto?'on':'')+'" onclick="AK.setGelenMod(\'foto\')"><i class="fas fa-camera"></i> Kamerayla</button>'+
@@ -27003,6 +27051,7 @@ AKS.yeniFoy = function(){
   var asilAc=AK.onOpen;
   AK.onOpen=function(){
     var r=asilAc.apply(this, arguments);
+    try{ AKS.fazlaBarCiz(); }catch(_){}
     try{
       if(!AKS._ilk){
         AKS._ilk=true;

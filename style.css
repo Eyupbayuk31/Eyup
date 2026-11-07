@@ -19362,3 +19362,17 @@ html #page-akskontrol.ak-sih #akKayitKart > .ak-step{ display:none; }
 .aks-oneri-s.yeni{ color:var(--text-muted); border-top:1px dashed var(--border); border-radius:0 0 11px 11px; margin-top:2px; }
 .aks-oneri-s.yeni .aks-av{ background:transparent; border:1.5px dashed color-mix(in srgb, var(--primary) 50%, transparent); font-size:10px; }
 .aks-oneri-s.yeni b{ color:var(--text-main); }
+
+/* Etiketçi fazlası ayarı */
+.aks-fazla-k, .ak-fazla-k{ display:inline-flex; align-items:center; gap:8px; }
+.aks-yuzde{ display:inline-flex; align-items:center; gap:2px; height:36px; padding:0 10px; border-radius:11px; background:var(--glass); border:1px solid var(--border); font-weight:800; color:var(--text-muted); }
+.aks-yuzde input{ width:46px; border:0; background:none; text-align:center; font:inherit; font-weight:800; color:var(--text-main); outline:none; -moz-appearance:textfield; }
+.aks-yuzde input::-webkit-outer-spin-button, .aks-yuzde input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.aks-numune small{ font-weight:600; opacity:.75; margin-left:4px; }
+.aks-fis-k{ display:block; font-size:11.5px; font-weight:600; color:var(--text-muted); }
+.aks-renk-top small b{ color:var(--text-main); font-size:inherit; font-weight:800; line-height:inherit; }
+#akFazlaBar .ak-fazla-k{ margin-left:auto; }
+#akFazlaBar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+html #akFazlaBar .aks-seg button{ min-height:0; }
+@media (max-width:768px){ #page-akskontrol.ak-sih #akFazlaBar{ display:none !important; } }
+#page-akskontrol.ak-sih #akFazlaBar{ display:none; }
