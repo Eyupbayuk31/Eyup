@@ -338,43 +338,45 @@
    uyumsuzdu. Artık nötr-koyu bir gül tabanı; üstündeki pembe doğru okunuyor.
    Durum renkleri koyu zemin için ayrı ayarlandı, metin kademeleri açıldı.  */
 [data-theme="rose"]{
-  --primary:#f43f5e;          /* koyu zeminde 5.2:1 */
-  --primary-light:#fb7185;
-  --primary-dark:#be123c;
-  --primary-glow:rgba(244,63,94,0.30);
-  --on-primary:#2b0410;       /* parlak pembe üstünde koyu yazı okunur */
+  /* Gül pembesi: kırmızıya çalan gül (#f43f5e) yerine sıcak pembe. Hata/gecikme
+     rengi mercan kırmızısı — pembeyle karışmasın. */
+  --primary:#f7559a;          /* koyu zeminde 6.0:1 */
+  --primary-light:#ff86b8;
+  --primary-dark:#c9306f;
+  --primary-glow:rgba(247,85,154,0.30);
+  --on-primary:#2b0418;       /* parlak pembe üstünde koyu yazı okunur */
 
-  --accent:#fda4af;
-  --accent-light:#fecdd3;
-  --accent-dark:#f43f5e;
+  --accent:#ffb3d1;
+  --accent-light:#ffd6e7;
+  --accent-dark:#f7559a;
 
-  --bg-main:#160a10;          /* nötr koyu gül tabanı */
-  --bg-card:#231118;
-  --bg-card-solid:#231118;
-  --bg-card-hover:#2e1720;
-  --bg-elevated:#2b151e;      /* modal / açılır menü */
-  --bg-sidebar:#1c0d13;
-  --bg-input:#1e0f15;
-  --bg-subtle:#1c0d13;
+  --bg-main:#170a13;          /* koyu gül-mürdüm tabanı */
+  --bg-card:#24111e;
+  --bg-card-solid:#24111e;
+  --bg-card-hover:#2f1728;
+  --bg-elevated:#2c1524;      /* modal / açılır menü */
+  --bg-sidebar:#1d0d18;
+  --bg-input:#1f0f1a;
+  --bg-subtle:#1d0d18;
 
-  --text-main:#fff1f5;        /* 16.1:1 */
-  --text-muted:#e2bccb;       /* 9.4:1 */
-  --text-dim:#b58a9b;         /* 5.3:1 — artık muted'dan ayrı */
+  --text-main:#fff1f7;        /* 16:1 */
+  --text-muted:#e9bfd4;       /* 9.3:1 */
+  --text-dim:#b98aa3;         /* 5.3:1 */
 
-  --border:#3a1c27;
-  --border-solid:#55293a;
-  --border-strong:#74384f;
+  --border:#3c1c30;
+  --border-solid:#592a47;
+  --border-strong:#7a3a60;
 
-  --focus-ring:rgba(244,63,94,0.45);
-  --selection:rgba(244,63,94,0.28);
+  --focus-ring:rgba(247,85,154,0.45);
+  --selection:rgba(247,85,154,0.28);
 
   --success:#34d399;          /* koyu zeminde 8.6:1 */
   --success-light:#6ee7b7;
   --success-dark:#10b981;
 
-  --danger:#fb7185;           /* pembe temada tehlike pembeye karışmasın diye açık */
-  --danger-light:#fda4af;
-  --danger-dark:#e11d48;
+  --danger:#ff6b6b;           /* mercan kırmızısı: pembe ana renkten açıkça ayrışır (7.0:1) */
+  --danger-light:#ff9b9b;
+  --danger-dark:#e5484d;
 
   --warning:#fbbf24;          /* 11.2:1 */
   --warning-light:#fcd34d;
@@ -384,8 +386,8 @@
   --info-light:#bae6fd;
   --info-dark:#38bdf8;
 
-  --glass:rgba(244,63,94,0.10);
-  --glass-border:rgba(244,63,94,0.20);
+  --glass:rgba(247,85,154,0.10);
+  --glass-border:rgba(247,85,154,0.20);
 
   --shadow-xs:0 1px 2px rgba(0,0,0,0.35);
   --shadow-sm:0 2px 4px rgba(0,0,0,0.45);
@@ -744,12 +746,12 @@
   --accent-light:#db2777;
   --accent-dark:#831843;
 
-  --bg-main:#fdf4f8;
+  --bg-main:#fcf0f6;          /* biraz daha pembe */
   --bg-card:#ffffff;
   --bg-card-solid:#ffffff;
-  --bg-card-hover:#fdf0f6;
+  --bg-card-hover:#fdeef5;
   --bg-elevated:#ffffff;      /* modal / açılır menü — karttan ayrışsın */
-  --bg-sidebar:#fffafc;
+  --bg-sidebar:#fff7fb;
   --bg-input:#fdf4f8;
   --bg-subtle:#faf5f7;        /* tablo şerit satırı: pembe değil, nötr */
 
@@ -18854,3 +18856,53 @@ html .t2-at-sirala select{ padding-left:34px !important; }
   .ad-karne-sat b{ font-size:16px; }
 }
 @media (prefers-reduced-motion:reduce){ .ad-ay-c i{ animation:none; } }
+
+/* Giriş / kayıt başarılı: yeşil yerine temanın rengi; tik büyüyerek gelir, düğme bir kez parlar */
+#loginOverlay .basarili{
+  background:linear-gradient(135deg, var(--primary-light, var(--primary)), var(--primary) 55%, var(--primary-dark, var(--primary))) !important;
+  color:var(--on-primary, #fff) !important;
+  animation:lgBasari .7s cubic-bezier(.2,.7,.3,1);
+}
+#loginOverlay .basarili > i{ animation:lgTik .45s cubic-bezier(.3,1.6,.5,1); }
+@keyframes lgBasari{
+  0%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); }
+  100%{ box-shadow:0 0 0 14px transparent; }
+}
+@keyframes lgTik{ from{ transform:scale(.3); opacity:0; } }
+
+
+/* ════════════════════════════════════════════════════════════
+   PEMBE TEMALAR (Gül · Çiçek)
+   Arka plan ışığındaki sabit mor/lacivert pembe-şeftaliye döner, ızgara
+   yerine çok silik minik kalpler, yükleme halkasının ucu kalp.
+   ════════════════════════════════════════════════════════════ */
+html[data-tasarim="yeni"][data-theme="rose"] .t2-mesh,
+[data-theme="rose"] .lg-mesh{
+  background:
+    radial-gradient(900px 700px at 18% 18%, rgba(247,85,154,.24), transparent 58%),
+    radial-gradient(800px 600px at 88% 82%, rgba(255,150,120,.12), transparent 58%),
+    radial-gradient(700px 500px at 55% 100%, rgba(255,134,184,.12), transparent 62%) !important;
+}
+html[data-tasarim="yeni"][data-theme="blossom"] .t2-mesh,
+[data-theme="blossom"] .lg-mesh{
+  background:
+    radial-gradient(900px 700px at 18% 18%, rgba(244,114,182,.22), transparent 58%),
+    radial-gradient(800px 600px at 88% 82%, rgba(255,183,153,.20), transparent 58%),
+    radial-gradient(700px 500px at 55% 100%, rgba(249,168,212,.22), transparent 62%) !important;
+}
+html[data-tasarim="yeni"][data-theme="rose"] .t2-grid{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='%23ff86b8' fill-opacity='.11'%3E%3Cpath transform='translate(10 12)' d='M5 9 .8 4.8A2.5 2.5 0 0 1 5 1.3a2.5 2.5 0 0 1 4.2 3.5z'/%3E%3Cpath transform='translate(42 44) scale(.75)' d='M5 9 .8 4.8A2.5 2.5 0 0 1 5 1.3a2.5 2.5 0 0 1 4.2 3.5z'/%3E%3C/g%3E%3C/svg%3E") !important;
+  background-size:64px 64px !important;
+}
+html[data-tasarim="yeni"][data-theme="blossom"] .t2-grid{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='%23db2777' fill-opacity='.10'%3E%3Cpath transform='translate(10 12)' d='M5 9 .8 4.8A2.5 2.5 0 0 1 5 1.3a2.5 2.5 0 0 1 4.2 3.5z'/%3E%3Cpath transform='translate(42 44) scale(.75)' d='M5 9 .8 4.8A2.5 2.5 0 0 1 5 1.3a2.5 2.5 0 0 1 4.2 3.5z'/%3E%3C/g%3E%3C/svg%3E") !important;
+  background-size:64px 64px !important;
+}
+
+/* Yükleme halkası: parlak nokta yerine kalp (yalnız pembe temalarda) */
+.br-kalp{ display:none; }
+:is([data-theme="rose"],[data-theme="blossom"]) .br-kalp{
+  display:inline; fill:#fff; transition:opacity .2s ease;
+  filter:drop-shadow(0 0 3px var(--primary)) drop-shadow(0 0 8px var(--primary));
+}
+:is([data-theme="rose"],[data-theme="blossom"]) .br-bas{ display:none; }
