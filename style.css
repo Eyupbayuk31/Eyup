@@ -18993,3 +18993,109 @@ html #page-list .table-desktop tr.t2-irs-tr:hover .tbl-act-view{ background:var(
 .tk-rp-ozel[hidden]{ display:none; }
 .tk-rp-chk{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; margin:4px 0 10px; }
 .tk-rp-say{ font-size:13px; padding:10px 12px; border-radius:10px; background:color-mix(in srgb, var(--primary) 8%, transparent); color:var(--text-main); }
+
+/* ═══════════════════════════════════════════════════════════════
+   İRSALİYE DETAYI (dt2) — tek akış: kutu içinde kutu yok, toplam tek
+   yerde, beden düz tablo, tek ana eylem. QR penceresi aynı modalı
+   kullandığı için her şey #detailModal.dt2 altında.
+   ═══════════════════════════════════════════════════════════════ */
+html #detailModal.dt2 .modal-detail{ max-width:min(820px,94vw) !important; }
+html #detailModal.dt2 .modal-header-new{ padding:16px 22px 4px !important; border-bottom:0 !important; background:var(--bg-card-solid) !important; }
+html #detailModal.dt2 #modalTitle{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-width:0;
+  font-family:var(--font-body) !important; font-size:14px !important; font-weight:700 !important; letter-spacing:0 !important; font-style:normal !important; }
+.dt2-tur{ --tr:var(--primary); display:inline-flex; align-items:center; padding:3px 10px; border-radius:99px; font-size:11.5px; font-weight:800; letter-spacing:.02em;
+  background:color-mix(in srgb, var(--tr) 15%, transparent); color:color-mix(in srgb, var(--tr) 78%, var(--text-main)); }
+.dt2-tur.standart{ --tr:#3b82f6; } .dt2-tur.fermuar{ --tr:#8b5cf6; } .dt2-tur.lastik{ --tr:#10b981; } .dt2-tur.dugme{ --tr:#ef4444; }
+.dt2-tur.toptan{ --tr:#f97316; } .dt2-tur.satenaskilik{ --tr:#06b6d4; } .dt2-tur.kordon{ --tr:#d946ef; } .dt2-tur.dantel{ --tr:#ec4899; }
+.dt2-no{ font-family:var(--font-mono); font-size:13.5px; font-weight:700; color:var(--text-muted); }
+.dt2-durum{ display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:99px; border:1px solid transparent; cursor:pointer;
+  font:inherit; font-size:12px; font-weight:700; transition:border-color .15s, background .15s; }
+.dt2-durum.ok{ background:color-mix(in srgb, var(--success) 14%, transparent); color:var(--success); }
+.dt2-durum.bek{ background:color-mix(in srgb, var(--warning) 15%, transparent); color:var(--warning); }
+.dt2-durum:hover{ border-color:currentColor; }
+.dt2-durum-d{ font-size:10px; width:0; overflow:hidden; opacity:0; transition:width .15s, opacity .15s; }
+.dt2-durum:hover .dt2-durum-d, .dt2-durum:focus-visible .dt2-durum-d{ width:11px; opacity:.8; }
+
+html #detailModal.dt2 .modal-body-new{ padding:6px 22px 22px !important; }
+
+.dt2-ust{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding:4px 0 16px; }
+.dt2-ust-l{ min-width:0; display:flex; flex-direction:column; gap:6px; }
+.dt2-model{ display:inline-flex; align-items:center; gap:10px; font-size:30px; font-weight:900; line-height:1.08; letter-spacing:-.01em;
+  color:var(--text-main); text-decoration:none; word-break:break-word; }
+.dt2-model i{ font-size:13px; color:var(--text-muted); opacity:0; transition:opacity .15s; }
+.dt2-model:hover{ color:var(--primary); } .dt2-model:hover i{ opacity:1; color:var(--primary); }
+.dt2-model.yok{ color:var(--text-muted); font-size:22px; }
+.dt2-alt{ display:flex; flex-wrap:wrap; gap:4px 16px; font-size:13px; font-weight:600; color:var(--text-muted); }
+.dt2-alt i{ margin-right:5px; opacity:.75; font-size:12px; }
+.dt2-top{ text-align:right; flex-shrink:0; }
+.dt2-top span{ display:block; font-size:10.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); }
+.dt2-top b{ display:block; font-size:34px; font-weight:900; line-height:1.05; color:var(--primary); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dt2-top em{ font-style:normal; font-size:14px; font-weight:700; color:var(--text-muted); margin-left:6px; }
+
+.dt2-bilgi{ display:flex; flex-wrap:wrap; margin:0 0 4px; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); row-gap:10px; }
+.dt2-kv{ padding:0 18px; border-left:1px solid var(--border); min-width:0; }
+.dt2-kv:first-child{ padding-left:0; border-left:0; }
+.dt2-kv dt{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+.dt2-kv dd{ margin:2px 0 0; font-size:14.5px; font-weight:700; color:var(--text-main); }
+.dt2-kv dd small{ font-size:11.5px; font-weight:600; color:var(--text-muted); margin-left:4px; }
+.dt2-kv.gec dd, .dt2-kv.gec dd small{ color:var(--danger); }
+
+.dt2-blok{ margin-top:18px; }
+.dt2-blok h4{ display:flex; align-items:baseline; gap:8px; margin:0 0 4px; font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--text-muted); }
+.dt2-blok h4 span{ margin-left:auto; font-weight:600; letter-spacing:0; text-transform:none; font-size:11.5px; }
+.dt2-t{ width:100%; border-collapse:collapse; }
+.dt2-t th{ text-align:left; padding:8px 12px 8px 0; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted);
+  border-bottom:1px solid var(--border); }
+.dt2-t td{ padding:11px 12px 11px 0; font-size:15px; font-weight:600; color:var(--text-main); border-bottom:1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  font-variant-numeric:tabular-nums; }
+.dt2-t td.ilk{ font-weight:800; }
+.dt2-t .n{ text-align:right; padding-right:0; }
+.dt2-t td.n{ font-weight:900; font-size:16px; }
+.dt2-t tbody tr:hover td{ background:color-mix(in srgb, var(--primary) 5%, transparent); }
+.dt2-t tfoot td{ border-bottom:0; border-top:1.5px solid var(--text-muted); font-weight:800; color:var(--text-muted); font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+.dt2-t tfoot td.n{ color:var(--primary); font-size:17px; letter-spacing:0; }
+
+html #detailModal.dt2 .dt-mal{ margin:16px 0 0; }
+.dt2-not{ display:flex; gap:10px; margin-top:18px; padding:11px 14px; border-left:3px solid var(--warning); border-radius:0 10px 10px 0;
+  background:color-mix(in srgb, var(--warning) 8%, transparent); font-size:13px; line-height:1.55; color:var(--text-main); }
+.dt2-not i{ color:var(--warning); margin-top:3px; flex-shrink:0; }
+html #detailModal.dt2 .dt-fotos{ grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); margin-top:8px; }
+
+/* Düğmeler (masaüstü): solda sade yardımcılar, sağda Paylaş + PDF */
+@media (min-width:769px){
+  html #detailModal.dt2 .modal-actions-new{ display:flex !important; align-items:center; gap:8px; padding:12px 22px !important; border-top:1px solid var(--border); }
+  html #detailModal.dt2 .modal-actions-secondary{ display:flex !important; gap:2px !important; flex:1; order:1; margin:0 !important; }
+  html #detailModal.dt2 .modal-actions-primary{ display:flex !important; gap:8px !important; order:2; margin:0 !important; }
+  html #detailModal.dt2 .modal-actions-secondary .modal-action-btn{ background:transparent !important; border:0 !important; box-shadow:none !important; backdrop-filter:none !important;
+    padding:9px 11px !important; color:var(--text-muted) !important; transform:none !important; }
+  html #detailModal.dt2 .modal-actions-secondary .modal-action-btn span{ color:inherit !important; font-weight:600; }
+  html #detailModal.dt2 .modal-actions-secondary .modal-action-btn i{ color:inherit !important; font-size:13.5px !important; transform:none !important; }
+  html #detailModal.dt2 .modal-actions-secondary .modal-action-btn:hover{ background:var(--glass) !important; color:var(--text-main) !important; }
+  html #detailModal.dt2 .modal-actions-primary .modal-action-btn{ padding:10px 18px !important; min-width:104px; transform:none !important; }
+  html #detailModal.dt2 #modalShareBtn{ order:1; background:color-mix(in srgb, var(--primary) 14%, transparent) !important; color:var(--text-main) !important;
+    box-shadow:none !important; border:1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important; }
+  html #detailModal.dt2 #modalShareBtn i{ color:var(--primary) !important; }
+  html #detailModal.dt2 #modalShareBtn:hover{ background:color-mix(in srgb, var(--primary) 22%, transparent) !important; }
+  html #detailModal.dt2 #modalPdfBtn{ order:2; box-shadow:0 6px 18px -8px var(--primary-glow) !important; }
+}
+
+@media (max-width:768px){
+  html #detailModal.dt2 .modal-header-new{ padding:14px 16px 2px !important; }
+  html #detailModal.dt2 .modal-body-new{ padding:4px 16px 16px !important; }
+  .dt2-ust{ flex-wrap:wrap; align-items:flex-start; gap:10px 16px; }
+  .dt2-model{ font-size:23px; }
+  .dt2-top{ text-align:left; }
+  .dt2-top b{ font-size:28px; }
+  .dt2-bilgi{ display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; }
+  .dt2-kv{ padding:0; border-left:0; }
+  html #detailModal.dt2 #modalShareBtn{ background:color-mix(in srgb, var(--primary) 14%, transparent) !important; color:var(--text-main) !important; box-shadow:none !important;
+    border:1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important; }
+  html #detailModal.dt2 #modalShareBtn i{ color:var(--primary) !important; }
+}
+/* dt2: genel mobil tablo kuralı (min-width:500px, sabit padding) bu tabloyu taşırıyordu */
+html #detailModal.dt2 .dt2-t{ min-width:0 !important; }
+html #detailModal.dt2 .dt2-t th{ padding:8px 12px 8px 0 !important; white-space:nowrap; }
+html #detailModal.dt2 .dt2-t td{ padding:11px 12px 11px 0 !important; white-space:normal; }
+html #detailModal.dt2 .dt2-t .n{ padding-right:0 !important; }
+html #detailModal.dt2 .dt2-durum{ min-height:0 !important; height:auto !important; }
+html #detailModal.dt2 .dt2-bilgi:last-child{ border-bottom:0; padding-bottom:0; }
