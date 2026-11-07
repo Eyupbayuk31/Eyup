@@ -18559,9 +18559,39 @@ table.fer-gizli thead th:first-child{ font-size:11px; }
    ════════════════════════════════════════════════════════════ */
 .t2-at-baslik{ display:flex; align-items:center; gap:10px; min-width:0; }
 .t2-at-baslik h2{ margin:0; }
-.t2-at-dans{ width:64px; height:64px; image-rendering:pixelated; flex-shrink:0; margin:-10px 0; user-select:none; pointer-events:none; }
-@media (max-width:768px){ .t2-at-dans{ width:52px; height:52px; } }
-@media (prefers-reduced-motion:reduce){ .t2-at-dans{ display:none; } }
+.t2-at-maskot{ position:relative; display:block; flex-shrink:0; transform:translateY(-9px); pointer-events:none; user-select:none; }
+.t2-at-dans{ position:relative; z-index:1; display:block; line-height:0; }
+.t2-at-dans img{ display:block; height:54px; width:auto; }
+@media (max-width:768px){ .t2-at-dans img{ height:46px; } }
+@media (prefers-reduced-motion:reduce){ .t2-at-maskot{ display:none; } }
+.t2-at-maskot .kalp{ display:none; }
+
+/* Pembe temalar (Gül / Çiçek): arkasında pembe ışıltı, başından yükselen minik kalpler */
+:is([data-theme="rose"],[data-theme="blossom"]) .t2-at-maskot::before{
+  content:''; position:absolute; z-index:0; left:50%; top:55%; width:130%; aspect-ratio:1; transform:translate(-50%,-50%);
+  border-radius:50%; background:radial-gradient(closest-side, rgba(255,150,195,.38), rgba(255,150,195,0) 72%);
+  animation:t2AtIsilti 2.6s ease-in-out infinite;
+}
+[data-theme="blossom"] .t2-at-maskot::before{ background:radial-gradient(closest-side, rgba(244,114,182,.30), rgba(244,114,182,0) 72%); }
+@keyframes t2AtIsilti{ 50%{ opacity:.55; transform:translate(-50%,-50%) scale(.9); } }
+:is([data-theme="rose"],[data-theme="blossom"]) .t2-at-maskot .kalp{
+  display:block; position:absolute; z-index:2; width:10px; height:9px; top:6px; opacity:0;
+  background:#ff7eb3;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 9'%3E%3Cpath d='M5 9 .8 4.8A2.5 2.5 0 0 1 5 1.3a2.5 2.5 0 0 1 4.2 3.5z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 9'%3E%3Cpath d='M5 9 .8 4.8A2.5 2.5 0 0 1 5 1.3a2.5 2.5 0 0 1 4.2 3.5z'/%3E%3C/svg%3E") center/contain no-repeat;
+  animation:t2AtKalp 3s ease-out infinite;
+}
+.t2-at-maskot .k1{ left:14%; animation-delay:0s !important; }
+.t2-at-maskot .k2{ left:62%; width:8px !important; height:7px !important; animation-delay:1s !important; background:#ffb3d1 !important; }
+.t2-at-maskot .k3{ left:40%; width:7px !important; height:6px !important; animation-delay:2s !important; }
+[data-theme="blossom"] .t2-at-maskot .kalp{ background:#ec4899; }
+[data-theme="blossom"] .t2-at-maskot .k2{ background:#f9a8d4 !important; }
+@keyframes t2AtKalp{
+  0%{ opacity:0; transform:translate(0,6px) scale(.6) rotate(-8deg); }
+  20%{ opacity:1; }
+  70%{ opacity:.9; }
+  100%{ opacity:0; transform:translate(6px,-22px) scale(1) rotate(10deg); }
+}
 
 /* Özet: 4 dokunulabilir kutu */
 .t2-at-ozet{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
