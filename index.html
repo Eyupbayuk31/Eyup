@@ -4242,6 +4242,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
 
       <!-- Adım adım sihirbaz (varsayılan). Arkadaki motor aynı: AK.* -->
+      <div class="aks-sekme" role="tablist" aria-label="Aksesuar kontrol">
+        <button type="button" role="tab" id="aksSekYeni" class="on" onclick="AKS.sekme('yeni')"><i class="fas fa-wand-magic-sparkles"></i> Yeni föy</button>
+        <button type="button" role="tab" id="aksSekKayit" onclick="AKS.sekme('kayit')"><i class="fas fa-clock-rotate-left"></i> Kayıtlar <b id="aksKayitSay"></b></button>
+      </div>
       <div id="akSih" class="aks" aria-live="polite"></div>
 
       <div id="akKlasik">
@@ -4291,7 +4295,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
       </div><!-- /akKlasik -->
 
-      <div class="ak-card">
+      <div class="ak-card" id="akKayitKart">
         <div class="ak-step"><span class="ak-n"><i class="fas fa-clock-rotate-left"></i></span> Kayıtlar</div>
         <div id="akRecords"></div>
       </div>
@@ -26606,11 +26610,23 @@ AKS.gorunumUygula = function(){
   var pg=document.getElementById('page-akskontrol'); if(!pg) return;
   var sih=AKS.acikMi();
   pg.classList.toggle('ak-sih', sih);
+  AKS.sekme(sih ? AKS._sekme : 'yeni');
   var b=document.getElementById('akGorBtn');
   if(b) b.innerHTML = sih ? '<i class="fas fa-table-columns"></i> <span>Hepsi tek sayfada</span>' : '<i class="fas fa-shoe-prints"></i> <span>Adım adım</span>';
   if(sih) AKS.ciz(false);
   else { try{ AK.renderColors(); }catch(_){} try{ window._t2AkAdimCiz && window._t2AkAdimCiz(); }catch(_){} }
 };
+AKS._sekme='yeni';
+AKS.sekme = function(t){
+  AKS._sekme = t==='kayit' ? 'kayit' : 'yeni';
+  var pg=document.getElementById('page-akskontrol'); if(pg) pg.classList.toggle('aks-kayitta', AKS._sekme==='kayit');
+  var y=document.getElementById('aksSekYeni'), k=document.getElementById('aksSekKayit');
+  if(y){ y.classList.toggle('on', AKS._sekme==='yeni'); y.setAttribute('aria-selected', AKS._sekme==='yeni'); }
+  if(k){ k.classList.toggle('on', AKS._sekme==='kayit'); k.setAttribute('aria-selected', AKS._sekme==='kayit'); }
+  AKS.kayitSay();
+  if(AKS._sekme==='kayit'){ try{ AK.renderRecords(); }catch(_){} }
+};
+AKS.kayitSay = function(){ var b=document.getElementById('aksKayitSay'); if(b){ var n=(AK.recs()||[]).length; b.textContent=n?n:''; } };
 AKS.gorunumDegis = function(){
   setConfig('akGorunum', AKS.acikMi() ? 'klasik' : 'sihirbaz');
   AKS.gorunumUygula();
@@ -26700,37 +26716,68 @@ AKS._atolyeler = function(){
   (getData('atolyeler')||[]).map(function(a){ return a.name; }).sort(function(a,b){ return String(a).localeCompare(String(b),'tr'); }).forEach(ekle);
   return {liste:son, sonN:sonN};
 };
+AKS._oneriSec = -1;
+AKS._oneriler = function(q){
+  q=(q||'').trim().toLocaleLowerCase('tr'); if(!q) return [];
+  var r=AKS._atolyeler(), out=[];
+  r.liste.forEach(function(a,i){ var k=a.toLocaleLowerCase('tr'), p=k.indexOf(q); if(p>=0) out.push({a:a, son:i<r.sonN, p:p}); });
+  // Başından eşleşen önce, sonra son kullanılan, sonra alfabe
+  out.sort(function(x,y){ return (x.p===0?0:1)-(y.p===0?0:1) || (x.son?0:1)-(y.son?0:1) || x.a.localeCompare(y.a,'tr'); });
+  return out.slice(0,6);
+};
+AKS._oneriHtml = function(){
+  var v=AKS._atolye(), q=v.toLocaleLowerCase('tr'), l=AKS._oneriler(v);
+  if(!v) return '';
+  var tam=l.some(function(x){ return x.a.toLocaleLowerCase('tr')===q; });
+  var vurgu=function(a){ var p=a.toLocaleLowerCase('tr').indexOf(q); if(p<0) return AKS._e(a);
+    return AKS._e(a.slice(0,p))+'<mark>'+AKS._e(a.slice(p,p+v.length))+'</mark>'+AKS._e(a.slice(p+v.length)); };
+  var satir=l.map(function(x,i){
+    return '<button type="button" class="aks-oneri-s'+(i===AKS._oneriSec?' on':'')+'" data-a="'+AKS._e(x.a)+'" onmousedown="event.preventDefault()" onclick="AKS.atolyeSec(this.dataset.a)">'+
+      '<span class="aks-av">'+AKS._e((x.a.trim()[0]||'?').toLocaleUpperCase('tr'))+'</span><span class="aks-oneri-ad">'+vurgu(x.a)+'</span>'+
+      (x.son?'<small>son kullanılan</small>':'')+'</button>';
+  }).join('');
+  if(!tam) satir+='<button type="button" class="aks-oneri-s yeni'+(l.length===AKS._oneriSec?' on':'')+'" onmousedown="event.preventDefault()" onclick="AKS.atolyeSec(document.getElementById(\'aksAtolye\').value)">'+
+    '<span class="aks-av"><i class="fas fa-plus"></i></span><span class="aks-oneri-ad"><b>'+AKS._e(v)+'</b> adıyla devam et</span></button>';
+  return '<div class="aks-oneri">'+satir+'</div>';
+};
 AKS._e1 = function(){
-  var v=AKS._atolye(), q=v.toLocaleLowerCase('tr'), r=AKS._atolyeler();
-  var secili=function(a){ return a.toLocaleLowerCase('tr')===q; };
-  var l=r.liste.map(function(a,i){ return {a:a, son:i<r.sonN}; });
-  if(q && !l.some(function(x){ return secili(x.a); })) l=l.filter(function(x){ return x.a.toLocaleLowerCase('tr').indexOf(q)>=0; });
-  var cip=function(x){
-    var bas=(x.a.trim()[0]||'?').toLocaleUpperCase('tr');
-    return '<button type="button" class="aks-cip'+(secili(x.a)?' on':'')+'" data-a="'+AKS._e(x.a)+'" onclick="AKS.atolyeSec(this.dataset.a)"><span class="aks-av">'+AKS._e(bas)+'</span>'+AKS._e(x.a)+(secili(x.a)?'<i class="fas fa-check"></i>':'')+'</button>';
-  };
-  var sonlar=l.filter(function(x){ return x.son; }).slice(0,8), digerleri=l.filter(function(x){ return !x.son; }).slice(0,24);
-  return AKS._soru('fa-industry','Föy hangi atölyeye gidiyor?','Listeden seç ya da adını yaz. Bir dahakine en üstte hazır gelir.')+
+  var v=AKS._atolye();
+  return AKS._soru('fa-industry','Föy hangi atölyeye gidiyor?','Atölyenin adını yazmaya başla, listeden seç.')+
     '<div class="aks-icerik aks-dar">'+
+      '<div class="aks-ara-kap">'+
       '<label class="aks-ara"><i class="fas fa-magnifying-glass"></i><input id="aksAtolye" class="form-input" value="'+AKS._e(v)+'" placeholder="Atölye adı" autocomplete="off" data-oto-odak '+
-        'oninput="AKS.atolyeYaz(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();AKS.ileri();}">'+
+        'oninput="AKS.atolyeYaz(this.value)" onkeydown="AKS.atolyeTus(event)">'+
         (v?'<button type="button" class="aks-ara-x" onclick="AKS.atolyeYaz(\'\',true)" aria-label="Temizle"><i class="fas fa-xmark"></i></button>':'')+'</label>'+
-      '<div id="aksAtolyeCip">'+
-      (sonlar.length?'<div class="aks-grup">Son kullanılanlar</div><div class="aks-cipler">'+sonlar.map(cip).join('')+'</div>':'')+
-      (digerleri.length?'<div class="aks-grup">Atölyeler</div><div class="aks-cipler">'+digerleri.map(cip).join('')+'</div>':'')+
-      (!sonlar.length && !digerleri.length && v?'<div class="aks-ipucu"><i class="fas fa-circle-plus"></i> <b>'+AKS._e(v)+'</b> listede yok, bu adla devam edilecek.</div>':'')+
+      '<div id="aksAtolyeCip">'+AKS._oneriHtml()+'</div>'+
       '</div>'+
     '</div>';
+};
+AKS.atolyeTus = function(e){
+  var l=document.querySelectorAll('#aksAtolyeCip .aks-oneri-s');
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    if(!l.length) return; e.preventDefault();
+    AKS._oneriSec = e.key==='ArrowDown' ? Math.min(l.length-1, AKS._oneriSec+1) : Math.max(-1, AKS._oneriSec-1);
+    [].forEach.call(l, function(b,i){ b.classList.toggle('on', i===AKS._oneriSec); });
+    return;
+  }
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(AKS._oneriSec>=0 && l[AKS._oneriSec]){ l[AKS._oneriSec].click(); return; }
+    var bir=AKS._oneriler(AKS._atolye());
+    // Tek öneri kaldıysa onu al (yazım farkı olmasın)
+    if(bir.length===1 && l.length===1){ AKS.atolyeSec(bir[0].a); return; }
+    AKS.ileri();
+  }
+  if(e.key==='Escape'){ AKS.atolyeYaz('',true); }
 };
 AKS._atolyeYaz = function(v){
   AK.state.atolye=v; var i=document.getElementById('akAtolye'); if(i) i.value=v;
 };
 AKS.atolyeYaz = function(v, odakla){
-  AKS._atolyeYaz(v);
-  // Yazarken kutuyu yeniden çizme (imleç kaçar) — yalnız çipleri tazele
-  var tmp=document.createElement('div'); tmp.innerHTML=AKS._e1();
-  var yeni=tmp.querySelector('#aksAtolyeCip'), eski=document.getElementById('aksAtolyeCip');
-  if(yeni && eski) eski.innerHTML=yeni.innerHTML;
+  AKS._atolyeYaz(v); AKS._oneriSec=-1;
+  // Yazarken kutuyu yeniden çizme (imleç kaçar) — yalnız önerileri tazele
+  var eski=document.getElementById('aksAtolyeCip'); if(eski) eski.innerHTML=AKS._oneriHtml();
+  var ip=document.querySelector('#akSih .aks-ileri'); if(ip) ip.classList.toggle('pasif', !AKS._atolye());
   if(odakla){ AKS.ciz(false); var inp=document.getElementById('aksAtolye'); if(inp) inp.focus(); }
 };
 AKS.atolyeSec = function(a){
@@ -26903,7 +26950,7 @@ AKS._e5 = function(){
   var foto=AK.gelenMod()==='foto';
   if(AKS.bitti){
     return '<div class="aks-sonuc"><svg class="aks-tik" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="23"/><path d="M15 27l7.5 7.5L38 19"/></svg>'+
-      '<h3>'+AKS._e(AKS.bitti)+'</h3><p>'+renkler.length+' renk kayıtlara eklendi. Aşağıdaki listeden tekrar yazdırabilirsin.</p></div>'+
+      '<h3>'+AKS._e(AKS.bitti)+'</h3><p>'+renkler.length+' renk kayıtlara eklendi. <b>Kayıtlar</b> sekmesinden tekrar yazdırabilirsin.</p></div>'+
       '<div class="aks-icerik aks-dar aks-ortala">'+
         '<button type="button" class="btn btn-primary aks-buyuk" onclick="AKS.yeniFoy()"><i class="fas fa-plus"></i> Yeni föy başlat</button>'+
         '<button type="button" class="aks-link" onclick="AKS.bitti=\'\';AKS.ciz(false)"><i class="fas fa-file-pdf"></i> Aynı föyü tekrar oluştur</button>'+
@@ -26935,7 +26982,7 @@ AKS.olustur = function(mod){
   var r; try{ r=AK.generateAll(mod); }catch(e){ toast('Föy oluşturulamadı: '+(e&&e.message||e),'error'); return; }
   Promise.resolve(r).then(function(){
     AKS.bitti = mod==='save' ? 'Kaydedildi' : (mod==='print' ? 'Yazdırmaya gönderildi' : 'Föy oluşturuldu');
-    AKS.ciz(false);
+    AKS.ciz(false); AKS.kayitSay();
   });
 };
 AKS.yeniFoy = function(){
@@ -26951,6 +26998,8 @@ AKS.yeniFoy = function(){
 (function(){
   var asil=AK.renderColors;
   AK.renderColors=function(){ var r=asil.apply(this, arguments); try{ if(AKS.acikMi() && AKS.adim>=3) AKS.ciz(false); }catch(_){} return r; };
+  var asilKayit=AK.renderRecords;
+  AK.renderRecords=function(){ var r=asilKayit.apply(this, arguments); try{ AKS.kayitSay(); }catch(_){} return r; };
   var asilAc=AK.onOpen;
   AK.onOpen=function(){
     var r=asilAc.apply(this, arguments);
@@ -26958,7 +27007,6 @@ AKS.yeniFoy = function(){
       if(!AKS._ilk){
         AKS._ilk=true;
         var sa=getConfig('akSonAsama',''); if(sa && AK.STAGE_ORDER[sa]){ AK.setAsama(sa); AKS.asamaSecildi=true; }
-        var l=getConfig('akSonAtolyeler',[])||[]; if(!AKS._atolye() && l[0]) AKS._atolyeYaz(l[0]);
       }
       AKS.gorunumUygula();
     }catch(_){}
