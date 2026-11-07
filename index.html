@@ -2764,6 +2764,13 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
     </div>
 
+    <!-- Atölye detay paneli: atölyeye dokununca açılır -->
+    <div class="modal-overlay" id="atolyeDetayModal" onclick="if(event.target===this)atolyeDetayKapat()">
+      <div class="modal t2-ad-modal" role="dialog" aria-modal="true" aria-labelledby="atolyeDetayAd">
+        <div id="atolyeDetayIc"></div>
+      </div>
+    </div>
+
     <!-- ========== STOK TAKİBİ ========== -->
     <!-- ========== GENEL STOK (uyarı merkezi) ========== -->
     <div class="page" id="page-stok">
@@ -5108,7 +5115,7 @@ function _atolyeTopCiz(rows){
     const ilk5=l.reduce(function(t,r){ return t+r.k[nK]; },0);
     govde='<div class="t2-at-bar-liste">'+l.map(function(r,i){
       const yuzde=Math.max(6,Math.round(r.k[nK]/mx*100));
-      return '<button type="button" class="t2-at-bar" data-ad="'+esc(r.a.name)+'" onclick="_atolyeIrsaliyeleri(this.dataset.ad)" title="İrsaliyelerini göster">'+
+      return '<button type="button" class="t2-at-bar" onclick="atolyeDetay('+r.a.id+')" title="Atölye detayı">'+
         '<span class="s">'+(i+1)+'</span>'+
         '<span class="ad">'+esc(r.a.name)+'</span>'+
         '<span class="yol"><span class="dolgu" style="width:'+yuzde+'%"></span></span>'+
@@ -5140,7 +5147,7 @@ function _atKartHtml(r){
   const sy=function(v,cls,et){ return '<div class="'+(cls||'')+(v?'':' sifir')+'"><b>'+_atSayiYaz(v)+'</b><span>'+et+'</span></div>'; };
   return '<div class="t2-atolye'+(k.gec?' gecikti':'')+'">'+
     '<div class="t2a-ust"><span class="t2a-ic"><i class="fas fa-industry"></i></span>'+
-      '<div class="t2a-ad"><b>'+ad+'</b>'+
+      '<div class="t2a-ad"><button type="button" class="t2-at-adbtn" onclick="atolyeDetay('+a.id+')" title="Atölye detayı">'+ad+'</button>'+
         '<small>Son sevk: '+(k.son?_atSonYazi(r.gun,k.son):'<span class="t2-sonuk">hiç yok</span>')+'</small>'+
         '<small>'+(r.tel?'<i class="fas fa-phone"></i> '+esc(a.telefon):'<span class="t2-sonuk"><i class="fas fa-phone-slash"></i> Telefon yok</span>')+'</small></div>'+
       '<button type="button" class="t2a-daha" onclick="_atolyeMenu('+a.id+')" aria-label="Diğer işlemler"><i class="fas fa-ellipsis"></i></button></div>'+
@@ -5159,7 +5166,7 @@ function _atTabloHtml(rows){
       const a=r.a, k=r.k, ad=esc(a.name);
       return '<tr class="'+(k.gec?'gecikti':'')+'">'+
         '<td class="ad"><div class="adk"><span class="t2a-ic sm"><i class="fas fa-industry"></i></span><div>'+
-          '<button type="button" class="t2-at-adbtn" data-ad="'+ad+'" onclick="_atolyeIrsaliyeleri(this.dataset.ad)" title="İrsaliyelerini göster">'+ad+'</button>'+
+          '<button type="button" class="t2-at-adbtn" onclick="atolyeDetay('+a.id+')" title="Atölye detayı">'+ad+'</button>'+
           '<small>'+(r.tel?'<i class="fas fa-phone"></i> '+esc(a.telefon):'<span class="t2-sonuk"><i class="fas fa-phone-slash"></i> Telefon yok</span>')+'</small></div></div></td>'+
         n(k.acik)+n(k.gec,'gec')+n(k.ay)+n(k.top)+
         '<td class="son">'+(k.son?'<b>'+_atSonYazi(r.gun,k.son)+'</b><small>'+_t2Tarih(k.son,true)+'</small>':'<span class="t2-sonuk">Hiç sevk yok</span>')+'</td>'+
@@ -5240,10 +5247,155 @@ function _atolyeTelefon(id){
 function _atolyeMenu(id){
   const a=(getData('atolyeler')||[]).find(x=>x.id===id); if(!a) return;
   _t2SheetAc(a.name, [
+    ['fa-id-card','Atölye detayı', function(){ atolyeDetay(id); }],
     ['fa-list','İrsaliyelerini göster', function(){ _atolyeIrsaliyeleri(a.name); }],
     ['fa-phone', a.telefon?'Telefonu değiştir':'Telefon ekle', function(){ _atolyeTelefon(id); }],
     ['fa-trash-can','Atölyeyi sil', function(){ deleteAtolye(id); }, true]
   ]);
+}
+
+
+// ══ ATÖLYE DETAY PANELİ ══════════════════════════════════════
+// Bir atölyenin her şeyi tek yerde: sayılar, karne (Raporlar'la aynı hesap),
+// son 6 ay, açık işler, en çok modeller, son irsaliyeler.
+const _AD_TUR={standart:['Poşet','fa-bag-shopping'],fermuar:['Fermuar','fa-grip-lines'],lastik:['Lastik','fa-circle-notch'],dugme:['Düğme','fa-circle-dot'],
+  toptan:['Toptan','fa-boxes-stacked'],satenaskilik:['Saten Askılık','fa-layer-group'],kordon:['Kordon','fa-bezier-curve'],dantel:['Dantel','fa-border-all']};
+let _adAcikId=null;
+function atolyeDetayKapat(){ const m=document.getElementById('atolyeDetayModal'); if(m) m.classList.remove('show'); _adAcikId=null; }
+function _adKayitAc(id,type){ atolyeDetayKapat(); setTimeout(function(){ try{ showDetailUni(id,type); }catch(_){} },120); }
+function _adYeniIrsaliye(ad){
+  atolyeDetayKapat();
+  try{ showPage('new'); }catch(_){}
+  setTimeout(function(){
+    const sel=document.getElementById('iAtolye'); if(!sel) return;
+    if(![].some.call(sel.options,function(o){ return o.value===ad; })){ const o=document.createElement('option'); o.value=o.textContent=ad; sel.appendChild(o); }
+    sel.value=ad; try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(_){}
+    try{ _syncAtolyeLabel('iAtolye'); }catch(_){}
+    toast(ad+' seçildi','success');
+  },160);
+}
+function atolyeDetay(id){
+  const a=(getData('atolyeler')||[]).find(function(x){ return x.id===id; }); if(!a) return;
+  _adAcikId=id;
+  const AD=(a.name||'').toLocaleUpperCase('tr');
+  const hepsi=getUnifiedList().filter(function(i){ return (i.atolye||i.firma||'').toLocaleUpperCase('tr')===AD; });
+  const bugun=new Date(); bugun.setHours(0,0,0,0);
+  const bugunS=new Date().toISOString().slice(0,10);
+  const n0=function(v){ return (+v||0).toLocaleString('tr'); };
+  const e=esc;
+
+  // Karne (Raporlar > Atölye Karnesi ile aynı hesap; toptan'da durum yok)
+  const kr=_krYeni(a.name);
+  hepsi.filter(_repHasStatus).forEach(function(i){ _krIsle(kr,i,bugun); });
+  _krBitir(kr);
+  // Ortalama teslim süresi: irsaliye tarihinden teslim edildiği güne
+  let sure=0, sureN=0;
+  hepsi.forEach(function(i){
+    if(!_repIsDone(i.durum)) return;
+    const ts=_krTeslimTs(i), t0=_krTerminTs(i.tarih);
+    if(!ts||!t0) return;
+    const g=Math.round((_krGun0(ts)-t0)/GUN); if(g<0||g>365) return;
+    sure+=g; sureN++;
+  });
+  const ortSure = sureN>=2 ? Math.round(sure/sureN*10)/10 : null;
+
+  const acik=hepsi.filter(function(i){ return i._type!=='toptan' && !_repIsDone(i.durum); })
+    .sort(function(x,y){ return String(x.termin||'9999').localeCompare(String(y.termin||'9999')); });
+  const geciken=acik.filter(function(i){ return i.termin && i.termin<bugunS; }).length;
+  let son=''; hepsi.forEach(function(i){ if(i.tarih && i.tarih>son) son=i.tarih; });
+  const toplamAdet=hepsi.reduce(function(t,i){ return t+(_repItemQty(i)||_posetSayilan(i.sizes)||0); },0);
+
+  // Son 6 ay
+  const aylar=[]; const d0=new Date(); d0.setDate(1);
+  for(let k=5;k>=0;k--){ const d=new Date(d0.getFullYear(), d0.getMonth()-k, 1); aylar.push({k:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), ad:d.toLocaleDateString('tr-TR',{month:'short'}), n:0}); }
+  hepsi.forEach(function(i){ const k=(i.tarih||'').slice(0,7); const m=aylar.find(function(x){ return x.k===k; }); if(m) m.n++; });
+  const ayMax=Math.max(1, ...aylar.map(function(x){ return x.n; }));
+
+  // En çok modeller + türler
+  const mod={}; hepsi.forEach(function(i){ const m=String(i.model||i.urun||'').trim(); if(!m) return; const K=m.toLocaleUpperCase('tr'); (mod[K]||(mod[K]={ad:m,n:0,adet:0})); mod[K].n++; mod[K].adet+=(_repItemQty(i)||_posetSayilan(i.sizes)||0); });
+  const modeller=Object.values(mod).sort(function(x,y){ return (y.n-x.n)||(y.adet-x.adet); }).slice(0,5);
+  const tur={}; hepsi.forEach(function(i){ tur[i._type]=(tur[i._type]||0)+1; });
+  const turler=Object.keys(tur).sort(function(x,y){ return tur[y]-tur[x]; });
+
+  const sonList=hepsi.slice().sort(function(x,y){ return String(y.tarih||'').localeCompare(String(x.tarih||'')) || ((+y.id||0)-(+x.id||0)); }).slice(0,10);
+  const tel=(a.telefon||'').replace(/[^\d+]/g,''), normTel=tel?_normalizePhoneForWa(tel):'';
+  const gun=_atGunFark(son);
+
+  const kpi=function(v,et,cls,alt){ return '<div class="ad-kpi '+(cls||'')+'"><b>'+v+'</b><span>'+et+'</span>'+(alt?'<small>'+alt+'</small>':'')+'</div>'; };
+  const harf=_krHarf(kr.puan), renk=_krRenk(kr.puan);
+  const satir=function(i){
+    const t=_AD_TUR[i._type]||['İrsaliye','fa-file-lines'];
+    const adet=_repItemQty(i)||_posetSayilan(i.sizes)||0;
+    const done=_repIsDone(i.durum);
+    return '<button type="button" class="ad-satir" onclick="_adKayitAc('+i.id+',\''+i._type+'\')">'+
+      '<span class="ad-tur"><i class="fas '+t[1]+'"></i></span>'+
+      '<span class="ad-st"><b>'+e(i.model||i.urun||i.no||'—')+'</b><small>'+[i.no, t[0], i.tarih?_t2Tarih(i.tarih):''].filter(Boolean).map(e).join(' · ')+'</small></span>'+
+      (adet?'<span class="ad-adet">'+n0(adet)+'</span>':'')+
+      (i._type==='toptan'?'':'<span class="ad-durum '+(done?'ok':'bek')+'">'+(done?'Teslim':'Bekliyor')+'</span>')+
+    '</button>';
+  };
+  const acikSatir=function(i){
+    const t=_AD_TUR[i._type]||['İrsaliye','fa-file-lines'];
+    const te=i.termin?_t2Termin(i.termin):null;
+    return '<button type="button" class="ad-satir" onclick="_adKayitAc('+i.id+',\''+i._type+'\')">'+
+      '<span class="ad-tur"><i class="fas '+t[1]+'"></i></span>'+
+      '<span class="ad-st"><b>'+e(i.model||i.urun||i.no||'—')+'</b><small>'+[i.no, t[0]].filter(Boolean).map(e).join(' · ')+'</small></span>'+
+      (te?'<span class="ad-termin '+te.cls+'">'+e(te.t)+'</span>':'<span class="ad-termin uzak">Termin yok</span>')+
+    '</button>';
+  };
+
+  const ic=document.getElementById('atolyeDetayIc'); if(!ic) return;
+  ic.innerHTML=
+    '<div class="ad-ust">'+
+      '<span class="ad-ikon"><i class="fas fa-industry"></i></span>'+
+      '<div class="ad-baslik"><h3 id="atolyeDetayAd">'+e(a.name)+'</h3>'+
+        '<small>'+(tel?'<i class="fas fa-phone"></i> '+e(a.telefon):'<span class="t2-sonuk"><i class="fas fa-phone-slash"></i> Telefon yok</span>')+
+        ' · son sevk '+(son?_atSonYazi(gun,son):'hiç yok')+'</small></div>'+
+      '<button type="button" class="ad-x" onclick="atolyeDetayKapat()" aria-label="Kapat"><i class="fas fa-xmark"></i></button>'+
+    '</div>'+
+    '<div class="ad-eylem">'+
+      (normTel?'<button type="button" class="btn btn-sm t2a-wa" onclick="_openWhatsApp(\''+normTel+'\',\'\')"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>'
+              :'<button type="button" class="btn btn-sm btn-secondary" onclick="atolyeDetayKapat();_atolyeTelefon('+a.id+')"><i class="fas fa-phone"></i> Telefon ekle</button>')+
+      '<button type="button" class="btn btn-sm btn-secondary" data-ad="'+e(a.name)+'" onclick="atolyeDetayKapat();_atolyeIrsaliyeleri(this.dataset.ad)"><i class="fas fa-list"></i> Tüm irsaliyeleri</button>'+
+      '<button type="button" class="btn btn-sm btn-primary" data-ad="'+e(a.name)+'" onclick="_adYeniIrsaliye(this.dataset.ad)"><i class="fas fa-file-circle-plus"></i> Yeni irsaliye</button>'+
+    '</div>'+
+    '<div class="ad-govde">'+
+      '<div class="ad-kpiler">'+
+        kpi(n0(hepsi.length),'İrsaliye')+
+        kpi(n0(acik.length),'Açık iş', acik.length?'':'sifir')+
+        kpi(n0(geciken),'Geciken', geciken?'kirmizi':'sifir')+
+        kpi(n0(toplamAdet),'Toplam adet', toplamAdet?'':'sifir')+
+      '</div>'+
+      '<div class="ad-blok ad-karne">'+
+        '<div class="ad-harf" style="--kr:'+renk+'"><b>'+harf+'</b><small>'+(kr.puan==null?'puan yok':kr.puan+' puan')+'</small></div>'+
+        '<div class="ad-karne-sat">'+
+          '<div><span>Zamanında teslim</span><b>'+(kr.zamanOran==null?'—':'%'+kr.zamanOran)+'</b></div>'+
+          '<div><span>Ort. gecikme</span><b>'+(kr.ortGecikme==null?'—':kr.ortGecikme.toLocaleString('tr')+' gün')+'</b></div>'+
+          '<div><span>Ort. teslim süresi</span><b>'+(ortSure==null?'—':ortSure.toLocaleString('tr')+' gün')+'</b></div>'+
+        '</div>'+
+        (kr.puan==null?'<p class="ad-not">Karne için termini olan ve teslim tarihi kayıtlı irsaliye gerekiyor.</p>':'<p class="ad-not">Raporlar &gt; Atölye Karnesi ile aynı hesap · '+kr.terminli+' terminli teslime göre</p>')+
+      '</div>'+
+      '<div class="ad-blok"><div class="ad-bb"><i class="fas fa-chart-column"></i> Son 6 ay</div>'+
+        '<div class="ad-aylar">'+aylar.map(function(m){ return '<div class="ad-ay'+(m.n?'':' bos')+'"><span class="ad-ay-n">'+(m.n||'')+'</span><span class="ad-ay-c"><i style="height:'+Math.round(m.n/ayMax*100)+'%"></i></span><span class="ad-ay-ad">'+e(m.ad)+'</span></div>'; }).join('')+'</div>'+
+      '</div>'+
+      '<div class="ad-iki">'+
+        '<div class="ad-blok"><div class="ad-bb"><i class="fas fa-hourglass-half"></i> Açık işler <em>'+acik.length+'</em></div>'+
+          (acik.length?'<div class="ad-liste">'+acik.slice(0,8).map(acikSatir).join('')+'</div>'+(acik.length>8?'<p class="ad-not">+'+(acik.length-8)+' iş daha · Tüm irsaliyeleri\'nden bak</p>':'')
+                      :'<p class="ad-bos"><i class="fas fa-circle-check"></i> Açık iş yok</p>')+
+        '</div>'+
+        '<div class="ad-blok"><div class="ad-bb"><i class="fas fa-shirt"></i> En çok modeller</div>'+
+          (modeller.length?'<div class="ad-modeller">'+modeller.map(function(m,k){ return '<div class="ad-model"><span class="s">'+(k+1)+'</span><b>'+e(m.ad)+'</b><small>'+m.n+' irsaliye'+(m.adet?' · '+n0(m.adet)+' adet':'')+'</small></div>'; }).join('')+'</div>'
+                          :'<p class="ad-bos">Model kaydı yok</p>')+
+          (turler.length?'<div class="ad-turler">'+turler.map(function(k){ const t=_AD_TUR[k]||[k,'fa-file']; return '<span><i class="fas '+t[1]+'"></i> '+t[0]+' <b>'+tur[k]+'</b></span>'; }).join('')+'</div>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="ad-blok"><div class="ad-bb"><i class="fas fa-clock-rotate-left"></i> Son irsaliyeler</div>'+
+        (sonList.length?'<div class="ad-liste">'+sonList.map(satir).join('')+'</div>':'<p class="ad-bos">Bu atölyeye henüz irsaliye kesilmemiş.</p>')+
+      '</div>'+
+    '</div>';
+  const m=document.getElementById('atolyeDetayModal');
+  m.classList.add('show');
+  const g=m.querySelector('.ad-govde'); if(g) g.scrollTop=0;
 }
 
 // ==================== STOK TAKİBİ ====================
@@ -12816,53 +12968,61 @@ function _krTerminTs(str){
   if(m) return new Date(+m[1], +m[2]-1, +m[3]).getTime();     // yerel gece yarısı
   const d=new Date(str); return isNaN(d.getTime())?0:_krGun0(d.getTime());
 }
+// Karne hesabı üç adım: boş kayıt → her irsaliyeyi işle → oranları/puanı bitir.
+// Raporlar > Atölye Karnesi ve Atölye detay paneli aynı hesabı kullanır.
+function _krYeni(a){
+  return {ad:a, is:0, adet:0, teslim:0, acik:0, geciken:0,
+          terminli:0, zamaninda:0, gecikmeGun:0, gecikmeSay:0, damgasiz:0,
+          mal:0, poset:0, asim:0, serbest:0, sonIs:0};
+}
+function _krIsle(x, i, bugun){
+  x.is++;
+  x.adet += _repItemQty(i) || _posetSayilan(i.sizes) || 0;
+  const t=new Date(i.tarih||i.createdAt||0);
+  if(!isNaN(t.getTime()) && t.getTime()>x.sonIs) x.sonIs=t.getTime();
+  if(i.serbest) x.serbest++;
+  const teslimEdildi=_repIsDone(i.durum);
+  if(teslimEdildi){
+    x.teslim++;
+    const trm=_krTerminTs(i.termin);
+    if(trm){
+      const ts=_krTeslimTs(i);
+      if(ts){
+        x.terminli++;
+        const td=_krGun0(ts);
+        if(td<=trm) x.zamaninda++;
+        else { x.gecikmeGun += Math.round((td-trm)/GUN); x.gecikmeSay++; }
+      } else x.damgasiz++;
+    }
+  } else {
+    x.acik++;
+    if(i.termin && new Date(i.termin)<bugun) x.geciken++;
+  }
+  // Fazla poşet (yalnızca poşet irsaliyesi + mal adeti girilmişse)
+  if(i._type==='standart' && !i.serbest && +i.malAdedi>0){
+    const ps=_posetSayilan(i.sizes), m=+i.malAdedi;
+    x.mal+=m; x.poset+=ps;
+    const d=_malDurum(ps,m);
+    if(d.asim>0) x.asim+=d.asim;
+  }
+}
+function _krBitir(x){
+  x.zamanOran = x.terminli ? Math.round(x.zamaninda/x.terminli*100) : null;
+  x.ortGecikme = x.gecikmeSay ? +(x.gecikmeGun/x.gecikmeSay).toFixed(1) : (x.terminli?0:null);
+  x.asimOran = x.mal ? Math.round(x.asim/x.mal*100) : null;
+  x.puan = krPuan(x);
+  return x;
+}
 function krTopla(){
   const data=getReportData().filter(_repHasStatus);
   const bugun=new Date(); bugun.setHours(0,0,0,0);
   const g={};
   data.forEach(i=>{
     const a=(i.atolye||i.firma||'Belirsiz').toString().trim()||'Belirsiz';
-    if(!g[a]) g[a]={ad:a, is:0, adet:0, teslim:0, acik:0, geciken:0,
-                    terminli:0, zamaninda:0, gecikmeGun:0, gecikmeSay:0, damgasiz:0,
-                    mal:0, poset:0, asim:0, serbest:0, sonIs:0};
-    const x=g[a];
-    x.is++;
-    x.adet += _repItemQty(i) || _posetSayilan(i.sizes) || 0;
-    const t=new Date(i.tarih||i.createdAt||0);
-    if(!isNaN(t.getTime()) && t.getTime()>x.sonIs) x.sonIs=t.getTime();
-    if(i.serbest) x.serbest++;
-    const teslimEdildi=_repIsDone(i.durum);
-    if(teslimEdildi){
-      x.teslim++;
-      const trm=_krTerminTs(i.termin);
-      if(trm){
-        const ts=_krTeslimTs(i);
-        if(ts){
-          x.terminli++;
-          const td=_krGun0(ts);
-          if(td<=trm) x.zamaninda++;
-          else { x.gecikmeGun += Math.round((td-trm)/GUN); x.gecikmeSay++; }
-        } else x.damgasiz++;
-      }
-    } else {
-      x.acik++;
-      if(i.termin && new Date(i.termin)<bugun) x.geciken++;
-    }
-    // Fazla poşet (yalnızca poşet irsaliyesi + mal adeti girilmişse)
-    if(i._type==='standart' && !i.serbest && +i.malAdedi>0){
-      const ps=_posetSayilan(i.sizes), m=+i.malAdedi;
-      x.mal+=m; x.poset+=ps;
-      const d=_malDurum(ps,m);
-      if(d.asim>0) x.asim+=d.asim;
-    }
+    if(!g[a]) g[a]=_krYeni(a);
+    _krIsle(g[a], i, bugun);
   });
-  const liste=Object.values(g).map(x=>{
-    x.zamanOran = x.terminli ? Math.round(x.zamaninda/x.terminli*100) : null;
-    x.ortGecikme = x.gecikmeSay ? +(x.gecikmeGun/x.gecikmeSay).toFixed(1) : (x.terminli?0:null);
-    x.asimOran = x.mal ? Math.round(x.asim/x.mal*100) : null;
-    x.puan = krPuan(x);
-    return x;
-  }).filter(x=>x.is>=krMinIs);
+  const liste=Object.values(g).map(_krBitir).filter(x=>x.is>=krMinIs);
   const sirala={
     puan:(a,b)=>((b.puan==null?-1:b.puan)-(a.puan==null?-1:a.puan))||(b.is-a.is),
     is:(a,b)=>b.is-a.is,
