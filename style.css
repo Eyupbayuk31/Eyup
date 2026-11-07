@@ -18747,20 +18747,6 @@ html .t2-at-sirala select{ padding-left:34px !important; }
 .ad-bos{ margin:4px 0; font-size:13px; color:var(--text-muted); }
 .ad-bos i{ color:#34d399; }
 
-/* Karne */
-.ad-karne{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; align-items:center; }
-.ad-karne .ad-not{ grid-column:1 / -1; margin-top:2px; }
-.ad-harf{
-  width:76px; height:76px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  border:2px solid var(--kr); background:color-mix(in srgb, var(--kr) 12%, transparent);
-}
-.ad-harf b{ font-family:var(--font-serif,'Instrument Serif',Georgia,serif); font-weight:400; font-size:40px; line-height:.9; color:var(--kr); }
-.ad-harf small{ font-size:10.5px; font-weight:700; color:var(--text-muted); margin-top:3px; }
-.ad-karne-sat{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
-.ad-karne-sat > div{ display:flex; flex-direction:column; gap:3px; }
-.ad-karne-sat span{ font-size:11.5px; color:var(--text-muted); font-weight:600; }
-.ad-karne-sat b{ font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; }
-
 /* Son 6 ay */
 .ad-aylar{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; align-items:end; height:118px; }
 .ad-ay{ display:flex; flex-direction:column; align-items:center; gap:5px; height:100%; }
@@ -18810,11 +18796,6 @@ html .t2-at-sirala select{ padding-left:34px !important; }
   .ad-govde{ padding:14px 16px 20px; }
   .ad-kpiler{ grid-template-columns:repeat(2, minmax(0,1fr)); }
   .ad-iki{ grid-template-columns:1fr; }
-  .ad-karne{ grid-template-columns:1fr; justify-items:start; }
-  .ad-karne .ad-harf{ flex-direction:row; width:auto; height:auto; padding:8px 14px; gap:10px; }
-  .ad-karne .ad-harf b{ font-size:32px; }
-  .ad-karne-sat{ width:100%; }
-  .ad-karne-sat b{ font-size:16px; }
 }
 @media (prefers-reduced-motion:reduce){ .ad-ay-c i{ animation:none; } }
 
