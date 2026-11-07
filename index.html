@@ -3625,6 +3625,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
               <button class="btn btn-primary" onclick="runManualBackup()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-cloud-arrow-up"></i> Hemen Yedek Al</button>
               <button class="btn btn-secondary" onclick="listBackupsFromGitHub()" style="flex:1;justify-content:center;min-width:130px;"><i class="fas fa-list"></i> Yedekleri Listele</button>
             </div>
+            <div id="backupUyari" class="s-yedek-durum" style="display:none;"></div>
             <div id="backupStatus" style="font-size:12px;margin:6px 0;display:none;"></div>
             <div id="backupList" style="font-size:12px;margin-top:8px;display:none;"></div>
           </div>
@@ -3675,6 +3676,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
             <div class="s-not">
               <b><i class="fas fa-circle-info"></i> Not:</b> Bir kayıt kalıcı olarak silindiğinde fotoğrafları otomatik olarak GitHub'dan da temizlenir. Bu panel, geçmişte birikmiş yetim dosyaları manuel temizlemek içindir. <b>Aktif veya Geri Dönüşüm'deki</b> hiçbir kayıtta referans almayan fotoğraflar tespit edilir.
             </div>
+            <div id="bekleyenFotoKutu"></div>
             <button class="btn btn-secondary" onclick="scanOrphanPhotos()" style="width:100%;justify-content:center;"><i class="fas fa-magnifying-glass"></i> Yetim Fotoları Tara</button>
             <div id="orphanPhotoStatus" style="font-size:12px;margin-top:10px;display:none;"></div>
           </div>
@@ -14708,6 +14710,7 @@ function emptyRecycleBin(){
 // ==================== REFRESH ====================
 function refreshPage(page){
   loadAtolyeSelects();
+  if(page==='settings'){ try{ _yedekUyariCiz(); _bekleyenFotoCiz(); }catch(_){} }
   if(page==='home')refreshHome();
   else if(page==='list'){currentTypeFilter='all';document.getElementById('listSearch').value='';document.getElementById('filterDate').value='all';document.getElementById('filterAtolye').value='all';document.getElementById('filterDurum').value='all';document.getElementById('filterSort').value='newest';applyFilters();}
   else if(page==='atolye')refreshAtolyeList();
@@ -19079,6 +19082,8 @@ async function _uploadBackupToGitHub(jsonStr, dateStr){
     let msg = (data && (data.message || data.error)) || ('HTTP '+res.status);
     if(/secret/i.test(msg) || /push protection/i.test(msg) || res.status === 422){
       msg = 'GitHub secret-scanning yedegi reddetti (' + msg + '). Yedek icinde hala token benzeri bir desen olabilir; not/aciklama alanlarini kontrol edin.';
+    } else {
+      msg = _ghHataCevir(res.status, msg).metin;
     }
     throw new Error('Yedek yuklenemedi: ' + msg);
   }
@@ -19129,23 +19134,54 @@ function _extractGithubBranch(url){
   }catch(_){ return null; }
 }
 
-async function _deleteGithubFile(cfg, path, branch){
+// GitHub hata cevabını Türkçe, ne yapılacağını söyleyen bir cümleye çevirir.
+// tur: 'yetki' (token/izin — tekrar denemek boşuna), 'sinir' (istek sınırı),
+//      'cakisma' (dal aynı anda değişti), 'diger'
+function _ghHataCevir(status, mesaj){
+  const m=String(mesaj||'');
+  if(status===401 || /bad credentials/i.test(m))
+    return {tur:'yetki', metin:'GitHub token geçersiz ya da süresi dolmuş. Ayarlar > GitHub Bulut Yükleme\'den yeni token gir.'};
+  if((status===403 || status===429) && /rate limit|abuse|secondary/i.test(m))
+    return {tur:'sinir', metin:'GitHub geçici olarak istek sınırına takıldı; biraz bekleyip tekrar dene.'};
+  if(status===403)
+    return {tur:'yetki', metin:'Token\'ın bu repoya yazma izni yok ('+m+'). Token ayarında "Contents: Read and write" olmalı; Ayarlar > GitHub Bulut Yükleme\'den yazma izinli token gir.'};
+  if(status===404)
+    return {tur:'yetki', metin:'Token bu repoya yazamıyor (GitHub "bulunamadı" diyor — token\'a bu repo verilmemiş ya da yazma izni yok). Ayarlar > GitHub Bulut Yükleme\'yi kontrol et.'};
+  if(status===409)
+    return {tur:'cakisma', metin:'Dal aynı anda değişti; tekrar dene.'};
+  return {tur:'diger', metin:(m||('HTTP '+status))};
+}
+async function _deleteGithubFile(cfg, path, branch, bilinenSha){
   if(!cfg || !cfg.token || !path) return { ok:false, reason:'no-cfg' };
   const useBranch = branch || cfg.branch || 'main';
-  const sha = await _ghGetFileSha(cfg, path, useBranch);
-  if(!sha) return { ok:false, reason:'not-found' }; // dosya zaten yok
   const apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo)
     + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
-  try{
-    const res = await fetch(apiUrl, {
-      method:'DELETE',
-      headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
-      body: JSON.stringify({ message:'cleanup: '+path, sha, branch: useBranch })
-    });
-    if(res.ok) return { ok:true };
-    const data = await res.json().catch(()=>({}));
-    return { ok:false, reason:(data && data.message) || ('HTTP '+res.status) };
-  }catch(e){ return { ok:false, reason: e.message || String(e) }; }
+  let sha = bilinenSha || await _ghGetFileSha(cfg, path, useBranch);
+  if(!sha) return { ok:true, yok:true }; // dosya zaten yok — silinmiş sayılır
+  for(let deneme=0; deneme<3; deneme++){
+    try{
+      const res = await fetch(apiUrl, {
+        method:'DELETE',
+        headers:{ 'Authorization':'token '+cfg.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+        body: JSON.stringify({ message:'cleanup: '+path, sha, branch: useBranch })
+      });
+      if(res.ok) return { ok:true };
+      const data = await res.json().catch(()=>({}));
+      const h=_ghHataCevir(res.status, data && data.message);
+      if(h.tur==='cakisma' || (res.status===422 && /sha/i.test(data&&data.message||''))){
+        sha = await _ghGetFileSha(cfg, path, useBranch);           // güncel sha ile bir daha
+        if(!sha) return { ok:true, yok:true };
+        continue;
+      }
+      if(h.tur==='sinir' && deneme<2){
+        const bekle=Math.min(60, +(res.headers.get('retry-after')||20)) * 1000;
+        await new Promise(r=>setTimeout(r, bekle));
+        continue;
+      }
+      return { ok:false, status:res.status, tur:h.tur, reason:h.metin };
+    }catch(e){ return { ok:false, tur:'diger', reason: 'Bağlantı hatası: '+(e.message || String(e)) }; }
+  }
+  return { ok:false, tur:'diger', reason:'Tekrar denemelere rağmen silinemedi' };
 }
 
 // Bir kaydin tum foto URL'lerini repo'dan sil. Hatalar sessiz gecer
@@ -19265,16 +19301,68 @@ async function cleanupOrphanPhotos(){
   if(!confirm(orphans.length + ' yetim foto kalici olarak silinecek. Devam edilsin mi?')) return;
   const cfg = _getGithubConfig();
   if(!cfg || !cfg.token){ setStatus('GitHub ayarlari eksik','#ef4444'); return; }
-  let done = 0, failed = 0;
+  let done = 0, failed = 0, durdu = null;
+  const hatalar = {};
   setStatus('<i class="fas fa-spinner fa-spin"></i> 0/'+orphans.length+' siliniyor...','#6b7280');
   for(const f of orphans){
-    const r = await _deleteGithubFile(cfg, f.path, f._branch);
-    if(r.ok) done++; else failed++;
+    const r = await _deleteGithubFile(cfg, f.path, f._branch, f.sha);
+    if(r.ok) done++;
+    else {
+      failed++; hatalar[r.reason] = (hatalar[r.reason]||0)+1;
+      // Token/izin sorunu: kalan dosyaları denemek boşuna — ilk hatada dur
+      if(r.tur==='yetki'){ durdu = r.reason; break; }
+    }
     setStatus('<i class="fas fa-spinner fa-spin"></i> '+(done+failed)+'/'+orphans.length+' islem... ('+done+' silindi, '+failed+' hata)','#6b7280');
   }
+  const hataHtml = Object.keys(hatalar).map(k=>'<li>'+esc(k)+(hatalar[k]>1?' <b>('+hatalar[k]+' dosya)</b>':'')+'</li>').join('');
+  if(durdu){
+    window._orphanPhotoCache = orphans.filter((_,i)=>i>=done); // silinemeyenler tekrar denenebilsin
+    setStatus('<div style="color:#ef4444;font-weight:700;margin-bottom:4px;"><i class="fas fa-circle-xmark"></i> Silme durduruldu'+(done?' ('+done+' silindi)':'')+'</div>'
+      +'<div>'+esc(durdu)+'</div>', '');
+    if(typeof toast === 'function') toast('Fotoğraflar silinemedi: GitHub yazma izni yok','error');
+    return;
+  }
   window._orphanPhotoCache = [];
-  setStatus('<i class="fas fa-circle-check"></i> Tamamlandi: '+done+' silindi, '+failed+' hata.', failed?'#f59e0b':'#10b981');
-  if(typeof toast === 'function') toast('Yetim foto temizligi: '+done+' silindi','success');
+  setStatus('<i class="fas fa-circle-check"></i> Tamamlandi: '+done+' silindi, '+failed+' hata.'+(hataHtml?'<ul style="margin:6px 0 0 18px;">'+hataHtml+'</ul>':''), failed?'#f59e0b':'#10b981');
+  if(typeof toast === 'function') toast('Yetim foto temizligi: '+done+' silindi', failed?'info':'success');
+}
+
+// ── GitHub'a yüklenemeyen fotoğraflar (ör. token süresi dolunca birikir) ──
+function _bekleyenFotolar(){
+  const l=[];
+  try{
+    _getAllUnifiedWithType().forEach(function(it){
+      (Array.isArray(it._photos)?it._photos:[]).forEach(function(p,idx){
+        if(!p || p.url) return;
+        const veri = typeof p.data==='string' && p.data.indexOf('data:')===0;
+        if(p.uploadFailed || veri) l.push({id:it.id, type:it._type, idx:idx, veri:veri?p.data:'', no:it.no||''});
+      });
+    });
+  }catch(_){}
+  return l;
+}
+function _bekleyenFotoCiz(){
+  const el=document.getElementById('bekleyenFotoKutu'); if(!el) return;
+  const l=_bekleyenFotolar(); if(!l.length){ el.innerHTML=''; return; }
+  const yuklenebilir=l.filter(function(x){ return x.veri; }).length, verisiz=l.length-yuklenebilir;
+  el.innerHTML='<div class="s-yedek-durum hata" style="margin:0 0 10px;"><i class="fas fa-cloud-arrow-up"></i><div><b>'+l.length+' fotoğraf GitHub\'a yüklenemedi</b>'+
+    (yuklenebilir?'<div>'+yuklenebilir+' tanesi bu cihazda duruyor, şimdi yüklenebilir.</div>':'')+
+    (verisiz?'<div>'+verisiz+' tanesinin verisi bu cihazda yok; o kayıtlara fotoğrafı yeniden eklemek gerekiyor.</div>':'')+
+    (yuklenebilir?'<button class="btn btn-sm btn-primary" style="margin-top:8px;" onclick="bekleyenFotolariYukle()" id="bekleyenFotoBtn"><i class="fas fa-upload"></i> '+yuklenebilir+' fotoğrafı yükle</button>':'')+
+    '</div></div>';
+}
+async function bekleyenFotolariYukle(){
+  const l=_bekleyenFotolar().filter(function(x){ return x.veri; });
+  if(!l.length){ _bekleyenFotoCiz(); return; }
+  const b=document.getElementById('bekleyenFotoBtn'); if(b) b.disabled=true;
+  for(let i=0;i<l.length;i++){
+    if(b) b.innerHTML='<i class="fas fa-spinner fa-spin"></i> '+(i+1)+'/'+l.length+' yükleniyor…';
+    try{ await _uploadPhotoInBackground(l[i].id, l[i].type, l[i].veri, l[i].idx); }catch(_){}
+    if(i<l.length-1) await new Promise(function(r){ setTimeout(r, 4000); }); // aynı dala art arda yazınca çakışmasın
+  }
+  _bekleyenFotoCiz();
+  const kalan=_bekleyenFotolar().filter(function(x){ return x.veri; }).length;
+  toast(kalan? (kalan+' fotoğraf yine yüklenemedi — token\'ı kontrol et') : 'Bekleyen fotoğrafların hepsi yüklendi', kalan?'error':'success');
 }
 
 async function runManualBackup(){
@@ -19285,7 +19373,8 @@ async function runManualBackup(){
     const data = _buildFullBackup();
     const dateStr = new Date().toISOString().slice(0,10);
     const path = await _uploadBackupToGitHub(JSON.stringify(data), dateStr);
-    try{ localStorage.setItem(_LAST_BACKUP_KEY, dateStr); }catch(_){}
+    try{ localStorage.setItem(_LAST_BACKUP_KEY, dateStr); localStorage.removeItem(_YEDEK_HATA_KEY); }catch(_){}
+    try{ _yedekUyariCiz(); }catch(_){}
     const counts = (data._meta && data._meta.fsKeys) ? data._meta.fsKeys.length : 0;
     setStatus('<i class="fas fa-circle-check"></i> Yedek hazir: <b>'+path+'</b> ('+counts+' kategori)','#10b981');
     if(typeof toast === 'function') toast('Yedek alindi: '+path,'success');
@@ -19310,11 +19399,44 @@ async function _runDailyBackupIfNeeded(){
     const totalRecords = Object.keys(data).filter(k=>k!=='_meta').reduce((acc,k)=>acc+(Array.isArray(data[k])?data[k].length:0), 0);
     if(totalRecords < 1) return;
     await _uploadBackupToGitHub(JSON.stringify(data), today);
-    try{ localStorage.setItem(_LAST_BACKUP_KEY, today); }catch(_){}
+    try{ localStorage.setItem(_LAST_BACKUP_KEY, today); localStorage.removeItem(_YEDEK_HATA_KEY); }catch(_){}
     console.log('[backup] Gunluk yedek alindi:', today);
+    try{ _yedekUyariCiz(); }catch(_){}
   }catch(e){
-    console.warn('[backup] Otomatik yedek hatasi:', e && e.message ? e.message : e);
+    const msg = e && e.message ? e.message : String(e);
+    console.warn('[backup] Otomatik yedek hatasi:', msg);
+    // Sessiz kalmasın: hata saklanır, Ayarlar'da uyarı çıkar, günde bir bildirim
+    try{
+      const today = new Date().toISOString().slice(0,10);
+      const onceki = JSON.parse(localStorage.getItem(_YEDEK_HATA_KEY)||'null');
+      localStorage.setItem(_YEDEK_HATA_KEY, JSON.stringify({tarih:today, mesaj:msg, ilk:(onceki&&onceki.ilk)||today}));
+      if(!onceki || onceki.tarih!==today){
+        if(typeof toast==='function') toast('Otomatik yedek alınamadı — Ayarlar > Veri\'ye bak','error');
+      }
+    }catch(_){}
+    try{ _yedekUyariCiz(); }catch(_){}
   }
+}
+const _YEDEK_HATA_KEY = 'irsaliye_backup_error';
+// Ayarlar > Otomatik Yedekleme kartı: son başarılı yedek + varsa hata ve çözüm
+function _yedekUyariCiz(){
+  const el=document.getElementById('backupUyari'); if(!el) return;
+  let hata=null; try{ hata=JSON.parse(localStorage.getItem(_YEDEK_HATA_KEY)||'null'); }catch(_){}
+  const son=localStorage.getItem(_LAST_BACKUP_KEY)||'';
+  const gun = son ? Math.round((Date.now()-new Date(son+'T12:00:00').getTime())/864e5) : null;
+  const sonYazi = son ? (_t2Tarih(son, true)+(gun>0?' ('+gun+' gün önce)':' (bugün)')) : 'bu cihazda kayıt yok';
+  if(!hata){
+    el.className='s-yedek-durum ok';
+    el.innerHTML='<i class="fas fa-circle-check"></i> Son başarılı yedek: <b>'+sonYazi+'</b>';
+    el.style.display = son ? 'flex' : 'none';
+    return;
+  }
+  el.className='s-yedek-durum hata';
+  el.style.display='flex';
+  el.innerHTML='<i class="fas fa-triangle-exclamation"></i><div><b>Otomatik yedek alınamıyor</b>'+
+    (hata.ilk && hata.ilk!==hata.tarih ? ' <span style="font-weight:600;">(ilk hata: '+_t2Tarih(hata.ilk,true)+')</span>' : '')+
+    '<div style="margin-top:3px;">'+esc(String(hata.mesaj||'').replace(/^Yedek yuklenemedi: /,''))+'</div>'+
+    '<div style="margin-top:3px;opacity:.85;">Son başarılı yedek: '+sonYazi+'</div></div>';
 }
 
 // Yedek listesini GitHub'dan cek (Ayarlar paneli icin)

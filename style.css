@@ -18853,3 +18853,11 @@ html[data-tasarim="yeni"][data-theme="blossom"] .t2-grid{
 .t2-at-tablo tbody tr{ cursor:pointer; }
 .t2-atolye{ cursor:pointer; transition:border-color .15s, background .15s; }
 @media (hover:hover){ .t2-atolye:hover{ border-color:color-mix(in srgb, var(--primary) 45%, var(--border)); } }
+
+/* Ayarlar > Otomatik Yedekleme: son yedek / hata şeridi */
+.s-yedek-durum{ display:flex; align-items:flex-start; gap:9px; margin:6px 0 8px; padding:10px 12px; border-radius:12px; font-size:12.5px; line-height:1.45; }
+.s-yedek-durum > i{ margin-top:2px; }
+.s-yedek-durum.ok{ color:var(--success, #10b981); background:color-mix(in srgb, var(--success, #10b981) 10%, transparent); }
+.s-yedek-durum.hata{ color:var(--danger, #ef4444); background:color-mix(in srgb, var(--danger, #ef4444) 10%, transparent); border:1px solid color-mix(in srgb, var(--danger, #ef4444) 35%, transparent); }
+.s-yedek-durum.hata b{ color:var(--danger, #ef4444); }
+.s-yedek-durum.hata div div{ color:var(--text-main); }
