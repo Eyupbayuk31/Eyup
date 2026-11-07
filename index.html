@@ -10125,148 +10125,138 @@ function deleteItemUni(id,type){
 function showDetailUni(id,type){
   const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
   const list=getData(key);const item=list.find(i=>i.id===id);if(!item)return;
-  document.getElementById('modalTitle').textContent=(item.no||'Detay')+' — '+getTypeLabel(type);
-  
-  // Termin gecikmiş mi? (bugünden önce ve teslim edilmemiş)
+  const _n0 = v => (+v||0).toLocaleString('tr-TR');
+  const durumOk = item.durum==='teslim';
   let terminLate=false;
-  if(item.termin && item.durum!=='teslim'){
+  if(item.termin && !durumOk){
     try{ terminLate = new Date(item.termin) < new Date(new Date().toDateString()); }catch(_){}
   }
-  // ── Yardımcılar ──────────────────────────────────────────────
-  const _n0 = v => (+v||0).toLocaleString('tr-TR');
-  // Künye satırı: etiket + değer (ikon yok — yoğun ve okunur dursun)
-  const kv = (lbl, val, cls) => val ? `<div class="dt-kv ${cls||''}"><dt>${lbl}</dt><dd>${val}</dd></div>` : '';
-  // Bölüm: başlık + sağda özet + içerik
-  const sec = (ic, baslik, sag, ic2) => `<section class="dt-sec">
-      <header><i class="fas ${ic}"></i><h4>${baslik}</h4>${sag?`<span class="dt-sec-sag">${sag}</span>`:''}</header>
-      <div class="dt-sec-b">${ic2}</div></section>`;
-  // Küçük değer kutucuğu
-  const chip = (lbl, val, alt) => `<div class="dt-chip"><span class="dt-chip-l">${lbl}</span><span class="dt-chip-v">${val}</span>${alt?`<span class="dt-chip-a">${alt}</span>`:''}</div>`;
-  // Büyük tek sayı kutusu
-  const stat = (lbl, val, birim) => `<div class="dt-stat"><span class="dt-stat-l">${lbl}</span><span class="dt-stat-v">${val}${birim?`<em>${birim}</em>`:''}</span></div>`;
-  const toplamBar = (lbl, val) => `<div class="dt-toplam"><span>${lbl}</span><b>${val}</b></div>`;
+  // ── BAŞLIK: tür etiketi + numara + durum (dokununca değişir) ──
+  document.getElementById('modalTitle').innerHTML =
+    `<span class="dt2-tur ${type}">${esc(getTypeLabel(type))}</span><span class="dt2-no">${esc(item.no||'Detay')}</span>`+
+    `<button type="button" class="dt2-durum ${durumOk?'ok':'bek'}" onclick="dtDurumDegis()" title="${durumOk?'Bekliyor yap':'Teslim edildi yap'}">`+
+      `<i class="fas ${durumOk?'fa-check':'fa-hourglass-half'}"></i> ${durumOk?'Teslim edildi':'Bekliyor'}<i class="fas fa-arrows-rotate dt2-durum-d"></i></button>`;
 
-  const model = item.model||item.urun||'';
-  const durumOk = item.durum==='teslim';
+  // ── TÜRE GÖRE: ana toplam + tablo(lar) ───────────────────────
+  // Toplam yalnızca bir kez, sağ üstte büyük yazılır.
+  let topV=null, topB='adet';
+  const ekKv=[];          // bilgi satırına türe özel ekler
+  const tablolar=[];      // {baslik, sag, sutun:[{l,n}], satir:[[...]], alt:[...]}
+  const bedenAd={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek beden'};
+  let araHtml='';
 
-  // ── KÜNYE: modelin kendisi kahraman, durum sağda ─────────────
-  let html = `<div class="dt-kunye${terminLate?' gec':''}">
-    <div class="dt-kunye-l">
-      <span class="dt-kunye-lbl">Model / Ürün</span>
-      ${model
-        ? `<a href="javascript:void(0)" class="dt-model" onclick="closeModal&&closeModal();MK.ac('${esc(model)}')" title="Model kartını aç">${esc(model)}<i class="fas fa-arrow-up-right-from-square"></i></a>`
-        : `<span class="dt-model dt-model-yok">—</span>`}
-      ${item.atolye||item.firma ? `<span class="dt-kunye-alt"><i class="fas fa-industry"></i> ${esc(item.atolye||item.firma)}</span>`:''}
-    </div>
-    <div class="dt-kunye-r">
-      ${item.durum ? (durumOk
-        ? '<span class="dt-pill dt-pill-ok"><i class="fas fa-circle-check"></i> Teslim Edildi</span>'
-        : '<span class="dt-pill dt-pill-wait"><i class="fas fa-hourglass-half"></i> Bekliyor</span>') : ''}
-      ${terminLate ? '<span class="dt-pill dt-pill-gec"><i class="fas fa-triangle-exclamation"></i> Termin geçti</span>' : ''}
-    </div>
-  </div>`;
-
-  // ── KÜNYE ALTI: tarih / termin / teslim bilgileri ────────────
-  const kunye = [
-    kv('Tarih', item.tarih?esc(_t2Tarih(item.tarih,true)):''),
-    kv('Termin', item.termin?esc(_t2Tarih(item.termin,true))+(item.durum!=='teslim'&&_t2Termin(item.termin).t?' <small class="t2-kv-k">'+_t2Termin(item.termin).t+'</small>':''):'', terminLate?'gec':''),
-    kv('Teslim Eden', esc(item.teslimEden||'')),
-    kv('Teslim Alan', esc(item.teslimAlan||'')),
-    kv('Renk', item.renk?esc(item.renk):''),
-    kv('PO', item.po?esc(item.po):'')
-  ].filter(Boolean).join('');
-  if(kunye) html += `<dl class="dt-kvs">${kunye}</dl>`;
-
-  // ── TÜRE ÖZEL İÇERİK ─────────────────────────────────────────
-  if(type==='standart' && item.sizes){
+  if(type==='standart'){
     const sizeNames={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
-    const bantNames={genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
-    const dolu=Object.keys(item.sizes).filter(k=>+item.sizes[k]>0);
-    if(dolu.length){
-      html += sec('fa-box','Poşet Ölçüleri', _n0(_posetToplam(item.sizes))+' adet',
-        `<div class="dt-chips">${dolu.map(k=>chip(sizeNames[k]||k, _n0(item.sizes[k]))).join('')}</div>`);
+    const bantNames={genis:'Geniş bant',dar:'Dar bant',kilcik:'Kılçık'};
+    const sz=item.sizes||{};
+    const dolu=Object.keys(sz).filter(k=>+sz[k]>0);
+    topV=_posetToplam(sz); topB='poşet';
+    if(dolu.length) tablolar.push({baslik:'Poşet ölçüleri', sutun:[{l:'Ölçü'},{l:'Adet',n:1}],
+      satir:dolu.map(k=>[sizeNames[k]||k, _n0(sz[k])]), alt:dolu.length>1?['Toplam', _n0(topV)]:null});
+    if(item.bant && Object.values(item.bant).some(v=>+v>0)){
+      const bk=Object.keys(item.bant).filter(k=>+item.bant[k]>0);
+      tablolar.push({baslik:'Bant ve kılçık', sutun:[{l:'Tür'},{l:'Adet',n:1}], satir:bk.map(k=>[bantNames[k]||k, _n0(item.bant[k])])});
     }
-    // Mal / poşet dengesi
-    const _pt=_posetSayilan(item.sizes);
-    const _pd=_posetToplam(item.sizes)-_pt;
-    const _pdNot=_pd>0?`<div class="dt-mal-n"><i class="fas fa-box"></i> Diğer ölçülerde ${_n0(_pd)} poşet daha var — dengeye katılmaz.</div>`:'';
+    const _pt=_posetSayilan(sz), _pd=_posetToplam(sz)-_pt;
+    const _pdNot=_pd>0?`<div class="dt-mal-n">Diğer ölçülerde ${_n0(_pd)} poşet daha var, dengeye katılmaz.</div>`:'';
     if(item.serbest){
-      html+=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-clipboard-question"></i> Serbest İrsaliye — Modele Bağlı Değil</div>
-        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_n0(_posetToplam(item.sizes))}</b> poşet verildi — model/mal adetine bağlı değil.</div>
-        ${item.serbestSebep?`<div class="dt-mal-n"><i class="fas fa-comment-dots"></i> ${esc(item.serbestSebep)}</div>`:''}
-      </div>`;
+      araHtml=`<div class="dt-mal serbest"><div class="dt-mal-h"><i class="fas fa-clipboard-question"></i> Serbest irsaliye, modele bağlı değil</div>
+        <div class="dt-mal-b"><b>${esc(item.atolye||'-')}</b> atölyesine <b>${_n0(topV)}</b> poşet verildi.</div>
+        ${item.serbestSebep?`<div class="dt-mal-n">${esc(item.serbestSebep)}</div>`:''}</div>`;
     } else if(item.malAdedi>0){
       const d=_malDurum(_pt, +item.malAdedi);
-      html+=`<div class="dt-mal ${d.k}"><div class="dt-mal-h"><i class="fas ${d.ic}"></i> Mal / Poşet Dengesi — ${d.lbl}</div>
+      araHtml=`<div class="dt-mal ${d.k}"><div class="dt-mal-h"><i class="fas ${d.ic}"></i> Mal / poşet dengesi: ${d.lbl}</div>
         <div class="dt-mal-b"><b>${_n0(item.malAdedi)}</b> adet mal için <b>${_n0(_pt)}</b> poşet (${POSET_SAYILAN_AD}) · <b>%${d.oran}</b></div>
-        <div class="dt-mal-n"><i class="fas fa-percent"></i> Fire payı %${d.fire} ile üst sınır <b>${_n0(d.limit)}</b>${d.asim>0?` — <b>${_n0(d.asim)}</b> aşım`:' — sınır içinde'}</div>
-        ${_pdNot}
-      </div>`;
-    }
-    if(item.bant && Object.values(item.bant).some(v=>+v>0)){
-      html += sec('fa-tape','Bant & Kılçık','',
-        `<div class="dt-chips">${Object.keys(item.bant).filter(k=>+item.bant[k]>0)
-          .map(k=>chip(bantNames[k]||k, _n0(item.bant[k]))).join('')}</div>`);
+        <div class="dt-mal-n">Fire payı %${d.fire} ile üst sınır <b>${_n0(d.limit)}</b>${d.asim>0?`, <b>${_n0(d.asim)}</b> aşım`:', sınır içinde'}</div>
+        ${_pdNot}</div>`;
     }
   }
-
   if(type==='fermuar' && item.beden){
-    const bedenLabel={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-    const ic = item.hideBeden
-      ? groupFermuarBedenByCm(item.beden).map(g=>chip(g.cm+' cm', _n0(g.adet), 'adet')).join('')
-      : sortBedenKeys(item.beden).map(k=>{ const bv=item.beden[k]||{};
-          return chip(bedenLabel[k]||k, _n0(bv.adet??0), (bv.cm??'-')+' cm'); }).join('');
-    html += sec('fa-ruler-horizontal', item.hideBeden?'Fermuar Ölçüleri':'Beden Detayları',
-      _n0(item.totalAdet||0)+' adet', `<div class="dt-chips">${ic}</div>`);
-    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet');
+    topV=+item.totalAdet||0;
+    if(item.hideBeden){
+      const g=groupFermuarBedenByCm(item.beden);
+      tablolar.push({baslik:'Fermuar ölçüleri', sutun:[{l:'Uzunluk'},{l:'Adet',n:1}],
+        satir:g.map(x=>[x.cm+' cm', _n0(x.adet)]), alt:g.length>1?['Toplam',_n0(topV)]:null});
+    } else {
+      let k=sortBedenKeys(item.beden).filter(k=>+((item.beden[k]||{}).adet)>0); if(!k.length) k=sortBedenKeys(item.beden);
+      tablolar.push({baslik:'Bedenler', sutun:[{l:'Beden'},{l:'Uzunluk'},{l:'Adet',n:1}],
+        satir:k.map(x=>{ const bv=item.beden[x]||{}; return [bedenAd[x]||x, bv.cm!=null&&bv.cm!==''?bv.cm+' cm':'—', _n0(bv.adet??0)]; }),
+        alt:k.length>1?['Toplam','',_n0(topV)]:null});
+    }
   }
-
-  if(type==='lastik'){
-    html += sec('fa-ruler','Lastik','', `<div class="dt-stats">
-      ${stat('Genişlik', item.cm||'-', 'cm')}
-      ${stat('Metre', _n0(item.metre), 'm')}
-    </div>`);
-  }
-  if(type==='dugme'){
-    html += sec('fa-circle-dot','Düğme','', `<div class="dt-stats">${stat('Adet', _n0(item.adet), 'adet')}</div>`);
-  }
-  if(type==='satenaskilik'){
-    html += sec('fa-ribbon','Saten Askılık','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
-  }
-  if(type==='dantel'){
-    html += sec('fa-border-all','Dantel','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
-  }
-  if(type==='kordon' && korMetreMi(item)){
-    html += sec('fa-bezier-curve','Kordon','', `<div class="dt-stats">${stat('Toplam Metre', _n0(item.metre), 'm')}</div>`);
-  }
-  if(type==='kordon' && !korMetreMi(item) && item.olcular && item.olcular.length){
-    html += sec('fa-bezier-curve','Kordon Ölçüleri', _n0(item.totalAdet||0)+' adet',
-      `<div class="dt-chips">${item.olcular.map(o=>chip((o.beden?(o.beden+' · '):'')+o.cm+' cm', _n0(o.adet), 'adet')).join('')}</div>`);
-    html += toplamBar('Toplam', _n0(item.totalAdet||0)+' adet');
+  if(type==='kordon'){
+    if(korMetreMi(item)){ topV=+item.metre||0; topB='m'; }
+    else if(item.olcular && item.olcular.length){
+      topV=+item.totalAdet||0;
+      const bedenli=item.olcular.some(o=>o.beden);
+      tablolar.push({baslik:'Kordon ölçüleri', sutun:(bedenli?[{l:'Beden'}]:[]).concat([{l:'Uzunluk'},{l:'Adet',n:1}]),
+        satir:item.olcular.map(o=>(bedenli?[o.beden||'—']:[]).concat([o.cm+' cm', _n0(o.adet)])),
+        alt:item.olcular.length>1?(bedenli?['Toplam','',_n0(topV)]:['Toplam',_n0(topV)]):null});
+    }
   }
   if(type==='toptan' && item.beden){
-    const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
-    html += sec('fa-boxes-stacked','Beden Detayları', _n0(item.total||0)+' adet',
-      `<div class="dt-chips">${sortBedenKeys(item.beden).map(k=>chip(bl[k]||k, _n0(item.beden[k]))).join('')}</div>`);
-    html += toplamBar('Toplam', _n0(item.total||0)+' adet');
+    topV=+item.total||0;
+    const k=sortBedenKeys(item.beden).filter(x=>+item.beden[x]>0);
+    tablolar.push({baslik:'Bedenler', sutun:[{l:'Beden'},{l:'Adet',n:1}], satir:k.map(x=>[bedenAd[x]||x, _n0(item.beden[x])]), alt:k.length>1?['Toplam',_n0(topV)]:null});
   }
+  if(type==='lastik'){ topV=+item.metre||0; topB='m'; if(item.cm) ekKv.push(['Genişlik', esc(String(item.cm))+' cm']); }
+  if(type==='dugme'){ topV=+item.adet||0; }
+  if(type==='satenaskilik' || type==='dantel'){ topV=+item.metre||0; topB='m'; }
+
+  // ── ÜST: model + atölye/tarih, sağda toplam ──────────────────
+  const model = item.model||item.urun||'';
+  let html = `<div class="dt2-ust">
+    <div class="dt2-ust-l">
+      ${model
+        ? `<a href="javascript:void(0)" class="dt2-model" onclick="closeModal&&closeModal();MK.ac('${esc(model).replace(/'/g,"\\'")}')" title="Model kartını aç">${esc(model)}<i class="fas fa-arrow-up-right-from-square"></i></a>`
+        : `<span class="dt2-model yok">Model yok</span>`}
+      <div class="dt2-alt">
+        ${item.atolye||item.firma?`<span><i class="fas fa-industry"></i> ${esc(item.atolye||item.firma)}</span>`:''}
+        ${item.tarih?`<span><i class="far fa-calendar"></i> ${esc(_t2Tarih(item.tarih,true))}</span>`:''}
+      </div>
+    </div>
+    ${topV!=null?`<div class="dt2-top"><span>Toplam</span><b>${_n0(topV)}<em>${topB}</em></b></div>`:''}
+  </div>`;
+
+  // ── BİLGİ SATIRI: kutusuz, ince ayraçlı ──────────────────────
+  const kv=(l,v,c)=>v?`<div class="dt2-kv${c?' '+c:''}"><dt>${l}</dt><dd>${v}</dd></div>`:'';
+  const terminTxt = item.termin ? esc(_t2Tarih(item.termin,true))+(!durumOk&&_t2Termin(item.termin).t?' <small>'+_t2Termin(item.termin).t+'</small>':'') : '';
+  const bilgi=[
+    kv('Teslim eden', esc(item.teslimEden||'')),
+    kv('Teslim alan', esc(item.teslimAlan||'')),
+    kv('Renk', item.renk?esc(item.renk):''),
+    ...ekKv.map(x=>kv(x[0],x[1])),
+    kv('Termin', terminTxt, terminLate?'gec':''),
+    kv('PO', item.po?esc(item.po):'')
+  ].filter(Boolean).join('');
+  if(bilgi) html += `<dl class="dt2-bilgi">${bilgi}</dl>`;
+
+  html += araHtml;
+
+  // ── TABLOLAR ─────────────────────────────────────────────────
+  tablolar.forEach(t=>{
+    const th=t.sutun.map(c=>`<th${c.n?' class="n"':''}>${c.l}</th>`).join('');
+    const nIdx=t.sutun.length-1;
+    const tr=t.satir.map(r=>'<tr>'+r.map((v,i)=>`<td${i===nIdx?' class="n"':''}${i===0?' class="ilk"':''}>${esc(String(v))}</td>`).join('')+'</tr>').join('');
+    const tf=t.alt?'<tfoot><tr>'+t.alt.map((v,i)=>`<td${i===nIdx?' class="n"':''}>${esc(String(v))}</td>`).join('')+'</tr></tfoot>':'';
+    html += `<section class="dt2-blok">${tablolar.length>1?`<h4>${t.baslik}</h4>`:''}<table class="dt2-t"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody>${tf}</table></section>`;
+  });
 
   // ── NOT ──────────────────────────────────────────────────────
   if(item.aciklama||item.not){
-    html += `<div class="dt-not"><i class="fas fa-sticky-note"></i><span>${esc(item.aciklama||item.not)}</span></div>`;
+    html += `<div class="dt2-not"><i class="fas fa-note-sticky"></i><span>${esc(item.aciklama||item.not)}</span></div>`;
   }
-
   // ── FOTOĞRAFLAR ──────────────────────────────────────────────
   const _fotolar=[];
   if(item._photos && Array.isArray(item._photos)) item._photos.forEach(f=>{ const u=f.url||f.data||''; if(u) _fotolar.push(u); });
   else if(item._photoUrl) _fotolar.push(item._photoUrl);
   if(_fotolar.length){
-    html += sec('fa-camera','Kanıt Fotoğrafları', _fotolar.length+' fotoğraf',
-      `<div class="dt-fotos">${_fotolar.map((u,i)=>
+    html += `<section class="dt2-blok"><h4>Fotoğraflar<span>${_fotolar.length}</span></h4><div class="dt-fotos">${_fotolar.map((u,i)=>
         `<button type="button" class="dt-foto" onclick="window.open('${u}','_blank')" title="Büyüt">
-           <img src="${u}" alt="Fotoğraf ${i+1}" loading="lazy"><span>${i+1}</span></button>`).join('')}</div>`);
+           <img src="${u}" alt="Fotoğraf ${i+1}" loading="lazy"><span>${i+1}</span></button>`).join('')}</div></section>`;
   }
 
+  document.getElementById('detailModal').classList.add('dt2');
   document.getElementById('modalContent').innerHTML=html;
   currentModalItem = item;
   currentModalType = type;
@@ -10275,6 +10265,11 @@ function showDetailUni(id,type){
   document.getElementById('detailModal').classList.add('show');
 }
 
+function dtDurumDegis(){
+  if(!currentModalItem || !currentModalType) return;
+  toggleDurumUni(currentModalItem.id, currentModalType);
+  showDetailUni(currentModalItem.id, currentModalType);
+}
 function editCurrentModalItem(){
   if(!currentModalItem || !currentModalType) return;
   closeModal();
@@ -18310,6 +18305,7 @@ async function generateQrForItem(id, type){
 
   const modal = document.getElementById('detailModal');
   document.getElementById('modalTitle').textContent = (item.no || 'QR') + ' — QR Kod';
+  modal.classList.remove('dt2');
   currentModalItem = item;
   currentModalType = type;
   document.getElementById('modalContent').innerHTML = `
