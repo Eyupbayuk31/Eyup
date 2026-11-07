@@ -1836,6 +1836,9 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       <!-- Tür filtresi + sayımlar (tek satır: istatistik kartları hem sayı gösterir hem filtreler) -->
       <div class="ls-strip" id="listStats"></div>
 
+      <!-- Araç satırı: bilgisayarda arama + filtreler + yenile/dışa aktar tek satır;
+           telefonda filtreler "Filtrele ve dışa aktar" altına katlanır -->
+      <div class="t2-lst-arac">
       <!-- Search -->
       <div class="search-bar">
         <i class="fas fa-search"></i>
@@ -1864,6 +1867,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
             <option value="week">Son 7 Gün</option>
             <option value="month">Bu Ay</option>
             <option value="lastmonth">Geçen Ay</option>
+            <option value="custom">Özel aralık…</option>
           </select>
           <div class="pdd-menu"></div>
         </div>
@@ -1905,7 +1909,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
 
       <!-- Tarih aralığı (özel) — ayrı, sade satır -->
-      <div class="date-range-row">
+      <div class="date-range-row" id="t2TarihAralik">
         <label><i class="fas fa-calendar-week" style="margin-right:5px;opacity:.7;"></i> Tarih Aralığı</label>
         <input type="date" id="filterDateFrom" onchange="applyFilters()">
         <span style="color:var(--text-dim);">—</span>
@@ -1925,6 +1929,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </div>
       </div>
       </div><!-- /t2-filtre-kutu -->
+      </div><!-- /t2-lst-arac -->
+
+      <!-- Aktif filtreler (tek dokunuşla kaldırılır) + kayıt sayısı -->
+      <div class="t2-aktif-filtre" id="t2AktifFiltre"></div>
 
       <!-- Bulk Action Bar -->
       <div class="bulk-bar" id="bulkBar">
@@ -9577,10 +9585,8 @@ function renderTypeFilterBar(){
   // Tek satır: hem tür sayımı gösterir hem filtre görevi görür ("Tümü" dahil)
   // Hiç kaydı olmayan türler gizlenir (seçili olan hariç) — 9 kutunun 7'si "0" görünmesin
   document.getElementById('listStats').innerHTML=types.filter(t=>t.key==='all'||currentTypeFilter===t.key||(counts[t.key]||0)>0).map(t=>`
-    <button type="button" class="ls-card ${currentTypeFilter===t.key?'active':''} ${t.key==='all'?'ls-card-all':''}" onclick="setTypeFilter('${t.key}')">
-      <span class="ls-ic"><i class="${t.icon}"></i></span>
-      <span class="ls-num">${counts[t.key]||0}</span>
-      <span class="ls-lbl">${t.label}</span>
+    <button type="button" class="t2-tur-cip ${currentTypeFilter===t.key?'active':''}" onclick="setTypeFilter('${t.key}')">
+      <i class="${t.icon}"></i><span>${t.label}</span><b class="ls-num">${counts[t.key]||0}</b>
     </button>
   `).join('');
 }
@@ -9747,29 +9753,10 @@ function applyFilters(){
   const now=new Date();
   const today=now.toISOString().split('T')[0];
 
-  // Dashboard widget'tan gelen filtre (en once uygula, kullanici kapatmadikca aktif)
-  if(typeof window._dashFilter === 'function'){
-    list = list.filter(window._dashFilter);
-    // Bilgi banneri
-    setTimeout(function(){
-      var box = document.getElementById('dashFilterBanner');
-      if(!box){
-        var head = document.querySelector('#page-list .page-header') || document.getElementById('page-list');
-        if(head){
-          box = document.createElement('div');
-          box.id = 'dashFilterBanner';
-          box.style.cssText = 'background:color-mix(in srgb, var(--primary) 10%, transparent);border:1px solid color-mix(in srgb, var(--primary) 30%, transparent);border-radius:8px;padding:8px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;';
-          head.insertBefore(box, head.firstChild);
-        }
-      }
-      if(box){
-        box.innerHTML = '<span><i class="fas fa-filter" style="color:var(--primary);"></i> <b>Anasayfa filtresi aktif:</b> '+(window._dashFilterLabel||'Özel filtre')+' • <b>'+list.length+'</b> kayıt</span>'
-          + '<button onclick="window._dashFilter=null;window._dashFilterLabel=\'\';var b=document.getElementById(\'dashFilterBanner\');if(b)b.remove();applyFilters();" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;">Filtreyi Kaldır</button>';
-      }
-    }, 30);
-  } else {
-    var b = document.getElementById('dashFilterBanner'); if(b) b.remove();
-  }
+  // Dashboard widget'tan gelen filtre (en once uygula, kullanici kapatmadikca aktif).
+  // Aktif filtreler satırında çip olarak görünür (_irsAktifFiltreCiz).
+  if(typeof window._dashFilter === 'function') list = list.filter(window._dashFilter);
+  { const eski=document.getElementById('dashFilterBanner'); if(eski) eski.remove(); }
 
   // Type filter
   if(currentTypeFilter!=='all')list=list.filter(i=>i._type===currentTypeFilter);
@@ -9789,8 +9776,11 @@ function applyFilters(){
     );
   }
   
-  // Date filter
+  // Date filter — "Özel aralık" seçilmedikçe aralık kutuları gizli ve boş
   const dateFilter=document.getElementById('filterDate')?.value||'all';
+  { const ar=document.getElementById('t2TarihAralik'), f=document.getElementById('filterDateFrom'), t=document.getElementById('filterDateTo');
+    if(dateFilter!=='custom'){ if(f) f.value=''; if(t) t.value=''; }
+    if(ar) ar.classList.toggle('goster', dateFilter==='custom'); }
   if(dateFilter==='today')list=list.filter(i=>i.tarih===today);
   else if(dateFilter==='yesterday'){const y=new Date(now-86400000).toISOString().split('T')[0];list=list.filter(i=>i.tarih===y);}
   else if(dateFilter==='week'){const wa=new Date(now-7*86400000).toISOString().split('T')[0];list=list.filter(i=>i.tarih>=wa);}
@@ -9821,6 +9811,62 @@ function applyFilters(){
   
   window._lastFilteredList = list;
   renderFilteredList(list);
+  try{ _irsAktifFiltreCiz(list.length); }catch(_){}
+}
+
+// ── Aktif filtreler satırı: her filtre bir çip, × ile kaldırılır ──
+function _irsAktifFiltreCiz(adet){
+  const el=document.getElementById('t2AktifFiltre'); if(!el) return;
+  const v=function(id){ const e=document.getElementById(id); return e?e.value:''; };
+  const optAd=function(id){ const e=document.getElementById(id); return e&&e.selectedOptions[0]?e.selectedOptions[0].textContent:''; };
+  const cip=[];
+  if(typeof window._dashFilter==='function') cip.push(['dash','fa-house', window._dashFilterLabel||'Anasayfa filtresi']);
+  if(currentTypeFilter!=='all') cip.push(['tur','fa-layer-group', getTypeLabel(currentTypeFilter)]);
+  const q=v('listSearch').trim(); if(q) cip.push(['ara','fa-search','"'+q+'"']);
+  const d=v('filterDate');
+  if(d==='custom'){
+    const f=v('filterDateFrom'), t=v('filterDateTo');
+    if(f||t) cip.push(['tarih','fa-calendar-day', (f?_t2Tarih(f,true):'…')+' – '+(t?_t2Tarih(t,true):'…')]);
+  } else if(d && d!=='all') cip.push(['tarih','fa-calendar-day', optAd('filterDate')]);
+  if(v('filterAtolye') && v('filterAtolye')!=='all') cip.push(['atolye','fa-industry', v('filterAtolye')]);
+  if(v('filterDurum') && v('filterDurum')!=='all') cip.push(['durum','fa-circle-info', optAd('filterDurum')]);
+  el.innerHTML = cip.map(function(c){
+      return '<span class="t2-af"><i class="fas '+c[1]+'"></i>'+esc(c[2])+'<button type="button" onclick="irsFiltreKaldir(\''+c[0]+'\')" aria-label="Filtreyi kaldır"><i class="fas fa-xmark"></i></button></span>';
+    }).join('')+
+    (cip.length>1?'<button type="button" class="t2-af-temizle" onclick="irsFiltreTemizle()">Hepsini temizle</button>':'')+
+    '<span class="t2-af-say"><b>'+(+adet||0).toLocaleString('tr')+'</b> kayıt</span>';
+}
+function irsFiltreKaldir(k, cizme){
+  const set=function(id,val){ const e=document.getElementById(id); if(e) e.value=val; };
+  if(k==='dash'){ window._dashFilter=null; window._dashFilterLabel=''; }
+  else if(k==='tur') currentTypeFilter='all';
+  else if(k==='ara') set('listSearch','');
+  else if(k==='tarih'){ set('filterDate','all'); set('filterDateFrom',''); set('filterDateTo',''); }
+  else if(k==='atolye'){ set('filterAtolye','all'); try{ _syncAtolyeLabel('filterAtolye'); }catch(_){} const l=document.getElementById('filterAtolyeLabel'); if(l) l.textContent='Tüm Atölyeler'; }
+  else if(k==='durum') set('filterDurum','all');
+  if(!cizme) applyFilters();
+}
+function irsFiltreTemizle(){ ['dash','tur','ara','tarih','atolye','durum'].forEach(function(k){ irsFiltreKaldir(k, true); }); applyFilters(); }
+// Satıra dokununca detay (kutucuk, durum etiketi ve düğmeler hariç)
+function _irsSatirTik(e,id,type){ if(e && e.target && e.target.closest && e.target.closest('input,button,a,.chip,.table-actions,label')) return; showDetailUni(id,type); }
+// Detay: kesik yazı yerine çipler — "60×90: 1.000"
+function _irsDetayHtml(i){
+  const d=String(getItemDetail(i)||'—'); if(d==='—') return '<span class="t2-sonuk">—</span>';
+  const sayi=function(n){ return (+n).toLocaleString('tr'); };
+  return d.split(' · ').map(function(p){
+    let m=p.match(/^(.+?):\s*(\d+)$/);
+    if(m) return '<span class="t2-dc"><em>'+esc(m[1])+'</em>'+sayi(m[2])+'</span>';
+    m=p.match(/^(\d+)\s*(adet|m)$/);
+    if(m) return '<span class="t2-dc">'+sayi(m[1])+' <em>'+m[2]+'</em></span>';
+    return '<span class="t2-dc'+(p==='SERBEST'?' serbest':'')+'">'+esc(p)+'</span>';
+  }).join('');
+}
+// Fotoğraf göstergesi: kaç foto var, GitHub'a yüklenemeyen varsa kırmızı
+function _irsFotoHtml(i){
+  let n=0; try{ n=(_getPhotosArray(i)||[]).length; }catch(_){}
+  if(!n) return '';
+  const hata=(Array.isArray(i._photos)?i._photos:[]).some(function(p){ return p && !p.url && !p.uploading && (p.uploadFailed || (typeof p.data==='string' && p.data.indexOf('data:')===0)); });
+  return '<span class="t2-foto'+(hata?' hata':'')+'" title="'+n+' fotoğraf'+(hata?' · bazıları GitHub\'a yüklenemedi':'')+'"><i class="fas fa-camera"></i>'+(n>1?n:'')+'</span>';
 }
 
 // ── Tarih yardımcıları (tasarım planı): "16 Eki", "3 gün geçti" ──
@@ -9885,6 +9931,8 @@ function renderFilteredList(list){
   const resultInfo=document.getElementById('resultInfo');
   
   resultInfo.innerHTML=`<i class="fas fa-filter"></i> <strong>${list.length}</strong> kayıt bulundu`;
+  // Listede termini olan kayıt yoksa Termin sütunu gizlenir (yer Detay'a kalır)
+  try{ const tb=tbody.closest('table'); if(tb) tb.classList.toggle('t2-terminsiz', !list.some(function(i){ return i.termin; })); }catch(_){}
   
   if(!list.length){
     tbody.innerHTML='';empty.style.display='block';
@@ -9897,11 +9945,17 @@ function renderFilteredList(list){
   const _srt=document.getElementById('filterSort')?.value||'newest';
   const _grupla=(_srt==='newest'||_srt==='oldest');
   const _grupAdi=i=>_t2TarihGrubu(i.tarih);
-  const _grupSay={}; if(_grupla) list.forEach(i=>{ const g=_grupAdi(i); _grupSay[g]=(_grupSay[g]||0)+1; });
+  const _grupSay={}, _grupAdet={}; if(_grupla) list.forEach(i=>{ const g=_grupAdi(i); _grupSay[g]=(_grupSay[g]||0)+1;
+    let a=0; try{ a=(i._type==='lastik'||i._type==='satenaskilik'||i._type==='dantel')?0:(_repItemQty(i)||_posetSayilan(i.sizes)||0); }catch(_){}
+    _grupAdet[g]=(_grupAdet[g]||0)+a; });
+  const _grupAlt=g=>_grupAdet[g]?`<small>${_grupAdet[g].toLocaleString('tr')} adet</small>`:'';
   let _sonG=null;
   const _baslik=(i,masa)=>{ if(!_grupla) return ''; const g=_grupAdi(i); if(g===_sonG) return ''; _sonG=g;
-    return masa ? `<tr class="t2-grup-tr"><td colspan="10"><span>${g}</span><em>${_grupSay[g]}</em></td></tr>`
-                : `<div class="t2-grup-bas"><span>${g}</span><em>${_grupSay[g]}</em></div>`; };
+    return masa ? `<tr class="t2-grup-tr"><td colspan="10"><span>${g}</span><em>${_grupSay[g]}</em>${_grupAlt(g)}</td></tr>`
+                : `<div class="t2-grup-bas"><span>${g}</span><em>${_grupSay[g]}</em>${_grupAlt(g)}</div>`; };
+  // Tarihin altında göreli zaman: "dün", "12 gün önce"
+  const _goreli=i=>{ const k=_t2GunFark(i.tarih); if(k===null||k>0) return ''; if(k===0) return 'bugün'; if(k===-1) return 'dün'; if(k>=-45) return (-k)+' gün önce'; return ''; };
+  const _bas=ad=>{ const t=String(ad||'').trim(); return t?esc(t.charAt(0).toLocaleUpperCase('tr')):'?'; };
   const _durum=i=>i.durum==='teslim'
     ? `<span class="chip chip-success clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Bekliyor yap"><i class="fas fa-check"></i> Teslim</span>`
     : `<span class="chip chip-warning clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Teslim edildi yap"><i class="fas fa-hourglass-half"></i> Bekliyor</span>`;
@@ -9911,14 +9965,14 @@ function renderFilteredList(list){
   // Desktop table
   _sonG=null;
   tbody.innerHTML=list.map(i=>_baslik(i,true)+`
-    <tr data-id="${i.id}" data-type="${i._type}" class="t2-irs-tr" oncontextmenu="showContextMenu(event, ${i.id}, '${i._type}'); return false;" ondblclick="showDetailUni(${i.id},'${i._type}')">
+    <tr data-id="${i.id}" data-type="${i._type}" class="t2-irs-tr${i.durum==='teslim'?'':' bek'}" oncontextmenu="showContextMenu(event, ${i.id}, '${i._type}'); return false;" onclick="_irsSatirTik(event,${i.id},'${i._type}')">
       <td><input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()"></td>
       <td>${getTypeBadge(i._type)}</td>
       <td class="t2-no-td">${i.no}</td>
-      <td style="white-space:nowrap;" title="${i.tarih||''}">${_t2Tarih(i.tarih)}</td>
-      <td class="t2-model-td">${i.model||i.urun||'-'}</td>
-      <td>${i.atolye||i.firma||'-'}</td>
-      <td class="t2-detay-td" title="${String(getItemDetail(i)).replace(/"/g,'&quot;')}">${getItemDetail(i)}</td>
+      <td class="t2-tarih-td" style="white-space:nowrap;" title="${i.tarih||''}">${_t2Tarih(i.tarih)}${_goreli(i)?'<small>'+_goreli(i)+'</small>':''}</td>
+      <td class="t2-model-td">${i.model||i.urun||'-'}${_irsFotoHtml(i)}</td>
+      <td class="t2-atolye-td">${(i.atolye||i.firma)?'<span class="t2-av">'+_bas(i.atolye||i.firma)+'</span>':''}${i.atolye||i.firma||'-'}</td>
+      <td class="t2-detay-td" title="${String(getItemDetail(i)).replace(/"/g,'&quot;')}">${_irsDetayHtml(i)}</td>
       <td>${_durum(i)}</td>
       <td class="t2-termin-td">${_termin(i)||'<span class="t2-sonuk">—</span>'}</td>
       <td>
@@ -9950,9 +10004,9 @@ function renderFilteredList(list){
           <span class="t2i-no">${i.no}</span>
           ${_durum(i)}
         </div>
-        <div class="t2i-model">${i.model||i.urun||'-'}</div>
+        <div class="t2i-model">${i.model||i.urun||'-'}${_irsFotoHtml(i)}</div>
         <div class="t2i-atolye"><i class="fas fa-industry"></i> ${i.atolye||i.firma||'-'}</div>
-        <div class="t2i-detay">${getItemDetail(i)}</div>
+        <div class="t2i-detay">${_irsDetayHtml(i)}</div>
         <div class="t2i-alt">
           <span class="t2i-tarih"><i class="far fa-calendar"></i> ${_t2Tarih(i.tarih)}</span>
           ${_termin(i)}
@@ -14126,7 +14180,7 @@ function _t2FiltreSay(){
   var el=document.getElementById('t2FiltreSay'); if(!el) return;
   var v=function(id){ var e=document.getElementById(id); return e ? e.value : ''; };
   var n=0;
-  if(v('filterDate') && v('filterDate')!=='all') n++;
+  if(v('filterDate') && v('filterDate')!=='all' && v('filterDate')!=='custom') n++;
   if(v('filterAtolye') && v('filterAtolye')!=='all') n++;
   if(v('filterDurum') && v('filterDurum')!=='all') n++;
   if(v('filterSort') && v('filterSort')!=='newest') n++;
@@ -15174,6 +15228,7 @@ function bulkDurum(durum){
 function clearDateRange(){
   const f=document.getElementById('filterDateFrom');if(f)f.value='';
   const t=document.getElementById('filterDateTo');if(t)t.value='';
+  const d=document.getElementById('filterDate');if(d)d.value='all';
   applyFilters();
 }
 
