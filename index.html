@@ -1348,6 +1348,7 @@
     if(!t||typeof t!=='string'){ try{ t=JSON.parse(localStorage.getItem('config_theme')); }catch(_){} }
     if(t&&typeof t==='string'){
       document.documentElement.setAttribute('data-theme',t);
+      try{ document.documentElement.classList.toggle('t2-acik', localStorage.getItem('t2_acik')==='1'); }catch(_){}
       // body parse edilir edilmez de uygula
       document.addEventListener('DOMContentLoaded',function(){
         document.body.setAttribute('data-theme',t);
@@ -13730,6 +13731,19 @@ TEMA_AILE.forEach(function(c){
   if(!_ESI_ACIK[c[0]]) _ESI_ACIK[c[0]] = c[1];   // koyu → açık eşi
   if(!_ESI_KOYU[c[1]]) _ESI_KOYU[c[1]] = c[0];   // açık → koyu eşi
 });
+// t2-acik sınıfı her zaman o anki data-theme'e bakar: tema hangi yoldan
+// değişirse değişsin (v9PickTheme, _temaUygula, açılış betiği) sınıf eski kalmaz
+window._t2AcikSenkron = function(){
+  var h=document.documentElement, id=h.getAttribute('data-theme');
+  if(!(window.V9_THEMES||[]).length) return;
+  var acik=!!window._temaAcikMi(id);
+  h.classList.toggle('t2-acik', acik);
+  try{ localStorage.setItem('t2_acik', acik?'1':'0'); }catch(_){}
+};
+try{
+  new MutationObserver(function(){ try{ window._t2AcikSenkron(); }catch(_){} })
+    .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+}catch(_){}
 window._temaAcikMi = function(id){
   var t=(window.V9_THEMES||[]).filter(function(x){ return x.id===id; })[0];
   return !!(t && (t.lightMode===true || t.cat==='light'));
@@ -13760,7 +13774,7 @@ window._temaUygula = function(){
   var mod=getConfig('colorMode', window._temaAcikMi(secilen)?'light':'dark');
   var uygulanan=window._temaCozumle(secilen, mod);
   document.documentElement.setAttribute('data-theme',uygulanan);
-  try{ document.documentElement.classList.toggle('t2-acik', !!window._temaAcikMi(uygulanan)); }catch(_){}
+  try{ window._t2AcikSenkron(); }catch(_){}
   if(document.body) document.body.setAttribute('data-theme',uygulanan);
   // V9 tema seçici açılışta kendi temasını basıyor olabilir — inline
   // ezmeleri temizle ki palet tek kaynaktan (CSS tema blokları) gelsin
