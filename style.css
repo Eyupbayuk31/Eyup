@@ -19632,3 +19632,53 @@ html #page-list .t2l-bk .t2l-bk-daha{ width:38px; padding:0 !important; justify-
 }
 @media (max-width:768px){ .t2l-sek-kap{ flex:0 0 100%; } }
 @media (max-width:768px){ .t2l-ozet{ flex:1 1 200px; } .t2l-sekmeler{ align-items:flex-start; } }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SİLİK YAZI HİYERARŞİSİ — bu koyu temalarda --text-muted / --text-dim
+   ana yazıyla neredeyse aynı parlaklıktaydı (ana/silik kontrast oranı
+   1,12–1,45; iyi temalarda 1,6+). İkincil bilgi ayırt edilmiyor, sayfa
+   "her şey bağırıyor" gibi duruyordu. Ton ana yazı + zeminden türetilir,
+   temanın rengi korunur.
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="amber"], body[data-theme="amber"],
+html[data-theme="emerald"], body[data-theme="emerald"],
+html[data-theme="sapphire"], body[data-theme="sapphire"],
+html[data-theme="gold"], body[data-theme="gold"],
+html[data-theme="nord"], body[data-theme="nord"],
+html[data-theme="forest"], body[data-theme="forest"],
+html[data-theme="lime"], body[data-theme="lime"],
+html[data-theme="sunset"], body[data-theme="sunset"],
+html[data-theme="volcano"], body[data-theme="volcano"],
+html[data-theme="neon"], body[data-theme="neon"],
+html[data-theme="obsidian"], body[data-theme="obsidian"],
+html[data-theme="bronze"], body[data-theme="bronze"],
+html[data-theme="olive"], body[data-theme="olive"],
+html[data-theme="cyber"], body[data-theme="cyber"],
+html[data-theme="ruby"], body[data-theme="ruby"],
+html[data-theme="teal"], body[data-theme="teal"],
+html[data-theme="jade"], body[data-theme="jade"],
+html[data-theme="slate"], body[data-theme="slate"],
+html[data-theme="steel"], body[data-theme="steel"],
+html[data-theme="ocean"], body[data-theme="ocean"]{
+  --text-muted: color-mix(in srgb, var(--text-main) 72%, var(--bg-main));
+  --text-dim:   color-mix(in srgb, var(--text-main) 54%, var(--bg-main));
+}
+#page-list{ --t2l-mut: var(--text-muted); }
+
+/* t2l — ince ayarlar (3. adım) */
+.t2l-r mark{ background:color-mix(in srgb, var(--primary) 32%, transparent); color:inherit; border-radius:3px; padding:0 1px; }
+.t2l-r:focus-within .t2l-act{ opacity:1; pointer-events:auto; transform:translate(0,-50%); }
+.t2l-r:focus-within > .card-inner{ background:color-mix(in srgb, var(--primary) 7%, transparent); }
+.t2l-r :focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+#page-list #listEmpty{ padding:46px 20px !important; text-align:center; border:1px dashed var(--t2l-cizgi); border-radius:18px; margin-top:10px; background:transparent !important; }
+#page-list #listEmpty > i{ font-size:30px; color:var(--text-muted); opacity:.6; margin-bottom:10px; display:block; }
+#page-list #listEmpty p{ color:var(--text-muted); margin:0 0 14px; font-size:14px; }
+/* Masaüstünde ay / grup başlıkları kaydırırken üstte kalır (üst çubuk 71px) */
+@media (min-width:769px){
+  #page-list .t2l-grup{ position:sticky; top:71px; z-index:5; margin:0 -6px; padding-left:10px; padding-right:10px;
+    background:linear-gradient(var(--bg-main) 70%, color-mix(in srgb, var(--bg-main) 0%, transparent)); }
+}
+@container (max-width: 600px){
+  .t2l-grup .l .w{ display:inline; font-size:12px; }
+}

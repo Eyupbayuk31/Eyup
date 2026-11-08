@@ -9884,8 +9884,8 @@ function applyFilters(){
   
   window._lastFilteredList = list;
   window._t2lLimit = 60;
-  renderFilteredList(list);
   try{ _irsAktifFiltreCiz(list.length); }catch(_){}
+  renderFilteredList(list);
 }
 
 // ── Aktif filtreler satırı: her filtre bir çip, × ile kaldırılır ──
@@ -10046,7 +10046,18 @@ function renderFilteredList(list){
   const kap=document.getElementById('t2lKap');
   const ri=document.getElementById('resultInfo'); if(ri) ri.innerHTML='';
   if(!host) return;
-  if(!list.length){ host.innerHTML=''; if(empty) empty.style.display='block'; if(kap) kap.classList.add('bos'); return; }
+  if(!list.length){
+    host.innerHTML=''; if(kap) kap.classList.add('bos');
+    if(empty){
+      empty.style.display='block';
+      const filtreli=!!document.querySelector('#t2AktifFiltre .t2-af');
+      const hic=!getUnifiedList().length;
+      empty.innerHTML = hic
+        ? '<i class="fas fa-inbox"></i><p>Henüz irsaliye yok.</p><button class="btn btn-primary btn-sm es-btn" onclick="showPage(\'new\')"><i class="fas fa-plus"></i> İlk irsaliyeyi kes</button>'
+        : '<i class="fas fa-magnifying-glass"></i><p>Bu arama ve filtrelerle kayıt bulunamadı.</p>'+(filtreli?'<button class="btn btn-secondary btn-sm es-btn" onclick="irsFiltreTemizle()"><i class="fas fa-filter-circle-xmark"></i> Filtreleri temizle</button>':'');
+    }
+    return;
+  }
   if(empty) empty.style.display='none'; if(kap) kap.classList.remove('bos');
 
   const _srt=document.getElementById('filterSort')?.value||'newest';
@@ -10071,6 +10082,9 @@ function renderFilteredList(list){
   const goreli=i=>{ const k=_t2GunFark(i.tarih); if(k===null||k>0) return ''; if(k===0) return 'bugün'; if(k===-1) return 'dün'; if(k>=-60) return (-k)+' gün önce'; return ''; };
   const sayi=n=>(+n||0).toLocaleString('tr');
 
+  const aranan=(document.getElementById('listSearch')?.value||'').trim();
+  const vur=t=>{ const e=esc(t||''); if(!aranan) return e; const k=String(t||'').toLocaleLowerCase('tr'), a=aranan.toLocaleLowerCase('tr'), p=k.indexOf(a);
+    return p<0 ? e : esc(String(t).slice(0,p))+'<mark>'+esc(String(t).slice(p,p+aranan.length))+'</mark>'+esc(String(t).slice(p+aranan.length)); };
   const satir=i=>{
     const id=i.id, ty=i._type, q=_irsMiktar(i), teslim=i.durum==='teslim';
     const te=(i.termin && !teslim) ? _t2Termin(i.termin, false) : null;
@@ -10088,8 +10102,8 @@ function renderFilteredList(list){
         ' onclick="_t2lTik(event,'+id+',\''+ty+'\')" oncontextmenu="showContextMenu(event,'+id+',\''+ty+'\');return false;">'+
       '<div class="card-inner">'+
         '<label class="t2l-ck" onclick="event.stopPropagation()"><input type="checkbox" class="bulk-check" data-id="'+id+'" data-type="'+ty+'" onchange="bulkUpdate()" aria-label="Seç"></label>'+
-        '<div class="t2l-m"><b><span class="t2l-mad">'+esc(i.model||i.urun||'—')+'</span>'+_irsFotoHtml(i)+'</b>'+
-          '<small><span class="t2l-no">'+esc(i.no||'')+'</span><span class="t2l-tip"><i>·</i>'+esc(getTypeLabel(ty))+'</span>'+(at?'<i>·</i><span class="t2l-at">'+esc(at)+'</span>':'')+'<span class="t2l-mt"><i>·</i>'+tarih+'</span>'+(teslim?'':'<span class="t2l-mdu '+(gec?'b':'w')+'"><i>·</i>'+(gec?te.t:'Bekliyor')+'</span>')+'</small></div>'+
+        '<div class="t2l-m"><b><span class="t2l-mad">'+(i.model||i.urun?vur(i.model||i.urun):'—')+'</span>'+_irsFotoHtml(i)+'</b>'+
+          '<small><span class="t2l-no">'+vur(i.no||'')+'</span><span class="t2l-tip"><i>·</i>'+esc(getTypeLabel(ty))+'</span>'+(at?'<i>·</i><span class="t2l-at">'+vur(at)+'</span>':'')+'<span class="t2l-mt"><i>·</i>'+tarih+'</span>'+(teslim?'':'<span class="t2l-mdu '+(gec?'b':'w')+'"><i>·</i>'+(gec?te.t:'Bekliyor')+'</span>')+'</small></div>'+
         '<div class="t2l-dt">'+cip+'</div>'+
         '<div class="t2l-ad"><b>'+(q.b==='m'?(Math.round(q.n*10)/10).toLocaleString('tr'):sayi(q.n))+'</b><small>'+q.b+'</small></div>'+
         '<div class="t2l-tr" title="'+esc(i.tarih||'')+'">'+tarih+'<small>'+alt+'</small></div>'+
@@ -10135,6 +10149,21 @@ function t2lGrupMenuCiz(){
   if(adEl) adEl.textContent=sec[2];
   if(menu) menu.innerHTML=_T2L_GRUP.map(x=>'<button type="button" class="t2-menu-o" onclick="t2lGrupSec(\''+x[0]+'\')"><i class="fas '+(x[0]===m?'fa-check':x[1])+'"></i> '+x[2]+'</button>').join('');
 }
+// "/" → arama kutusu (yazı alanında değilken), Esc → aramayı temizle
+document.addEventListener('keydown', function(e){
+  const pl=document.getElementById('page-list'); if(!pl || !pl.classList.contains('active')) return;
+  const ara=document.getElementById('listSearch'); if(!ara) return;
+  const yaziyor=e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+  if(e.key==='/' && !yaziyor && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector('.modal-overlay.show')){ e.preventDefault(); ara.focus(); ara.select(); }
+  else if(e.key==='Escape' && e.target===ara && ara.value){ e.preventDefault(); ara.value=''; applyFilters(); }
+});
+// Liste sonuna gelince sonraki 60 kayıt kendiliğinden (düğme yedek olarak kalır)
+(function(){
+  if(!('IntersectionObserver' in window)) return;
+  const io=new IntersectionObserver(function(es){ es.forEach(function(en){ if(en.isIntersecting && en.target.isConnected && !window._t2lYukleniyor){ window._t2lYukleniyor=true; setTimeout(function(){ window._t2lYukleniyor=false; }, 400); t2lDahaFazla(); } }); }, {rootMargin:'300px 0px'});
+  const izle=function(){ const b=document.querySelector('#t2lListe .t2l-daha'); if(b && !b._izleniyor){ b._izleniyor=true; io.observe(b); } };
+  new MutationObserver(izle).observe(document.documentElement, {childList:true, subtree:true});
+})();
 function t2lDahaFazla(){
   window._t2lLimit += 60;
   renderFilteredList(window._lastFilteredList||[]);
