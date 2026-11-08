@@ -1923,26 +1923,15 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
 
       <!-- Tür sekmeleri -->
-      <div class="t2l-sekmeler"><div class="t2l-sek-kap" id="listStats" role="tablist"></div><span class="t2l-ozet" id="t2lOzet"></span></div>
+      <div class="t2l-sekmeler"><div class="t2l-sek-kap" id="listStats" role="tablist"></div><span class="t2l-ozet" id="t2lOzet"></span>
+        <div class="t2l-grupla">
+          <button type="button" class="t2l-gbtn" onclick="event.stopPropagation(); _t2DigerAc(this.nextElementSibling)" title="Gruplama"><i class="fas fa-layer-group"></i><span id="t2lGrupAd">Aya göre</span><i class="fas fa-chevron-down t2l-gok"></i></button>
+          <div class="t2l-grupla-l" id="t2lGrupMenu" hidden></div>
+        </div>
+      </div>
 
       <!-- Aktif filtreler (tek dokunuşla kaldırılır) + kayıt sayısı -->
       <div class="t2-aktif-filtre" id="t2AktifFiltre"></div>
-
-      <!-- Bulk Action Bar -->
-      <div class="bulk-bar" id="bulkBar">
-        <div class="bulk-count"><i class="fas fa-check-square"></i> <span id="bulkCount">0</span> kayıt seçili</div>
-        <div class="bulk-actions">
-          <button class="bulk-btn success" onclick="bulkDurum('teslim')"><i class="fas fa-check"></i> Teslim Et</button>
-          <button class="bulk-btn" onclick="bulkDurum('bekliyor')"><i class="fas fa-clock"></i> Beklemeye Al</button>
-          <button class="bulk-btn" onclick="bulkShareWhatsApp()"><svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp</button>
-          <button class="bulk-btn" onclick="bulkExportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
-          <button class="bulk-btn" onclick="bulkExportImage()" title="Seçilenleri görsel (PNG) olarak telefona kaydet veya paylaş"><i class="fas fa-image"></i> Görsel</button>
-          <button class="bulk-btn" onclick="bulkPrint()" style="background:rgba(255,255,255,0.15);"><i class="fas fa-print"></i> Yazdır</button>
-              <button class="bulk-btn danger" onclick="bulkDelete()"><i class="fas fa-trash"></i> Sil</button>
-          <button class="bulk-btn" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Tümünü Seç</button>
-          <button class="bulk-btn" onclick="bulkClear()"><i class="fas fa-times"></i> İptal</button>
-        </div>
-      </div>
 
       <!-- Result info -->
       <div class="result-info" id="resultInfo"></div>
@@ -1957,6 +1946,26 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <div class="empty-state" id="listEmpty" style="display:none;"><i class="fas fa-inbox"></i><p>Aramanıza uygun kayıt bulunamadı.</p><button class="btn btn-primary btn-sm es-btn" onclick="showPage('new')"><i class="fas fa-plus"></i> Yeni İrsaliye</button></div>
       </div>
       <div id="irsaliyeMobile" hidden></div>
+
+      <!-- Toplu seçim çubuğu: seçim varken listenin altında yüzer -->
+      <div class="bulk-bar t2l-bk" id="bulkBar" role="region" aria-label="Toplu işlemler">
+        <button type="button" class="t2l-bk-x" onclick="bulkClear()" title="Seçimi kaldır" aria-label="Seçimi kaldır"><i class="fas fa-xmark"></i></button>
+        <div class="bulk-count t2l-bk-say"><b><span id="bulkCount">0</span> seçili</b><small id="bulkToplam"></small></div>
+        <div class="bulk-actions t2l-bk-l">
+          <button class="bulk-btn success" onclick="bulkDurum('teslim')"><i class="fas fa-check"></i><span>Teslim et</span></button>
+          <button class="bulk-btn" onclick="bulkDurum('bekliyor')"><i class="fas fa-hourglass-half"></i><span>Beklet</span></button>
+          <button class="bulk-btn" onclick="bulkShareWhatsApp()"><svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg><span>WhatsApp</span></button>
+          <button class="bulk-btn" onclick="bulkExportPDF()"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
+          <button class="bulk-btn" onclick="bulkPrint()"><i class="fas fa-print"></i><span>Yazdır</span></button>
+          <button class="bulk-btn t2l-bk-daha" type="button" onclick="event.stopPropagation(); _t2DigerAc(this.nextElementSibling)" title="Diğer"><i class="fas fa-ellipsis"></i></button>
+          <div class="t2l-bk-menu" hidden>
+            <button type="button" class="t2-menu-o" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Listedekilerin hepsini seç</button>
+            <button type="button" class="t2-menu-o" onclick="bulkExportImage()"><i class="fas fa-image"></i> Görsel olarak kaydet / paylaş</button>
+            <button type="button" class="t2-menu-o btn-danger" onclick="bulkDelete()"><i class="fas fa-trash"></i> Seçilenleri sil</button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Selection Summary Dashboard -->
       <div class="sel-dash" id="selDash" style="display:none;">
@@ -10041,10 +10050,22 @@ function renderFilteredList(list){
   if(empty) empty.style.display='none'; if(kap) kap.classList.remove('bos');
 
   const _srt=document.getElementById('filterSort')?.value||'newest';
-  const grupla=(_srt==='newest'||_srt==='oldest');
-  // Grup toplamları tüm listeden (ekranda yalnız ilk N satır olsa da başlık doğru)
-  const gBilgi={};
-  if(grupla) list.forEach(i=>{ const g=_t2lGrup(i.tarih); (gBilgi[g]||(gBilgi[g]=[])).push(i); });
+  const mod=t2lGrupMod();
+  t2lGrupMenuCiz();
+  // Gruplama: ay (yalnız tarih sıralamasında), atölye, model ya da yok
+  let anahtar=null, ad=null;
+  if(mod==='ay' && (_srt==='newest'||_srt==='oldest')){ anahtar=i=>_t2lGrup(i.tarih); ad=anahtar; }
+  else if(mod==='atolye'){ anahtar=i=>((i.atolye||i.firma||'').trim().toLocaleUpperCase('tr'))||'~'; ad=i=>(i.atolye||i.firma||'').trim()||'Atölyesiz'; }
+  else if(mod==='model'){ anahtar=i=>((i.model||i.urun||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('tr'))||'~'; ad=i=>(i.model||i.urun||'').trim()||'Modelsiz'; }
+  const grupla=!!anahtar;
+  // Grup toplamları tüm listeden (ekranda yalnız ilk N satır olsa da başlık doğru).
+  // Atölye/model gruplarında aynı gruba düşenler bir araya toplanır; grup
+  // sırası listedeki ilk görünüşe göre (en yeni önce).
+  const gBilgi={}, gAd={}, gSira=[];
+  if(grupla){
+    list.forEach(i=>{ const g=anahtar(i); if(!gBilgi[g]){ gBilgi[g]=[]; gAd[g]=ad(i); gSira.push(g); } gBilgi[g].push(i); });
+    if(mod!=='ay') list=[].concat.apply([], gSira.map(g=>gBilgi[g]));
+  }
   const goster=list.slice(0, window._t2lLimit);
   const bugun=new Date().toISOString().slice(0,10);
   const goreli=i=>{ const k=_t2GunFark(i.tarih); if(k===null||k>0) return ''; if(k===0) return 'bugün'; if(k===-1) return 'dün'; if(k>=-60) return (-k)+' gün önce'; return ''; };
@@ -10086,11 +10107,12 @@ function renderFilteredList(list){
   if(grupla){
     let sonG=null, acik=false;
     goster.forEach(i=>{
-      const g=_t2lGrup(i.tarih);
+      const g=anahtar(i);
       if(g!==sonG){
         if(acik) html+='</div></section>';
-        const gl=gBilgi[g]||[];
-        html+='<section class="t2l-g"><div class="t2l-grup"><div class="l"><h3>'+esc(g)+'</h3><span>'+gl.length.toLocaleString('tr')+' irsaliye</span></div><span class="t">'+_t2lMiktarYaz(_t2lTopla(gl))+'</span></div><div class="t2l-kutu">';
+        const gl=gBilgi[g]||[], bk=gl.filter(x=>x.durum!=='teslim').length, nm=gAd[g]||g;
+        const av = mod==='atolye' ? '<span class="t2l-gav">'+esc((nm.trim()[0]||'?').toLocaleUpperCase('tr'))+'</span>' : '';
+        html+='<section class="t2l-g g-'+mod+'"><div class="t2l-grup"><div class="l">'+av+'<h3>'+esc(nm)+'</h3><span>'+gl.length.toLocaleString('tr')+' irsaliye</span>'+(bk?'<span class="w">'+bk+' bekliyor</span>':'')+'</div><span class="t">'+_t2lMiktarYaz(_t2lTopla(gl))+'</span></div><div class="t2l-kutu">';
         sonG=g; acik=true;
       }
       html+=satir(i);
@@ -10102,6 +10124,16 @@ function renderFilteredList(list){
   const kalan=list.length-goster.length;
   if(kalan>0) html+='<button type="button" class="t2l-daha" onclick="t2lDahaFazla()"><i class="fas fa-chevron-down"></i> '+Math.min(60,kalan).toLocaleString('tr')+' kayıt daha göster <em>(kalan '+kalan.toLocaleString('tr')+')</em></button>';
   host.innerHTML=html;
+}
+// Gruplama tercihi (cihazda hatırlanır)
+const _T2L_GRUP=[['ay','fa-calendar','Aya göre'],['atolye','fa-industry','Atölyeye göre'],['model','fa-cube','Modele göre'],['yok','fa-list','Gruplama yok']];
+function t2lGrupMod(){ const m=getConfig('irsGrup','ay'); return _T2L_GRUP.some(x=>x[0]===m) ? m : 'ay'; }
+function t2lGrupSec(m){ setConfig('irsGrup', m); window._t2lLimit=60; renderFilteredList(window._lastFilteredList||[]); try{ _bulkRestoreSelection(); }catch(_){} }
+function t2lGrupMenuCiz(){
+  const m=t2lGrupMod(), menu=document.getElementById('t2lGrupMenu'), adEl=document.getElementById('t2lGrupAd');
+  const sec=_T2L_GRUP.find(x=>x[0]===m);
+  if(adEl) adEl.textContent=sec[2];
+  if(menu) menu.innerHTML=_T2L_GRUP.map(x=>'<button type="button" class="t2-menu-o" onclick="t2lGrupSec(\''+x[0]+'\')"><i class="fas '+(x[0]===m?'fa-check':x[1])+'"></i> '+x[2]+'</button>').join('');
 }
 function t2lDahaFazla(){
   window._t2lLimit += 60;
@@ -15039,6 +15071,10 @@ function _bulkSyncUI(){
   _bulkPrune();
   const count=window._bulkSelected.size;
   const cEl=document.getElementById('bulkCount'); if(cEl) cEl.textContent=count;
+  try{
+    const tEl=document.getElementById('bulkToplam');
+    if(tEl){ const sec=count ? getUnifiedList().filter(i=>window._bulkSelected.has(i._type+':'+i.id)) : []; tEl.innerHTML = sec.length ? _t2lMiktarYaz(_t2lTopla(sec)) : ''; }
+  }catch(_){}
   const bar=document.getElementById('bulkBar'); if(bar){ if(count>0) bar.classList.add('show'); else bar.classList.remove('show'); }
   const pl=document.getElementById('page-list'); if(pl) pl.classList.toggle('t2l-secim', count>0);
   const allChecks=document.querySelectorAll('.bulk-check[data-id]');
