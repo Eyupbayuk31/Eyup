@@ -1829,30 +1829,32 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
 
     <!-- ========== İRSALİYELER ========== -->
     <div class="page" id="page-list">
-      <div class="section-header">
-        <div><h2><i class="fas fa-list"></i>Tüm İrsaliyeler</h2><p>Tüm sevkiyat türlerini görüntüleyin ve filtreleyin</p></div>
-        <button class="btn btn-primary" onclick="showPage('new')"><i class="fas fa-plus"></i> Yeni Ekle</button>
+      <!-- Üst: başlık + sayı (bekleyenler), arama, filtre, yenile, dışa aktar — tek satır -->
+      <div class="t2l-ust">
+        <div class="t2l-baslik"><h2>İrsaliyeler</h2><span class="t2l-say" id="t2lSay"></span></div>
+        <div class="search-bar t2l-ara">
+          <i class="fas fa-search"></i>
+          <input type="text" id="listSearch" placeholder="No, model, atölye veya kişi ara..." oninput="applyFilters()" autocomplete="off">
+        </div>
+        <div class="t2l-ibler">
+          <button type="button" class="t2l-ib t2l-filtre" id="t2FiltreAc" onclick="t2FiltreAcKapa()" aria-expanded="false" aria-controls="t2FiltreKutu">
+            <i class="fas fa-sliders"></i><span class="t2l-ib-yazi">Filtre</span><span class="t2-filtre-say" id="t2FiltreSay" hidden>0</span>
+          </button>
+          <button type="button" class="t2l-ib" id="listRefreshBtn" onclick="manualRefreshList()" title="Yenile" aria-label="Yenile" style="position:relative;"><i class="fas fa-rotate"></i><span id="listRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
+          <div class="t2l-disa">
+            <button type="button" class="t2l-ib" onclick="event.stopPropagation(); _t2DigerAc(this.nextElementSibling)" title="Dışa aktar" aria-label="Dışa aktar"><i class="fas fa-file-export"></i></button>
+        <div class="t2-disa-liste" hidden>
+          <button type="button" class="t2-menu-o" onclick="printListPDF()"><i class="fas fa-file-pdf"></i> PDF olarak yazdır</button>
+          <button type="button" class="t2-menu-o" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+          <button type="button" class="t2-menu-o" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV (tümü)</button>
+          <button type="button" class="t2-menu-o" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> CSV (yalnız filtrelenenler)</button>
+        </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Tür filtresi + sayımlar (tek satır: istatistik kartları hem sayı gösterir hem filtreler) -->
-      <div class="ls-strip" id="listStats"></div>
-
-      <!-- Araç satırı: bilgisayarda arama + filtreler + yenile/dışa aktar tek satır;
-           telefonda filtreler "Filtrele ve dışa aktar" altına katlanır -->
-      <div class="t2-lst-arac">
-      <!-- Search -->
-      <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input type="text" id="listSearch" placeholder="İrsaliye no, model, atölye veya kişi ara..." oninput="applyFilters()">
-      </div>
-
-      <!-- Telefonda filtreler ve dışa aktarma bu düğmenin altına katlanır (yeni tasarım) -->
-      <button type="button" class="t2-filtre-ac" id="t2FiltreAc" onclick="t2FiltreAcKapa()" aria-expanded="false" aria-controls="t2FiltreKutu">
-        <i class="fas fa-sliders"></i><span>Filtrele ve dışa aktar</span>
-        <span class="t2-filtre-say" id="t2FiltreSay" hidden>0</span>
-        <i class="fas fa-chevron-down t2-fc"></i>
-      </button>
-      <div class="t2-filtre-kutu" id="t2FiltreKutu">
+      <!-- Filtre paneli (Filtre düğmesiyle açılır) -->
+      <div class="t2-filtre-kutu t2l-panel" id="t2FiltreKutu">
       <!-- Filter Row: Date + Atölye + Durum + Sort — özel (tema uyumlu) dropdown'lar -->
       <div class="filter-row">
         <div class="pdd">
@@ -1918,19 +1920,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <button class="btn btn-xs btn-secondary" onclick="clearDateRange()" style="white-space:nowrap;">Temizle</button>
       </div>
 
-      <!-- Araç çubuğu: yenile + dışa aktarma -->
-      <div class="export-bar">
-        <button class="export-btn ex-refresh" id="listRefreshBtn" onclick="manualRefreshList()"><i class="fas fa-sync-alt"></i> Yenile<span id="listRefreshDot" style="display:none;position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid var(--bg-card);box-shadow:0 0 0 2px rgba(245,158,11,.4);"></span></button>
-        <button type="button" class="export-btn t2-disa-btn" onclick="event.stopPropagation(); _t2DigerAc(this.nextElementSibling)"><i class="fas fa-file-export"></i> Dışa aktar <i class="fas fa-chevron-down t2-disa-ok"></i></button>
-        <div class="t2-disa-liste" hidden>
-          <button type="button" class="t2-menu-o" onclick="printListPDF()"><i class="fas fa-file-pdf"></i> PDF olarak yazdır</button>
-          <button type="button" class="t2-menu-o" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-          <button type="button" class="t2-menu-o" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV (tümü)</button>
-          <button type="button" class="t2-menu-o" onclick="exportFilteredCSV()"><i class="fas fa-filter"></i> CSV (yalnız filtrelenenler)</button>
-        </div>
       </div>
-      </div><!-- /t2-filtre-kutu -->
-      </div><!-- /t2-lst-arac -->
+
+      <!-- Tür sekmeleri -->
+      <div class="t2l-sekmeler"><div class="t2l-sek-kap" id="listStats" role="tablist"></div><span class="t2l-ozet" id="t2lOzet"></span></div>
 
       <!-- Aktif filtreler (tek dokunuşla kaldırılır) + kayıt sayısı -->
       <div class="t2-aktif-filtre" id="t2AktifFiltre"></div>
@@ -1954,19 +1947,16 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       <!-- Result info -->
       <div class="result-info" id="resultInfo"></div>
 
-      <!-- Desktop Table -->
-      <div class="card table-desktop" style="padding:0;">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th><input type="checkbox" class="bulk-check" id="bulkCheckAll" onchange="bulkToggleAll(this.checked)"></th><th>Tür</th><th>No</th><th>Tarih</th><th>Model</th><th>Atölye</th><th>Detay</th><th>Durum</th><th>Termin</th><th>İşlem</th></tr></thead>
-            <tbody id="irsaliyeTable"></tbody>
-          </table>
+      <!-- Liste: masaüstü ve telefon için tek, duyarlı yapı -->
+      <div class="t2l-kap" id="t2lKap">
+        <div class="t2l-kolon" aria-hidden="false">
+          <label class="t2l-ck"><input type="checkbox" class="bulk-check" id="bulkCheckAll" onchange="bulkToggleAll(this.checked)" aria-label="Tümünü seç"></label>
+          <span>Model</span><span>Detay</span><span class="n">Miktar</span><span class="n">Tarih</span><span class="n">Durum</span>
         </div>
+        <div id="t2lListe"></div>
         <div class="empty-state" id="listEmpty" style="display:none;"><i class="fas fa-inbox"></i><p>Aramanıza uygun kayıt bulunamadı.</p><button class="btn btn-primary btn-sm es-btn" onclick="showPage('new')"><i class="fas fa-plus"></i> Yeni İrsaliye</button></div>
       </div>
-
-      <!-- Mobile Cards -->
-      <div class="table-mobile" id="irsaliyeMobile" style="display:none;"></div>
+      <div id="irsaliyeMobile" hidden></div>
 
       <!-- Selection Summary Dashboard -->
       <div class="sel-dash" id="selDash" style="display:none;">
@@ -9648,13 +9638,21 @@ function renderTypeFilterBar(){
     {key:'dantel',label:'Dantel',icon:'fas fa-border-all'},
   ];
   
-  // Tek satır: hem tür sayımı gösterir hem filtre görevi görür ("Tümü" dahil)
-  // Hiç kaydı olmayan türler gizlenir (seçili olan hariç) — 9 kutunun 7'si "0" görünmesin
+  // Sekmeler: tür sayımı + filtre. Kaydı olmayan türler gizlenir (seçili olan hariç).
   document.getElementById('listStats').innerHTML=types.filter(t=>t.key==='all'||currentTypeFilter===t.key||(counts[t.key]||0)>0).map(t=>`
-    <button type="button" class="t2-tur-cip ${currentTypeFilter===t.key?'active':''}" onclick="setTypeFilter('${t.key}')">
-      <i class="${t.icon}"></i><span>${t.label}</span><b class="ls-num">${counts[t.key]||0}</b>
-    </button>
+    <button type="button" role="tab" aria-selected="${currentTypeFilter===t.key}" class="t2l-sek ${currentTypeFilter===t.key?'on':''}" onclick="setTypeFilter('${t.key}')">${t.label}<em>${(counts[t.key]||0).toLocaleString('tr')}</em></button>
   `).join('');
+  // Başlıkta toplam ve bekleyen sayısı (bekleyene dokununca filtrelenir)
+  const sy=document.getElementById('t2lSay');
+  if(sy){
+    const bek=all.filter(i=>i.durum!=='teslim').length;
+    sy.innerHTML='<b>'+all.length.toLocaleString('tr')+'</b> kayıt'+(bek?' <i>·</i> <button type="button" class="t2l-bek" onclick="t2lBekleyenler()">'+bek.toLocaleString('tr')+' bekliyor</button>':'');
+  }
+}
+function t2lBekleyenler(){
+  const d=document.getElementById('filterDurum'); if(d) d.value='bekliyor';
+  try{ pddSyncAll(); }catch(_){}
+  applyFilters();
 }
 
 function setTypeFilter(type){
@@ -9876,6 +9874,7 @@ function applyFilters(){
   else if(sort==='termin')list.sort((a,b)=>{if(!a.termin)return 1;if(!b.termin)return -1;return a.termin.localeCompare(b.termin);});
   
   window._lastFilteredList = list;
+  window._t2lLimit = 60;
   renderFilteredList(list);
   try{ _irsAktifFiltreCiz(list.length); }catch(_){}
 }
@@ -9900,7 +9899,9 @@ function _irsAktifFiltreCiz(adet){
       return '<span class="t2-af"><i class="fas '+c[1]+'"></i>'+esc(c[2])+'<button type="button" onclick="irsFiltreKaldir(\''+c[0]+'\')" aria-label="Filtreyi kaldır"><i class="fas fa-xmark"></i></button></span>';
     }).join('')+
     (cip.length>1?'<button type="button" class="t2-af-temizle" onclick="irsFiltreTemizle()">Hepsini temizle</button>':'')+
-    '<span class="t2-af-say"><b>'+(+adet||0).toLocaleString('tr')+'</b> kayıt</span>';
+    '';
+  const oz=document.getElementById('t2lOzet');
+  if(oz) oz.innerHTML='<b>'+(+adet||0).toLocaleString('tr')+'</b> irsaliye'+((window._lastFilteredList||[]).length?' · '+_t2lMiktarYaz(_t2lTopla(window._lastFilteredList)):'');
 }
 function irsFiltreKaldir(k, cizme){
   const set=function(id,val){ const e=document.getElementById(id); if(e) e.value=val; };
@@ -9990,117 +9991,150 @@ function getItemDetail(item, gizle){
   return '—';
 }
 
+// ── İrsaliyeler listesi (t2l) — masaüstü ve telefon için tek, duyarlı yapı ──
+const _T2L_RENK={standart:'#3b82f6',fermuar:'#8b5cf6',lastik:'#10b981',dugme:'#ef4444',toptan:'#f97316',satenaskilik:'#06b6d4',kordon:'#d946ef',dantel:'#ec4899'};
+const _T2L_AY={Oca:'Ocak','Şub':'Şubat',Mar:'Mart',Nis:'Nisan',May:'Mayıs',Haz:'Haziran',Tem:'Temmuz','Ağu':'Ağustos',Eyl:'Eylül',Eki:'Ekim',Kas:'Kasım',Ara:'Aralık'};
+const _T2L_BEDEN={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL','4xl':'4XL',tek:'Tek'};
+window._t2lLimit = 60;
+// Ana miktar: tek sayı + birim (adet / poşet / m)
+function _irsMiktar(i){
+  const t=i._type;
+  if(t==='standart') return {n:_posetToplam(i.sizes||{}), b:'poşet'};
+  if(t==='fermuar'){ let n=+i.totalAdet||0; if(!n && i.beden) Object.keys(i.beden).forEach(k=>{ n+=+((i.beden[k]||{}).adet)||0; }); return {n:n, b:'adet'}; }
+  if(t==='kordon') return korMetreMi(i) ? {n:+i.metre||0, b:'m'} : {n:+i.totalAdet||0, b:'adet'};
+  if(t==='toptan') return {n:+i.total||0, b:'adet'};
+  if(t==='dugme') return {n:+i.adet||0, b:'adet'};
+  return {n:+i.metre||0, b:'m'};   // lastik, saten askılık, dantel
+}
+// Detay çipleri: toplamı tekrar etmeden kırılım (ölçü / beden / cm)
+function _irsKirilim(i){
+  const t=i._type, out=[];
+  if(t==='standart'){
+    const sn={s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'}, bn={genis:'Geniş bant',dar:'Dar bant',kilcik:'Kılçık'};
+    const sz=i.sizes||{}; Object.keys(sz).forEach(k=>{ if(+sz[k]>0) out.push([sn[k]||k, +sz[k]]); });
+    const bt=i.bant||{}; Object.keys(bt).forEach(k=>{ if(+bt[k]>0) out.push([bn[k]||k, +bt[k]]); });
+    if(i.serbest) out.unshift(['Serbest', null]);
+  } else if(t==='fermuar' && i.beden){
+    if(i.hideBeden){ (groupFermuarBedenByCm(i.beden)||[]).forEach(g=>out.push([g.cm+' cm', +g.adet])); }
+    else {
+      const k=sortBedenKeys(i.beden).filter(x=>+((i.beden[x]||{}).adet)>0);
+      k.forEach(x=>{ const bv=i.beden[x]||{}; out.push([(_T2L_BEDEN[x]||x)+(k.length<=2 && bv.cm?' · '+bv.cm+' cm':''), +bv.adet]); });
+    }
+  } else if(t==='kordon' && !korMetreMi(i)){
+    (i.olcular||[]).forEach(o=>out.push([(o.beden?o.beden+' · ':'')+o.cm+' cm', +o.adet]));
+  } else if(t==='toptan' && i.beden){
+    sortBedenKeys(i.beden).forEach(x=>{ if(+i.beden[x]>0) out.push([_T2L_BEDEN[x]||x, +i.beden[x]]); });
+  } else if(t==='lastik' && i.cm){ out.push([i.cm+' cm genişlik', null]); }
+  return out;
+}
+function _t2lGrup(v){ const g=_t2TarihGrubu(v); const m=String(g).match(/^(\S+)\s+(\d{4})$/); return m && _T2L_AY[m[1]] ? _T2L_AY[m[1]]+' '+m[2] : g; }
+function _t2lMiktarYaz(t){ const p=[]; if(t.adet||(!t.m&&!t.poset)) p.push('<b>'+t.adet.toLocaleString('tr')+'</b> adet'); if(t.poset) p.push('<b>'+t.poset.toLocaleString('tr')+'</b> poşet'); if(t.m) p.push('<b>'+(Math.round(t.m*10)/10).toLocaleString('tr')+'</b> m'); return p.join(' · '); }
+function _t2lTopla(list){ const t={adet:0,poset:0,m:0}; list.forEach(i=>{ const q=_irsMiktar(i); if(q.b==='m') t.m+=q.n; else if(q.b==='poşet') t.poset+=q.n; else t.adet+=q.n; }); return t; }
+
 function renderFilteredList(list){
-  const tbody=document.getElementById('irsaliyeTable');
+  const host=document.getElementById('t2lListe');
   const empty=document.getElementById('listEmpty');
-  const mobileEl=document.getElementById('irsaliyeMobile');
-  const resultInfo=document.getElementById('resultInfo');
-  
-  resultInfo.innerHTML=`<i class="fas fa-filter"></i> <strong>${list.length}</strong> kayıt bulundu`;
-  // Listede termini olan kayıt yoksa Termin sütunu gizlenir (yer Detay'a kalır)
-  try{ const tb=tbody.closest('table'); if(tb) tb.classList.toggle('t2-terminsiz', !list.some(function(i){ return i.termin; })); }catch(_){}
-  
-  if(!list.length){
-    tbody.innerHTML='';empty.style.display='block';
-    mobileEl.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><p>Aramanıza uygun kayıt bulunamadı.</p></div>';
-    return;
-  }
-  empty.style.display='none';
+  const kap=document.getElementById('t2lKap');
+  const ri=document.getElementById('resultInfo'); if(ri) ri.innerHTML='';
+  if(!host) return;
+  if(!list.length){ host.innerHTML=''; if(empty) empty.style.display='block'; if(kap) kap.classList.add('bos'); return; }
+  if(empty) empty.style.display='none'; if(kap) kap.classList.remove('bos');
 
-  // Tarihe göre gruplar (yalnız tarih sıralamasında): Bugün · Dün · Bu hafta · Bu ay · Daha eski
   const _srt=document.getElementById('filterSort')?.value||'newest';
-  const _grupla=(_srt==='newest'||_srt==='oldest');
-  const _grupAdi=i=>_t2TarihGrubu(i.tarih);
-  const _grupSay={}, _grupAdet={}; if(_grupla) list.forEach(i=>{ const g=_grupAdi(i); _grupSay[g]=(_grupSay[g]||0)+1;
-    let a=0; try{ a=(i._type==='lastik'||i._type==='satenaskilik'||i._type==='dantel')?0:(_repItemQty(i)||_posetSayilan(i.sizes)||0); }catch(_){}
-    _grupAdet[g]=(_grupAdet[g]||0)+a; });
-  const _grupAlt=g=>_grupAdet[g]?`<small>${_grupAdet[g].toLocaleString('tr')} adet</small>`:'';
-  let _sonG=null;
-  const _baslik=(i,masa)=>{ if(!_grupla) return ''; const g=_grupAdi(i); if(g===_sonG) return ''; _sonG=g;
-    return masa ? `<tr class="t2-grup-tr"><td colspan="10"><span>${g}</span><em>${_grupSay[g]}</em>${_grupAlt(g)}</td></tr>`
-                : `<div class="t2-grup-bas"><span>${g}</span><em>${_grupSay[g]}</em>${_grupAlt(g)}</div>`; };
-  // Tarihin altında göreli zaman: "dün", "12 gün önce"
-  const _goreli=i=>{ const k=_t2GunFark(i.tarih); if(k===null||k>0) return ''; if(k===0) return 'bugün'; if(k===-1) return 'dün'; if(k>=-45) return (-k)+' gün önce'; return ''; };
-  const _bas=ad=>{ const t=String(ad||'').trim(); return t?esc(t.charAt(0).toLocaleUpperCase('tr')):'?'; };
-  const _durum=i=>i.durum==='teslim'
-    ? `<span class="chip chip-success clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Bekliyor yap"><i class="fas fa-check"></i> Teslim</span>`
-    : `<span class="chip chip-warning clickable t2-durum" onclick="event.stopPropagation();toggleDurumUni(${i.id},'${i._type}')" title="Teslim edildi yap"><i class="fas fa-hourglass-half"></i> Bekliyor</span>`;
-  const _termin=i=>{ if(!i.termin) return ''; const te=_t2Termin(i.termin, i.durum==='teslim');
-    return `<span class="t2-termin ${te.cls}" title="Termin: ${_t2Tarih(i.termin,true)}"><i class="fas fa-flag-checkered"></i> ${_t2Tarih(i.termin)}${te.t?'<small><span class="t2-ayr"> · </span>'+te.t+'</small>':''}</span>`; };
+  const grupla=(_srt==='newest'||_srt==='oldest');
+  // Grup toplamları tüm listeden (ekranda yalnız ilk N satır olsa da başlık doğru)
+  const gBilgi={};
+  if(grupla) list.forEach(i=>{ const g=_t2lGrup(i.tarih); (gBilgi[g]||(gBilgi[g]=[])).push(i); });
+  const goster=list.slice(0, window._t2lLimit);
+  const bugun=new Date().toISOString().slice(0,10);
+  const goreli=i=>{ const k=_t2GunFark(i.tarih); if(k===null||k>0) return ''; if(k===0) return 'bugün'; if(k===-1) return 'dün'; if(k>=-60) return (-k)+' gün önce'; return ''; };
+  const sayi=n=>(+n||0).toLocaleString('tr');
 
-  // Desktop table
-  _sonG=null;
-  tbody.innerHTML=list.map(i=>_baslik(i,true)+`
-    <tr data-id="${i.id}" data-type="${i._type}" class="t2-irs-tr${i.durum==='teslim'?'':' bek'}" oncontextmenu="showContextMenu(event, ${i.id}, '${i._type}'); return false;" onclick="_irsSatirTik(event,${i.id},'${i._type}')">
-      <td><input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()"></td>
-      <td>${getTypeBadge(i._type)}</td>
-      <td class="t2-no-td">${i.no}</td>
-      <td class="t2-tarih-td" style="white-space:nowrap;" title="${i.tarih||''}">${_t2Tarih(i.tarih)}${_goreli(i)?'<small>'+_goreli(i)+'</small>':''}</td>
-      <td class="t2-model-td">${i.model||i.urun||'-'}${_irsFotoHtml(i)}</td>
-      <td class="t2-atolye-td">${(i.atolye||i.firma)?'<span class="t2-av">'+_bas(i.atolye||i.firma)+'</span>':''}${i.atolye||i.firma||'-'}</td>
-      <td class="t2-detay-td" title="${String(getItemDetail(i)).replace(/"/g,'&quot;')}">${_irsDetayHtml(i)}</td>
-      <td>${_durum(i)}</td>
-      <td class="t2-termin-td">${_termin(i)||'<span class="t2-sonuk">—</span>'}</td>
-      <td>
-        <div class="table-actions">
-          <button class="btn btn-xs tbl-act-view" onclick="showDetailUni(${i.id},'${i._type}')" title="Detay">
-            <i class="fas fa-eye"></i>
-          </button>
-          <div class="table-actions-more">
-            <button class="btn btn-xs tbl-act-pdf"  onclick="generatePDF(${i.id},'${i._type}')"          title="PDF İndir"><i class="fas fa-file-pdf"></i></button>
-            <button class="btn btn-xs tbl-act-wa"   onclick="shareIrsaliyeWhatsApp(${i.id},'${i._type}')" title="WhatsApp"><svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
-            <button class="btn btn-xs tbl-act-copy" onclick="copyWaybill(${i.id},'${i._type}')"           title="Kopyala"><i class="fas fa-copy"></i></button>
-            <button class="btn btn-xs tbl-act-tmpl" onclick="saveAsTemplate(${i.id},'${i._type}')"        title="Şablon"><i class="fas fa-bookmark"></i></button>
-            <button class="btn btn-xs tbl-act-del"  onclick="deleteItemUni(${i.id},'${i._type}')"         title="Sil"><i class="fas fa-trash"></i></button>
-          </div>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  const satir=i=>{
+    const id=i.id, ty=i._type, q=_irsMiktar(i), teslim=i.durum==='teslim';
+    const te=(i.termin && !teslim) ? _t2Termin(i.termin, false) : null;
+    const gec=!!(te && te.k!==null && te.k<0);
+    const kir=_irsKirilim(i), fazla=Math.max(0, kir.length-4);
+    const cip=kir.slice(0,4).map(c=>'<span>'+esc(c[0])+(c[1]!=null?'<b>'+sayi(c[1])+'</b>':'')+'</span>').join('')+(fazla?'<span class="f">+'+fazla+'</span>':'');
+    const at=i.atolye||i.firma||'';
+    const tarih=_t2Tarih(i.tarih);
+    const alt = te ? '<span class="t2l-te '+te.cls+'"><i class="fas fa-flag"></i> '+_t2Tarih(i.termin)+'</span>' : '<span>'+goreli(i)+'</span>';
+    const du = teslim
+      ? '<button type="button" class="t2l-ok" onclick="toggleDurumUni('+id+',\''+ty+'\')" title="Teslim edildi · bekliyor yapmak için tıkla" aria-label="Teslim edildi"><i class="fas fa-check"></i></button>'
+      : (gec ? '<button type="button" class="t2l-pill b" onclick="toggleDurumUni('+id+',\''+ty+'\')" title="Teslim edildi yap"><i class="fas fa-flag"></i> <span class="t2l-on">Termin </span>'+te.t+'</button>'
+             : '<button type="button" class="t2l-pill w" onclick="toggleDurumUni('+id+',\''+ty+'\')" title="Teslim edildi yap"><i class="fas fa-hourglass-half"></i> Bekliyor</button>');
+    return '<div class="t2l-r'+(teslim?'':' bek')+(gec?' gec':'')+'" data-id="'+id+'" data-type="'+ty+'" style="--tr:'+(_T2L_RENK[ty]||'var(--primary)')+'"'+
+        ' onclick="_t2lTik(event,'+id+',\''+ty+'\')" oncontextmenu="showContextMenu(event,'+id+',\''+ty+'\');return false;">'+
+      '<div class="card-inner">'+
+        '<label class="t2l-ck" onclick="event.stopPropagation()"><input type="checkbox" class="bulk-check" data-id="'+id+'" data-type="'+ty+'" onchange="bulkUpdate()" aria-label="Seç"></label>'+
+        '<div class="t2l-m"><b><span class="t2l-mad">'+esc(i.model||i.urun||'—')+'</span>'+_irsFotoHtml(i)+'</b>'+
+          '<small><span class="t2l-no">'+esc(i.no||'')+'</span><span class="t2l-tip"><i>·</i>'+esc(getTypeLabel(ty))+'</span>'+(at?'<i>·</i><span class="t2l-at">'+esc(at)+'</span>':'')+'<span class="t2l-mt"><i>·</i>'+tarih+'</span>'+(teslim?'':'<span class="t2l-mdu '+(gec?'b':'w')+'"><i>·</i>'+(gec?te.t:'Bekliyor')+'</span>')+'</small></div>'+
+        '<div class="t2l-dt">'+cip+'</div>'+
+        '<div class="t2l-ad"><b>'+(q.b==='m'?(Math.round(q.n*10)/10).toLocaleString('tr'):sayi(q.n))+'</b><small>'+q.b+'</small></div>'+
+        '<div class="t2l-tr" title="'+esc(i.tarih||'')+'">'+tarih+'<small>'+alt+'</small></div>'+
+        '<div class="t2l-du">'+du+
+          '<div class="t2l-act" onclick="event.stopPropagation()">'+
+            '<button type="button" onclick="generatePDF('+id+',\''+ty+'\')" title="PDF indir" aria-label="PDF indir"><i class="fas fa-file-pdf"></i></button>'+
+            '<button type="button" onclick="shareIrsaliyeWhatsApp('+id+',\''+ty+'\')" title="WhatsApp" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>'+
+            '<button type="button" onclick="showContextMenu(event,'+id+',\''+ty+'\')" title="Diğer" aria-label="Diğer işlemler"><i class="fas fa-ellipsis"></i></button>'+
+          '</div>'+
+        '</div>'+
+      '</div></div>';
+  };
 
-  // Mobil kartlar: kartın tamamına dokununca detay açılır
-  _sonG=null;
-  mobileEl.innerHTML=list.map(i=>_baslik(i,false)+`
-    <div class="uni-mobile-card t2-irs type-${i._type}${i.durum==='teslim'?' teslim':''}" data-id="${i.id}" data-type="${i._type}"
-         onclick="if(!event.target.closest('.bulk-check,.chip,.action-btn-menu,.card-dropdown-menu'))showDetailUni(${i.id},'${i._type}')">
-      <div class="card-inner">
-        <div class="t2i-ust">
-          <input type="checkbox" class="bulk-check" data-id="${i.id}" data-type="${i._type}" onchange="bulkUpdate()" onclick="event.stopPropagation()" aria-label="Seç">
-          ${getTypeBadge(i._type)}
-          <span class="t2i-no">${i.no}</span>
-          ${_durum(i)}
-        </div>
-        <div class="t2i-model">${i.model||i.urun||'-'}${_irsFotoHtml(i)}</div>
-        <div class="t2i-atolye"><i class="fas fa-industry"></i> ${i.atolye||i.firma||'-'}</div>
-        <div class="t2i-detay">${_irsDetayHtml(i)}</div>
-        <div class="t2i-alt">
-          <span class="t2i-tarih"><i class="far fa-calendar"></i> ${_t2Tarih(i.tarih)}</span>
-          ${_termin(i)}
-          <button type="button" class="action-btn-menu" onclick="event.stopPropagation();toggleCardMenu(this, ${i.id}, '${i._type}')" aria-label="İşlemler"><i class="fas fa-ellipsis-vertical"></i></button>
-        </div>
-      </div>
-      <div class="card-dropdown-menu">
-        <div class="dropdown-item" onclick="event.stopPropagation();generatePDF(${i.id},'${i._type}');closeAllMenus()">
-          <i class="fas fa-file-pdf"></i> PDF İndir
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation();shareIrsaliyeWhatsApp(${i.id},'${i._type}');closeAllMenus()" style="color:#25D366;">
-          <i class="fa-brands fa-whatsapp"></i> WhatsApp'tan Gönder
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation();copyWaybill(${i.id},'${i._type}');closeAllMenus()">
-          <i class="fas fa-copy"></i> Kopyala
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation();saveAsTemplate(${i.id},'${i._type}');closeAllMenus()">
-          <i class="fas fa-bookmark"></i> Şablon Kaydet
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation();openShareFromCard(${i.id},'${i._type}');closeAllMenus()">
-          <i class="fas fa-share-alt"></i> Paylaş
-        </div>
-        <div class="dropdown-item danger" onclick="event.stopPropagation();deleteItemUni(${i.id},'${i._type}');closeAllMenus()">
-          <i class="fas fa-trash"></i> Sil
-        </div>
-      </div>
-    </div>
-  `).join('');
+  let html='';
+  if(grupla){
+    let sonG=null, acik=false;
+    goster.forEach(i=>{
+      const g=_t2lGrup(i.tarih);
+      if(g!==sonG){
+        if(acik) html+='</div></section>';
+        const gl=gBilgi[g]||[];
+        html+='<section class="t2l-g"><div class="t2l-grup"><div class="l"><h3>'+esc(g)+'</h3><span>'+gl.length.toLocaleString('tr')+' irsaliye</span></div><span class="t">'+_t2lMiktarYaz(_t2lTopla(gl))+'</span></div><div class="t2l-kutu">';
+        sonG=g; acik=true;
+      }
+      html+=satir(i);
+    });
+    if(acik) html+='</div></section>';
+  } else {
+    html='<section class="t2l-g"><div class="t2l-kutu">'+goster.map(satir).join('')+'</div></section>';
+  }
+  const kalan=list.length-goster.length;
+  if(kalan>0) html+='<button type="button" class="t2l-daha" onclick="t2lDahaFazla()"><i class="fas fa-chevron-down"></i> '+Math.min(60,kalan).toLocaleString('tr')+' kayıt daha göster <em>(kalan '+kalan.toLocaleString('tr')+')</em></button>';
+  host.innerHTML=html;
+}
+function t2lDahaFazla(){
+  window._t2lLimit += 60;
+  renderFilteredList(window._lastFilteredList||[]);
+  try{ _bulkRestoreSelection(); }catch(_){}
+}
+// Telefonda uzun bas → seçim başlar (kutucuklar seçim varken görünür)
+(function(){
+  var zam=null, x0=0, y0=0, satir=null;
+  function iptal(){ clearTimeout(zam); zam=null; }
+  document.addEventListener('touchstart', function(e){
+    var r=e.target.closest && e.target.closest('#page-list .t2l-r'); if(!r || e.target.closest('button,input,label,a')) return;
+    satir=r; x0=e.touches[0].clientX; y0=e.touches[0].clientY; iptal();
+    zam=setTimeout(function(){
+      zam=null; var cb=satir && satir.querySelector('.bulk-check'); if(!cb) return;
+      cb.checked=!cb.checked; bulkUpdate();
+      try{ navigator.vibrate && navigator.vibrate(18); }catch(_){}
+      satir.dataset.uzun='1';   // ardından gelen tıklama detayı açmasın
+    }, 480);
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){ if(!zam) return; var t=e.touches[0]; if(Math.abs(t.clientX-x0)>10 || Math.abs(t.clientY-y0)>10) iptal(); }, {passive:true});
+  document.addEventListener('touchend', iptal, {passive:true});
+  document.addEventListener('click', function(e){
+    var r=e.target.closest && e.target.closest('#page-list .t2l-r'); if(r && r.dataset.uzun){ delete r.dataset.uzun; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+})();
+// Satıra tıklama: seçim modundaysa seçer, değilse detayı açar
+function _t2lTik(e,id,type){
+  if(e && e.target && e.target.closest && e.target.closest('input,button,a,label')) return;
+  if(window._bulkSelected && window._bulkSelected.size && window.innerWidth<=768){
+    const cb=e.currentTarget && e.currentTarget.querySelector('.bulk-check'); if(cb){ cb.checked=!cb.checked; bulkUpdate(); } return;
+  }
+  showDetailUni(id,type);
 }
 
 function toggleDurumUni(id,type){
@@ -15006,6 +15040,7 @@ function _bulkSyncUI(){
   const count=window._bulkSelected.size;
   const cEl=document.getElementById('bulkCount'); if(cEl) cEl.textContent=count;
   const bar=document.getElementById('bulkBar'); if(bar){ if(count>0) bar.classList.add('show'); else bar.classList.remove('show'); }
+  const pl=document.getElementById('page-list'); if(pl) pl.classList.toggle('t2l-secim', count>0);
   const allChecks=document.querySelectorAll('.bulk-check[data-id]');
   const checkedRendered=document.querySelectorAll('.bulk-check[data-id]:checked');
   const hdr=document.getElementById('bulkCheckAll'); if(hdr) hdr.checked=allChecks.length>0&&allChecks.length===checkedRendered.length;
@@ -15245,12 +15280,15 @@ function hideSelDash(){
 
 function bulkToggleAll(checked){
   document.querySelectorAll('.bulk-check[data-id]').forEach(cb=>{cb.checked=checked;});
+  // "Daha fazla göster" ile henüz çizilmemiş satırlar da seçime girsin/çıksın
+  try{ if(document.getElementById('page-list')?.classList.contains('active')) (window._lastFilteredList||[]).forEach(i=>{ const k=i._type+':'+i.id; if(checked) window._bulkSelected.add(k); else window._bulkSelected.delete(k); }); }catch(_){}
   bulkUpdate();
 }
 
 function bulkSelectAll(){
   document.querySelectorAll('.bulk-check[data-id]').forEach(cb=>{cb.checked=true;});
-  document.getElementById('bulkCheckAll').checked=true;
+  try{ if(document.getElementById('page-list')?.classList.contains('active')) (window._lastFilteredList||[]).forEach(i=>window._bulkSelected.add(i._type+':'+i.id)); }catch(_){}
+  const h=document.getElementById('bulkCheckAll'); if(h) h.checked=true;
   bulkUpdate();
 }
 
@@ -23792,7 +23830,7 @@ window.hideLoading = function(){
 // Yön kilidi + passive:false ile dikey scroll ile çakışmaz; buton/menü/checkbox
 // üstünde başlayan dokunuşlar swipe başlatmaz (tıklamalar bozulmaz).
 (function(){
-  var SEL = '.uni-mobile-card, .mobile-card';
+  var SEL = '.uni-mobile-card, .mobile-card, .t2l-r';
   var NO_SWIPE = 'button, a, input, select, textarea, label, .action-btn-menu, .card-dropdown-menu, .bulk-check, .mc-actions, .mc-actions-new, .chip';
   var TH = 80, MAX = 130;
   var sx=0, sy=0, cx=0, active=false, locked=false, horiz=false;
