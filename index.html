@@ -24586,8 +24586,10 @@ AK.saveRecs = function(r){ AK._set(AK.LS_REC, r); };
 // DOKUMA ETİKET KÜTÜPHANESİ
 // Arşivde gelen her dokuma etiketi koduyla saklanır. Bir sonraki
 // arşivde dokuma gelmezse föy boş çıkmasın diye buradan
-// (ör. AULBW13729) seçilip renk kartına eklenebilir. İki PC arasında
-// senkron olsun diye array-of-one formatında tutulur.
+// (ör. AULBW13729) seçilip renk kartına eklenebilir.
+// HER ETİKET AYRI KAYIT (id = kod). Eskiden hepsi tek kayıttaydı; birkaç
+// görselden sonra bulutun 1 MB kayıt sınırını aşıyor, yazma reddedilince
+// canlı senkron yereldeki kütüphaneyi de siliyordu.
 // ═══════════════════════════════════════════════════════════════════
 AK.LS_LIB='ak_labels_v2';
 AK.LIB_MAX=80;              // kütüphanede tutulacak en fazla etiket
@@ -24600,13 +24602,33 @@ AK.LIB_IMG_MAX=180000;      // ~135 KB üstü görsel saklanmaz (bulut kotası)
 AK.LIB_TYPES = ['dokuma'];
 AK.lib = function(){
   var raw=AK._get(AK.LS_LIB);
-  var o = (Array.isArray(raw)&&raw[0]&&raw[0].items) ? raw[0].items
-        : (raw && !Array.isArray(raw)) ? raw : {};
+  var o={};
+  if(Array.isArray(raw)){
+    raw.forEach(function(it){
+      if(!it) return;
+      if(it.items && typeof it.items==='object'){          // eski tek kayıt biçimi
+        Object.keys(it.items).forEach(function(k){ if(!o[k]) o[k]=it.items[k]; });
+      } else if(it.code && it.img){                       // yeni: etiket başına kayıt
+        o[it.code]={ type:it.type, renk:it.renk||'', img:it.img, model:it.model||'', ts:it.ts||0 };
+      }
+    });
+  } else if(raw && typeof raw==='object'){ o=raw; }
   // Eski sürümden kalan dokuma dışı kayıtlar gösterilmez
   var t={}; Object.keys(o).forEach(function(k){ if(o[k] && AK.LIB_TYPES.indexOf(o[k].type)>=0) t[k]=o[k]; });
   return t;
 };
-AK.saveLib = function(L){ AK._set(AK.LS_LIB, [{id:'ak_labels', items:L||{}}]); };
+AK.saveLib = function(L){
+  L=L||{};
+  var eski={}; try{ (AK._get(AK.LS_LIB)||[]).forEach(function(it){ if(it&&it.code) eski[it.code]=it; }); }catch(_){}
+  var arr=Object.keys(L).map(function(k){
+    var e=L[k], o=eski[k];
+    // Değişmeyen etiketin damgası korunur, yalnız değişen buluta yeniden gider
+    var ayni = o && o.img===e.img && (o.renk||'')===(e.renk||'') && (o.model||'')===(e.model||'') && o.type===e.type;
+    return { id:k, code:k, type:e.type, renk:e.renk||'', img:e.img, model:e.model||'', ts:e.ts||0,
+             _updatedAt: ayni ? (o._updatedAt||e.ts||Date.now()) : Date.now() };
+  });
+  AK._set(AK.LS_LIB, arr);
+};
 // Görseli küçült — kütüphane bulut kotasını doldurmasın
 AK._imgKucult = function(url, maxW){
   return new Promise(function(res){
@@ -24617,7 +24639,9 @@ AK._imgKucult = function(url, maxW){
         if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
         var c=document.createElement('canvas'); c.width=w; c.height=h;
         var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0,w,h);
-        res(c.toDataURL('image/png'));
+        var png=c.toDataURL('image/png');
+        // PNG sınırı aşarsa JPEG'e düş — büyük etiket sessizce kaybolmasın
+        res(png.length<=AK.LIB_IMG_MAX ? png : c.toDataURL('image/jpeg', 0.9));
       }catch(e){ res(url); }
     };
     im.onerror=function(){ res(null); };
@@ -24656,6 +24680,16 @@ AK._tarandiEkle = function(k){
 // Kod tablosu değişti → daha önce "bilinmiyor" diye atlanan görseller artık
 // tanınabilir; taranmış işaretini kaldır ki bir sonraki geçişte alınsınlar.
 AK._tarandiSifirla = function(){ try{ localStorage.removeItem(AK.LS_LIBSCAN); }catch(e){} };
+// Kütüphane etiket başına kayda geçti: bu cihazda bir kez bütün arşivler
+// yeniden taransın ki eski biçimde kaybolan etiketler geri gelsin.
+(function(){
+  try{
+    if(localStorage.getItem('ak_lib_v3')) return;
+    localStorage.setItem('ak_lib_v3','1');
+    AK._tarandiSifirla();
+    var L=AK.lib(); if(Object.keys(L).length) AK.saveLib(L);   // eski tek kaydı böl
+  }catch(e){}
+})();
 // Sessiz, arka planda çalışan tarama — kullanıcı hiçbir şeye basmasın
 AK.libArkaPlanTara = function(){
   try{ if(AK._libTarayor) return; AK.libTara(true,false); }catch(e){}
