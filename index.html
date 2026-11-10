@@ -24752,6 +24752,7 @@ AK.loadLibs = function(){
 AK.categorize = function(fn){
   var map=AK.map(); var low=fn.toLowerCase().split('/').pop();
   if(low.indexOf('lotsticker')>=0) return null; // Lot sticker kontrol edilmiyor → yok say
+  if(low.indexOf('cartonlabel')>=0) return null; // Koli etiketi föye girmez → yok say
   // Fall in Love serisi: yıkama + iç barkod TEK PDF'te birleşik
   // (AccessoryWashingInstructionAndStampSticker) → hem barkod hem yıkama üret
   if(low.slice(-4)==='.pdf' && low.indexOf('washinginstruction')>=0 && low.indexOf('stampsticker')>=0) return {type:'icbarkod_yikama'};
@@ -24841,6 +24842,19 @@ AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,sc
   if(!any) return AK._trim(o.c,o.ctx);
   var pad=Math.round(9*scale);
   minx=Math.max(0,minx-pad); miny=Math.max(0,miny-pad*1.4); maxx=Math.min(o.c.width,maxx+pad*4); maxy=Math.min(o.c.height,maxy+pad);
+  // Yazı sınırının dışında kalan çizimleri de al: en üst kutudaki barkod ve
+  // kutu kenarları yazı değil, sadece yazıya göre kırpınca kesiliyordu.
+  // Yazının üstüne/altına doğru mürekkep süren satırlar alınır; 10 pt boş
+  // aralık görülünce durulur (alttaki boş arka yüz kutusu alınmaz).
+  try{
+    var gx0=Math.floor(minx), gw=Math.max(1,Math.floor(maxx)-gx0);
+    var px=o.ctx.getImageData(gx0,0,gw,o.c.height).data;
+    var dolu=function(yy){ var b=yy*gw*4; for(var xx=0;xx<gw;xx++){ var k=b+xx*4; if(px[k]<200||px[k+1]<200||px[k+2]<200) return true; } return false; };
+    var bosSinir=Math.round(10*scale);
+    var uz=function(bas,yon){ var son=bas, bos=0; for(var yy=bas; yy>=0 && yy<o.c.height; yy+=yon){ if(dolu(yy)){ son=yy; bos=0; } else if(++bos>=bosSinir) break; } return son; };
+    miny=Math.max(0, uz(Math.floor(miny),-1)-4);
+    maxy=Math.min(o.c.height, uz(Math.floor(maxy),1)+4);
+  }catch(_){}
   var w=maxx-minx,h=maxy-miny; if(w<20||h<20) return AK._trim(o.c,o.ctx);
   var cc=document.createElement('canvas');cc.width=w;cc.height=h;var cx=cc.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(o.c,minx,miny,w,h,0,0,w,h);
   return AK._trim(cc,cx);
@@ -24848,7 +24862,7 @@ AK._textCrop = function(pdf,pageNum,scale){ return AK._pageCanvas(pdf,pageNum,sc
 // Renk kodu ön eki → Türkçe renk adı (DeFacto: NV251=Lacivert, BK81=Siyah...).
 // Barkod metnindeki "Solid" gibi desen kelimeleri güvenilmez; kod ön eki nettir.
 AK._CODE_RENK = { BK:'Siyah', BL:'Mavi', NV:'Lacivert', WH:'Beyaz', EC:'Ekru', EK:'Ekru',
-  CR:'Krem', GR:'Gri', GY:'Gri', AN:'Antrasit', RD:'Kırmızı', RE:'Kırmızı', BG:'Bej',
+  CR:'Krem', ER:'Ekru', GR:'Gri', GY:'Gri', AN:'Antrasit', RD:'Kırmızı', RE:'Kırmızı', BG:'Bej',
   GN:'Yeşil', KH:'Haki', YL:'Sarı', MU:'Hardal', OR:'Turuncu', PK:'Pembe', PN:'Pembe', PW:'Pudra',
   PR:'Mor', PU:'Mor', BR:'Kahverengi', BN:'Kahverengi', BE:'Mavi', TN:'Taba', LI:'Lila',
   TR:'Turkuaz', MN:'Mint', PT:'Petrol', SL:'Somon', IN:'İndigo', ST:'Taş' };
@@ -24870,12 +24884,25 @@ AK._pageInfo = function(t){
   // Renk kodunda rakam sayısı 1–4 olabilir (ör. BR2). Eskiden en az 2 rakam
   // isteniyordu; BR2 gibi kodlar okunamayıp renk "kodsuz" kalıyordu.
   var cm=t.match(/([A-Z]\d{3,5}[A-Z]{1,3})\s*\/\s*([A-Z]{2}\d{1,4})/);        // MODEL/COLORCODE
+  // Fall in Love kısa birleşik etiket: eğik çizgi yok, model ile renk kodu
+  // arasına başka kelime girebiliyor ("I5770AX LOUNGEWEAR GR93 Grey SIZE : M").
+  // Yanlış eşleşme olmasın diye renk kodunun ardından renk adı gelmesi şart.
+  var cmAd=null;
+  if(!cm){
+    var c2=t.match(/\b([A-Z]{2}\d{1,4})\s+([A-Z][a-z]{2,12})\s+SIZE\s*:/);
+    var md=t.match(/\b([A-Z]\d{3,5}[A-Z]{1,3})\b/);
+    if(c2 && md){ cm=[c2[0], md[1], c2[1]]; cmAd=c2[2]; }
+    else {
+      var c3=t.match(/\b([A-Z]\d{3,5}[A-Z]{1,3})\s+([A-Z]{2}\d{1,4})\s+([A-Z][a-z]{2,12})\b/);
+      if(c3){ cm=c3; cmAd=c3[3]; }
+    }
+  }
   var sz=t.match(/SIZE\s*:\s*([0-9]?[A-Za-z]{1,3})/i);  // 3XL/4XL/2XL gibi rakamla başlayanlar da yakalansın
   var nm=t.match(/\b([A-Z][a-z]{2,12})\s+SIZE\s*:/);                          // renk adı (SIZE'dan önce)
   var code=cm?cm[2]:null;
   // Önce barkod METNİNDEKİ gerçek renk adı (Beige→Bej); desen kelimesiyse
   // ("Solid" vb.) kod ön ekinden tahmine düşülür.
-  var renk=AK._renkFromText(nm?nm[1]:null);
+  var renk=AK._renkFromText(nm?nm[1]:null) || AK._renkFromText(cmAd);
   // Barkodda ad BÜYÜK HARF yazılmışsa ("BLUE SIZE : M") üstteki kalıp tutmuyor
   // ve yanlış kod-ön-eki tahminine düşülüyordu. Sadece BİLİNEN renk adlarını
   // kabul et — "TABLE" gibi kelimeler renk sanılmasın.
@@ -25126,15 +25153,19 @@ AK._extractEntries = function(file){
 // Çıkarılan girişleri işle → aksesuar listesi (+ otomatik PO/Model/Renk)
 // Sonuç: { detected:{po,model}, byColor:{CODE:{code,renk,icbarkod:[],fiyat:[]}}, shared:[...] }
 // icbarkod/fiyat renk-özel; dokuma/lot/yıkama/askı ORTAK (tüm renklere).
-AK.processEntries = function(entries){
+AK.processEntries = function(entries, comboVar){
   return AK.loadLibs().then(function(){
     var names=entries.map(function(e){ return e.name; });
     var pos={}; names.forEach(function(n){ var mm=n.split('/').pop().match(/^(\d{6,8})[_\-]/); if(mm) pos[mm[1]]=(pos[mm[1]]||0)+1; });
     var detPo=Object.keys(pos).sort(function(a,b){return pos[b]-pos[a];})[0]||'';
     var det={po:detPo, model:'', renk:''};
     var byColor={}; var shared=[]; var sizeSet={};
+    // Arşivde gelip föye BASILMAYAN dosyalar ve nedeni — sihirbazda gösterilir
+    var atlanan=[];
+    var atla=function(n,neden){ atlanan.push({name:n.split('/').pop(), neden:neden}); };
     // Birleşik (Fall in Love) dosya varsa ayrı StampSticker/yıkama dosyalarını ALMA
-    var hasCombo = entries.some(function(e){ var c=AK.categorize(e.name); return c && c.type==='icbarkod_yikama'; });
+    // (aynı anda yüklenen DİĞER arşivde ya da önceki yüklemede gelmiş olabilir)
+    var hasCombo = !!comboVar || entries.some(function(e){ var c=AK.categorize(e.name); return c && c.type==='icbarkod_yikama'; });
     // Model RENK BAZINDA da saklanır: bir arşivde birden çok modelin etiketi
     // olabiliyor ve tek global det.model (ilk gören kazanır) yüzünden her rengin
     // föyüne yanlış model kodu basılıyordu (barkodda H4237AX iken başlıkta H8415AX).
@@ -25153,7 +25184,13 @@ AK.processEntries = function(entries){
     }
     return entries.reduce(function(chain,e){
       return chain.then(function(){
-        var name=e.name, bytes=e.bytes; var cat=AK.categorize(name); if(!cat) return;
+        var name=e.name, bytes=e.bytes; var cat=AK.categorize(name);
+        if(!cat){
+          var lw=name.toLowerCase();
+          if(lw.indexOf('lotsticker')>=0) atla(name,'Lot etiketi, kontrol edilmiyor');
+          else if(lw.indexOf('cartonlabel')>=0) atla(name,'Koli etiketi, föye girmez');
+          return;
+        }
         if(/\.(png|jpe?g)$/i.test(name)){
           var _u=AK._pngUrl(bytes,name);
           shared.push({name:name,type:cat.type,code:cat.code||null,renk:cat.renk||null,images:[_u]});
@@ -25163,7 +25200,7 @@ AK.processEntries = function(entries){
           if(cat.renk&&!det.renk) det.renk=cat.renk; return; }
         if(cat.type==='unknown'){ shared.push({name:name,type:'unknown',code:cat.code||null,renk:null,images:[],pdfBytes:bytes}); return; }
         // Birleşik dosya varsa ayrı barkod/yıkama dosyasını atla (mükerrer olmasın)
-        if((cat.type==='icbarkod'||cat.type==='yikama') && hasCombo) return;
+        if((cat.type==='icbarkod'||cat.type==='yikama') && hasCombo){ atla(name, (cat.type==='icbarkod'?'Ayrı iç barkod':'Ayrı yıkama')+' geldi; birleşik etikette zaten var, föye basılmadı'); return; }
         if(cat.type==='icbarkod'){ return AK._icbarkodColors(bytes).then(function(list){ list.forEach(function(x){ var col=ensureColor(x.code,x.renk,x.model); col.icbarkod=x.url?[x.url]:[]; if(x.lisans) col.lisans=true; if(x.barkodlar) col.barkodlar=Object.assign(col.barkodlar||{}, x.barkodlar); }); if(list.sizes) list.sizes.forEach(function(sz){ sizeSet[sz]=true; }); }); }
         // Fall in Love birleşik: tüm dolu sayfaları TAM (okunur) render et → tek "birleşik" bölüm
         if(cat.type==='icbarkod_yikama'){
@@ -25187,7 +25224,7 @@ AK.processEntries = function(entries){
         // diğer (dokuma / lisans / süs / kart arkası) → ortak
         return AK.renderSmart(bytes,cat.type).then(function(imgs){ shared.push({name:name,type:cat.type,code:null,renk:null,images:imgs}); });
       });
-    }, Promise.resolve()).then(function(){ return { detected:det, byColor:byColor, shared:shared, sizes:Object.keys(sizeSet) }; });
+    }, Promise.resolve()).then(function(){ return { detected:det, byColor:byColor, shared:shared, sizes:Object.keys(sizeSet), atlanan:atlanan }; });
   });
 };
 
@@ -25489,9 +25526,15 @@ AK.rebuildColors = function(){
 // Arşiv dosyalarını işleyip M (merged) birikimine ekler — onZip ve
 // kayıttan yeniden üretim (regen) aynı çekirdeği kullanır.
 AK._processFilesInto = function(files, M){
-  return files.reduce(function(chain,f){
+  // Önce bütün arşivler açılır: birleşik (Fall in Love) etiket bir zipte, ayrı
+  // iç barkod öbür zipte gelebiliyor. Birleşik varsa ayrı olan hiç alınmaz.
+  var acik=[];
+  return files.reduce(function(ch,f){ return ch.then(function(){ return AK._extractEntries(f).then(function(en){ acik.push(en); }); }); }, Promise.resolve()).then(function(){
+  var comboVar = acik.some(function(en){ return en.some(function(e){ var c=AK.categorize(e.name); return c && c.type==='icbarkod_yikama'; }); })
+              || Object.keys(M.byColor||{}).some(function(k){ return M.byColor[k]._combo; });
+  return acik.reduce(function(chain,entries){
     return chain.then(function(){
-      return AK._extractEntries(f).then(function(entries){ return AK.processEntries(entries); }).then(function(res){
+      return AK.processEntries(entries, comboVar).then(function(res){
         // FARKLI MODEL → birikimi sıfırla. AK._merged yüklemeler arasında
         // bilerek korunur (aynı modelin birden çok arşivi/rengi birleşsin diye)
         // ama model değişince temizlenmiyordu: önceki modelin ortak etiketleri
@@ -25499,10 +25542,12 @@ AK._processFilesInto = function(files, M){
         var nm=(res.detected.model||'').toUpperCase().trim();
         var cm2=(M.detected.model||'').toUpperCase().trim();
         if(nm && cm2 && nm!==cm2){
-          M.byColor={}; M.shared=[]; M.sizes=[]; M.detected={po:'',model:''};
+          M.byColor={}; M.shared=[]; M.sizes=[]; M.atlanan=[]; M.detected={po:'',model:''};
           M._modelChanged=true;
         }
         if(!M.sizes) M.sizes=[];
+        if(!M.atlanan) M.atlanan=[];
+        (res.atlanan||[]).forEach(function(a){ if(!M.atlanan.some(function(b){ return b.name===a.name; })) M.atlanan.push(a); });
         (res.sizes||[]).forEach(function(sz){ if(M.sizes.indexOf(sz)<0) M.sizes.push(sz); });
         Object.keys(res.byColor).forEach(function(k){ var src=res.byColor[k]; var mk=AK._resolveColorKey(M.byColor, src.code, src.model); var dst=M.byColor[mk]||(M.byColor[mk]={code:src.code,renk:src.renk,model:src.model||null,icbarkod:[],fiyat:[],yikama:[],combo:[],adet:null}); if(!dst.yikama) dst.yikama=[]; if(!dst.combo) dst.combo=[]; if(src.icbarkod.length) dst.icbarkod=src.icbarkod; if(src.fiyat.length) dst.fiyat=src.fiyat; if(src.yikama&&src.yikama.length) dst.yikama=src.yikama; if(src.combo&&src.combo.length) dst.combo=src.combo; if(src.adet) dst.adet=src.adet; if(src.renk&&!dst.renk) dst.renk=src.renk; if(src.model&&!dst.model) dst.model=src.model; if(src.lisans) dst.lisans=true; if(src._combo) dst._combo=true; });
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
@@ -25510,7 +25555,13 @@ AK._processFilesInto = function(files, M){
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
       });
     });
-  }, Promise.resolve()).then(function(){ return M; });
+  }, Promise.resolve()).then(function(){
+    // Birleşik etiket SONRADAN geldiyse önceki yüklemeden kalan ayrı iç barkod/yıkama düşer
+    var cv=Object.keys(M.byColor).some(function(k){ return M.byColor[k]._combo; });
+    if(cv) Object.keys(M.byColor).forEach(function(k){ var c=M.byColor[k]; if(c.combo&&c.combo.length){ c.icbarkod=[]; c.yikama=[]; } });
+    return M;
+  });
+  });
 };
 AK.onZip = function(id, fileList){
   var all = (fileList && fileList.length!==undefined) ? Array.prototype.slice.call(fileList) : (fileList?[fileList]:[]);
@@ -26020,6 +26071,8 @@ AK._renderColorPage = function(pdf, c){
       var pr; try{ pr=pdf.getImageProperties(url); }catch(e){ return; }
       var colw2 = big ? cw : LEFTW;
       var w=colw2, h=w*pr.height/pr.width;
+      // Dokuma sınırı geniş bant için: kare/dik etiket 20 mm'de pul gibi kalıyordu
+      if(f.type==='dokuma' && pr.width/pr.height < 2.5) cap = 42;
       if(h>cap){ h=cap; w=h*pr.width/pr.height; if(w>colw2){ w=colw2; h=w*pr.height/pr.width; } }
       // Garanti: hiçbir görsel tek sayfanın kullanılabilir yüksekliğini aşmasın.
       var pageMax = H-2*M-4;
@@ -27036,6 +27089,7 @@ AKS._e3 = function(){
       (adetsiz?'<div class="aks-uyari"><i class="fas fa-circle-info"></i><span>'+(adetsiz===renkler.length?'Adetler gelmedi. Özet tabloyu (Excel) ekleyebilir ya da sonraki adımda elle girebilirsin.':adetsiz+' rengin adedi yok, sonraki adımda girebilirsin.')+'</span></div>':'')+
       (eksik?'<div class="aks-uyari"><i class="fas fa-triangle-exclamation"></i><span>'+eksik+' renkte eksik etiket var, sonraki adımda görürsün.</span></div>':'')+
       '<div class="aks-dosyalar"><i class="fas fa-paperclip"></i> '+(AK._zipNames||[]).map(AKS._e).join(' · ')+'</div>'+
+      AKS._atlananHtml()+
       '<div class="aks-ikincil">'+
         '<label class="btn btn-secondary btn-sm" for="aksDosya"><i class="fas fa-plus"></i> Dosya ekle</label>'+
         '<button type="button" class="btn btn-secondary btn-sm" onclick="AKS.bastan()"><i class="fas fa-rotate-left"></i> Baştan yükle</button>'+
@@ -27089,6 +27143,7 @@ AKS._e4 = function(){
         AKS._durumHtml(tamam)+
       '</div>'+
       (bedenler&&!acik?'<div class="aks-bedenler">'+bedenler+'</div>':'')+
+      '<div class="aks-gelen"><span class="aks-gelen-b">Föye basılacak etiketler</span>'+AKS._etiketKartlari(c)+'</div>'+
       adetGir+
       ((miss.length||!top)?'<ul class="aks-sorun">'+
         (!top?'<li class="aks-sorun-adet"><i class="fas fa-hashtag"></i> Beden adetlerini gir</li>':'')+
@@ -27103,7 +27158,83 @@ AKS._e4 = function(){
   }).join('');
   return AKS._soru('fa-list-check','Renkleri kontrol et',
       renkler.length+' renkten <b>'+hazir+'</b> tanesi hazır'+(hazir<renkler.length?', eksikleri buradan tamamla.':'. Her şey yerinde.'))+
-    '<div class="aks-icerik">'+satir+'</div>';
+    '<div class="aks-icerik">'+satir+AKS._atlananHtml()+'</div>';
+};
+// Bir renge gelen etiketler — GÖRSELİYLE. Yanlış okunan burada görülür ve
+// düzeltilir: föyden çıkar / geri al, tanınmayan dosyaya tip ver, PNG etiketin
+// tipini değiştir. Klasik görünümdeki işlevlerin aynıları kullanılır.
+AKS._tipSecenek = function(){
+  return Object.keys(AK.STAGE_ORDER).map(function(st){
+    return '<optgroup label="'+AK.STAGE_LABEL[st]+'">'+AK.STAGE_ORDER[st].map(function(t){ return '<option value="'+t+'">'+AK.TYPES[t].label+'</option>'; }).join('')+'</optgroup>';
+  }).join('');
+};
+AKS._etiketKartlari = function(c){
+  var order=AK.STAGE_ORDER[AK.state.asama]||[];
+  var ana=[], diger=[];
+  (c.files||[]).forEach(function(f,i){
+    if(!f) return;
+    if(f.type==='unknown' || f.type==='ignored') diger.push([f,i]);
+    else if(order.indexOf(f.type)>=0) ana.push([f,i]);
+  });
+  var kart=function(f,i){
+    var gizli=AK.gizliMi(f);
+    var ad=f.label||AK.TYPES[f.type].label;
+    var ic=f.full?'fa-layer-group':(AK._TYPE_ICON[f.type]||'fa-file');
+    var alt=[f.renk||'', (f.images&&f.images.length>1)?f.images.length+' sayfa':'', f.code||''].filter(Boolean).join(' · ');
+    var not=f.note||f._uiNot||'';
+    var duzelt=(f.code && !f.full && !f._manuel);
+    return '<div class="aks-et'+(gizli?' gizli':'')+(f._manuel?' elle':'')+'">'+
+      '<button type="button" class="aks-et-img" onclick="AKS.buyut('+c.id+','+i+')" title="Büyüt">'+
+        (f.images&&f.images[0]?'<img src="'+f.images[0]+'" alt="">':'<i class="fas fa-file-pdf"></i>')+
+      '</button>'+
+      '<span class="aks-et-ic"><i class="fas '+ic+'"></i></span>'+
+      (gizli
+        ? '<button type="button" class="aks-et-geri" onclick="AKS.etAl('+c.id+','+i+')"><i class="fas fa-rotate-left"></i> Föye geri al</button>'
+        : '<button type="button" class="aks-et-x" onclick="AKS.etCikar('+c.id+','+i+')" title="'+(f._manuel?'Kaldır':'Föyden çıkar')+'" aria-label="Föyden çıkar"><i class="fas fa-xmark"></i></button>')+
+      '<div class="aks-et-b">'+
+        '<b>'+AKS._e(ad)+'</b>'+
+        (alt?'<small>'+AKS._e(alt)+(f._manuel?' · kütüphaneden':'')+'</small>':'')+
+        (gizli?'<span class="aks-et-not soluk">Föye basılmayacak</span>':(not?'<span class="aks-et-not">'+AKS._e(not)+'</span>':''))+
+        (duzelt&&!gizli?'<select class="aks-et-tip" title="Tipi yanlışsa değiştir" onchange="AKS.etTip('+c.id+','+i+',this.value)"><option value="">Tipi değiştir</option>'+AKS._tipSecenek()+'<option value="__ignore">Föye girmesin</option></select>':'')+
+      '</div></div>';
+  };
+  var html = ana.length ? '<div class="aks-etler">'+ana.map(function(x){ return kart(x[0],x[1]); }).join('')+'</div>'
+                        : '<div class="aks-et-yok">Bu aşamaya ait etiket gelmedi.</div>';
+  if(diger.length){
+    html += '<details class="aks-diger"><summary><i class="fas fa-chevron-right"></i> Föye girmeyen diğer dosyalar ('+diger.length+')</summary>'+
+      '<p>Arşivde geldi ama ne olduğu belli değil. Föye girmesi gerekiyorsa tipini seç.</p>'+
+      '<div class="aks-etler kucuk">'+diger.map(function(x){ var f=x[0], i=x[1];
+        return '<div class="aks-et">'+
+          '<button type="button" class="aks-et-img" onclick="AKS.buyut('+c.id+','+i+')" title="Büyüt">'+
+            (f.images&&f.images[0]?'<img src="'+f.images[0]+'" alt="">':'<i class="fas fa-file-pdf"></i>')+'</button>'+
+          '<div class="aks-et-b"><small>'+AKS._e(f.code||(f.name||'').split('/').pop())+'</small>'+
+          '<select class="aks-et-tip" onchange="AKS.etTip('+c.id+','+i+',this.value)"><option value="">Tipini seç</option>'+AKS._tipSecenek()+'</select></div></div>';
+      }).join('')+'</div></details>';
+  }
+  return html;
+};
+AKS._f = function(cid,i){ var c=AK._c(cid); return c&&c.files?c.files[i]:null; };
+AKS.etCikar = function(cid,i){ var f=AKS._f(cid,i); if(!f) return; if(f._manuel) AK.libCikar(cid,f.name); else AK.foydenCikar(cid,f.name); };
+AKS.etAl = function(cid,i){ var f=AKS._f(cid,i); if(f) AK.foyeAl(cid,f.name); };
+AKS.etTip = function(cid,i,v){ var f=AKS._f(cid,i); if(f && v) AK.tag(cid,f.name,v); };
+// Etiketi büyük göster (birleşik etikette bütün sayfalar)
+AKS.buyut = function(cid,i){
+  var f=AKS._f(cid,i); if(!f||!f.images||!f.images.length) return;
+  var kap=document.createElement('div'); kap.className='aks-lb'; kap.setAttribute('role','dialog'); kap.setAttribute('aria-label','Etiket görseli');
+  kap.innerHTML='<div class="aks-lb-ust"><b>'+AKS._e(f.label||(AK.TYPES[f.type]&&AK.TYPES[f.type].label)||'Etiket')+'</b>'+
+    '<button type="button" class="aks-lb-x" aria-label="Kapat"><i class="fas fa-xmark"></i></button></div>'+
+    '<div class="aks-lb-ic">'+f.images.map(function(u){ return '<img src="'+u+'" alt="">'; }).join('')+'</div>';
+  var kapat=function(){ kap.remove(); document.removeEventListener('keydown',tus); };
+  var tus=function(e){ if(e.key==='Escape') kapat(); };
+  kap.addEventListener('click',function(e){ if(e.target===kap || e.target.closest('.aks-lb-x')) kapat(); });
+  document.addEventListener('keydown',tus);
+  document.body.appendChild(kap);
+};
+AKS._atlananHtml = function(){
+  var a=(AK._merged&&AK._merged.atlanan)||[];
+  if(!a.length) return '';
+  return '<div class="aks-atlanan"><div class="aks-atlanan-b"><i class="fas fa-eye-slash"></i> Arşivde gelen ama föye basılmayanlar</div>'+
+    a.map(function(x){ return '<div class="aks-atlanan-s"><b>'+AKS._e(x.name)+'</b><span>'+AKS._e(x.neden)+'</span></div>'; }).join('')+'</div>';
 };
 AKS._durumHtml = function(tamam){ return tamam?'<span class="aks-durum ok"><i class="fas fa-circle-check"></i> Hazır</span>':'<span class="aks-durum eks"><i class="fas fa-triangle-exclamation"></i> Eksik</span>'; };
 // Adet yazılırken ekran yeniden çizilmez (yoksa kutudan çıkınca "Sonraki"
