@@ -778,6 +778,10 @@
 
     // ── setData: localStorage + Firestore
     window.setData = function(key, val){
+      // Ayni veri tekrar yaziliyorsa (arka plan taramalari vb.) hicbir sey
+      // yapma: bulutta degisecek bir sey yok, rozet de bosuna "kaydediliyor"a
+      // donup gidip gelmesin.
+      try { if(localStorage.getItem(key) === JSON.stringify(val)) return; } catch(_){}
       // prev'i DOGRUDAN localStorage'dan oku
       let prev = [];
       try {
@@ -1125,8 +1129,29 @@
     // Yesil = bagli, kirmizi = SDK yok (kayitlar yerel kalir), turuncu = yazma/dinleme hatasi.
     // Tiklaninca: bagliysa buluttan yeniden eskitler, degilse sayfayi yeniler.
     var _lastBadgeState = '';
+    // Kisa yazmalarda rozet gidip gelmesin: "kaydediliyor" ancak yazma 600 ms'yi
+    // gecerse gorunur; gorundukten sonra en az 1,5 sn kalir. Pes pese yazmalar
+    // tek bir "kaydediliyor" olarak gorunur.
+    var _rozetSyncT = null, _rozetOkT = null, _rozetSyncAt = 0;
     function updateCloudBadge(state, detail){
       if(window._isViewerUrl) return;
+      if(state === 'sync'){
+        clearTimeout(_rozetOkT); _rozetOkT = null;
+        if(_lastBadgeState === 'sync' || _rozetSyncT) return;
+        _rozetSyncT = setTimeout(function(){ _rozetSyncT = null; _rozetSyncAt = Date.now(); _rozetUygula('sync'); }, 600);
+        return;
+      }
+      clearTimeout(_rozetSyncT); _rozetSyncT = null;
+      if(state === 'ok' && _lastBadgeState === 'sync'){
+        clearTimeout(_rozetOkT);
+        var kalan = Math.max(0, 1500 - (Date.now() - _rozetSyncAt));
+        _rozetOkT = setTimeout(function(){ _rozetOkT = null; _rozetUygula('ok'); }, kalan);
+        return;
+      }
+      clearTimeout(_rozetOkT); _rozetOkT = null;
+      _rozetUygula(state, detail);
+    }
+    function _rozetUygula(state, detail){
       if(state === _lastBadgeState && state === 'ok') return; // gereksiz DOM yazma
       _lastBadgeState = state;
       window._lastBadgeStateRef = state; // setData finally'sinin hata durumunu gormesi icin
@@ -24656,6 +24681,8 @@ AK.libKaydet = function(code, type, renk, url, model){
     if(!small || small.length>AK.LIB_IMG_MAX) return false;
     var L=AK.lib();
     var eski=L[code]||{};
+    // Aynı görsel zaten kayıtlıysa yeniden yazma (her taramada buluta gitmesin)
+    if(eski.img===small && eski.type===type && (!renk || eski.renk===renk) && (!model || eski.model===model)) return true;
     L[code]={ type:type, renk:renk||eski.renk||'', img:small, model:model||eski.model||'', ts:Date.now() };
     var keys=Object.keys(L);
     if(keys.length>AK.LIB_MAX){
