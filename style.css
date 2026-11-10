@@ -19742,3 +19742,14 @@ html[data-theme="ocean"], body[data-theme="ocean"]{
   .aks-renk-ad{ min-width:110px; }
   .aks-renk-ad small{ white-space:nowrap; }
 }
+
+/* Aksesuar sihirbazı: listede olmayan atölye için "eklensin mi?" sorusu */
+.aks-yeni-sor{ margin-top:10px; padding:14px; border-radius:14px; text-align:left;
+  border:1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  background:color-mix(in srgb, var(--primary) 8%, var(--bg-card-solid, var(--bg-card))); }
+.aks-yeni-sor-m{ display:flex; gap:10px; font-size:13.5px; line-height:1.45; color:var(--text-main); }
+.aks-yeni-sor-m i{ color:var(--primary); margin-top:3px; }
+.aks-yeni-sor-m span{ color:var(--text-muted); }
+.aks-yeni-sor-m b{ color:var(--text-main); }
+.aks-yeni-sor-b{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+@media (max-width:600px){ .aks-yeni-sor-b .btn{ flex:1 1 100%; justify-content:center; } }
