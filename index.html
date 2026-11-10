@@ -26896,6 +26896,16 @@ AKS.git = function(n, yon){
 };
 AKS.ileri = function(){
   if(AKS.adim===1 && !AKS._atolye()){ AKS._salla('Atölye seç ya da yaz'); return; }
+  // Listede olmayan isim: önce atölyelere eklensin mi diye sor
+  if(AKS.adim===1){
+    var _a=AKS._atolye();
+    if(!AKS._kayitliMi(_a) && !AKS._gecildi[_a.toLocaleLowerCase('tr')]){
+      AKS._sor=_a;
+      var cip=document.getElementById('aksAtolyeCip');
+      if(cip) cip.innerHTML=AKS._oneriHtml(); else AKS.ciz(false);
+      return;
+    }
+  }
   if(AKS.adim===2 && !AKS.asamaSecildi){ AKS.asamaSecildi=true; }
   if(AKS.adim===3){
     if(!AKS._arsivVar()){ AKS._salla('Önce arşiv dosyalarını yükle'); return; }
@@ -26962,9 +26972,53 @@ AKS._oneriler = function(q){
   out.sort(function(x,y){ return (x.p===0?0:1)-(y.p===0?0:1) || (x.son?0:1)-(y.son?0:1) || x.a.localeCompare(y.a,'tr'); });
   return out.slice(0,6);
 };
+// Atölyeler listesinde (Atölyeler sayfası) kayıtlı mı?
+AKS._kayitliMi = function(a){
+  var k=(a||'').trim().toLocaleLowerCase('tr');
+  return (getData('atolyeler')||[]).some(function(x){ return String(x&&x.name||'').trim().toLocaleLowerCase('tr')===k; });
+};
+AKS._sor = null;        // listede olmayan isim için "eklensin mi?" sorusu açık
+AKS._gecildi = {};      // "sadece bu föyde kullan" denen isimler (tekrar sorulmaz)
+AKS._soruHtml = function(a){
+  // Yazılan isim listedekilerden birinin parçasıysa önce onu öner (aynı atölye iki kez açılmasın)
+  var k=a.toLocaleLowerCase('tr');
+  var benzer=AKS._oneriler(a).map(function(x){ return x.a; }).filter(function(x){ return x.toLocaleLowerCase('tr')!==k && AKS._kayitliMi(x); }).slice(0,3);
+  if(benzer.length){
+    return '<div class="aks-yeni-sor" role="group" aria-label="Atölye seç">'+
+      '<div class="aks-yeni-sor-m"><i class="fas fa-circle-info"></i><span><b>'+AKS._e(a)+'</b> listede yok. Bunu mu demek istedin?</span></div>'+
+      '<div class="aks-yeni-sor-b">'+
+        benzer.map(function(x){ return '<button type="button" class="btn btn-primary" data-a="'+AKS._e(x)+'" onclick="AKS.atolyeSec(this.dataset.a)">'+AKS._e(x)+'</button>'; }).join('')+
+        '<button type="button" class="btn btn-secondary" onclick="AKS.atolyeEkle()"><i class="fas fa-plus"></i> Yeni atölye olarak ekle</button>'+
+        '<button type="button" class="btn btn-secondary" onclick="AKS.atolyeGec()">Sadece bu föyde kullan</button>'+
+      '</div></div>';
+  }
+  return '<div class="aks-yeni-sor" role="group" aria-label="Yeni atölye">'+
+    '<div class="aks-yeni-sor-m"><i class="fas fa-circle-info"></i><span><b>'+AKS._e(a)+'</b> atölyeler listende yok. Listeye ekleyeyim mi? Eklersen irsaliyede de seçebilirsin, iki bilgisayarda da görünür.</span></div>'+
+    '<div class="aks-yeni-sor-b">'+
+      '<button type="button" class="btn btn-primary" onclick="AKS.atolyeEkle()"><i class="fas fa-plus"></i> Atölyelere ekle ve devam et</button>'+
+      '<button type="button" class="btn btn-secondary" onclick="AKS.atolyeGec()">Sadece bu föyde kullan</button>'+
+    '</div></div>';
+};
+AKS.atolyeEkle = function(){
+  var a=AKS._atolye(); if(!a) return;
+  if(!AKS._kayitliMi(a)){
+    var list=getData('atolyeler')||[];
+    list.push({ id:Date.now(), name:a, telefon:'' });
+    setData('atolyeler', list);
+    try{ if(typeof loadAtolyeSelects==='function') loadAtolyeSelects(); }catch(_){}
+    try{ if(typeof refreshAtolyeList==='function') refreshAtolyeList(); }catch(_){}
+    if(typeof toast==='function') toast('Atölye eklendi: '+a,'success');
+  }
+  AKS._sor=null; AKS.git(2,'ileri');
+};
+AKS.atolyeGec = function(){
+  var a=AKS._atolye(); if(!a) return;
+  AKS._gecildi[a.toLocaleLowerCase('tr')]=1; AKS._sor=null; AKS.git(2,'ileri');
+};
 AKS._oneriHtml = function(){
   var v=AKS._atolye(), q=v.toLocaleLowerCase('tr'), l=AKS._oneriler(v);
   if(!v) return '';
+  if(AKS._sor && AKS._sor.toLocaleLowerCase('tr')===q) return AKS._soruHtml(v);
   var tam=l.some(function(x){ return x.a.toLocaleLowerCase('tr')===q; });
   var vurgu=function(a){ var p=a.toLocaleLowerCase('tr').indexOf(q); if(p<0) return AKS._e(a);
     return AKS._e(a.slice(0,p))+'<mark>'+AKS._e(a.slice(p,p+v.length))+'</mark>'+AKS._e(a.slice(p+v.length)); };
@@ -26999,6 +27053,7 @@ AKS.atolyeTus = function(e){
   }
   if(e.key==='Enter'){
     e.preventDefault();
+    if(AKS._sor){ var bb=document.querySelector('#aksAtolyeCip .aks-yeni-sor .btn-primary'); if(bb) bb.click(); return; }
     if(AKS._oneriSec>=0 && l[AKS._oneriSec]){ l[AKS._oneriSec].click(); return; }
     var bir=AKS._oneriler(AKS._atolye());
     // Tek öneri kaldıysa onu al (yazım farkı olmasın)
@@ -27011,7 +27066,7 @@ AKS._atolyeYaz = function(v){
   AK.state.atolye=v; var i=document.getElementById('akAtolye'); if(i) i.value=v;
 };
 AKS.atolyeYaz = function(v, odakla){
-  AKS._atolyeYaz(v); AKS._oneriSec=-1;
+  AKS._atolyeYaz(v); AKS._oneriSec=-1; AKS._sor=null;
   // Yazarken kutuyu yeniden çizme (imleç kaçar) — yalnız önerileri tazele
   var eski=document.getElementById('aksAtolyeCip'); if(eski) eski.innerHTML=AKS._oneriHtml();
   var ip=document.querySelector('#akSih .aks-ileri'); if(ip) ip.classList.toggle('pasif', !AKS._atolye());
