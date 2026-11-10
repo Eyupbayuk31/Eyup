@@ -25185,6 +25185,7 @@ AK.processEntries = function(entries, comboVar){
     return entries.reduce(function(chain,e){
       return chain.then(function(){
         var name=e.name, bytes=e.bytes; var cat=AK.categorize(name);
+        if(/fallinlove/i.test(name.replace(/[\s_\-]/g,''))) det.fil=true;   // Fall in Love serisi
         if(!cat){
           var lw=name.toLowerCase();
           if(lw.indexOf('lotsticker')>=0) atla(name,'Lot etiketi, kontrol edilmiyor');
@@ -25457,7 +25458,10 @@ AK._colorsFromMerged = function(m, prev){
     var isLisans = !!col.lisans || m.shared.some(function(s){ return s.type==='lisansEtiketi'||s.type==='lisansKarti'; });
     // LİSANSLI MODELDE DOKUMA HER ZAMAN SİYAHTIR — mal ekru/beyaz olsa bile.
     // Mal rengi kuralı (açık→beyaz, koyu→siyah) yalnızca lisanssız modeller için.
-    var labelPref = isLisans ? 'black' : AK._labelForGarment(effRenk);
+    // FALL IN LOVE: dokuma etiketi her renkte aynı gelir, açık/koyu mal kuralı
+    // yoktur — ne seçim ne not uygulanır.
+    var isFil = !!(m.detected && m.detected.fil) || !!(col.combo&&col.combo.length);
+    var labelPref = isFil ? null : (isLisans ? 'black' : AK._labelForGarment(effRenk));
     m.shared.forEach(function(s){
       if(s.type==='yikama' && s.images && s.images.length===colorCount && colorCount>1){
         files.push({type:'yikama',images:[s.images[ci]],renk:effRenk,name:'yikamaS:'+k}); return;
@@ -25492,6 +25496,7 @@ AK._colorsFromMerged = function(m, prev){
           return;
         }
       }
+      if(s.type==='dokuma' && isFil){ files.push(Object.assign({}, s, {renk:null, note:null})); return; }
       files.push(s);
     });
     // Önerilen dokuma etiketi diğerinden önce sıralansın
@@ -25553,6 +25558,7 @@ AK._processFilesInto = function(files, M){
         var seen={}; M.shared.forEach(function(s){ seen[(s.name||'')+s.type]=true; }); res.shared.forEach(function(s){ var key=(s.name||'')+s.type; if(!seen[key]){ M.shared.push(s); seen[key]=true; } });
         if(!M.detected.po && res.detected.po) M.detected.po=res.detected.po;
         if(!M.detected.model && res.detected.model) M.detected.model=res.detected.model;
+        if(res.detected.fil) M.detected.fil=true;
       });
     });
   }, Promise.resolve()).then(function(){
