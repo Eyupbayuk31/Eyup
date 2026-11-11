@@ -9844,6 +9844,49 @@ function _kfSayfaSec(store, kamera){
   i.click();
 }
 
+// ── Telefonda irsaliye "Kaydet" çubuğu ───────────────────────────────
+// Sayfanın içindeki "position:fixed" düğme, sayfaya transform gelince
+// (giriş animasyonu vb.) ekrana değil sayfanın dibine yapışıp kayboluyordu.
+// Çubuk doğrudan body'de durur; sayfadaki asıl düğmeye basar, yazısını da
+// ondan alır (Kaydet ↔ Güncelle).
+(function(){
+  var cubuk=null, kaynak=null, gozcu=null, bekliyor=false;
+  function telefon(){ return window.matchMedia && window.matchMedia('(max-width:768px)').matches && document.documentElement.getAttribute('data-tasarim')==='yeni'; }
+  function acikPencere(){
+    return [].some.call(document.querySelectorAll('.modal-overlay.show, .gs-overlay.show, .sidebar.open, .t2-sheet-ort.on, .aks-lb, .kf-secim'), function(e){
+      var c=getComputedStyle(e); return c.display!=='none' && c.visibility!=='hidden' && +c.opacity>0.05;
+    });
+  }
+  function kur(){
+    if(cubuk) return;
+    cubuk=document.createElement('div'); cubuk.id='t2KaydetCubuk'; cubuk.hidden=true;
+    cubuk.innerHTML='<button type="button" class="btn btn-primary"></button>';
+    cubuk.firstChild.addEventListener('click', function(){ if(kaynak) kaynak.click(); });
+    document.body.appendChild(cubuk);
+  }
+  function yaziKopyala(){ if(cubuk && kaynak){ var b=cubuk.firstChild; b.innerHTML=kaynak.innerHTML; b.classList.toggle('btn-update-mode', kaynak.classList.contains('btn-update-mode')); b.disabled=kaynak.disabled; } }
+  function guncelle(){
+    bekliyor=false;
+    var sayfa=document.querySelector('.page.active');
+    var btn=(telefon() && sayfa && sayfa.querySelector(':scope > .irs-bar')) ? sayfa.querySelector(':scope > .section-header .btn-primary') : null;
+    document.documentElement.classList.toggle('t2-kaydet-cubuk', !!btn);
+    if(!btn){ if(cubuk) cubuk.hidden=true; if(gozcu){ gozcu.disconnect(); gozcu=null; } kaynak=null; return; }
+    kur();
+    if(kaynak!==btn){
+      kaynak=btn; if(gozcu) gozcu.disconnect();
+      gozcu=new MutationObserver(yaziKopyala);
+      gozcu.observe(btn,{attributes:true, childList:true, subtree:true, characterData:true});
+    }
+    yaziKopyala();
+    cubuk.hidden=acikPencere();
+  }
+  function planla(){ if(!bekliyor){ bekliyor=true; requestAnimationFrame(guncelle); } }
+  // Sayfa / pencere açılıp kapanınca (class değişimi) ve ekran boyu değişince
+  new MutationObserver(planla).observe(document.body,{attributes:true, attributeFilter:['class'], subtree:true});
+  window.addEventListener('resize', planla);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', planla); else planla();
+})();
+
 // Esc ile kapanır
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape' && _tkg && document.getElementById('tkGelenModal').classList.contains('show') && !document.querySelector('.kf-lb')){
