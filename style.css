@@ -20003,3 +20003,21 @@ html .tkg-modal .kf-yok-a input.form-input{ height:40px; width:96px; min-width:0
 .kf-sa .kf-sa-evet{ min-height:48px; justify-content:center; }
 .kf-yok-s2{ display:flex; flex-wrap:wrap; gap:8px; }
 .kf-yok-s2 .btn{ min-height:42px; flex:1 1 auto; justify-content:center; }
+
+/* İrsaliyeler (masaüstü): işlem düğmeleri artık tarihin üstüne kayarak binmiyor.
+   Liste üzerinde fare gezdikçe her satırda beliren/kaybolan panel tarihi örtüp
+   açıyordu ("sürekli oynuyor"). Düğmeler en sağda kendi sütununda hep durur;
+   fare gelince yalnız renkleri koyulaşır. */
+.t2l-kolon, .t2l-r > .card-inner{ grid-template-columns:30px minmax(0,1.5fr) minmax(0,1.3fr) 104px 96px 150px 112px; }
+.t2l-act, .t2l-r:hover .t2l-act, .t2l-r:focus-within .t2l-act{
+  left:calc(100% + 14px); right:auto; top:50%; transform:translateY(-50%); opacity:1; pointer-events:auto;
+  transition:none; background:transparent; box-shadow:none; padding:0; }
+.t2l-act button{ background:transparent; color:color-mix(in srgb, var(--t2l-mut) 70%, transparent); }
+.t2l-r:hover .t2l-act button{ color:var(--t2l-mut); background:var(--t2l-yumus); }
+.t2l-act button:hover{ color:var(--text-main); background:color-mix(in srgb, var(--primary) 18%, transparent); }
+@container (max-width: 860px){
+  .t2l-kolon, .t2l-r > .card-inner{ grid-template-columns:30px minmax(0,1fr) 96px 90px 140px 112px; }
+}
+@container (max-width: 600px){
+  .t2l-r > .card-inner{ grid-template-columns:auto minmax(0,1fr) auto; }
+}
