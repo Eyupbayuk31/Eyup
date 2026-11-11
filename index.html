@@ -7664,13 +7664,33 @@ function _ftImpGemini(belgeler, metin){
       if(!mod.length || !mod.some(function(m){ return m.satirlar.length; })){ toast(metin && !belgeler.length ? 'Yazıda cm / adet bulunamadı' : 'Belgede cm / adet bulunamadı. Yazıyı yapıştırmayı dene.','error'); return false; }
       var ted=document.getElementById('ftImpTed'), tedOku=mod.map(function(m){ return m.tedarikci; }).filter(Boolean)[0];
       if(ted && !ted.value.trim() && tedOku) ted.value=tedOku;
-      _ftImpEkle(mod.map(function(m){
-        return { model:m.model||'', renk:m.renk||'', pdfToplam:m.toplam||null,
-          satirlar:m.satirlar.map(function(z){ return {cm:_ftImpCm(z.cm), adet:Math.round(+z.adet||0), beden:(typeof _takipBedenNorm==='function'?_takipBedenNorm(z.beden):z.beden)||''}; }) };
-      }), ad+' · Gemini');
+      _ftImpEkle(_ftImpRenkeAyir(mod), ad+' · Gemini');
       return true;
     })
     .finally(function(){ if(bilgi) bilgi.textContent=eski; });
+}
+// Gemini sonucu → kartlar. Aynı model farklı renk (ör. YKK raporunda Renk 511 ve
+// RJ76) ayrı sipariştir: her (model, renk) ayrı kart. Üst üste binen fotoğraflarda
+// aynı satır iki kez gelirse bir kez alınır.
+function _ftImpRenkNorm(r){ return String(r||'').toLocaleLowerCase('tr').replace(/\s+/g,''); }
+function _ftImpRenkeAyir(mod){
+  var gruplar=[], bul={};
+  mod.forEach(function(m){
+    (m.satirlar||[]).forEach(function(z){
+      var renk=String(z.renk||m.renk||'').trim();
+      var anahtar=_ftNormModel(m.model||'')+'|'+_ftImpRenkNorm(renk);
+      var g=bul[anahtar];
+      if(!g){ g=bul[anahtar]={model:m.model||'', renk:renk, pdfToplam:null, satirlar:[], gor:{}}; gruplar.push(g); }
+      var satir={cm:_ftImpCm(z.cm), adet:Math.round(+z.adet||0), beden:(typeof _takipBedenNorm==='function'?_takipBedenNorm(z.beden):z.beden)||''};
+      var imza=satir.cm+'|'+satir.adet+'|'+satir.beden;
+      if(g.gor[imza]) return;
+      g.gor[imza]=1; g.satirlar.push(satir);
+    });
+  });
+  // Tek model tek renkse belgedeki toplam karşılaştırma için kalsın
+  if(mod.length===1 && gruplar.length===1) gruplar[0].pdfToplam=mod[0].toplam||null;
+  gruplar.forEach(function(g){ delete g.gor; g.satirlar.sort(function(a,b){ return (+a.cm||0)-(+b.cm||0); }); });
+  return gruplar;
 }
 // Tekrar sipariş (RPT) adı: "M1S10178" → "M1S10178 RPT", o da varsa "RPT 2", "RPT 3"…
 function _ftImpTaban(kod){ return String(kod||'').trim().replace(/\s+RPT(\s*\d+)?$/i,''); }
@@ -7757,7 +7777,8 @@ function _ftImpKartHtml(k, i){
       '<input class="form-input ft-imp-model'+(k.model?'':' eksik')+'" value="'+e(k.model)+'" placeholder="Model kodunu yaz" aria-label="Model kodu" onchange="ftImpModel('+i+',this.value)">'+
       '<button type="button" class="ft-imp-x" onclick="ftImpKartSil('+i+')" aria-label="Bu listeyi çıkar"><i class="fas fa-trash-can"></i></button>'+
     '</div>'+
-    '<div class="ft-imp-kaynak"><i class="fas fa-file-lines"></i> '+e(k.kaynak||'')+(k.renk?' · renk '+e(k.renk):'')+(m||!k.model?'':' · <b>yeni model</b>')+'</div>'+
+    '<div class="ft-imp-kaynak"><i class="fas fa-file-lines"></i> '+e(k.kaynak||'')+(m||!k.model?'':' · <b>yeni model</b>')+'</div>'+
+    '<label class="ft-imp-renk"><span>Renk</span><input class="form-input" value="'+e(k.renk||'')+'" placeholder="Renk (ör. Siyah, RJ76)" aria-label="Bu listenin rengi" onchange="ftImpRenkDeg('+i+',this.value)"></label>'+
     (k.model?'':_ftImpOneriHtml(k,i))+
     var_+
     (k.satirlar.length?'':'<div class="ft-imp-bos">Bu belgede cm / adet satırı bulunamadı. Satırları elle ekleyebilirsin.</div>')+
@@ -7784,7 +7805,7 @@ function _ftImpKaydetYaz(){
   var top=gecerli.reduce(function(s,k){ return s+_ftImpKartToplam(k); },0);
   var b=document.getElementById('ftImpKaydet'); b.disabled=!gecerli.length;
   document.getElementById('ftImpKaydetYazi').textContent = gecerli.length
-    ? (gecerli.length===1?'Kaydet':gecerli.length+' modeli kaydet')+' · '+top.toLocaleString('tr')+' adet'
+    ? (gecerli.length===1?'Kaydet':gecerli.length+' listeyi kaydet')+' · '+top.toLocaleString('tr')+' adet'
     : (_ftImp.kartlar.some(function(k){ return k.dahil && !k.model.trim(); }) ? 'Önce model kodunu yaz' : 'Kaydet');
 }
 function ftImpDeger(i,j,alan,v){
@@ -7800,6 +7821,7 @@ function ftImpSatirEkle(i){
   var k=_ftImp.kartlar[i]; if(!k) return; k.satirlar.push({cm:'', adet:0}); _ftImpCiz();
   setTimeout(function(){ var s=document.querySelectorAll('.ft-imp-kart[data-i="'+i+'"] .ft-imp-satir'); var son=s[s.length-1]; if(son) son.querySelector('input').focus(); },40);
 }
+function ftImpRenkDeg(i,v){ var k=_ftImp.kartlar[i]; if(!k) return; k.renk=String(v||'').trim(); }
 function ftImpKartSil(i){ _ftImp.kartlar.splice(i,1); _ftImpCiz(); }
 function ftImpDahil(i,v){ var k=_ftImp.kartlar[i]; if(!k) return; k.dahil=!!v; _ftImpCiz(); }
 function ftImpMod(i,m){ var k=_ftImp.kartlar[i]; if(!k) return; k.mod=m; _ftImpCiz(); }
@@ -7810,6 +7832,7 @@ function ftImpKaydet(){
   var renk=document.getElementById('ftImpRenk').value.trim();
   var list=_ftImpListe(), yeni=0, guncel=0, adet=0, sonId=null, sayac=0, rptler=[], kordon=_ftImpKordon();
   var kartlar=_ftImp.kartlar.filter(function(k){ return k.dahil && k.model.trim(); });
+  var rptBu={}, yeniBu={};   // bu kayıtta açılan RPT / yeni model: aynı modelin diğer renkleri de oraya
   for(var a=0;a<kartlar.length;a++){
     var k=kartlar[a];
     var sat=k.satirlar.filter(function(z){ return +z.cm>0 && +z.adet>0; });
@@ -7817,24 +7840,28 @@ function ftImpKaydet(){
     var n=_ftNormModel(k.model);
     var m=list.find(function(x){ return _ftNormModel(x.modelKodu)===n; });
     if(m && _ftImpMetreMi(m)) k.mod='rpt';
-    if(m && k.mod==='rpt'){
+    var kRenk=(k.renk||renk||'').trim();
+    if(m && k.mod==='rpt' && rptBu[n]){ m=rptBu[n]; }
+    else if(m && k.mod==='rpt' && !yeniBu[m.id]){
       // Tekrar sipariş: ayrı model. Tedarikçi/renk boşsa asıl modelden gelir.
       var asil=m;
-      m={id:Date.now()+(sayac++), modelKodu:_ftImpRptAd(k.model, list), renk:renk||k.renk||asil.renk||'', tedarikci:ted||asil.tedarikci||'', termin:termin, sizes:[], createdAt:new Date().toISOString()};
-      list.unshift(m); yeni++; rptler.push(m.modelKodu);
+      m={id:Date.now()+(sayac++), modelKodu:_ftImpRptAd(k.model, list), renk:kRenk||asil.renk||'', tedarikci:ted||asil.tedarikci||'', termin:termin, sizes:[], createdAt:new Date().toISOString()};
+      list.unshift(m); yeni++; rptler.push(m.modelKodu); rptBu[n]=m;
     } else if(!m){
-      m={id:Date.now()+(sayac++), modelKodu:k.model.trim(), renk:renk||k.renk||'', tedarikci:ted, termin:termin, sizes:[], createdAt:new Date().toISOString()};
-      list.unshift(m); yeni++;
-    } else {
+      m={id:Date.now()+(sayac++), modelKodu:k.model.trim(), renk:kRenk, tedarikci:ted, termin:termin, sizes:[], createdAt:new Date().toISOString()};
+      list.unshift(m); yeni++; yeniBu[m.id]=1;
+    } else if(yeniBu[m.id]){ /* bu kayıtta açılan model: diğer rengi eklenir */ }
+    else {
       if(ted) m.tedarikci=ted;
       if(termin) m.termin=termin;
       if(m.tamamlandi===true) delete m.tamamlandi; // yeni satın alma geldi → tekrar aktif
       m.sizes=m.sizes||[]; guncel++;
     }
     sat.forEach(function(z){
-      var s=m.sizes.find(function(x){ return _ftNum(x.cm)===+z.cm; });
-      if(s){ s.siparisAdet = k.mod==='yaz' ? z.adet : (+s.siparisAdet||0)+z.adet; if(z.beden && (!s.beden || k.mod==='yaz')) s.beden=z.beden; }
-      else m.sizes.push({id:Date.now()+(sayac++)*7+Math.floor(Math.random()*1000), beden:z.beden||'', cm:String(z.cm), renk:renk||k.renk||m.renk||'', siparisAdet:z.adet, teslimatlar:[], kullanimlar:[]});
+      // Aynı cm farklı renk ayrı satırdır
+      var s=m.sizes.find(function(x){ return _ftNum(x.cm)===+z.cm && (!kRenk || !x.renk || _ftImpRenkNorm(x.renk)===_ftImpRenkNorm(kRenk)); });
+      if(s){ s.siparisAdet = k.mod==='yaz' ? z.adet : (+s.siparisAdet||0)+z.adet; if(z.beden && (!s.beden || k.mod==='yaz')) s.beden=z.beden; if(kRenk && !s.renk) s.renk=kRenk; }
+      else m.sizes.push({id:Date.now()+(sayac++)*7+Math.floor(Math.random()*1000), beden:z.beden||'', cm:String(z.cm), renk:kRenk||m.renk||'', siparisAdet:z.adet, teslimatlar:[], kullanimlar:[]});
       adet+=z.adet;
     });
     _ftStamp(m); sonId=m.id;

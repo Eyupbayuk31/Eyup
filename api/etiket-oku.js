@@ -38,7 +38,12 @@ const ISTEM_SIPARIS =
   'Tedarikçinin kendi stok/iş numarasını (ör. 212211-2) model yazma. Model kodu yoksa boş bırak.\n' +
   '- satirlar: her uzunluk için bir satır. cm sayı, adet tam sayı. Satır birden çok bedeni kapsıyorsa ' +
   '(ör. "(XS-S-M) 23 cm : 5500 adet") beden alanına "XS-S-M" yaz; tek beden ise o bedeni yaz; beden yoksa boş bırak.\n' +
-  '- Fiyat, fermuar tipi, not gibi bilgileri satıra koyma. renk: varsa renk adı (ör. Kahverengi). ' +
+  '- RENK: tabloda Renk sütunu varsa (ör. "511", "RJ76") her satırın renk alanına o satırdaki kodu aynen yaz. ' +
+  'Farklı renkler FARKLI siparişlerdir: aynı model kodu olsa bile her renk için ayrı bir modeller kaydı döndür ve kaydın renk alanına o kodu yaz. ' +
+  'Renk sütunu yoksa belgede yazan renk adını (ör. Kahverengi, "SYAH" → Siyah) kaydın renk alanına yaz.\n' +
+  '- Fotoğraflar aynı sayfanın üst üste binen parçaları olabilir: aynı satırı (aynı sıra no, renk, uzunluk, miktar) iki kez yazma.\n' +
+  '- "İrsaliye Detayları" tablosundaki parça teslimat miktarlarını satır yapma; yalnız ana tablodaki sipariş Miktar\'ını al.\n' +
+  '- Fiyat, fermuar tipi, not gibi bilgileri satıra koyma. ' +
   'tedarikci: belgede açıkça görünen tedarikçi firma adı, yoksa boş. toplam: belgede yazan genel toplam adet, yoksa 0.\n' +
   '- Okuyamadığın değeri uydurma, boş bırak.';
 const SEMA_SIPARIS = {
@@ -57,7 +62,8 @@ const SEMA_SIPARIS = {
             type: 'ARRAY',
             items: {
               type: 'OBJECT',
-              properties: { beden: { type: 'STRING' }, cm: { type: 'NUMBER' }, adet: { type: 'INTEGER' } },
+              properties: { beden: { type: 'STRING' }, cm: { type: 'NUMBER' }, adet: { type: 'INTEGER' },
+                renk: { type: 'STRING', description: 'Bu satırın Renk sütunundaki kod, yoksa boş' } },
               required: ['cm', 'adet']
             }
           }
@@ -264,7 +270,7 @@ module.exports = async function (req, res) {
             renk: String(m.renk || '').trim(),
             tedarikci: String(m.tedarikci || '').trim(),
             toplam: Math.max(0, Math.round(+m.toplam || 0)),
-            satirlar: (m.satirlar || []).map(z => ({ beden: String(z.beden || '').trim(), cm: +z.cm || 0, adet: Math.max(0, Math.round(+z.adet || 0)) }))
+            satirlar: (m.satirlar || []).map(z => ({ beden: String(z.beden || '').trim(), cm: +z.cm || 0, adet: Math.max(0, Math.round(+z.adet || 0)), renk: String(z.renk || '').trim() }))
               .filter(z => z.adet > 0 && (z.cm > 0 || tur === 'gelen'))   // gelen: metreyle gelen ham kordonda cm yok
           })).filter(m => m.satirlar.length || m.model);
           res.status(200).json({ modeller, model, denemeler });
