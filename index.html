@@ -9745,19 +9745,31 @@ function _kfOkut(fotolar){
   }, Promise.resolve());
 }
 // Okunan kolileri modelin satırlarıyla eşleştir (sorun alanını doldurur)
+// Model karşılaştırması: boşluksuz, RPT eki yok ("J5911 RPT 2" = "J 5911")
+function _kfModelTaban(x){ return _ftNormModel(x||'').replace(/\s+RPT(\s*\d+)?$/,'').replace(/\s+/g,''); }
+// Etiketten okunan model: harfsiz kod (YKK ürün kodu 4964423) model değil; yoksa başlık satırından
+function _kfEtiketModel(k){
+  var m=String(k.model||'').toUpperCase().replace(/İ/g,'I').replace(/\s+/g,'');
+  if(m && /[A-Z]/.test(m) && /\d/.test(m)) return m;
+  var b=String(k.baslik||'').toUpperCase().replace(/İ/g,'I').match(/\b([A-Z]{1,3})\s?(\d{3,6})\b/);
+  return b ? b[1]+b[2] : '';
+}
 function _kfEslestir(m, satirlar, fotolar){
-  var mk=_ftNormModel(m.modelKodu||''), gor={};
+  var mk=_kfModelTaban(m.modelKodu||''), gor={};
   fotolar.forEach(function(f){
     (f.koliler||[]).forEach(function(k){
       k.sizeId=null; k.sorun=''; k.uyari='';
       if(f.cikar || k.cikar) { k.sorun='çıkarıldı'; return; }
       if(k.okunabildi===false || !(+k.miktar>0) || !(+k.uzunluk>0)){ k.sorun='Okunamadı'; return; }
-      if(k.model && _ftNormModel(k.model)!==mk){ k.sorun='Başka model: '+k.model; return; }
+      var km=_kfEtiketModel(k);
+      if(km && _kfModelTaban(km)!==mk){ k.sorun='Başka model: '+km; return; }
       var ad=satirlar.filter(function(z){ return z.cm!=null && z.cm!=='' && Math.abs(_ftNum(z.cm)-(+k.uzunluk))<0.01; });
       if(ad.length>1){
         // Aynı cm iki renkte (ör. 511 ve "Siyah (RJ76)"): koli etiketindeki renk koduyla seç
-        var rk=_kfRenkNorm(k.renk_kodu);
-        var r=rk ? ad.filter(function(z){ var zr=_kfRenkNorm(z.renk); return zr && (zr===rk || zr.indexOf(rk)>=0 || rk.indexOf(zr)>=0); }) : [];
+        // Kod (511 / RJ76) ya da etiket satırındaki renk adı (… - PEMBE)
+        var rk=_kfRenkNorm(k.renk_kodu), ra=_kfRenkNorm(typeof _ftImpBaslikRenk==='function'?_ftImpBaslikRenk(k.baslik||''):'');
+        var r=(rk||ra) ? ad.filter(function(z){ var zr=_kfRenkNorm(z.renk); if(!zr) return false;
+          return (rk && (zr===rk || zr.indexOf(rk)>=0 || rk.indexOf(zr)>=0)) || (ra && (zr===ra || zr.indexOf(ra)>=0)); }) : [];
         if(r.length===1) ad=r;
         else { k.sorun=k.uzunluk+' cm '+ad.length+' renkte var, renk '+(k.renk_kodu?k.renk_kodu+' eşleşmedi':'okunamadı'); return; }
       }
@@ -9898,7 +9910,7 @@ function _kfBuyut(i){
       (k.uyari?'<div class="kf-lb-uyari"><i class="fas fa-triangle-exclamation"></i> '+esc(k.uyari)+'</div>':'')+
       '<label>Uzunluk <input class="form-input" type="number" step="0.5" min="0" inputmode="decimal" data-j="'+j+'" data-a="uzunluk" value="'+(+k.uzunluk||'')+'"> cm</label>'+
       '<label>Miktar <input class="form-input" type="number" min="0" inputmode="numeric" data-j="'+j+'" data-a="miktar" value="'+(+k.miktar||'')+'"> adet</label>'+
-      (k.siparis_no||k.renk_kodu?'<small>'+esc([k.model, k.siparis_no, k.renk_kodu?('renk '+k.renk_kodu):'', (f.koliler||[]).length>1&&_kfFotoKutu(f)===1?'karışık koli':''].filter(Boolean).join(' · '))+'</small>':'')+
+      (k.siparis_no||k.renk_kodu?'<small>'+esc([_kfEtiketModel(k), k.siparis_no, k.renk_kodu?('renk '+k.renk_kodu):'', (f.koliler||[]).length>1&&_kfFotoKutu(f)===1?'karışık koli':''].filter(Boolean).join(' · '))+'</small>':'')+
     '</div>';
   }).join('');
   kap.innerHTML='<div class="aks-lb-ust"><b>Koli '+(i+1)+'</b><button type="button" class="aks-lb-x" aria-label="Kapat"><i class="fas fa-xmark"></i></button></div>'+
@@ -10002,11 +10014,28 @@ function _kfSayfaSec(store, kamera){
       .then(function(l){ liste=l; return _kfOkut(liste); })
       .then(function(){
         bekle.remove();
-        var say={}; liste.forEach(function(f){ f.koliler.forEach(function(k){ if(k.model) say[_ftNormModel(k.model)]=(say[_ftNormModel(k.model)]||0)+1; }); });
+        var say={}; liste.forEach(function(f){ f.koliler.forEach(function(k){ var km=_kfEtiketModel(k); if(km) say[_kfModelTaban(km)]=(say[_kfModelTaban(km)]||0)+1; }); });
         var sira=Object.keys(say).sort(function(a,b){ return say[b]-say[a]; });
         if(!sira.length){ toast('Fotoğraflarda model kodu okunamadı. Modeli açıp Gelen Gir içinden dene.','error'); return; }
         var tum=getData(store)||[];
-        var m=tum.filter(function(x){ return _ftNormModel(x.modelKodu)===sira[0] && !x.tamamlandi; })[0] || tum.filter(function(x){ return _ftNormModel(x.modelKodu)===sira[0]; })[0];
+        // Aynı model ve RPT'leri (J5911, J5911 RPT): kolilerin cm / rengine en çok uyan, bekleyeni olan
+        var aday=tum.filter(function(x){ return _kfModelTaban(x.modelKodu)===sira[0]; });
+        var puan=function(x){
+          var p=0, sz=(x.sizes||[]);
+          liste.forEach(function(f){ f.koliler.forEach(function(k){
+            if(!(+k.uzunluk>0)) return;
+            var ra=_kfRenkNorm(_ftImpBaslikRenk(k.baslik||'')), rk=_kfRenkNorm(k.renk_kodu);
+            var es=sz.filter(function(z){ return Math.abs(_ftNum(z.cm)-(+k.uzunluk))<0.01; });
+            if(!es.length) return;
+            p+=1;
+            if(es.some(function(z){ var zr=_kfRenkNorm(z.renk); return zr && ((rk && zr.indexOf(rk)>=0) || (ra && zr.indexOf(ra)>=0)); })) p+=2;
+            if(es.some(function(z){ return _ftBekleyen(z)>0; })) p+=1;
+          }); });
+          if(x.tamamlandi) p-=1000;
+          return p;
+        };
+        aday.sort(function(a,b){ return (puan(b)-puan(a)) || ((+(b._updatedAt||0))-(+(a._updatedAt||0))); });
+        var m=aday[0];
         if(!m){ toast(sira[0]+' takipte yok. Önce satın almayı gir.','error'); return; }
         takipGelenAc(store, m.id);
         if(!_tkg) return;

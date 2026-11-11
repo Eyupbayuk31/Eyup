@@ -26,7 +26,10 @@ const ISTEM =
   'Etikette tipik olarak: alıcı firma adı, barkod ve altında sipariş numarası (ör. P100691430), ' +
   'tedarikçi iş numarası (ör. 212211-2), bizim MODEL KODUMUZ (bir harf + rakamlar, ör. J4842), ' +
   've bir tablo: Renk (ör. "1400690 127"), Uzunluk (cm, ör. 23), Miktar (adet, ör. 1350).\n' +
-  'Kurallar: model alanına sadece model kodunu yaz (J4842 gibi), tedarikçi iş numarasını (212211-2) yazma. ' +
+  'YKK etiketlerinde model kodu "J 5911 - SEPARE - PEMBE" gibi bir satırdadır: model J5911, renk adı PEMBE. ' +
+  '"Item" altındaki 7 haneli sayı (ör. 4964423) ve FS6000000X ürün kodudur, MODEL DEĞİLDİR.\n' +
+  'Kurallar: model alanına sadece model kodunu yaz (J4842, J5911 gibi; mutlaka harfle başlar), tedarikçi iş numarasını (212211-2) ya da ürün kodunu yazma. ' +
+  'baslik alanına model kodunun geçtiği satırı aynen yaz (ör. "J 5911 - SEPARE - PEMBE"). ' +
   'uzunluk cm cinsinden sayı, miktar adet cinsinden tam sayı. Emin olmadığın alanı boş bırak ya da 0 yaz, uydurma. ' +
   'Fotoğrafta okunabilir koli etiketi yoksa okunabildi=false yaz.\n' +
   'KARIŞIK KOLİ: bir etiketin tablosunda birden çok satır (farklı uzunluk ya da renk) varsa HER SATIR için ayrı kayıt döndür; ' +
@@ -179,6 +182,7 @@ const SEMA = {
           uzunluk:     { type: 'NUMBER' },
           miktar:      { type: 'INTEGER' },
           renk_kodu:   { type: 'STRING' },
+          baslik:      { type: 'STRING', description: 'Model kodunun geçtiği satır aynen (ör. "J 5911 - SEPARE - PEMBE"), yoksa boş' },
           siparis_no:  { type: 'STRING' }
         },
         required: ['foto', 'okunabildi']
@@ -306,7 +310,9 @@ module.exports = async function (req, res) {
           foto: Math.max(0, (parseInt(k.foto, 10) || 1) - 1),       // 0 tabanlı
           etiket: Math.max(1, parseInt(k.etiket, 10) || 1),
           okunabildi: k.okunabildi !== false,
-          model: String(k.model || '').trim().toUpperCase().replace(/\s+/g, ''),
+          // Harfsiz kod (ör. YKK ürün kodu 4964423) model değildir
+          model: (m => (/[A-Z]/.test(m) && /\d/.test(m)) ? m : '')(String(k.model || '').trim().toUpperCase().replace(/\s+/g, '')),
+          baslik: String(k.baslik || '').trim().slice(0, 120),
           uzunluk: +k.uzunluk || 0,
           miktar: Math.max(0, Math.round(+k.miktar || 0)),
           renk_kodu: String(k.renk_kodu || '').trim(),
