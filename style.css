@@ -19763,3 +19763,60 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
   html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 4px !important; font-size:13.5px; }
   .ft-imp-satir.bedenli .ft-imp-x{ width:28px; }
 }
+
+/* ═══ Koli fotoğrafından Gelen Gir ═══ */
+.tkg-foto{ padding:8px 12px 2px; border-bottom:1px solid var(--border); }
+.tkg-foto[hidden]{ display:none; }
+.kf-ust{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-bottom:8px; }
+.kf-btn{ min-height:42px; }
+.kf-ipucu{ font-size:12px; color:var(--text-muted); }
+.kf-durum{ display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--text-main); line-height:1.45;
+  padding:8px 10px; border-radius:10px; background:color-mix(in srgb, var(--primary) 9%, transparent); margin-bottom:8px; }
+.kf-durum > i{ color:var(--primary); margin-top:3px; }
+.kf-durum.okunuyor{ color:var(--text-muted); }
+.kf-durum.hata{ background:color-mix(in srgb, var(--danger, #ef4444) 12%, transparent); align-items:center; }
+.kf-durum.hata > i{ color:var(--danger, #ef4444); }
+.kf-durum.hata span{ flex:1; }
+.kf-durum em{ font-style:normal; font-weight:700; }
+.kf-kotu{ color:var(--danger, #ef4444); }
+.kf-uyar{ color:var(--warning); }
+.kf-tekrar{ all:unset; cursor:pointer; font-weight:800; font-size:12.5px; padding:6px 10px; border-radius:8px; background:var(--primary); color:var(--bg-main, #000); }
+.kf-seri{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch; }
+.kf-ft{ all:unset; box-sizing:border-box; cursor:zoom-in; position:relative; flex:0 0 96px; height:96px; border-radius:11px; overflow:hidden;
+  background:#fff; border:2px solid var(--border); }
+.kf-ft img{ width:100%; height:100%; object-fit:cover; display:block; }
+.kf-ft-y{ position:absolute; left:0; right:0; bottom:0; padding:3px 5px; font-size:10.5px; font-weight:800; line-height:1.25; text-align:center;
+  color:#fff; background:rgba(15,23,42,.82); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kf-ft.iyi{ border-color:var(--success); }
+.kf-ft.uyar{ border-color:var(--warning); }
+.kf-ft.uyar .kf-ft-y{ background:rgba(180,83,9,.92); }
+.kf-ft.kotu{ border-color:var(--danger, #ef4444); }
+.kf-ft.kotu .kf-ft-y{ background:rgba(185,28,28,.92); }
+.kf-ft.bekle img{ opacity:.55; }
+.kf-ft.cikti img{ opacity:.3; filter:grayscale(1); }
+.kf-ft:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.tkg-koli{ display:inline-flex; align-items:center; gap:5px; margin-top:4px; padding:2px 8px; border-radius:99px; font-size:11.5px; font-weight:800;
+  color:var(--primary); background:color-mix(in srgb, var(--primary) 13%, transparent); }
+/* büyütülmüş koli + düzeltme */
+.kf-lb .aks-lb-ic img{ max-height:60vh; object-fit:contain; }
+.kf-lb-form{ width:min(100%, 520px); background:var(--bg-card-solid, #1f2937); color:var(--text-main); border-radius:14px; padding:14px; }
+.kf-lb-koli{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding-bottom:10px; }
+.kf-lb-koli label{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--text-muted); }
+.kf-lb-koli input{ width:100px; margin:0; }
+.kf-lb-koli small{ flex-basis:100%; font-size:12px; color:var(--text-muted); }
+.kf-lb-sorun, .kf-lb-uyari{ flex-basis:100%; font-size:13px; font-weight:700; }
+.kf-lb-sorun{ color:var(--danger, #ef4444); }
+.kf-lb-uyari{ color:var(--warning); }
+.kf-lb-b{ display:flex; flex-wrap:wrap; gap:8px; }
+/* sayfa düğmesinden okurken bekleme */
+.kf-bekle{ position:fixed; inset:0; z-index:100001; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); }
+.kf-bekle > div{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:22px 28px; border-radius:16px;
+  background:var(--bg-card-solid, #1f2937); color:var(--text-main); box-shadow:0 10px 30px rgba(0,0,0,.4); }
+.kf-bekle i{ font-size:26px; color:var(--primary); }
+.kf-bekle span{ font-size:12.5px; color:var(--text-muted); }
+@media (max-width:600px){
+  .kf-btn{ flex:1 1 0; justify-content:center; padding-left:8px; padding-right:8px; }
+  .kf-ipucu{ flex-basis:100%; }
+  .kf-ft{ flex-basis:84px; height:84px; }
+}
+.kf-lb{ background:rgba(0,0,0,.9); }
