@@ -74,6 +74,19 @@ const SEMA_SIPARIS = {
         },
         required: ['satirlar']
       }
+    },
+    belgeler: {
+      type: 'ARRAY',
+      description: 'Her belge (Belge N) için bir kayıt',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          belge: { type: 'INTEGER', description: 'Belge numarası (Belge N içindeki N)' },
+          baslik: { type: 'STRING', description: 'Bu belgede görünen "Müşteri Sipariş No" yazısı aynen (ör. "J 5911 - SEPARE - SYAH"); bu belgede görünmüyorsa boş' },
+          renk_kodlari: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Bu belgedeki tablo satırlarında görünen Renk sütunu kodları' }
+        },
+        required: ['belge']
+      }
     }
   },
   required: ['modeller']
@@ -278,7 +291,11 @@ module.exports = async function (req, res) {
             satirlar: (m.satirlar || []).map(z => ({ beden: String(z.beden || '').trim(), cm: +z.cm || 0, adet: Math.max(0, Math.round(+z.adet || 0)), renk: String(z.renk || '').trim() }))
               .filter(z => z.adet > 0 && (z.cm > 0 || tur === 'gelen'))   // gelen: metreyle gelen ham kordonda cm yok
           })).filter(m => m.satirlar.length || m.model);
-          res.status(200).json({ modeller, model, denemeler });
+          const belgeler = (sonuc.belgeler || []).map(b => ({
+            belge: parseInt(b.belge, 10) || 0, baslik: String(b.baslik || '').trim().slice(0, 120),
+            renkKodlari: (b.renk_kodlari || []).map(x => String(x || '').trim()).filter(Boolean).slice(0, 10)
+          }));
+          res.status(200).json({ modeller, belgeler, model, denemeler });
           return;
         }
         const koliler = (sonuc.koliler || []).map(k => ({
