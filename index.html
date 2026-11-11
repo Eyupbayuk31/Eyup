@@ -7471,6 +7471,12 @@ function _ftImpCoz(metin, dosyaAdi){
     var l=ham.replace(/[|\t]+/g,' ').replace(/\s+/g,' ').trim(); if(!l) return;
     var mm=l.match(/^(?:model(?:\s*kodu)?|mdl)\s*[:#\-]?\s*([A-Za-z0-9][A-Za-z0-9\-\/.]*)/i);
     if(mm){ yeni(mm[1].toLocaleUpperCase('tr').replace(/İ/g,'I')); baslikGordu=false; return; }
+    // Satın almacı e-postası: "J 4842 modelinin fermuar siparişine ait detaylar…"
+    var me=l.match(/\b([A-Za-z]{1,3})\s?(\d{3,6}[A-Za-z]{0,3})\s+model/i);
+    if(me){ yeni((me[1]+me[2]).toLocaleUpperCase('tr').replace(/İ/g,'I')); baslikGordu=false; return; }
+    // "Renk : Kahverengi"
+    var re=l.match(/^renk(?:\s*ad[ıi])?\s*[:\-]\s*(\S.*)$/i);
+    if(re){ if(!cur) yeni(''); cur._renkAd=re[1].trim(); return; }
     if(/^(genel\s+)?(toplam|total)\b/i.test(l)){
       var t=l.match(/(\d[\d.,]*)\s*(adet)?\s*$/i);
       if(t){ if(!cur) yeni(''); cur.pdfToplam=_ftImpAdet(t[1]); }
@@ -7495,7 +7501,7 @@ function _ftImpCoz(metin, dosyaAdi){
   bloklar=bloklar.filter(function(b){ return b.satirlar.length || b.model; });
   bloklar.forEach(function(b){
     // Bütün satırlarda aynı renk kodu varsa (ör. 337) modele renk olarak öner
-    var rk=Object.keys(b._renk); b.renk = rk.length===1 ? rk[0] : ''; delete b._renk;
+    var rk=Object.keys(b._renk); b.renk = rk.length===1 ? rk[0] : (b._renkAd||''); delete b._renk; delete b._renkAd;
     if(!b.model && dosyaAdi) b.model=_ftImpDosyaModel(dosyaAdi);
   });
   return bloklar;
