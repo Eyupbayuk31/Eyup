@@ -9531,8 +9531,8 @@ function _kfCiz(){
   kap.innerHTML=
     '<div class="kf-ust">'+
       '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(true)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-camera"></i> Koli fotoğrafı çek</button>'+
-      '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(false)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-images"></i> Galeriden</button>'+
-      (F.liste.length?'':'<span class="kf-ipucu">Koli etiketlerini çek, adetler kendiliğinden dolsun.</span>')+
+      '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(false)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-images"></i> Galeriden yükle</button>'+
+      (F.liste.length?'':'<span class="kf-ipucu">Koli etiketini çek ya da galerideki fotoğrafları yükle, adetler kendiliğinden dolsun.</span>')+
     '</div>'+
     durum+
     (seri?'<div class="kf-seri">'+seri+'</div>':'');
@@ -9652,7 +9652,28 @@ function _kfFotolariYukle(store, modelId, kabulId, veriler){
 }
 // Sayfa düğmesi: önce fotoğraflar okunur, model bulunur, o modelin Gelen Gir'i hazır açılır
 function takipKoliFoto(store){
-  var i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.multiple=true;
+  // Önce sor: koli elde mi (kamera) yoksa fotoğraflar galeride mi
+  var eski=document.querySelector('.kf-secim'); if(eski) eski.remove();
+  var kap=document.createElement('div'); kap.className='kf-secim'; kap.setAttribute('role','dialog'); kap.setAttribute('aria-label','Koli fotoğrafı');
+  kap.innerHTML='<div class="kf-secim-k">'+
+    '<b>Koli fotoğrafı</b><span>Etiketler okunur, model ve adetler kendiliğinden dolar.</span>'+
+    '<button type="button" class="kf-secim-b" data-k="1"><i class="fas fa-camera"></i><span>Kamerayla çek<small>Koli elindeyse</small></span></button>'+
+    '<button type="button" class="kf-secim-b" data-k="0"><i class="fas fa-images"></i><span>Galeriden yükle<small>Fotoğraflar telefonda ya da bilgisayardaysa, birden çok seçebilirsin</small></span></button>'+
+    '<button type="button" class="kf-secim-v">Vazgeç</button></div>';
+  var kapat=function(){ kap.remove(); document.removeEventListener('keydown',tus,true); };
+  var tus=function(e){ if(e.key==='Escape'){ e.stopPropagation(); kapat(); } };
+  kap.addEventListener('click',function(e){
+    var b=e.target.closest('.kf-secim-b');
+    if(b){ kapat(); _kfSayfaSec(store, b.dataset.k==='1'); return; }
+    if(e.target===kap || e.target.closest('.kf-secim-v')) kapat();
+  });
+  document.addEventListener('keydown',tus,true);
+  document.body.appendChild(kap);
+  setTimeout(function(){ var b=kap.querySelector('.kf-secim-b'); if(b) b.focus(); },50);
+}
+function _kfSayfaSec(store, kamera){
+  var i=document.createElement('input'); i.type='file'; i.accept='image/*';
+  if(kamera) i.setAttribute('capture','environment'); else i.multiple=true;
   i.onchange=function(){
     var dosyalar=[].slice.call(i.files||[]); if(!dosyalar.length) return;
     var bekle=document.createElement('div'); bekle.className='kf-bekle';
