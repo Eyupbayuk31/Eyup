@@ -19911,3 +19911,9 @@ html #t2FiltreKutu .filter-row{ overflow:visible !important; }
   html.t2-kaydet-cubuk[data-tasarim="yeni"] .page.active:has(> .irs-bar) > .section-header .btn-primary{ display:none !important; }
 }
 @media (min-width:769px){ #t2KaydetCubuk{ display:none !important; } }
+
+/* Açılır filtre menüsü: arka plan temanın (bazı temalarda yarı saydam) kart
+   rengiydi; altındaki sekmeler ve yazılar menünün içinden görünüyordu. */
+html .pdd-menu{ background:var(--bg-card-solid, var(--bg-main, #111)) !important; z-index:80 !important; }
+html .pdd.open{ z-index:80; }
+.fer-grup{ color:var(--primary); letter-spacing:.2px; }

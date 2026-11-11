@@ -136,7 +136,7 @@
         return (ia===-1?999:ia)-(ib===-1?999:ib);
       }).map(function(k){
         var v = d.beden[k];
-        if(typeof v === 'object') return '<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(v.cm||'-')+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(v.adet||0)+'</td></tr>';
+        if(typeof v === 'object') return '<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(v.ad?String(v.ad).replace(/</g,'&lt;'):(BEDEN_NAMES[k]||k))+'</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(v.cm||'-')+' cm</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(v.adet||0)+'</td></tr>';
         return '<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+(BEDEN_NAMES[k]||k)+'</td><td colspan="2" style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">'+v+'</td></tr>';
       }).join('');
       sizesHtml += tbl('Beden Detayları',['Beden','CM','Adet'],rows3, d.total||null);
@@ -8254,6 +8254,17 @@ function ftCloseModelAc(){
   const box=document.getElementById('fModelAc'); if(box){ box.style.display='none'; box.innerHTML=''; }
   _ftAcHover=false;
 }
+// Fermuar irsaliye formu: beden grubu (XS-S-M tek uzunluk) ilk bedeninin
+// satırına yazılır ve satırın adı gruba çevrilir; kayıtta beden[k].ad olur.
+function _ferSatirTd(k){ const i=document.getElementById('fer_'+k+'cm'); const tr=i&&i.closest('tr'); return tr?tr.querySelector('td'):null; }
+function _ferSatirAd(k, ad){
+  const td=_ferSatirTd(k); if(!td) return;
+  if(td.dataset.orj==null) td.dataset.orj=td.innerHTML;
+  if(ad){ td.innerHTML='<b class="fer-grup">'+esc(ad)+'</b>'; td.dataset.grup=ad; }
+  else { td.innerHTML=td.dataset.orj; delete td.dataset.grup; }
+}
+function _ferSatirGrup(k){ const td=_ferSatirTd(k); return (td && td.dataset.grup) || ''; }
+function _ferSatirAdlariSifirla(){ (typeof _FT_BEDEN_KEYS!=='undefined'?_FT_BEDEN_KEYS:['xxs','xs','s','m','l','xl','xxl','3xl','tek']).forEach(k=>_ferSatirAd(k,'')); }
 function ftPickModel(id){
   const m=_ftAll().find(x=>x.id===id); if(!m){ ftCloseModelAc(); return; }
   const modelEl=document.getElementById('fModel'); if(modelEl) modelEl.value=m.modelKodu||'';
@@ -8264,6 +8275,7 @@ function ftPickModel(id){
   // Termin
   const termEl=document.getElementById('fTermin');
   if(termEl && m.termin && !termEl.value) termEl.value=m.termin;
+  _ferSatirAdlariSifirla();
   // Önce TÜM beden satırlarını temizle — böylece sadece dolduracaklarımız kalır.
   _FT_BEDEN_KEYS.forEach(s=>{
     const ec=document.getElementById('fer_'+s+'cm'); const ea=document.getElementById('fer_'+s+'a');
@@ -8290,7 +8302,7 @@ function ftPickModel(id){
     // yazılır; satır adı grubu tam anlatmadığı için PDF'de beden gizlenir.
     if(!key && /[-\/]/.test(bAd)){
       const ilk=_FT_BEDEN_MAP[bAd.split(/\s*[-\/]\s*/)[0]];
-      if(ilk && !dolu[ilk]){ yaz(ilk, z, stok); yerlesen++; return; }
+      if(ilk && !dolu[ilk]){ yaz(ilk, z, stok); _ferSatirAd(ilk, bAd); return; }
     }
     if(!key){ bedensizler.push({z, stok}); return; } // beden adı yok (ör. PDF'ten gelen cm satırı)
     yaz(key, z, stok);
@@ -10561,7 +10573,7 @@ function _irsKirilim(i){
     if(i.hideBeden){ (groupFermuarBedenByCm(i.beden)||[]).forEach(g=>out.push([g.cm+' cm', +g.adet])); }
     else {
       const k=sortBedenKeys(i.beden).filter(x=>+((i.beden[x]||{}).adet)>0);
-      k.forEach(x=>{ const bv=i.beden[x]||{}; out.push([(_T2L_BEDEN[x]||x)+(k.length<=2 && bv.cm?' · '+bv.cm+' cm':''), +bv.adet]); });
+      k.forEach(x=>{ const bv=i.beden[x]||{}; out.push([(bv.ad||_T2L_BEDEN[x]||x)+(k.length<=2 && bv.cm?' · '+bv.cm+' cm':''), +bv.adet]); });
     }
   } else if(t==='kordon' && !korMetreMi(i)){
     (i.olcular||[]).forEach(o=>out.push([(o.beden?o.beden+' · ':'')+o.cm+' cm', +o.adet]));
@@ -10820,7 +10832,7 @@ function showDetailUni(id,type){
     } else {
       let k=sortBedenKeys(item.beden).filter(k=>+((item.beden[k]||{}).adet)>0); if(!k.length) k=sortBedenKeys(item.beden);
       tablolar.push({baslik:'Bedenler', sutun:[{l:'Beden'},{l:'Uzunluk'},{l:'Adet',n:1}],
-        satir:k.map(x=>{ const bv=item.beden[x]||{}; return [bedenAd[x]||x, bv.cm!=null&&bv.cm!==''?bv.cm+' cm':'—', _n0(bv.adet??0)]; }),
+        satir:k.map(x=>{ const bv=item.beden[x]||{}; return [bv.ad||bedenAd[x]||x, bv.cm!=null&&bv.cm!==''?bv.cm+' cm':'—', _n0(bv.adet??0)]; }),
         alt:k.length>1?['Toplam','',_n0(topV)]:null});
     }
   }
@@ -11355,7 +11367,7 @@ function generatePDF(id, type, mode) {
       html += `<div class="section-title" style="font-size:${bedenCount >= 7 ? '11px' : '12px'};">Beden Detayları${item.renk ? ` <span style="font-size:${bedenCount >= 7 ? '10px' : '11px'};font-weight:500;color:#6b7280;margin-left:8px;">Renk: ${esc(item.renk)}</span>` : ''}</div>`;
       html += `<table style="margin-bottom:${bedenCount >= 7 ? '6px' : '10px'};"><thead><tr><th style="font-size:${fontSize};padding:${padding};">Beden</th><th style="font-size:${fontSize};padding:${padding};">CM</th><th style="font-size:${fontSize};padding:${padding};">Adet</th></tr></thead><tbody>`;
       sortBedenKeys(item.beden).forEach(k => {
-        const bv=item.beden[k]||{}; html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bedenLabel[k]||k}</b></td><td style="font-size:${fontSize};padding:${padding};">${bv.cm??'-'} cm</td><td style="font-size:${fontSize};padding:${padding};">${bv.adet??0}</td></tr>`;
+        const bv=item.beden[k]||{}; html += `<tr><td style="font-size:${fontSize};padding:${padding};"><b>${bv.ad?esc(bv.ad):(bedenLabel[k]||k)}</b></td><td style="font-size:${fontSize};padding:${padding};">${bv.cm??'-'} cm</td><td style="font-size:${fontSize};padding:${padding};">${bv.adet??0}</td></tr>`;
       });
       html += `</tbody></table><div class="total-row" style="font-size:${bedenCount >= 7 ? '12px' : '14px'};padding:${bedenCount >= 7 ? '6px 0' : '8px 0'};">Toplam Adet: ${item.totalAdet||0}</div>`;
     }
@@ -11702,7 +11714,7 @@ function saveFermuar(){
   const renk=document.getElementById('fRenk').value.trim();
   if(!model||!tarih||!atolye||!teslimEden||!teslimAlan||!renk)return toast('Zorunlu alanları doldurun (Renk dahil)','error');
   const sizes=['xxs','xs','s','m','l','xl','xxl','3xl','tek'];const beden={};let total=0;
-  sizes.forEach(s=>{const cm=+(document.getElementById('fer_'+s+'cm').value||0);const adet=+(document.getElementById('fer_'+s+'a').value||0);if(adet>0)beden[s]={cm,adet};total+=adet;});
+  sizes.forEach(s=>{const cm=+(document.getElementById('fer_'+s+'cm').value||0);const adet=+(document.getElementById('fer_'+s+'a').value||0);if(adet>0){beden[s]={cm,adet};const ad=_ferSatirGrup(s);if(ad)beden[s].ad=ad;}total+=adet;});
   const termin=document.getElementById('fTermin').value;const aciklama=document.getElementById('fAciklama').value.trim();
   const hideBeden=document.getElementById('fHideBeden').checked;
 
@@ -11727,6 +11739,7 @@ function saveFermuar(){
   _syncAtolyeLabel('fAtolye');
   document.getElementById('fHideBeden').checked=false; window._ftOtoGizle=false; try{ _ferGizleCiz(); }catch(_){}
   sizes.forEach(s=>{document.getElementById('fer_'+s+'cm').value='';document.getElementById('fer_'+s+'a').value='';});
+  _ferSatirAdlariSifirla();
   document.getElementById('ferToplam').textContent='0';
   const today=new Date().toISOString().split('T')[0];document.getElementById('fTarih').value=today;
   toast('Fermuar irsaliyesi kaydedildi: '+item.no);refreshHome();
@@ -16572,7 +16585,7 @@ function buildShareText(item, type) {
         const bv = item.beden[k];
         const v = type === 'fermuar' ? (bv?.adet ?? 0) : bv;
         const cm = type === 'fermuar' && bv && (bv.cm === 0 || bv.cm) ? ` (${bv.cm} cm)` : '';
-        return +v ? `${bl[k]||k}${cm}: ${v}` : '';
+        return +v ? `${(bv&&bv.ad)||bl[k]||k}${cm}: ${v}` : '';
       }).filter(Boolean);
     }
     if (bds.length) text += `\n${type==='fermuar'&&item.hideBeden?'Ölçüler':'Bedenler'}:\n  ${bds.join('\n  ')}\n`;
@@ -16731,7 +16744,7 @@ function bulkShareWhatsApp() {
             const bv = item.beden[k];
             const v = type === 'fermuar' ? (bv && bv.adet) : bv;
             const cm = type === 'fermuar' && bv && (bv.cm === 0 || bv.cm) ? ` (${bv.cm} cm)` : '';
-            return {k:(bl[k]||k)+cm, v: +v||0};
+            return {k:((bv&&bv.ad)||bl[k]||k)+cm, v: +v||0};
           }).filter(x => x.v > 0);
       if (bds.length) {
         text += `${type==='fermuar'&&item.hideBeden?'Ölçüler':'Bedenler'}:\n` + bds.map(b=>`   • ${b.k}: *${b.v} adet*`).join('\n') + `\n`;
@@ -16863,7 +16876,7 @@ function _singleItemPdfHtml(item, type){
       const bl={xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
       h+=`<div class="st">Beden Detayları${item.renk?` <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px;">Renk: ${esc(item.renk)}</span>`:''}</div>`;
       h+=`<table><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>`;
-      sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};h+=`<tr><td><b>${bl[k]||k}</b></td><td>${bv.cm??'-'} cm</td><td>${bv.adet??0}</td></tr>`;});
+      sortBedenKeys(item.beden).forEach(k=>{const bv=item.beden[k]||{};h+=`<tr><td><b>${bv.ad?esc(bv.ad):(bl[k]||k)}</b></td><td>${bv.cm??'-'} cm</td><td>${bv.adet??0}</td></tr>`;});
       h+=`</tbody></table><div class="tr2">Toplam Adet: ${item.totalAdet||0}</div>`;
     }
   }
@@ -18497,6 +18510,7 @@ function _fillPageFromData(page, data){
         if(ec) ec.value = data.beden[s].cm||'';
         if(ea) ea.value = data.beden[s].adet||'';
       }
+      try{ _ferSatirAd(s, (data.beden[s]&&data.beden[s].ad)||''); }catch(_){}
     });
     const eh=document.getElementById('fHideBeden'); if(eh) eh.checked = !!data.hideBeden; try{ _ferGizleCiz(); }catch(_){}
   }
@@ -24160,7 +24174,7 @@ function _renderPublicViewer(d){
   } else if(d.beden){
     const rows = (window.sortBedenKeys ? window.sortBedenKeys(d.beden) : Object.keys(d.beden)).map(k => {
       const v = d.beden[k];
-      if(typeof v === 'object') return `<tr><td>${BEDEN_NAMES[k]||k}</td><td>${v.cm||'-'} cm</td><td>${v.adet||0}</td></tr>`;
+      if(typeof v === 'object') return `<tr><td>${v.ad?String(v.ad).replace(/</g,'&lt;'):(BEDEN_NAMES[k]||k)}</td><td>${v.cm||'-'} cm</td><td>${v.adet||0}</td></tr>`;
       return `<tr><td>${BEDEN_NAMES[k]||k}</td><td colspan="2">${v}</td></tr>`;
     }).join('');
     if(rows) sizesHtml += `<h3>Beden Detayları</h3><table class="pv-tbl"><thead><tr><th>Beden</th><th>CM</th><th>Adet</th></tr></thead><tbody>${rows}</tbody></table>${d.total?`<div class="pv-total">Toplam Adet: ${d.total}</div>`:''}`;
