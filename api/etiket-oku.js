@@ -38,9 +38,12 @@ const ISTEM_SIPARIS =
   'Tedarikçinin kendi stok/iş numarasını (ör. 212211-2) model yazma. Model kodu yoksa boş bırak.\n' +
   '- satirlar: her uzunluk için bir satır. cm sayı, adet tam sayı. Satır birden çok bedeni kapsıyorsa ' +
   '(ör. "(XS-S-M) 23 cm : 5500 adet") beden alanına "XS-S-M" yaz; tek beden ise o bedeni yaz; beden yoksa boş bırak.\n' +
-  '- RENK: tabloda Renk sütunu varsa (ör. "511", "RJ76") her satırın renk alanına o satırdaki kodu aynen yaz. ' +
-  'Farklı renkler FARKLI siparişlerdir: aynı model kodu olsa bile her renk için ayrı bir modeller kaydı döndür ve kaydın renk alanına o kodu yaz. ' +
-  'Renk sütunu yoksa belgede yazan renk adını (ör. Kahverengi, "SYAH" → Siyah) kaydın renk alanına yaz.\n' +
+  '- RENK: tabloda Renk sütunu varsa (ör. "511", "RJ76") her satırın renk alanına o satırdaki KODU aynen yaz. ' +
+  'Farklı renk kodları FARKLI siparişlerdir: aynı model kodu olsa bile her renk kodu için ayrı bir modeller kaydı döndür. ' +
+  'Kaydın renk alanına renk ADINI yaz: belge başlığında (ör. "Müşteri Sipariş No: J 5911 - SEPARE - SYAH") geçen rengi düzgün Türkçe yaz ' +
+  '(SYAH → Siyah, BYZ → Beyaz, LACI → Lacivert, KHV → Kahverengi). Bir başlık hangi tabloya aitse o tablodaki renk kodunun adıdır; ' +
+  'aynı kodlu satırlar başka fotoğrafta başlıksız devam ediyorsa onlar için de aynı adı kullan. Adı hiçbir yerde yazmıyorsa renk alanını boş bırak, kod uydurma ad yazma. ' +
+  'Renk sütunu yoksa belgede yazan renk adını kaydın renk alanına yaz.\n' +
   '- Fotoğraflar aynı sayfanın üst üste binen parçaları olabilir: aynı satırı (aynı sıra no, renk, uzunluk, miktar) iki kez yazma.\n' +
   '- "İrsaliye Detayları" tablosundaki parça teslimat miktarlarını satır yapma; yalnız ana tablodaki sipariş Miktar\'ını al.\n' +
   '- Fiyat, fermuar tipi, not gibi bilgileri satıra koyma. ' +
