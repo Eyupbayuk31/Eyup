@@ -2441,6 +2441,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
 
         <!-- cm cm sıralı satır listesi -->
         <div class="ft-rows" id="ftDetailRows"></div>
+        <div class="tk-kabul-kap" id="ftDetailKabul"></div>
       </div>
     </div>
 
@@ -2684,6 +2685,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </div>
 
         <div class="ft-rows" id="ktDetailRows"></div>
+        <div class="tk-kabul-kap" id="ktDetailKabul"></div>
       </div>
     </div>
 
@@ -7280,14 +7282,16 @@ function ftRenderDetail(){
   var _rr=document.getElementById('ftRowRenk'); if(_rr){ _rr.placeholder=m.renk?('Renk ('+m.renk+')'):'Renk'; }
 
   const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
+  const _kTop=_tkModelKoli(m);
   document.getElementById('ftDetailKpis').innerHTML=[
     ['fa-cart-shopping', sip.toLocaleString('tr'), 'Toplam Sipariş'],
-    ['fa-truck-ramp-box', gel.toLocaleString('tr'), 'Toplam Gelen'],
+    ['fa-truck-ramp-box', gel.toLocaleString('tr'), 'Toplam Gelen'+(_kTop?' · '+_kTop+' koli':'')],
     ['fa-warehouse', stok.toLocaleString('tr'), 'Eldeki Stok'],
     ['fa-hourglass-half', bek.toLocaleString('tr'), 'Bekleyen'],
   ].map(x=>`<div class="ft-dkpi"><i class="fas ${x[0]}"></i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
 
   const sizes=_ftSizesSorted(m);
+  const _kb=document.getElementById('ftDetailKabul'); if(_kb) _kb.innerHTML=_takipKabulHtml('fermuarTakip', m);
   const host=document.getElementById('ftDetailRows');
   if(!sizes.length){
     host.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Henüz beden yok. Yukarıdaki formla ekleyin — <b>küçükten büyüğe cm sırasına</b> göre listelenir.</p></div>';
@@ -7309,7 +7313,7 @@ function ftRenderDetail(){
         <span class="ft-row-cm">${z.cm!=null?z.cm+' cm':'—'}</span>
         <span class="ft-row-renk">${z.renk?esc(z.renk):'—'}</span>
         <span class="ft-c-sip" data-l="Sipariş">${(+z.siparisAdet||0).toLocaleString('tr')}</span>
-        <span class="pos ft-c-gel" data-l="Gelen">${zg.toLocaleString('tr')}</span>
+        <span class="pos ft-c-gel" data-l="Gelen">${zg.toLocaleString('tr')}${_tkKoli(z)?`<small class="tk-koli">${_tkKoli(z)} koli</small>`:''}</span>
         <span class="neg ft-c-kul" data-l="Kullanılan">${zk.toLocaleString('tr')}</span>
         <span class="${zb>0?'bad':(zg>(+z.siparisAdet||0)?'fz':'')} ft-c-eks" data-l="Eksik">${zb>0?zb.toLocaleString('tr'):(zg>(+z.siparisAdet||0)?'+'+(zg-(+z.siparisAdet||0)).toLocaleString('tr')+' fazla':'—')}</span>
         <span class="ft-row-stok ${stokCls}" data-l="Stok">${zs.toLocaleString('tr')}</span>
@@ -7326,12 +7330,13 @@ function ftRenderDetail(){
 }
 function _ftHistoryHtml(modelId, z){
   const rows=[];
-  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi',kind:'t',eid:t.id}));
+  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi'+(t.koli?' · '+t.koli+' koli':''),kind:'t',eid:t.id,kabul:t.kabulId}));
   (z.kullanimlar||[]).forEach(k=>rows.push({t:k.tarih,ic:'fa-scissors',cls:'neg',txt:'−'+(+k.adet||0)+' kullanıldı'+(k.no?(' ('+k.no+')'):''),kind:'k',eid:k.id}));
   rows.sort((a,b)=>(b.t||'').localeCompare(a.t||''));
   if(!rows.length) return '<div class="ft-hist-empty">Henüz hareket yok.</div>';
   return '<div class="ft-hist-list">'+rows.map(r=>
     `<div class="ft-hist-row"><i class="fas ${r.ic} ${r.cls}"></i><span class="ft-hist-txt ${r.cls}">${r.txt}</span><span class="ft-hist-date">${r.t?_ftFmtDate(r.t):''}</span>`+
+    (r.kabul!=null && _tkKabulFotoVar('fermuarTakip',modelId,r.kabul)?`<button class="ft-hist-foto" onclick="takipKabulFoto('fermuarTakip',${modelId},${r.kabul})" title="Koli fotoğrafları"><i class="fas fa-camera"></i></button>`:'')+
     `<button class="ft-hist-del" onclick="ftDeleteHist(${modelId},${z.id},'${r.kind}',${r.eid})" title="Bu hareketi sil (yanlış giriş)"><i class="fas fa-times"></i></button></div>`
   ).join('')+'</div>';
 }
@@ -7345,6 +7350,7 @@ function ftDeleteHist(modelId, sizeId, kind, entryId){
   const lbl = kind==='t' ? ('+'+(+entry.adet||0)+' geldi') : ('−'+(+entry.adet||0)+' kullanıldı'+(entry.no?(' ('+entry.no+')'):''));
   if(!confirm('"'+lbl+'" hareketini silmek istiyor musunuz?\n\nStok/gelen değerleri otomatik yeniden hesaplanır.')) return;
   z[arrName]=(z[arrName]||[]).filter(e=>e.id!==entryId);
+  if(kind==='t' && entry.kabulId!=null) _tkKabulDus(list[midx], sizeId, entry.kabulId);
   _ftStamp(list[midx]);
   setData('fermuarTakip',list);
   ftRenderDetail();
@@ -8630,14 +8636,16 @@ function ktRenderDetail(){
 
   const sip=_ftModelSip(m), gel=_ftModelGelen(m), stok=_ftModelStok(m), bek=_ftModelBekleyen(m);
   const bir=metreMi?' m':'';
+  const _kTopK=_tkModelKoli(m);
   document.getElementById('ktDetailKpis').innerHTML=[
     ['fa-cart-shopping', _ktSayi(sip,metreMi)+bir, 'Toplam Sipariş'],
-    ['fa-truck-ramp-box', _ktSayi(gel,metreMi)+bir, 'Toplam Gelen'],
+    ['fa-truck-ramp-box', _ktSayi(gel,metreMi)+bir, 'Toplam Gelen'+(_kTopK?' · '+_kTopK+' koli':'')],
     ['fa-warehouse', _ktSayi(stok,metreMi)+bir, 'Eldeki Stok'],
     ['fa-hourglass-half', _ktSayi(bek,metreMi)+bir, 'Bekleyen'],
   ].map(x=>`<div class="ft-dkpi"><i class="fas ${x[0]}"></i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
 
   const sizes=_ktSatirlar(m);
+  const _kbK=document.getElementById('ktDetailKabul'); if(_kbK) _kbK.innerHTML=_takipKabulHtml('kordonTakip', m);
   const host=document.getElementById('ktDetailRows');
   if(!sizes.length){
     host.innerHTML = metreMi
@@ -8665,7 +8673,7 @@ function ktRenderDetail(){
         ${metreMi?'':`<span class="ft-row-cm">${z.cm!=null?z.cm+' cm':'—'}</span>`}
         <span class="ft-row-renk${metreMi?' km-renk':''}">${z.renk?esc(z.renk):'—'}</span>
         <span class="ft-c-sip" data-l="Sipariş${metreMi?' (m)':''}">${S(z.siparisAdet)}</span>
-        <span class="pos ft-c-gel" data-l="Gelen">${S(zg)}</span>
+        <span class="pos ft-c-gel" data-l="Gelen">${S(zg)}${_tkKoli(z)?`<small class="tk-koli">${_tkKoli(z)} koli</small>`:''}</span>
         <span class="neg ft-c-kul" data-l="Kullanılan">${S(zk)}</span>
         <span class="${zb>0?'bad':(zg>(+z.siparisAdet||0)?'fz':'')} ft-c-eks" data-l="Eksik">${zb>0?S(zb):(zg>(+z.siparisAdet||0)?'+'+S(zg-(+z.siparisAdet||0))+' fazla':'—')}</span>
         <span class="ft-row-stok ${stokCls}" data-l="Stok">${S(zs)}</span>
@@ -8682,12 +8690,13 @@ function ktRenderDetail(){
 }
 function _ktHistoryHtml(modelId, z){
   const rows=[];
-  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi',kind:'t',eid:t.id}));
+  (z.teslimatlar||[]).forEach(t=>rows.push({t:t.tarih,ic:'fa-truck-ramp-box',cls:'pos',txt:'+'+(+t.adet||0)+' geldi'+(t.koli?' · '+t.koli+' koli':''),kind:'t',eid:t.id,kabul:t.kabulId}));
   (z.kullanimlar||[]).forEach(k=>rows.push({t:k.tarih,ic:'fa-scissors',cls:'neg',txt:'−'+(+k.adet||0)+' kullanıldı'+(k.no?(' ('+k.no+')'):''),kind:'k',eid:k.id}));
   rows.sort((a,b)=>(b.t||'').localeCompare(a.t||''));
   if(!rows.length) return '<div class="ft-hist-empty">Henüz hareket yok.</div>';
   return '<div class="ft-hist-list">'+rows.map(r=>
     `<div class="ft-hist-row"><i class="fas ${r.ic} ${r.cls}"></i><span class="ft-hist-txt ${r.cls}">${r.txt}</span><span class="ft-hist-date">${r.t?_ftFmtDate(r.t):''}</span>`+
+    (r.kabul!=null && _tkKabulFotoVar('kordonTakip',modelId,r.kabul)?`<button class="ft-hist-foto" onclick="takipKabulFoto('kordonTakip',${modelId},${r.kabul})" title="Koli fotoğrafları"><i class="fas fa-camera"></i></button>`:'')+
     `<button class="ft-hist-del" onclick="ktDeleteHist(${modelId},${z.id},'${r.kind}',${r.eid})" title="Bu hareketi sil (yanlış giriş)"><i class="fas fa-times"></i></button></div>`
   ).join('')+'</div>';
 }
@@ -8699,6 +8708,7 @@ function ktDeleteHist(modelId, sizeId, kind, entryId){
   const lbl = kind==='t' ? ('+'+(+entry.adet||0)+' geldi') : ('−'+(+entry.adet||0)+' kullanıldı'+(entry.no?(' ('+entry.no+')'):''));
   if(!confirm('"'+lbl+'" hareketini silmek istiyor musunuz?\n\nStok/gelen değerleri otomatik yeniden hesaplanır.')) return;
   z[arrName]=(z[arrName]||[]).filter(e=>e.id!==entryId);
+  if(kind==='t' && entry.kabulId!=null) _tkKabulDus(list[midx], sizeId, entry.kabulId);
   _ftStamp(list[midx]);
   setData('kordonTakip',list);
   ktRenderDetail();
@@ -9417,6 +9427,68 @@ function _tkgGeriAlGoster(store, modelId, eklenen, mesaj, kabulId){
   clearTimeout(_tkgGeriSayac);
   _tkgGeriSayac=setTimeout(function(){ el.classList.remove('show'); }, 7000);
 }
+// ── Koli sayıları ve "Gelen koliler" (mal kabul) bölümü ──────────────
+function _tkKoli(z){ return (z && z.teslimatlar || []).reduce(function(s,t){ return s+(+t.koli||0); },0); }
+function _tkModelKoli(m){ return (m && m.sizes || []).reduce(function(s,z){ return s+_tkKoli(z); },0); }
+function _tkKabul(store, modelId, kabulId){
+  var m=(getData(store)||[]).filter(function(x){ return x.id===modelId; })[0];
+  return m ? ((m.kabuller||[]).filter(function(k){ return k.id===kabulId; })[0]||null) : null;
+}
+function _tkKabulFotoVar(store, modelId, kabulId){ var k=_tkKabul(store, modelId, kabulId); return !!(k && (k.fotolar||[]).some(Boolean)); }
+// Teslimat silinince mal kabul kaydından o satırın kolileri düşer; boşalan kayıt silinir
+function _tkKabulDus(m, sizeId, kabulId){
+  var k=(m.kabuller||[]).filter(function(x){ return x.id===kabulId; })[0]; if(!k) return;
+  k.koliler=(k.koliler||[]).filter(function(x){ return x.sizeId!==sizeId; });
+  if(!k.koliler.length) m.kabuller=m.kabuller.filter(function(x){ return x.id!==kabulId; });
+}
+function _takipKabulHtml(store, m){
+  var kl=(m && m.kabuller || []).filter(function(k){ return (k.koliler||[]).length; }).slice().sort(function(a,b){ return (b.id||0)-(a.id||0); });
+  if(!kl.length) return '';
+  var satirlar=(store==='kordonTakip' && typeof _ktSatirlar==='function') ? _ktSatirlar(m) : _ftSizesSorted(m);
+  var cmSira=function(a,b){ return (+a||0)-(+b||0); };
+  return '<div class="tk-kabul"><div class="tk-kabul-b"><i class="fas fa-boxes-stacked"></i> Gelen koliler</div>'+
+    kl.map(function(k){
+      var top=0, grup={};
+      k.koliler.forEach(function(x){ top+=+x.adet||0; var g=grup[x.cm]||(grup[x.cm]={n:0,a:0}); g.n++; g.a+=+x.adet||0; });
+      var cmler=Object.keys(grup).sort(cmSira).map(function(c){ return '<span><b>'+esc(c)+' cm</b> '+grup[c].n+' koli · '+(grup[c].a).toLocaleString('tr')+'</span>'; }).join('');
+      var foto=(k.fotolar||[]);
+      var resim=foto.map(function(u,i){
+        var bu=k.koliler.filter(function(x){ return x.f===i; })[0];
+        if(!bu) return '';   // kolisi silinen teslimatın fotoğrafı gösterilmez
+        var alt=bu ? (esc(bu.cm)+' cm · '+(+bu.adet||0).toLocaleString('tr')) : '';
+        return u ? '<button type="button" class="tk-kb-ft" onclick="takipKabulFoto(\''+store+'\','+m.id+','+k.id+','+i+')" title="Büyüt"><img src="'+esc(u)+'" alt="" loading="lazy"><span>'+alt+'</span></button>'
+                 : '<span class="tk-kb-ft bos" title="Fotoğraf yüklenmedi"><i class="fas fa-image"></i><span>'+alt+'</span></span>';
+      }).join('');
+      return '<div class="tk-kb">'+
+        '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+k.koliler.length+' koli · '+top.toLocaleString('tr')+' adet</span>'+
+          (k.siparisNo?'<small>Sipariş '+esc(k.siparisNo)+'</small>':'')+'</div>'+
+        '<div class="tk-kb-cm">'+cmler+'</div>'+
+        (resim?'<div class="tk-kb-seri">'+resim+'</div>':'')+
+      '</div>';
+    }).join('')+'</div>';
+}
+// Bir teslimatın koli fotoğraflarını büyük göster (baştan i. fotoğrafa kayar)
+function takipKabulFoto(store, modelId, kabulId, bas){
+  var k=_tkKabul(store, modelId, kabulId); if(!k) return;
+  var foto=(k.fotolar||[]);
+  var parca=foto.map(function(u,i){
+    var bu=(k.koliler||[]).filter(function(x){ return x.f===i; });
+    if(!u || !bu.length) return '';
+    var yazi=bu.map(function(x){ return esc(x.cm)+' cm · '+(+x.adet||0).toLocaleString('tr')+' adet'; }).join(' | ');
+    return '<figure class="tk-lb-f" data-i="'+i+'"><img src="'+esc(u)+'" alt=""><figcaption>Koli '+(i+1)+(yazi?' · '+yazi:'')+'</figcaption></figure>';
+  }).join('');
+  if(!parca){ toast('Bu teslimatın fotoğrafı yok','info'); return; }
+  var kap=document.createElement('div'); kap.className='aks-lb kf-lb tk-lb'; kap.setAttribute('role','dialog'); kap.setAttribute('aria-label','Koli fotoğrafları');
+  kap.innerHTML='<div class="aks-lb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih))+' · ':'')+(k.koliler||[]).length+' koli</b><button type="button" class="aks-lb-x" aria-label="Kapat"><i class="fas fa-xmark"></i></button></div>'+
+    '<div class="aks-lb-ic">'+parca+'</div>';
+  var kapat=function(){ kap.remove(); document.removeEventListener('keydown',tus,true); };
+  var tus=function(e){ if(e.key==='Escape'){ e.stopPropagation(); kapat(); } };
+  kap.addEventListener('click',function(e){ if(e.target===kap || e.target.closest('.aks-lb-x')) kapat(); });
+  document.addEventListener('keydown',tus,true);
+  document.body.appendChild(kap);
+  if(bas!=null){ setTimeout(function(){ var f=kap.querySelector('.tk-lb-f[data-i="'+bas+'"]'); if(f) f.scrollIntoView({block:'start'}); },60); }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // KOLİ FOTOĞRAFINDAN GELEN GİR
 // Koli etiketleri çekilir → /api/etiket-oku (Gemini) okur → model + cm
@@ -9647,6 +9719,7 @@ function _kfFotolariYukle(store, modelId, kabulId, veriler){
     var k=(m.kabuller||[]).filter(function(x){ return x.id===kabulId; })[0]; if(!k) return;
     k.fotolar=veriler.map(function(_,i){ return adresler[i]||''; });
     _ftStamp(m); setData(store, list);
+    try{ _tkgYenile(store, modelId); }catch(_){}
     var eksik=k.fotolar.filter(function(u){ return !u; }).length;
     if(eksik) toast(eksik+' koli fotoğrafı yüklenemedi','error');
   });
