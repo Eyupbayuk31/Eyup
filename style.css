@@ -15568,7 +15568,9 @@ html[data-perf="lite"] :is(#_pf,*):is(#_pf,*):is(.card,.ak-card,.s-card,.ft-card
   border:1px solid var(--border) !important;
 }
 /* Hover'da yükselme/ölçekleme yeniden boyama tetikliyor — sadece renk değişsin */
-html[data-perf="lite"] :is(#_pf,*):hover{ transform:none !important; }
+/* Yalnız yükselme/ölçekleme efekti olan öğeler: ortalamak için transform kullanan
+   öğeler (translate(-50%)) fare gelince yerinden zıplıyordu (liste düğmeleri). */
+html[data-perf="lite"] :is(#_pf,.card,.btn,button,a,[class*="-card"],[class*="chip"],.theme-btn,.share-opt,.list-stat-mini):hover{ transform:none !important; }
 /* Bulanıklık kapanınca ARKA PLAN AYRIMI kaybolur: bu katmanların kendi
    arka plan rengi şeffaf, okunabilirliği tamamen backdrop-filter'a
    dayanıyordu. Hafif modda modal açınca arkadaki sayfa net görünüp
@@ -20010,7 +20012,7 @@ html .tkg-modal .kf-yok-a input.form-input{ height:40px; width:96px; min-width:0
    fare gelince yalnız renkleri koyulaşır. */
 .t2l-kolon, .t2l-r > .card-inner{ grid-template-columns:30px minmax(0,1.5fr) minmax(0,1.3fr) 104px 96px 150px 112px; }
 .t2l-act, .t2l-r:hover .t2l-act, .t2l-r:focus-within .t2l-act{
-  left:calc(100% + 14px); right:auto; top:50%; transform:translateY(-50%); opacity:1; pointer-events:auto;
+  left:calc(100% + 14px); right:auto; top:0; bottom:0; align-items:center; transform:none; opacity:1; pointer-events:auto;
   transition:none; background:transparent; box-shadow:none; padding:0; }
 .t2l-act button{ background:transparent; color:color-mix(in srgb, var(--t2l-mut) 70%, transparent); }
 .t2l-r:hover .t2l-act button{ color:var(--t2l-mut); background:var(--t2l-yumus); }
