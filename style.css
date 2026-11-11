@@ -19862,3 +19862,30 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
   html .gs-count:empty{ display:none !important; }
 }
 .aks-lb-ust{ padding-top:calc(12px + env(safe-area-inset-top, 0px)); }
+
+/* ═══ Takip detayı: koli sayıları ve "Gelen koliler" ═══ */
+.ft-c-gel .tk-koli{ display:block; margin-top:2px; font-size:11px; font-weight:800; color:var(--primary); letter-spacing:0; }
+.ft-hist-foto{ all:unset; cursor:pointer; width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;
+  color:var(--primary); background:color-mix(in srgb, var(--primary) 12%, transparent); margin-left:6px; flex-shrink:0; }
+.ft-hist-foto:hover, .ft-hist-foto:focus-visible{ background:var(--primary); color:var(--bg-main, #000); }
+.tk-kabul-kap:empty{ display:none; }
+.tk-kabul{ margin-top:16px; }
+.tk-kabul-b{ font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.tk-kabul-b i{ color:var(--primary); }
+.tk-kb{ border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:10px; background:var(--bg-card); }
+.tk-kb-ust{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; }
+.tk-kb-ust b{ font-size:15px; font-weight:800; color:var(--text-main); }
+.tk-kb-ust span{ font-size:13px; font-weight:700; color:var(--text-main); }
+.tk-kb-ust small{ font-size:12px; color:var(--text-muted); margin-left:auto; }
+.tk-kb-cm{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.tk-kb-cm span{ font-size:12.5px; color:var(--text-muted); padding:4px 10px; border-radius:99px; background:color-mix(in srgb, var(--text-muted) 9%, transparent); }
+.tk-kb-cm b{ color:var(--text-main); font-weight:800; margin-right:2px; }
+.tk-kb-seri{ display:flex; gap:8px; overflow-x:auto; margin-top:10px; padding-bottom:2px; -webkit-overflow-scrolling:touch; }
+.tk-kb-ft{ all:unset; box-sizing:border-box; cursor:zoom-in; position:relative; flex:0 0 84px; height:84px; border-radius:10px; overflow:hidden; background:#fff; border:1px solid var(--border); }
+.tk-kb-ft img{ width:100%; height:100%; object-fit:cover; display:block; }
+.tk-kb-ft > span{ position:absolute; left:0; right:0; bottom:0; padding:2px 4px; font-size:10px; font-weight:800; text-align:center; color:#fff; background:rgba(15,23,42,.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tk-kb-ft.bos{ cursor:default; display:flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--text-muted) 10%, transparent); color:var(--text-muted); font-size:20px; }
+.tk-kb-ft:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.tk-lb .aks-lb-ic{ gap:18px; }
+.tk-lb-f{ margin:0; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.tk-lb-f figcaption{ color:#fff; font-size:13px; font-weight:700; }
