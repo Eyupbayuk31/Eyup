@@ -2431,12 +2431,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <div class="ft-addrow">
           <div class="ft-addrow-title" onclick="takipFormAc(this)"><i class="fas fa-ruler"></i> Yeni Beden / CM Ekle<i class="fas fa-chevron-down ft-addrow-ok"></i></div>
           <div class="ft-addrow-grid">
-            <select class="form-input" id="ftRowBeden">
-              <option value="">Beden —</option>
-              <option>Tek Beden</option>
-              <option>XXS</option><option>XS</option><option>S</option><option>M</option>
-              <option>L</option><option>XL</option><option>XXL</option><option>3XL</option>
-            </select>
+            <input class="form-input" id="ftRowBeden" list="takipBedenListe" placeholder="Beden" autocomplete="off" aria-label="Beden (ör. M ya da XS-S-M)">
             <input class="form-input" type="number" id="ftRowCm" placeholder="CM *" min="0" step="0.5" autocomplete="off">
             <input class="form-input" id="ftRowRenk" placeholder="Renk" autocomplete="off">
             <input class="form-input" type="number" id="ftRowSiparis" placeholder="Satın Alma Adeti *" min="0" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ftAddSizeRow();}">
@@ -2449,6 +2444,13 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
       </div>
     </div>
 
+    <!-- Beden önerileri: tek beden ya da aynı uzunluğu paylaşan beden grubu -->
+    <datalist id="takipBedenListe">
+      <option value="Tek Beden"></option><option value="XXS"></option><option value="XS"></option><option value="S"></option>
+      <option value="M"></option><option value="L"></option><option value="XL"></option><option value="XXL"></option><option value="3XL"></option>
+      <option value="XS-S-M"></option><option value="L-XL-XXL"></option><option value="XS-S"></option><option value="S-M"></option>
+      <option value="M-L"></option><option value="L-XL"></option><option value="XL-XXL"></option>
+    </datalist>
     <!-- Toplu "Gelen Gir" ekranı (Fermuar + Kordon ortak). Detay ekranına
          DOKUNMAZ; onun üstüne açılır, kapanınca detay aynen yerinde durur. -->
     <div class="modal-overlay" id="tkGelenModal" onclick="if(event.target===this)takipGelenKapat()">
@@ -2673,12 +2675,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <div class="ft-addrow">
           <div class="ft-addrow-title" onclick="takipFormAc(this)"><i class="fas fa-ruler"></i> <span id="ktAddTitle">Yeni Beden / CM Ekle</span><i class="fas fa-chevron-down ft-addrow-ok"></i></div>
           <div class="ft-addrow-grid kt-addrow-adet" id="ktAddGrid">
-            <select class="form-input" id="ktRowBeden">
-              <option value="">Beden —</option>
-              <option>Tek Beden</option>
-              <option>XXS</option><option>XS</option><option>S</option><option>M</option>
-              <option>L</option><option>XL</option><option>XXL</option><option>3XL</option>
-            </select>
+            <input class="form-input" id="ktRowBeden" list="takipBedenListe" placeholder="Beden" autocomplete="off" aria-label="Beden (ör. M ya da XS-S-M)">
             <input class="form-input" type="number" id="ktRowCm" placeholder="CM *" min="0" step="0.1" autocomplete="off">
             <input class="form-input" id="ktRowRenk" placeholder="Renk" autocomplete="off">
             <input class="form-input" type="number" id="ktRowSiparis" placeholder="Satın Alma Adeti *" min="0" step="0.1" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ktAddSizeRow();}">
@@ -7359,7 +7356,7 @@ function ftToggleHistory(sizeId){ const el=document.getElementById('ftHist-'+siz
 
 function ftAddSizeRow(){
   const m=_ftAll().find(x=>x.id===_ftCurrentDetailId); if(!m) return;
-  const beden=document.getElementById('ftRowBeden').value;
+  const beden=_takipBedenNorm(document.getElementById('ftRowBeden').value);
   const cm=document.getElementById('ftRowCm').value.trim();
   // Satır rengi boşsa model rengini kullan (renk artık model seviyesinde girilir)
   const renk=document.getElementById('ftRowRenk').value.trim() || (m.renk||'');
@@ -8729,7 +8726,7 @@ function ktAddSizeRow(){
     if(siparis<=0){ toast('Satın alma adeti gerekli','error'); return; }
     if((m.sizes||[]).some(z=>_ftNum(z.cm)===_ftNum(cm))){ toast('Bu cm zaten eklenmiş: '+cm+'cm — satırdan düzenleyin','error'); return; }
   }
-  const beden = metreMi ? '' : (document.getElementById('ktRowBeden').value||'');
+  const beden = metreMi ? '' : _takipBedenNorm(document.getElementById('ktRowBeden').value||'');
 
   let list=_ktAll(); const idx=list.findIndex(x=>x.id===m.id); if(idx<0) return;
   list[idx].sizes = list[idx].sizes || [];
@@ -9145,15 +9142,19 @@ window._takipKalaniGir = function(inputId, adet){
 };
 
 const _TAKIP_BEDENLER=['','Tek Beden','XXS','XS','S','M','L','XL','XXL','3XL'];
+// Elle yazılan beden: "xs - s - m" → "XS-S-M", "tek beden" → "Tek Beden"
+function _takipBedenNorm(v){
+  v=String(v||'').trim(); if(!v) return '';
+  if(/^tek(\s*beden)?$/i.test(v)) return 'Tek Beden';
+  return v.toLocaleUpperCase('tr').replace(/İ/g,'I').replace(/\s*[-\/,+]\s*/g,'-').replace(/\s+/g,' ');
+}
 // metreli=true → ham kordon satırı: cm/beden yok, miktar metre
 function _takipEditRowHtml(store, z, bedenli, metreli){
   const S=v=>metreli ? (Math.round((+v||0)*10)/10).toLocaleString('tr') : Math.round(+v||0).toLocaleString('tr');
   const BR=metreli?'m':'adet';
   const gelen=_ftGelen(z), kul=_ftKullanilan(z);
   const bedenSec = (bedenli && !metreli)
-    ? `<select class="form-input tk-in tk-in-beden" id="tkEditBeden" aria-label="Beden">`+
-      _TAKIP_BEDENLER.map(bd=>`<option value="${esc(bd)}"${(z.beden||'')===bd?' selected':''}>${bd||'Beden —'}</option>`).join('')+
-      `</select>` : '';
+    ? `<input class="form-input tk-in tk-in-beden" id="tkEditBeden" list="takipBedenListe" value="${esc(z.beden||'')}" placeholder="Beden" autocomplete="off" aria-label="Beden (ör. M ya da XS-S-M)" onkeydown="_takipEditTus(event,'${store}')">` : '';
   const cmKutu = metreli ? '' :
     `<input class="form-input tk-in tk-in-cm" type="number" id="tkEditCm" step="0.1" min="0" inputmode="decimal"
             value="${z.cm!=null?esc(String(z.cm)):''}" placeholder="CM" aria-label="CM"
@@ -9233,7 +9234,7 @@ function takipRowEditSave(store){
   if(!metreli) sizes[zidx].cm=cm;
   sizes[zidx].renk=renk;
   sizes[zidx].siparisAdet=sip;
-  if(bedenEl) sizes[zidx].beden=bedenEl.value;
+  if(bedenEl) sizes[zidx].beden=_takipBedenNorm(bedenEl.value);
   list[midx].sizes=sizes;
   _ftStamp(list[midx]);
   setData(store, list);
