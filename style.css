@@ -19986,3 +19986,9 @@ html .tkg-modal .kf-yok-a input.form-input{ height:40px; width:96px; min-width:0
   .kf-yok-y{ grid-column:1 / -1; }
   .kf-yok-a{ width:auto; }
 }
+
+/* Koli büyütme: aynı cm iki renkte → renk seçimi */
+.kf-lb-renk{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px; border-radius:10px; margin-bottom:8px;
+  background:color-mix(in srgb, var(--warning, #f59e0b) 12%, transparent); }
+.kf-lb-renk span{ flex:1 1 100%; font-size:13px; font-weight:700; color:var(--text-main); }
+.kf-lb-renk .btn{ min-height:40px; }
