@@ -97,7 +97,9 @@ function istemForm(form, bugun) {
     'Alanlar:\n' +
     '- atolye: malın gönderildiği atölye adı, metinde geçtiği gibi ama ek almadan (ör. "Paşa\'ya" → "Paşa").\n' +
     '- model: bizim model kodumuz (bir-üç harf + rakamlar, ör. J4842, I6399AX). "J 4842" ise birleştir.\n' +
-    '- renk: renk adı (ör. Kahverengi). teslim_eden / teslim_alan: kişi adları açıkça yazıyorsa.\n' +
+    '- renk: renk adı (ör. Kahverengi).\n' +
+    '- satirlar: miktar satırları. "23 cm 3 koli 1800" demek 23 cm uzunluktan 1800 adet demektir (3 koli sayısıdır, adet değil) → {cm:23, adet:1800}. ' +
+    '"XS-S-M 23 cm 500" → {beden:"XS-S-M", cm:23, adet:500}. "S 100 M 200" → {beden:"S", adet:100}, {beden:"M", adet:200}.\n' +
     '- tarih ve termin: YYYY-AA-GG biçiminde; "yarın", "cuma" gibi ifadeleri bugüne göre çevir. Yazmıyorsa boş.\n' +
     '- aciklama: yalnızca açıkça not olarak yazılan kısa bilgi, yoksa boş.\n' +
     '- Bu irsaliye türüyle ilgisi olmayan alanları boş bırak / 0 yaz. Fiyat ve tutar yazma. Okuyamadığın değeri uydurma.';
@@ -106,11 +108,13 @@ const SEMA_FORM = {
   type: 'OBJECT',
   properties: {
     atolye: { type: 'STRING' }, firma: { type: 'STRING' }, model: { type: 'STRING' }, renk: { type: 'STRING' },
-    teslim_eden: { type: 'STRING' }, teslim_alan: { type: 'STRING' },
     tarih: { type: 'STRING' }, termin: { type: 'STRING' }, aciklama: { type: 'STRING' },
     satirlar: {
       type: 'ARRAY',
-      items: { type: 'OBJECT', properties: { beden: { type: 'STRING' }, cm: { type: 'NUMBER' }, adet: { type: 'INTEGER' } }, required: ['adet'] }
+      items: { type: 'OBJECT', properties: {
+        beden: { type: 'STRING', description: 'Beden ya da beden grubu (XS-S-M), yoksa boş' },
+        cm: { type: 'NUMBER', description: 'Uzunluk cm, yoksa 0' },
+        adet: { type: 'INTEGER', description: 'Gönderilen adet (koli sayısı değil)' } }, required: ['adet'] }
     },
     metre: { type: 'NUMBER' }, adet: { type: 'INTEGER' }, cm: { type: 'NUMBER' },
     posetler: { type: 'ARRAY', items: { type: 'OBJECT', properties: { olcu: { type: 'STRING' }, adet: { type: 'INTEGER' } }, required: ['olcu', 'adet'] } },
@@ -124,7 +128,8 @@ const tarihMi = v => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '').trim()) ? Strin
 function formSonucu(o) {
   return {
     atolye: yazi(o.atolye), firma: yazi(o.firma), model: yazi(o.model).toUpperCase().replace(/\s+/g, ''), renk: yazi(o.renk),
-    teslimEden: yazi(o.teslim_eden), teslimAlan: yazi(o.teslim_alan), tarih: tarihMi(o.tarih), termin: tarihMi(o.termin),
+    teslimEden: '', teslimAlan: '',   // kişi adı Gemini'den alınmaz (uydurabiliyor); yazıda açıkça varsa telefon okur
+    tarih: tarihMi(o.tarih), termin: tarihMi(o.termin),
     aciklama: yazi(o.aciklama),
     satirlar: (o.satirlar || []).map(z => ({ beden: yazi(z.beden), cm: +z.cm || 0, adet: tam(z.adet) })).filter(z => z.adet > 0),
     metre: Math.max(0, Math.round((+o.metre || 0) * 10) / 10), adet: tam(o.adet), cm: Math.max(0, +o.cm || 0),

@@ -10284,7 +10284,18 @@ function ydOku(gemini){
       if(_yd!==oturum) return;
       var r=_ydGeminiDuzelt(j, form);
       // Yerelde bulunan atölye Gemini'de bulunamadıysa yereli kullan
-      if(metin){ var y=_ydYerel(metin, form); if(!r.atolye && y.atolye){ r.atolye=y.atolye; r.atolyeHam=''; } if(form==='toptan' && !r.firma) r.firma=y.firma; }
+      if(metin){
+        var y=_ydYerel(metin, form);
+        if(!r.atolye && y.atolye){ r.atolye=y.atolye; r.atolyeHam=''; }
+        if(form==='toptan' && !r.firma) r.firma=y.firma;
+        r.teslimEden=y.teslimEden; r.teslimAlan=y.teslimAlan;   // kişi adları yalnız yazıda açıkça varsa
+        // Sadece yazı gönderildiyse: yazıda geçmeyen model / renk uydurmadır, alma
+        if(!oturum.fotolar.length){
+          var duz=_ydKatla(metin).replace(/[^a-z0-9]/g,'');
+          if(r.model && duz.indexOf(_ydKatla(r.model).replace(/[^a-z0-9]/g,''))<0) r.model=y.model||'';
+          if(r.renk && _ydKatla(metin).indexOf(_ydKatla(r.renk).split(' ')[0])<0) r.renk=y.renk||'';
+        }
+      }
       _yd.sonuc=r; _yd.kaynak='gemini'; _yd.hata='';
     })
     .catch(function(e){ if(_yd===oturum) _yd.hata=(e&&e.message)||String(e); })
