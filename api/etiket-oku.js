@@ -58,6 +58,7 @@ const SEMA_SIPARIS = {
         type: 'OBJECT',
         properties: {
           model:     { type: 'STRING' },
+          baslik:    { type: 'STRING', description: 'Bu tablonun belge başlığındaki "Müşteri Sipariş No" yazısı aynen (ör. "J 5911 - SEPARE - SYAH"), yoksa boş' },
           renk:      { type: 'STRING' },
           tedarikci: { type: 'STRING' },
           toplam:    { type: 'INTEGER' },
@@ -270,6 +271,7 @@ module.exports = async function (req, res) {
         if (siparis) {
           const modeller = (sonuc.modeller || []).map(m => ({
             model: String(m.model || '').trim().toUpperCase().replace(/\s+/g, ''),
+            baslik: String(m.baslik || '').trim().slice(0, 120),
             renk: String(m.renk || '').trim(),
             tedarikci: String(m.tedarikci || '').trim(),
             toplam: Math.max(0, Math.round(+m.toplam || 0)),

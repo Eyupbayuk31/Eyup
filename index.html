@@ -7673,6 +7673,21 @@ function _ftImpGemini(belgeler, metin){
 // RJ76) ayrı sipariştir: her (model, renk) ayrı kart. Üst üste binen fotoğraflarda
 // aynı satır iki kez gelirse bir kez alınır.
 function _ftImpRenkNorm(r){ return String(r||'').toLocaleLowerCase('tr').replace(/\s+/g,''); }
+// Başlıktaki kısaltılmış renk: sessiz harfleri karşılaştırılır (SYAH → syh = siyah,
+// BYZ → beyaz, LCVRT → lacivert, KHV → kahve). Sondaki kelimeden geriye bakılır.
+function _ftImpBaslikRenk(baslik){
+  var ses=function(x){ return _ydKatla(x).replace(/[^a-z]/g,'').replace(/[aeiou]/g,''); };
+  var liste=(typeof _YD_RENK!=='undefined'?_YD_RENK:[]).slice().sort(function(a,b){ return b.length-a.length; });
+  var kel=String(baslik||'').split(/[\s\-–\/,;:()]+/).filter(Boolean).reverse();
+  for(var i=0;i<kel.length;i++){
+    var t=ses(kel[i]); if(t.length<2 || /\d/.test(kel[i])) continue;
+    for(var j=0;j<liste.length;j++){
+      var r=ses(liste[j]);
+      if(r===t || (t.length>=3 && r.indexOf(t)===0 && (r.length-t.length)<=3)) return liste[j].charAt(0).toLocaleUpperCase('tr')+liste[j].slice(1);
+    }
+  }
+  return '';
+}
 function _ftImpRenkeAyir(mod){
   var gruplar=[], bul={}, adlar={};
   // Renk adı (başlıktaki "SYAH" → Siyah) kayıtta, kod (RJ76) satırda. Adı bilinen
@@ -7680,6 +7695,9 @@ function _ftImpRenkeAyir(mod){
   mod.forEach(function(m){
     var kodlar={}; (m.satirlar||[]).forEach(function(z){ if(z.renk) kodlar[_ftImpRenkNorm(z.renk)]=1; });
     var k=Object.keys(kodlar);
+    // Renk alanına kod yazıldıysa ad başlıktan çözülür ("... - SEPARE - SYAH" → Siyah)
+    if(m.renk && k.length===1 && _ftImpRenkNorm(m.renk)===k[0]) m.renk='';
+    if(!m.renk && m.baslik) m.renk=_ftImpBaslikRenk(m.baslik);
     if(m.renk && k.length===1 && _ftImpRenkNorm(m.renk)!==k[0]) adlar[k[0]]=String(m.renk).trim();
   });
   function renkYazi(kod, ad){
