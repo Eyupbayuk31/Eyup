@@ -185,14 +185,32 @@
     // Fotoğraflar
     var photoHtml = '';
     if(d.photos && Array.isArray(d.photos) && d.photos.length > 0){
+      // Koli fotoğraflarında cm bilgisi varsa üstte filtre: Hepsi · 23 cm · 24 cm
+      var _cmSay={}, _cmSira=[];
+      d.photos.forEach(function(p){ (Array.isArray(p.cm)?p.cm:[]).forEach(function(c){ c=String(c); if(_cmSay[c]==null){ _cmSay[c]=0; _cmSira.push(c); } _cmSay[c]++; }); });
+      _cmSira.sort(function(a,b){ return (+a)-(+b); });
+      var _filtre = _cmSira.length>1 ? '<div id="qrCmFiltre" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 6px;">'
+        + ['*'].concat(_cmSira).map(function(c,i){
+            var et = c==='*' ? 'Hepsi ('+d.photos.length+')' : String(c).replace('.',',')+' cm ('+_cmSay[c]+')';
+            return '<button type="button" data-c="'+String(c).replace(/"/g,'')+'" onclick="window._qrCmSec&&window._qrCmSec(this)" style="font:inherit;font-size:14px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;'
+              +(i===0?'background:#111827;color:#fff;border:1px solid #111827;':'background:#fff;color:#111827;border:1px solid #d1d5db;')+'">'+et+'</button>';
+          }).join('') + '</div>' : '';
+      window._qrCmSec = function(b){
+        var c=b.getAttribute('data-c');
+        [].forEach.call(document.querySelectorAll('#qrCmFiltre button'), function(x){ var on=(x===b); x.style.background=on?'#111827':'#fff'; x.style.color=on?'#fff':'#111827'; x.style.borderColor=on?'#111827':'#d1d5db'; });
+        var n=0;
+        [].forEach.call(document.querySelectorAll('[data-qcm]'), function(el){ var g=(c==='*' || el.getAttribute('data-qcm').indexOf(' '+c+' ')>=0); el.style.display=g?'':'none'; if(g) n++; });
+        var h=document.getElementById('qrFotoSay'); if(h) h.textContent=n;
+      };
       var imgs = d.photos.map(function(p,i){
-        return '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#f9fafb;">'
+        return '<div data-qcm=" '+(Array.isArray(p.cm)?p.cm.map(String).join(' '):'').replace(/"/g,'')+' " style="border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#f9fafb;">'
           +'<a href="'+p.url+'" target="_blank" rel="noopener">'
           +'<img src="'+p.url+'" alt="Kanıt '+(i+1)+'" style="display:block;width:100%;height:auto;max-height:250px;object-fit:contain;border-radius:8px;cursor:zoom-in;" '
           +'onerror="this.parentNode.parentNode.innerHTML=\'<div style=&quot;padding:16px;background:#fef2f2;color:#991b1b;text-align:center;&quot;>Fotoğraf yüklenemedi</div>\'">'
           +'</a>'+(p.yazi?'<div style="font-size:12px;font-weight:700;color:#374151;text-align:center;margin-top:6px;">'+String(p.yazi).replace(/</g,'&lt;')+'</div>':'')+'</div>';
       }).join('');
-      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">'+(_durumBelge?'Gelen Koli Fotoğrafları':'Kanıt Fotoğrafları')+' ('+d.photos.length+')</h3>'
+      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">'+(_durumBelge?'Gelen Koli Fotoğrafları':'Kanıt Fotoğrafları')+' (<span id="qrFotoSay">'+d.photos.length+'</span>)</h3>'
+        +_filtre
         +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;">'+imgs+'</div>'
         +'<div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>';
     } else if(d.photoUrl){
@@ -9613,7 +9631,7 @@ function _takipDurumPayload(m, type){
     (k.fotolar||[]).forEach((u,i)=>{
       if(!u) return;
       const bu=(k.koliler||[]).filter(x=>x.f===i); if(!bu.length) return;
-      photos.push({ url:u, at:k.tarih||'', yazi:(k.tarih?_ftFmtDate(k.tarih)+' · ':'')+bu.map(x=>x.cm+' cm · '+(+x.adet||0).toLocaleString('tr')).join(' | ') });
+      photos.push({ url:u, at:k.tarih||'', cm:bu.map(x=>String(x.cm)).filter((v,j,l)=>l.indexOf(v)===j), yazi:(k.tarih?_ftFmtDate(k.tarih)+' · ':'')+bu.map(x=>x.cm+' cm · '+(+x.adet||0).toLocaleString('tr')).join(' | ') });
     });
   });
   return { v:1, id:m.id, type, no:m.modelKodu||'', model:m.modelKodu||'', renk:m.renk||'', termin:m.termin||'',
@@ -17300,8 +17318,11 @@ function showContextMenu(e, id, type){
       <div class="context-menu-item" onclick="contextAction('detail')">
         <i class="fas fa-eye"></i> Detay <span class="shortcut">Enter</span>
       </div>
+      <div class="context-menu-item" onclick="contextAction('print')">
+        <i class="fas fa-print"></i> Yazdır <span class="shortcut">Ctrl+P</span>
+      </div>
       <div class="context-menu-item" onclick="contextAction('pdf')">
-        <i class="fas fa-file-pdf"></i> PDF İndir <span class="shortcut">Ctrl+P</span>
+        <i class="fas fa-file-pdf"></i> PDF İndir
       </div>
       <div class="context-menu-item" onclick="contextAction('copy')">
         <i class="fas fa-copy"></i> Kopyala <span class="shortcut">Ctrl+D</span>
@@ -17337,6 +17358,7 @@ function contextAction(action){
 
   switch(action){
     case 'detail': showDetailUni(id, type); break;
+    case 'print': generatePDF(id, type, 'print'); break;
     case 'pdf': generatePDF(id, type); break;
     case 'copy': copyWaybill(id, type); break;
     case 'template': saveAsTemplate(id, type); break;
@@ -17375,7 +17397,7 @@ document.addEventListener('keydown',function(e){
     }
     else if(e.ctrlKey && e.key === 'p'){
       e.preventDefault();
-      generatePDF(id, type);
+      generatePDF(id, type, 'print');
     }
     else if(e.ctrlKey && e.key === 'd'){
       e.preventDefault();
@@ -19952,10 +19974,7 @@ function _buildQrPayloadV3(item, type){
 function _buildQrPayload(item, type){
   // Çoklu fotoğraf desteği - sadece yüklenmiş URL'leri gönder
   const photos = _getPhotosArray(item);
-  const photoUrls = photos.filter(p => p.url).map(p => ({
-    url: p.url,
-    at: p.at || ''
-  }));
+  const photoUrls = photos.filter(p => p.url).map(_qrFotoEkle);
 
   return {
     app: 'irsaliyepro',
@@ -21485,6 +21504,25 @@ async function _uploadPhotoToCatbox(dataUrl, _retryCount){
 // VIEWER JSON — GitHub raw'da public yayın (Firebase'i bypass'lar)
 // QR taranınca atölye direkt GitHub'dan JSON çeker (auth, security rule yok)
 // ====================================================================
+// Koli fotoğrafının içeriği (mal kabul kaydından): QR sayfasında fotoğraf altı
+// yazısı ve cm filtresi için. {cm:['23'], yazi:'23 cm · 950'}
+function _qrFotoBilgi(url){
+  if(!url) return {};
+  var bul=null;
+  ['fermuarTakip','kordonTakip'].some(function(st){
+    return (getData(st)||[]).some(function(m){
+      return (m.kabuller||[]).some(function(k){
+        var i=(k.fotolar||[]).indexOf(url); if(i<0) return false;
+        var l=(k.koliler||[]).filter(function(x){ return x.f===i; }); if(!l.length) return false;
+        bul=l; return true;
+      });
+    });
+  });
+  if(!bul) return {};
+  var cm=bul.map(function(x){ return String(x.cm); }).filter(function(v,i,a){ return a.indexOf(v)===i; });
+  return { cm:cm, yazi: bul.map(function(x){ return String(x.cm).replace('.',',')+' cm · '+(+x.adet||0).toLocaleString('tr'); }).join(' | ') };
+}
+function _qrFotoEkle(p){ var o={url:p.url, at:p.at||''}; var b=_qrFotoBilgi(p.url); if(b.cm){ o.cm=b.cm; o.yazi=b.yazi; } return o; }
 function _buildViewerPayload(item, type){
   if(type==='ftdurum' || type==='ktdurum') return _takipDurumPayload(item, type);
   const photos = (typeof _getPhotosArray === 'function') ? _getPhotosArray(item) : [];
@@ -21511,7 +21549,7 @@ function _buildViewerPayload(item, type){
     totalAdet: item.totalAdet,
     renk: item.renk,
     aciklama: item.aciklama || item.not || '',
-    photos: (photos || []).filter(p => p && p.url).map(p => ({url: p.url, at: p.at || ''})),
+    photos: (photos || []).filter(p => p && p.url).map(_qrFotoEkle),
     updatedAt: Date.now()
   };
 }
@@ -25138,7 +25176,7 @@ async function _renderPublicViewerFromCloud(id, type, repoInfo){
       cm: item.cm, metre: item.metre, adet: item.adet,
       total: item.total, totalAdet: item.totalAdet, renk: item.renk,
       aciklama: item.aciklama||item.not||'',
-      photos: (photos||[]).filter(p=>p&&p.url).map(p=>({url:p.url,at:p.at||''}))
+      photos: (photos||[]).filter(p=>p&&p.url).map(_qrFotoEkle)
     };
   }
 
@@ -25236,6 +25274,20 @@ function _renderPublicViewer(d){
   const photoHtml = (() => {
     // Çoklu fotoğraf desteği (v2)
     if (d.photos && Array.isArray(d.photos) && d.photos.length > 0) {
+      // Koli fotoğraflarında cm bilgisi varsa filtre: Hepsi · 23 cm · 24 cm
+      const cmSay = {}, cmSira = [];
+      d.photos.forEach(p => (Array.isArray(p.cm) ? p.cm : []).forEach(c => { c = String(c); if (cmSay[c] == null) { cmSay[c] = 0; cmSira.push(c); } cmSay[c]++; }));
+      cmSira.sort((a, b) => (+a) - (+b));
+      const temiz = x => String(x).replace(/[^0-9.,]/g, '');
+      const filtre = cmSira.length > 1 ? '<div class="pv-cm-filtre" id="pvCmFiltre">' +
+        ['*'].concat(cmSira).map((c, i) => `<button type="button" data-c="${c === '*' ? '*' : temiz(c)}" class="${i === 0 ? 'on' : ''}" onclick="window._pvCmSec && window._pvCmSec(this)">${c === '*' ? 'Hepsi (' + d.photos.length + ')' : temiz(c).replace('.', ',') + ' cm (' + cmSay[c] + ')'}</button>`).join('') +
+        '</div>' : '';
+      window._pvCmSec = function(b){
+        const c = b.getAttribute('data-c'); let n = 0;
+        document.querySelectorAll('#pvCmFiltre button').forEach(x => x.classList.toggle('on', x === b));
+        document.querySelectorAll('.pv-photo-item[data-qcm]').forEach(el => { const g = (c === '*' || el.getAttribute('data-qcm').indexOf(' ' + c + ' ') >= 0); el.style.display = g ? '' : 'none'; if (g) n++; });
+        const h = document.getElementById('pvFotoSay'); if (h) h.textContent = n;
+      };
       const photosGrid = d.photos.map((photo, idx) => {
         const timestamp = photo.at ? new Date(photo.at).toLocaleString('tr-TR', {
           day: '2-digit',
@@ -25244,12 +25296,14 @@ function _renderPublicViewer(d){
           hour: '2-digit',
           minute: '2-digit'
         }) : '';
+        const qcm = ' ' + (Array.isArray(photo.cm) ? photo.cm.map(temiz).join(' ') : '') + ' ';
         return `
-          <div class="pv-photo-item">
+          <div class="pv-photo-item" data-qcm="${qcm}">
             <a href="${photo.url}" target="_blank" rel="noopener">
               <img src="${photo.url}" alt="Kanıt Fotoğrafı ${idx+1}" class="pv-photo" loading="lazy"
                    onerror="this.parentNode.parentNode.innerHTML='<div class=&quot;pv-photo-error&quot;>Fotoğraf yüklenemedi</div>';">
             </a>
+            ${photo.yazi ? `<div class="pv-photo-yazi">${String(photo.yazi).replace(/</g,'&lt;')}</div>` : ''}
             ${timestamp ? `<div class="pv-photo-time">${timestamp}</div>` : ''}
           </div>
         `;
@@ -25257,7 +25311,8 @@ function _renderPublicViewer(d){
 
       return `
         <div class="pv-photo-wrap">
-          <h3>Kanıt Fotoğrafları (${d.photos.length})</h3>
+          <h3>Kanıt Fotoğrafları (<span id="pvFotoSay">${d.photos.length}</span>)</h3>
+          ${filtre}
           <div class="pv-photo-grid">${photosGrid}</div>
           <div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>
         </div>
@@ -25330,6 +25385,10 @@ function _renderPublicViewer(d){
         .pv-photo-item:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(17,24,39,0.15);}
         .pv-photo{display:block;width:100%;height:auto;max-height:250px;object-fit:contain;border-radius:8px;cursor:zoom-in;}
         .pv-photo-time{font-size:10px;color:#6b7280;text-align:center;margin-top:6px;font-weight:500;}
+        .pv-photo-yazi{font-size:12.5px;color:#374151;text-align:center;margin-top:6px;font-weight:700;}
+        .pv-cm-filtre{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 12px;}
+        .pv-cm-filtre button{font:inherit;font-size:14px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;background:#fff;color:#111827;border:1px solid #d1d5db;}
+        .pv-cm-filtre button.on{background:#111827;color:#fff;border-color:#111827;}
         .pv-photo-error{padding:20px;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;color:#991b1b;text-align:center;font-size:13px;}
         .pv-footer{padding:16px 20px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#6b7280;}
         .pv-read-only{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(17,24,39,0.1);color:#111827;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:10px;}
