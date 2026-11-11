@@ -19753,3 +19753,13 @@ html[data-theme="ocean"], body[data-theme="ocean"]{
 .aks-yeni-sor-m b{ color:var(--text-main); }
 .aks-yeni-sor-b{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 @media (max-width:600px){ .aks-yeni-sor-b .btn{ flex:1 1 100%; justify-content:center; } }
+
+/* Satın alma içe aktarma: beden grubu kutusu (ör. XS-S-M tek uzunluk) */
+.ft-imp-satir.bedenli{ grid-template-columns:.9fr 1fr 1.2fr 40px; }
+html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !important; text-align:center; font-weight:700; }
+.ft-imp-beden input::placeholder{ font-weight:500; letter-spacing:0; }
+@media (max-width:480px){
+  .ft-imp-satir.bedenli{ grid-template-columns:1.05fr .9fr 1.25fr 26px; gap:5px; }
+  html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 4px !important; font-size:13.5px; }
+  .ft-imp-satir.bedenli .ft-imp-x{ width:28px; }
+}

@@ -7492,11 +7492,19 @@ function _ftImpCoz(metin, dosyaAdi){
       if(!r) return;
       cm=_ftImpCm(r[1]); ad=_ftImpAdet(r[2]);
     }
+    // Birden çok beden tek uzunlukta olabilir: "(XS-S-M) 23 cm : 5500 adet"
+    var bdn='';
+    var cmYer=l.search(/\d{1,3}(?:[.,]\d{1,2})?\s*cm\b/i);
+    if(cmYer>0){
+      var bg=l.slice(0,cmYer).match(/(?:^|[\s(\[])((?:XXS|XS|XXL|XL|2XL|3XL|4XL|S|M|L)(?:\s*[-\/,+]\s*(?:XXS|XS|XXL|XL|2XL|3XL|4XL|S|M|L))*)\s*[)\]:]?\s*$/i);
+      if(bg) bdn=bg[1].toUpperCase().replace(/\s*[-\/,+]\s*/g,'-');
+    }
     if(!cm || +cm<=0 || +cm>=300 || ad<=0) return;
     if(!cur) yeni('');
     if(renk) cur._renk[renk]=(cur._renk[renk]||0)+1;
     var ayni=cur.satirlar.find(function(z){ return z.cm===cm; });
-    if(ayni) ayni.adet+=ad; else cur.satirlar.push({cm:cm, adet:ad});
+    if(ayni){ ayni.adet+=ad; if(bdn && ayni.beden!==bdn) ayni.beden=ayni.beden?ayni.beden+'-'+bdn:bdn; }
+    else cur.satirlar.push({cm:cm, adet:ad, beden:bdn});
   });
   bloklar=bloklar.filter(function(b){ return b.satirlar.length || b.model; });
   bloklar.forEach(function(b){
@@ -7601,7 +7609,7 @@ function _ftImpAyniMi(k, m){
 }
 function _ftImpEkle(bloklar, kaynak){
   bloklar.forEach(function(b){
-    var k={id:Date.now()+Math.floor(Math.random()*1e6), kaynak:kaynak, model:b.model||'', satirlar:b.satirlar.map(function(z){ return {cm:z.cm, adet:z.adet}; }),
+    var k={id:Date.now()+Math.floor(Math.random()*1e6), kaynak:kaynak, model:b.model||'', satirlar:b.satirlar.map(function(z){ return {cm:z.cm, adet:z.adet, beden:z.beden||''}; }),
       pdfToplam:b.pdfToplam, renk:b.renk||'', mod:'ekle', dahil:true, tekrar:false};
     var m=_ftImpMevcut(k.model);
     // Model takipte varsa varsayılan: ayrı tekrar sipariş (RPT). Var olan modelin
@@ -7655,7 +7663,8 @@ function _ftImpKartHtml(k, i){
       (k.mod!=='rpt'?'<div class="ft-imp-uyari"><i class="fas fa-triangle-exclamation"></i> '+(k.mod==='yaz'?'Var olan satın alma adetleri silinip bu adetler yazılacak.':'Adetler var olan siparişin üstüne eklenecek.')+'</div>':'');
   }
   var satir=k.satirlar.map(function(z,j){
-    return '<div class="ft-imp-satir">'+
+    return '<div class="ft-imp-satir'+(metre?'':' bedenli')+'">'+
+      (metre?'':'<label class="ft-imp-alan ft-imp-beden"><input class="form-input" type="text" value="'+e(z.beden||'')+'" placeholder="Beden" aria-label="Beden (ör. XS-S-M)" oninput="ftImpDeger('+i+','+j+',\'beden\',this.value)"></label>')+
       '<label class="ft-imp-alan"><input class="form-input" type="number" inputmode="decimal" step="0.5" min="0" value="'+e(z.cm)+'" aria-label="Uzunluk cm" oninput="ftImpDeger('+i+','+j+',\'cm\',this.value)"><span>cm</span></label>'+
       '<label class="ft-imp-alan"><input class="form-input" type="number" inputmode="numeric" min="0" value="'+(z.adet||'')+'" aria-label="Adet" oninput="ftImpDeger('+i+','+j+',\'adet\',this.value)"><span>adet</span></label>'+
       '<button type="button" class="ft-imp-x" onclick="ftImpSatirSil('+i+','+j+')" aria-label="Satırı sil"><i class="fas fa-xmark"></i></button>'+
@@ -7699,7 +7708,9 @@ function _ftImpKaydetYaz(){
 }
 function ftImpDeger(i,j,alan,v){
   var k=_ftImp.kartlar[i]; if(!k||!k.satirlar[j]) return;
-  k.satirlar[j][alan] = alan==='cm' ? _ftImpCm(v) : (Math.max(0, Math.round(+v||0)));
+  k.satirlar[j][alan] = alan==='cm' ? _ftImpCm(v)
+    : alan==='beden' ? String(v||'').trim().toLocaleUpperCase('tr').replace(/İ/g,'I')
+    : (Math.max(0, Math.round(+v||0)));
   var t=document.getElementById('ftImpTop'+i); if(t) t.innerHTML=_ftImpToplamHtml(k);
   _ftImpKaydetYaz();
 }
@@ -7741,8 +7752,8 @@ function ftImpKaydet(){
     }
     sat.forEach(function(z){
       var s=m.sizes.find(function(x){ return _ftNum(x.cm)===+z.cm; });
-      if(s){ s.siparisAdet = k.mod==='yaz' ? z.adet : (+s.siparisAdet||0)+z.adet; }
-      else m.sizes.push({id:Date.now()+(sayac++)*7+Math.floor(Math.random()*1000), beden:'', cm:String(z.cm), renk:renk||k.renk||m.renk||'', siparisAdet:z.adet, teslimatlar:[], kullanimlar:[]});
+      if(s){ s.siparisAdet = k.mod==='yaz' ? z.adet : (+s.siparisAdet||0)+z.adet; if(z.beden && (!s.beden || k.mod==='yaz')) s.beden=z.beden; }
+      else m.sizes.push({id:Date.now()+(sayac++)*7+Math.floor(Math.random()*1000), beden:z.beden||'', cm:String(z.cm), renk:renk||k.renk||m.renk||'', siparisAdet:z.adet, teslimatlar:[], kullanimlar:[]});
       adet+=z.adet;
     });
     _ftStamp(m); sonId=m.id;
@@ -8244,7 +8255,14 @@ function ftPickModel(id){
   _ftSizesSorted(m).forEach(z=>{
     const stok=_ftStok(z);
     if(stok<=0){ skipped++; return; }               // stok yok → forma koyma
-    const key=_FT_BEDEN_MAP[(z.beden||'').toString().trim().toLocaleUpperCase('tr')];
+    const bAd=(z.beden||'').toString().trim().toLocaleUpperCase('tr');
+    let key=_FT_BEDEN_MAP[bAd];
+    // Beden grubu (ör. "XS-S-M" tek uzunluk): grubun ilk bedeninin satırına
+    // yazılır; satır adı grubu tam anlatmadığı için PDF'de beden gizlenir.
+    if(!key && /[-\/]/.test(bAd)){
+      const ilk=_FT_BEDEN_MAP[bAd.split(/\s*[-\/]\s*/)[0]];
+      if(ilk && !dolu[ilk]){ yaz(ilk, z, stok); yerlesen++; return; }
+    }
     if(!key){ bedensizler.push({z, stok}); return; } // beden adı yok (ör. PDF'ten gelen cm satırı)
     yaz(key, z, stok);
   });
