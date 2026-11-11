@@ -52,7 +52,11 @@ function hataMetni(status, govde) {
 
 async function gemini(anahtar, model, parcalar) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
+  // Tek model en çok 25 sn: takılırsa sıradaki modele geçilir
+  const iptal = new AbortController();
+  const sayac = setTimeout(() => iptal.abort(), 25000);
   const r = await fetch(url, {
+    signal: iptal.signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': anahtar },
     body: JSON.stringify({
@@ -61,6 +65,7 @@ async function gemini(anahtar, model, parcalar) {
     })
   });
   const govde = await r.json().catch(() => null);
+  clearTimeout(sayac);
   return { status: r.status, ok: r.ok, govde };
 }
 
@@ -95,10 +100,15 @@ module.exports = async function (req, res) {
   }
 
   let son = null;
+  const denemeler = [];   // hangi model, ne cevap, kaç ms — sorun ayıklamak için (gizli bilgi yok)
   for (const model of MODELLER) {
-    let c;
+    let c; const t0 = Date.now();
     try { c = await gemini(anahtar, model, parcalar); }
-    catch (e) { son = { status: 502, govde: { error: { message: 'Bağlantı hatası' } } }; continue; }
+    catch (e) {
+      denemeler.push({ model, status: e && e.name === 'AbortError' ? 'zaman aşımı' : 'bağlantı', ms: Date.now() - t0 });
+      son = { status: 502, govde: { error: { message: 'Bağlantı hatası' } } }; continue;
+    }
+    denemeler.push({ model, status: c.status, ms: Date.now() - t0 });
     if (c.ok) {
       try {
         const metin = ((c.govde.candidates || [])[0] || {}).content.parts.map(p => p.text || '').join('');
@@ -112,7 +122,7 @@ module.exports = async function (req, res) {
           renk_kodu: String(k.renk_kodu || '').trim(),
           siparis_no: String(k.siparis_no || '').trim()
         }));
-        res.status(200).json({ koliler, model });
+        res.status(200).json({ koliler, model, denemeler });
         return;
       } catch (e) {
         son = { status: 502, govde: { error: { message: 'Cevap çözülemedi' } } };
@@ -124,5 +134,5 @@ module.exports = async function (req, res) {
     if (![404, 429, 500, 503].includes(c.status)) break;
   }
   const st = (son && son.status) || 502;
-  res.status(st === 429 ? 429 : 502).json({ hata: hataMetni(st, son && son.govde) });
+  res.status(st === 429 ? 429 : 502).json({ hata: hataMetni(st, son && son.govde), denemeler });
 };
