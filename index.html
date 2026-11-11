@@ -9758,7 +9758,7 @@ function _kfEslestir(m, satirlar, fotolar){
   var mk=_kfModelTaban(m.modelKodu||''), gor={};
   fotolar.forEach(function(f){
     (f.koliler||[]).forEach(function(k){
-      k.sizeId=null; k.sorun=''; k.uyari='';
+      k.sizeId=null; k.sorun=''; k.uyari=''; k.yokCm=null;
       if(f.cikar || k.cikar) { k.sorun='çıkarıldı'; return; }
       if(k.okunabildi===false || !(+k.miktar>0) || !(+k.uzunluk>0)){ k.sorun='Okunamadı'; return; }
       var km=_kfEtiketModel(k);
@@ -9774,9 +9774,10 @@ function _kfEslestir(m, satirlar, fotolar){
         else { k.sorun=k.uzunluk+' cm '+ad.length+' renkte var, renk '+(k.renk_kodu?k.renk_kodu+' eşleşmedi':'okunamadı'); return; }
       }
       var z=ad[0];
-      if(!z){ k.sorun=k.uzunluk+' cm siparişte yok'; return; }
+      if(!z){ k.sorun=k.uzunluk+' cm siparişte yok'; k.yokCm=+k.uzunluk; return; }
       k.sizeId=z.id;
-      var imza=[k.uzunluk,k.miktar,k.siparis_no||'',k.renk_kodu||'',(f.koliler||[]).length].join('|');
+      // Koli numarası (barkod altı) okunduysa ona bakılır: aynı cm ve adetteki dolu koliler şüpheli sayılmaz
+      var imza=k.koli_no ? 'no|'+k.koli_no+'|'+k.uzunluk : [k.uzunluk,k.miktar,k.siparis_no||'',k.renk_kodu||'',(f.koliler||[]).length].join('|');
       if(gor[imza]) k.uyari='Aynı koli iki kez çekilmiş olabilir'; gor[imza]=1;
     });
   });
@@ -9856,6 +9857,7 @@ function _kfCiz(){
     onceki.slice(0,3).map(function(k){ return '<b>'+esc(_ftFmtDate(k.tarih||''))+'</b> '+_kfKutuSay(k.koliler)+' koli'; }).join(' · ')+(onceki.length>3?' …':'')+'</div>' : '';
   kap.innerHTML=
     oncekiHtml+
+    _kfYokHtml(m)+
     '<div class="kf-ust">'+
       '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(true)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-camera"></i> Koli fotoğrafı çek</button>'+
       '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(false)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-images"></i> Galeriden yükle</button>'+
@@ -9864,6 +9866,63 @@ function _kfCiz(){
     '</div>'+
     durum+
     (seri?'<div class="kf-seri">'+seri+'</div>':'');
+}
+// Kolide gelen ama siparişte (satın almada) olmayan ölçüler: satın almacı eksik
+// girmiş olabilir. Ölçü başına adet kutusu + "Satın almaya ekle".
+function _kfYokListe(){
+  var g={}, sira=[];
+  (_tkg && _tkg.foto ? _tkg.foto.liste : []).forEach(function(f, fi){
+    if(f.cikar) return;
+    (f.koliler||[]).forEach(function(k){
+      if(k.yokCm==null || k.cikar) return;
+      var a=String(k.yokCm);
+      if(!g[a]){ g[a]={cm:k.yokCm, adet:0, koli:{}, renk:k.renk_kodu||'', baslik:k.baslik||''}; sira.push(a); }
+      g[a].adet+=+k.miktar||0; g[a].koli[fi+'/'+(k.etiket||1)]=1;
+    });
+  });
+  return sira.sort(function(a,b){ return (+a)-(+b); }).map(function(a){ var x=g[a]; x.koliSay=Object.keys(x.koli).length; return x; });
+}
+function _kfYokHtml(m){
+  var l=_kfYokListe(); if(!l.length || !m) return '';
+  var taban=_kfModelTaban(m.modelKodu);
+  var kardes=(getData(_tkg.store)||[]).filter(function(x){ return x.id!==m.id && _kfModelTaban(x.modelKodu)===taban; });
+  return '<div class="kf-yok"><div class="kf-yok-b"><i class="fas fa-triangle-exclamation"></i> Kolide gelen ama siparişte olmayan ölçü. Satın almacı eksik girmiş olabilir.</div>'+
+    l.map(function(x){
+      var var_=kardes.filter(function(k){ return (k.sizes||[]).some(function(z){ return Math.abs(_ftNum(z.cm)-x.cm)<0.01; }); }).map(function(k){ return k.modelKodu; });
+      return '<div class="kf-yok-s"><div class="kf-yok-y"><b>'+esc(String(x.cm).replace('.',','))+' cm</b> · '+x.koliSay+' koli · '+_kfSayi(x.adet)+' adet'+
+          (var_.length?'<small>'+esc(var_.join(', '))+' içinde var; renk farklı olabilir</small>':'')+'</div>'+
+        '<label class="kf-yok-a"><input class="form-input" type="number" min="1" inputmode="numeric" value="'+x.adet+'" id="kfYok'+String(x.cm).replace('.','_')+'" aria-label="Sipariş adedi"><span>adet</span></label>'+
+        '<button type="button" class="btn btn-secondary kf-yok-e" onclick="_kfYokEkle('+x.cm+')"><i class="fas fa-plus"></i> Satın almaya ekle</button>'+
+      '</div>';
+    }).join('')+'</div>';
+}
+function _kfYokEkle(cm){
+  if(!_tkg) return;
+  var x=_kfYokListe().filter(function(y){ return Math.abs(y.cm-cm)<0.01; })[0]; if(!x) return;
+  var inp=document.getElementById('kfYok'+String(cm).replace('.','_'));
+  var n=Math.round(+(inp&&inp.value)||0); if(!(n>0)){ toast('Sipariş adedini yaz','error'); return; }
+  var store=_tkg.store, list=getData(store)||[], i=list.findIndex(function(y){ return y.id===_tkg.modelId; }); if(i<0) return;
+  var m=list[i]; m.sizes=m.sizes||[];
+  // Renk: modeldeki tek renk; birden çoksa kolinin kodu/adıyla uyan; yoksa koli kodu
+  var renkler={}; m.sizes.forEach(function(z){ if(z.renk) renkler[z.renk]=1; });
+  var rl=Object.keys(renkler), renk=rl.length===1?rl[0]:'';
+  if(!renk && rl.length){
+    var rk=_kfRenkNorm(x.renk), ra=_kfRenkNorm(_ftImpBaslikRenk(x.baslik));
+    renk=rl.filter(function(r){ var n_=_kfRenkNorm(r); return (rk && n_.indexOf(rk)>=0) || (ra && n_.indexOf(ra)>=0); })[0]||'';
+  }
+  if(!renk) renk=x.renk||m.renk||'';
+  m.sizes.push({id:Date.now()+Math.floor(Math.random()*1000), beden:'', cm:String(cm), renk:renk, siparisAdet:n, teslimatlar:[], kullanimlar:[], sonradan:true});
+  _ftStamp(m); setData(store, list);
+  // Gelen Gir ekranını yeni satırla yeniden kur; fotoğraflar ve girilen adetler kalsın
+  var F=_tkg.foto, deger={}, tarih=document.getElementById('tkgTarih').value;
+  document.querySelectorAll('#tkgListe .tkg-satir').forEach(function(s){ var v=s.querySelector('.tkg-kutu').value; if(v!=='') deger[s.dataset.id]=v; });
+  takipGelenAc(store, m.id);
+  if(!_tkg) return;
+  _tkg.foto=F; document.getElementById('tkgTarih').value=tarih; try{ takipGelenTarihYaz(); }catch(_){}
+  document.querySelectorAll('#tkgListe .tkg-satir').forEach(function(s){ if(deger[s.dataset.id]!=null && !(F.doldu&&F.doldu[s.dataset.id])) s.querySelector('.tkg-kutu').value=deger[s.dataset.id]; });
+  _kfUygula(); _kfCiz();
+  try{ if(store==='kordonTakip') renderKordonTakip(); else renderFermuarTakip(); }catch(_){}
+  toast(String(cm).replace('.',',')+' cm satın almaya eklendi ('+n.toLocaleString('tr')+' adet). Koliler o satıra yazıldı.','success');
 }
 function _kfFotoKutu(f){ var g={}; (f.koliler||[]).forEach(function(k){ g[k.etiket||1]=1; }); return Object.keys(g).length; }
 // Dosya seçici (kamera ya da galeri). Kamera tek tek çeker, her çekim eklenir.

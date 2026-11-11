@@ -183,6 +183,7 @@ const SEMA = {
           miktar:      { type: 'INTEGER' },
           renk_kodu:   { type: 'STRING' },
           baslik:      { type: 'STRING', description: 'Model kodunun geçtiği satır aynen (ör. "J 5911 - SEPARE - PEMBE"), yoksa boş' },
+          koli_no:     { type: 'STRING', description: 'Büyük barkodun altındaki uzun koli numarası (ör. 29260651263000000001), yoksa boş' },
           siparis_no:  { type: 'STRING' }
         },
         required: ['foto', 'okunabildi']
@@ -313,6 +314,7 @@ module.exports = async function (req, res) {
           // Harfsiz kod (ör. YKK ürün kodu 4964423) model değildir
           model: (m => (/[A-Z]/.test(m) && /\d/.test(m)) ? m : '')(String(k.model || '').trim().toUpperCase().replace(/\s+/g, '')),
           baslik: String(k.baslik || '').trim().slice(0, 120),
+          koli_no: String(k.koli_no || '').replace(/\s+/g, '').slice(0, 40),
           uzunluk: +k.uzunluk || 0,
           miktar: Math.max(0, Math.round(+k.miktar || 0)),
           renk_kodu: String(k.renk_kodu || '').trim(),
