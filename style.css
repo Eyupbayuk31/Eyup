@@ -19851,3 +19851,14 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
     z-index:-1; pointer-events:none;
   }
 }
+
+/* iPhone (uygulama olarak eklenince) sayfa saat/pil çubuğunun altına da
+   çiziliyor. Tam ekran açılan pencerelerin başlığı oraya denk gelince kapatma
+   düğmesine basılamıyordu (arama penceresinin X'i pil simgesinin altındaydı). */
+@media (max-width:768px){
+  html .gs-head{ padding-top:calc(16px + env(safe-area-inset-top, 0px)) !important; }
+  html .tkg-ust{ padding-top:calc(14px + env(safe-area-inset-top, 0px)) !important; }
+  html .gs-kbd-esc{ display:none !important; }   /* telefonda klavye kısayolu yok */
+  html .gs-count:empty{ display:none !important; }
+}
+.aks-lb-ust{ padding-top:calc(12px + env(safe-area-inset-top, 0px)); }
