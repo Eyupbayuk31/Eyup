@@ -8463,6 +8463,22 @@ function ftPickModel(id){
   });
   // Beden adı olmayan cm satırları formdaki boş satırlara cm sırasıyla yerleşir;
   // PDF'de beden adı çıkmasın diye "bedenleri gizle" kendiliğinden işaretlenir.
+  // Hiçbir satırda stok yoksa (mal henüz gelmedi / Gelen Gir yapılmadı) satırlar yine
+  // cm ve beden grubuyla gelsin, adet boş kalsın: kullanıcı yalnız adeti yazar.
+  let stoksuzDoldu=false;
+  if(!filled && skipped){
+    stoksuzDoldu=true; skipped=0;
+    _ftSizesSorted(m).forEach(z=>{
+      const bAd=(z.beden||'').toString().trim().toLocaleUpperCase('tr');
+      let key=_FT_BEDEN_MAP[bAd];
+      if(!key && /[-\/]/.test(bAd)){
+        const ilk=_FT_BEDEN_MAP[bAd.split(/\s*[-\/]\s*/)[0]];
+        if(ilk && !dolu[ilk]){ yaz(ilk, z, ''); _ferSatirAd(ilk, bAd); return; }
+      }
+      if(!key || dolu[key]){ bedensizler.push({z, stok:''}); return; }
+      yaz(key, z, '');
+    });
+  }
   const bosSlot=_FT_BEDEN_KEYS.filter(k=>!dolu[k]);
   bedensizler.forEach((b,i)=>{ const key=bosSlot[i]; if(!key){ bedsiz++; return; } yaz(key, b.z, b.stok); yerlesen++; });
   const hb=document.getElementById('fHideBeden');
@@ -8475,7 +8491,14 @@ function ftPickModel(id){
   let t=0; _FT_BEDEN_KEYS.forEach(s=>{ t+=+(document.getElementById('fer_'+s+'a').value||0); });
   const tot=document.getElementById('ferToplam'); if(tot) tot.textContent=t;
   ftCloseModelAc();
-  let msg=m.modelKodu+' seçildi · '+filled+' beden dolduruldu';
+  // Stok yoksa nedenini söyle: gelen mal hangi irsaliyelerle kullanılmış
+  let neden='';
+  if(stoksuzDoldu){
+    const gelen=(m.sizes||[]).reduce((t,z)=>t+_ftGelen(z),0);
+    const nolar=[]; (m.sizes||[]).forEach(z=>(z.kullanimlar||[]).forEach(k=>{ if(k.no && nolar.indexOf(k.no)<0) nolar.push(k.no); }));
+    neden = !gelen ? 'henüz gelen girilmedi' : ('gelen '+gelen.toLocaleString('tr')+' adet'+(nolar.length?' zaten '+nolar.slice(0,3).join(', ')+' ile kesildi':' kullanıldı'));
+  }
+  let msg=m.modelKodu+' seçildi · '+(stoksuzDoldu ? 'elde stok yok ('+neden+'). Satırlar cm ile yazıldı, adet boş' : filled+' beden dolduruldu');
   if(skipped) msg+=' ('+skipped+' stoksuz atlandı)';
   if(yerlesen) msg+=' · beden adı yok, PDF\'de sadece cm çıkacak';
   if(bedsiz) msg+=' ('+bedsiz+' satır sığmadı — manuel girin)';
@@ -11786,6 +11809,49 @@ function toggleDurumUni(id,type){
     try{item._updatedBy=localStorage.getItem('irsaliye_last_user')||item._updatedBy;}catch(_){}setData(key,list);applyFilters();toast('Durum güncellendi');}
 }
 
+// İrsaliye silinince / düzenlenince Takip'teki "kullanılan" kaydı geri alınır.
+// Kesimde ftConsumeForCut / ktConsumeForCut irsaliye numarasıyla (no) kullanım
+// yazar; silmede bu kayıtlar bırakılıyordu ve stok geri gelmiyordu.
+function _takipKullanimIade(type, no){
+  if(!no) return 0;
+  var store = type==='fermuar' ? 'fermuarTakip' : type==='kordon' ? 'kordonTakip' : null; if(!store) return 0;
+  var list=getData(store)||[], n=0;
+  list.forEach(function(m){
+    var degisti=false;
+    (m.sizes||[]).forEach(function(z){
+      var once=(z.kullanimlar||[]).length; if(!once) return;
+      z.kullanimlar=z.kullanimlar.filter(function(k){ return k.no!==no; });
+      if(z.kullanimlar.length!==once){ n+=once-z.kullanimlar.length; degisti=true; }
+    });
+    if(degisti){ try{ _ftStamp(m); }catch(_){} }
+  });
+  if(n) setData(store, list);
+  return n;
+}
+// Geri alınan / düzenlenen irsaliye yeniden stoktan düşer (kontrol açıksa)
+function _takipKullanimYeniden(type, item){
+  if(!item) return;
+  try{
+    if(type==='fermuar' && typeof window.ftConsumeForCut==='function') window.ftConsumeForCut(item.model, item.beden, item.no);
+    if(type==='kordon' && typeof window.ktConsumeForCut==='function') window.ktConsumeForCut(item.model, item.olcular, item.no, korMetreMi(item), item.metre, item.renk);
+  }catch(_){}
+}
+// Geri dönüşümdeki (silinmiş) irsaliyelerden artakalan kullanımları temizle
+// (bu düzeltmeden önce silinenler için bir kez yeterli; her açılışta zararsız)
+function _yetimKullanimTemizle(){
+  try{
+    var n=0;
+    (getData('recycleBin')||[]).forEach(function(r){
+      var t=r._type; if((t!=='fermuar' && t!=='kordon') || !r.no) return;
+      var aktif=(getData(t==='fermuar'?'fermuarlar':'kordonlar')||[]).some(function(x){ return x.no===r.no; });
+      if(!aktif) n+=_takipKullanimIade(t, r.no);
+    });
+    if(n){ try{ if(document.getElementById('page-fermuar-takip').classList.contains('active')) renderFermuarTakip(); }catch(_){} }
+    return n;
+  }catch(_){ return 0; }
+}
+setTimeout(_yetimKullanimTemizle, 6000);
+
 function deleteItemUni(id,type){
   if(!confirm('Bu kaydı silmek istediğinize emin misiniz? (Geri dönüşüme taşınacak)'))return;
   const key=type==='standart'?'irsaliyeler':type==='fermuar'?'fermuarlar':type==='lastik'?'lastikler':type==='dugme'?'dugmeler':type==='kordon'?'kordonlar':type==='dantel'?'danteller':type==='satenaskilik'?'satenaskilikler':'toptanlar';
@@ -11797,8 +11863,9 @@ function deleteItemUni(id,type){
   let recycle=getData('recycleBin');
   recycle.unshift({...item,_type:type,_deletedAt:new Date().toISOString()});
   setData('recycleBin',recycle);
+  const iade=_takipKullanimIade(type, item.no);   // Takip stoğuna geri
   applyFilters();refreshHome();
-  if(typeof toastAction==='function') toastAction('Kayıt geri dönüşüme taşındı'+(item.no?' · '+esc(item.no):''),'info','Geri al',function(){ restoreItem(id,type); });
+  if(typeof toastAction==='function') toastAction('Kayıt geri dönüşüme taşındı'+(item.no?' · '+esc(item.no):'')+(iade?' · Takip stoğuna geri eklendi':''),'info','Geri al',function(){ restoreItem(id,type); });
   else toast('Kayıt geri dönüşüme taşındı','info');
   if(type==='lastik')refreshLastikList();
   else if(type==='dugme')refreshDugmeList();
@@ -11975,6 +12042,8 @@ function _saveUniIfEditing(type, patch){
   const existing = list[idx];
   list[idx] = {...existing, ...patch};
   setData(key, list);
+  // Fermuar / kordon düzenlenince Takip'teki kullanım yeni adetlerle yazılır
+  if(type==='fermuar' || type==='kordon'){ _takipKullanimIade(type, existing.no); _takipKullanimYeniden(type, list[idx]); }
   toast((TYPE_LABEL_MAP[type]||'Kayıt')+' güncellendi: '+(existing.no||existing.firma||''));
   cancelEditUni();
   refreshHome();
@@ -16435,6 +16504,8 @@ function restoreItem(id,type){
 
   recycle=recycle.filter(r=>r.id!==id);
   setData('recycleBin',recycle);
+  // Geri gelen irsaliye Takip stoğundan yeniden düşer (önce eskisi temizlenir: çift düşmesin)
+  if(type==='fermuar' || type==='kordon'){ _takipKullanimIade(type, cleanItem.no); _takipKullanimYeniden(type, cleanItem); }
 
   recycleKurtarilanCount++;
   try{ renderRecycleBin(); }catch(_){}
@@ -16961,6 +17032,7 @@ function bulkDelete(){
       let recycle=getData('recycleBin');
       recycle.unshift({...item,_type:type,_deletedAt:new Date().toISOString()});
       setData('recycleBin',recycle);
+      _takipKullanimIade(type, item.no);   // Takip stoğuna geri
     }
   });
   bulkClear();applyFilters();refreshHome();
