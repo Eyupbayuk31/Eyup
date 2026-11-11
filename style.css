@@ -19820,3 +19820,17 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
   .kf-ft{ flex-basis:84px; height:84px; }
 }
 .kf-lb{ background:rgba(0,0,0,.9); }
+/* Koli fotoğrafı: kamera mı galeri mi */
+.kf-secim{ position:fixed; inset:0; z-index:100001; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.6); }
+.kf-secim-k{ width:min(100%, 420px); display:flex; flex-direction:column; gap:10px; padding:20px; border-radius:18px;
+  background:var(--bg-card-solid, #1f2937); color:var(--text-main); box-shadow:0 14px 40px rgba(0,0,0,.45); }
+.kf-secim-k > b{ font-size:17px; font-weight:800; }
+.kf-secim-k > span{ font-size:13px; color:var(--text-muted); margin-bottom:4px; }
+.kf-secim-b{ all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px;
+  border:1px solid var(--border); background:color-mix(in srgb, var(--primary) 8%, transparent); }
+.kf-secim-b:hover, .kf-secim-b:focus-visible{ border-color:var(--primary); background:color-mix(in srgb, var(--primary) 15%, transparent); }
+.kf-secim-b > i{ width:42px; height:42px; flex:0 0 42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px;
+  background:var(--primary); color:var(--bg-main, #000); }
+.kf-secim-b > span{ display:flex; flex-direction:column; gap:2px; font-size:15px; font-weight:800; }
+.kf-secim-b small{ font-size:12px; font-weight:500; color:var(--text-muted); }
+.kf-secim-v{ all:unset; cursor:pointer; align-self:center; padding:8px 14px; font-size:13px; font-weight:700; color:var(--text-muted); }
