@@ -19834,3 +19834,20 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
 .kf-secim-b > span{ display:flex; flex-direction:column; gap:2px; font-size:15px; font-weight:800; }
 .kf-secim-b small{ font-size:12px; font-weight:500; color:var(--text-muted); }
 .kf-secim-v{ all:unset; cursor:pointer; align-self:center; padding:8px 14px; font-size:13px; font-weight:700; color:var(--text-muted); }
+
+/* Alt menü (telefon): iPhone'da güvenli alan yüzünden menü fazla yukarıda
+   yüzüyor, altındaki boşlukta sayfa yazıları görünüyordu. Menü ev çizgisinin
+   hemen üstüne iner; alttaki boşluk zemin rengiyle dolar. */
+@media (max-width:768px){
+  html[data-tasarim="yeni"]{ --t2-guv: env(safe-area-inset-bottom, 0px); }
+  html[data-tasarim="yeni"] body .bottom-nav{
+    bottom:max(10px, calc(var(--t2-guv) - 12px)) !important;
+    overflow:visible !important;
+  }
+  html[data-tasarim="yeni"] body .bottom-nav::after{
+    content:""; position:absolute; left:-13px; right:-13px; top:calc(100% - 12px);
+    height:calc(max(10px, calc(var(--t2-guv) - 12px)) + 14px);
+    background:linear-gradient(to bottom, transparent, var(--bg-main) 12px);
+    z-index:-1; pointer-events:none;
+  }
+}
