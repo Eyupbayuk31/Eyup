@@ -48,7 +48,7 @@
 
     // ── v4 COMPACT FORMAT: id36.type.owner~repo[.branch] ──────────────
     // Ornek: mq9ridmt.k.Eyupbayuk31~Eyup.data
-    var _TV = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel'};
+    var _TV = {s:'standart',f:'fermuar',l:'lastik',d:'dugme',tp:'toptan',sa:'satenaskilik',k:'kordon',da:'dantel',ftd:'ftdurum',ktd:'ktdurum'};
     var v4Match = vParam.match(/^([0-9a-z]+)\.([a-z]{1,3})\.([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_-]+))?$/);
     var d;
     if(v4Match){
@@ -82,12 +82,17 @@
     // Tamamen self-contained: app'in geri kalanina (Firebase, 5000 satir kod) bagimli degil
     // ════════════════════════════════════════════════════════════════
     function renderViewer(d){
-    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi'};
+    var TYPE_NAMES = {standart:'Poşet İrsaliyesi',fermuar:'Fermuar İrsaliyesi',lastik:'Lastik İrsaliyesi',dugme:'Düğme İrsaliyesi',toptan:'Toptan Sipariş',satenaskilik:'Saten Askılık İrsaliyesi',kordon:'Kordon İrsaliyesi',dantel:'Dantel İrsaliyesi',ftdurum:'Fermuar Teslim Durumu',ktdurum:'Kordon Teslim Durumu'};
     var SIZE_NAMES  = {s30:'30×40',s35:'35×45',s40:'40×60',s50:'50×70',s60:'60×90',s100:'100×100'};
     var BANT_NAMES  = {genis:'Geniş Bant',dar:'Dar Bant',kilcik:'Kılçık'};
     var BEDEN_NAMES = {xxs:'XXS',xs:'XS',s:'S',m:'M',l:'L',xl:'XL',xxl:'XXL','3xl':'3XL',tek:'Tek Beden'};
     var typeLabel  = TYPE_NAMES[d.type] || 'İrsaliye';
-    var durumBadge = d.durum === 'teslim'
+    var _durumBelge = Array.isArray(d.durumSatir);
+    var durumBadge = _durumBelge
+      ? (d.durum === 'teslim'
+        ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">Tamamlandı</span>'
+        : '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;">Eksik var</span>')
+      : d.durum === 'teslim'
       ? '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;">Teslim Edildi</span>'
       : '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;">Bekliyor</span>';
 
@@ -160,6 +165,22 @@
       sizesHtml += tbl('Kordon Ölçüleri', korBd?['Beden','CM','Adet']:['CM','Adet'], rows5, korTotal+' adet');
     }
     if(d.totalAdet) sizesHtml += '<div style="text-align:right;font-size:15px;font-weight:800;color:#111827;padding:10px 0;">Toplam Adet: '+d.totalAdet+'</div>';
+    // Teslim durumu (Fermuar / Kordon Takip): satır satır sipariş / gelen / koli
+    if(_durumBelge && d.durumSatir.length){
+      var _td='padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;';
+      var _bd=d.durumSatir.some(function(r){ return r.beden && r.beden!=='—'; });
+      var _kl=d.durumSatir.some(function(r){ return +r.koli>0; });
+      var rowsD=d.durumSatir.map(function(r){
+        var eks=Math.max(0,(+r.siparis||0)-(+r.gelen||0));
+        return '<tr>'+(_bd?'<td style="'+_td+'font-weight:700;">'+String(r.beden||'—').replace(/</g,'&lt;')+'</td>':'')+
+          '<td style="'+_td+'font-weight:700;">'+(r.cm!=null&&r.cm!==''?String(r.cm).replace(/</g,'&lt;')+' cm':'—')+'</td>'+
+          '<td style="'+_td+'">'+(+r.siparis||0).toLocaleString('tr')+'</td>'+
+          '<td style="'+_td+'">'+(+r.gelen||0).toLocaleString('tr')+'</td>'+
+          (_kl?'<td style="'+_td+'">'+(+r.koli>0?(+r.koli):'—')+'</td>':'')+
+          '<td style="'+_td+'font-weight:700;color:'+(eks>0?'#991b1b':'#065f46')+';">'+(eks>0?eks.toLocaleString('tr')+' eksik':'Tamam')+'</td></tr>';
+      }).join('');
+      sizesHtml += tbl('Teslim Durumu', (_bd?['Beden']:[]).concat(['CM','Sipariş','Gelen']).concat(_kl?['Koli']:[]).concat(['Durum']), rowsD, null);
+    }
 
     // Fotoğraflar
     var photoHtml = '';
@@ -169,9 +190,9 @@
           +'<a href="'+p.url+'" target="_blank" rel="noopener">'
           +'<img src="'+p.url+'" alt="Kanıt '+(i+1)+'" style="display:block;width:100%;height:auto;max-height:250px;object-fit:contain;border-radius:8px;cursor:zoom-in;" '
           +'onerror="this.parentNode.parentNode.innerHTML=\'<div style=&quot;padding:16px;background:#fef2f2;color:#991b1b;text-align:center;&quot;>Fotoğraf yüklenemedi</div>\'">'
-          +'</a></div>';
+          +'</a>'+(p.yazi?'<div style="font-size:12px;font-weight:700;color:#374151;text-align:center;margin-top:6px;">'+String(p.yazi).replace(/</g,'&lt;')+'</div>':'')+'</div>';
       }).join('');
-      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Kanıt Fotoğrafları ('+d.photos.length+')</h3>'
+      photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">'+(_durumBelge?'Gelen Koli Fotoğrafları':'Kanıt Fotoğrafları')+' ('+d.photos.length+')</h3>'
         +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;">'+imgs+'</div>'
         +'<div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>';
     } else if(d.photoUrl){
@@ -180,7 +201,7 @@
         +'<img src="'+d.photoUrl+'" alt="Fotoğraf" style="display:block;width:100%;height:auto;max-height:300px;object-fit:contain;border-radius:10px;">'
         +'</a>';
     } else {
-      photoHtml = '<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;margin-top:12px;">Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.</div>';
+      photoHtml = '<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;text-align:center;font-size:13px;color:#92400e;margin-top:12px;">'+(_durumBelge?'Bu model için henüz koli fotoğrafı yok.':'Bu irsaliyede henüz buluta yüklenmiş fotoğraf yok.')+'</div>';
     }
 
     // HTML özel karakterlerini kaçır (XSS koruması)
@@ -2441,7 +2462,6 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
 
         <!-- cm cm sıralı satır listesi -->
         <div class="ft-rows" id="ftDetailRows"></div>
-        <div class="tk-kabul-kap" id="ftDetailKabul"></div>
       </div>
     </div>
 
@@ -2685,7 +2705,6 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </div>
 
         <div class="ft-rows" id="ktDetailRows"></div>
-        <div class="tk-kabul-kap" id="ktDetailKabul"></div>
       </div>
     </div>
 
@@ -7291,7 +7310,6 @@ function ftRenderDetail(){
   ].map(x=>`<div class="ft-dkpi"><i class="fas ${x[0]}"></i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
 
   const sizes=_ftSizesSorted(m);
-  const _kb=document.getElementById('ftDetailKabul'); if(_kb) _kb.innerHTML=_takipKabulHtml('fermuarTakip', m);
   const host=document.getElementById('ftDetailRows');
   if(!sizes.length){
     host.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Henüz beden yok. Yukarıdaki formla ekleyin — <b>küçükten büyüğe cm sırasına</b> göre listelenir.</p></div>';
@@ -7326,7 +7344,7 @@ function ftRenderDetail(){
       </div>
       <div class="ft-row-hist" id="ftHist-${z.id}" style="display:none;">${_ftHistoryHtml(m.id, z)}</div>
     </div>`;
-  }).join('');
+  }).join('') + _takipKabulHtml('fermuarTakip', m);
 }
 function _ftHistoryHtml(modelId, z){
   const rows=[];
@@ -8027,6 +8045,10 @@ function _takipTeslimBelgesi(o){
   .kn{font-size:13px;color:#374151;margin-top:6px;}
   .ay{color:#9ca3af;margin:0 7px;}
   .ust-r{text-align:right;flex-shrink:0;}
+  .ust-sag{display:flex;align-items:flex-start;gap:16px;flex-shrink:0;}
+  .qr{display:flex;flex-direction:column;align-items:center;gap:3px;width:96px;}
+  .qr img{width:88px;height:88px;display:block;image-rendering:pixelated;}
+  .qr span{font-size:8px;line-height:1.2;color:#374151;text-align:center;font-weight:600;}
   .ust-r .l{font-size:10px;font-weight:800;letter-spacing:.12em;color:#6b7280;}
   .ust-r .t{font-size:18px;font-weight:800;}
   .ust-r .s{font-size:12px;color:#6b7280;}
@@ -8089,7 +8111,8 @@ function _takipTeslimBelgesi(o){
 <div class="sayfa">
   <header class="ust">
     <div><div class="tur">${o.tur.toLocaleUpperCase('tr')} TESLİM DURUMU</div><h1>${baslik}</h1><div class="kn">${ustKunye}</div></div>
-    <div class="ust-r"><div class="l">TARİH</div><div class="t">${tarih}</div><div class="s">${saat}</div></div>
+    <div class="ust-sag">${o.qr?`<div class="qr"><img src="${o.qr}" alt="QR"><span>Okutun: güncel durum ve koli fotoğrafları</span></div>`:''}
+    <div class="ust-r"><div class="l">TARİH</div><div class="t">${tarih}</div><div class="s">${saat}</div></div></div>
   </header>
   <div class="durum ${eksikVar?'eks':'tam'}"><div class="ik"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${eksikVar?'<path d="M12 5.5v8"/><path d="M12 18.4v.2"/>':'<path d="M5.5 12.5l4.2 4.2L18.5 8"/>'}</svg></div><div><div class="b">${durumBas}</div><div class="a">${durumAlt}</div></div></div>
   <div class="ozet">
@@ -8122,6 +8145,7 @@ function _ftTeslimAc(seciliIds, onlyMissing){
   const html=_takipTeslimBelgesi({
     tur:'Fermuar', cogul:'fermuarlar', dosya:'Fermuar_Teslim_Durumu',
     onlyMissing: onlyMissing,
+    qr: models.length===1 ? _takipDurumQr('fermuarTakip', models[0]) : '',
     sayi:v=>Math.round(+v||0).toLocaleString('tr'),
     models: models.map(m=>({ kod:m.modelKodu||'—', renk:m.renk||'', tedarikci:m.tedarikci||'', termin:m.termin||'', metre:false,
       rows:_ftSizesSorted(m).map(z=>({beden:z.beden||'—', cm:z.cm, renk:z.renk||m.renk||'—', siparis:+z.siparisAdet||0, gelen:_ftGelen(z), eksik:_ftBekleyen(z)})) }))
@@ -8289,6 +8313,7 @@ function ftPickModel(id){
   if(skipped) msg+=' ('+skipped+' stoksuz atlandı)';
   if(yerlesen) msg+=' · beden adı yok, PDF\'de sadece cm çıkacak';
   if(bedsiz) msg+=' ('+bedsiz+' satır sığmadı — manuel girin)';
+  try{ _kfIrsaliyeFoto('fermuarTakip', m); }catch(_){}   // koli fotoğrafları irsaliyeye (QR'da görünür)
   toast(msg, filled?'success':'info');
 }
 
@@ -8645,7 +8670,6 @@ function ktRenderDetail(){
   ].map(x=>`<div class="ft-dkpi"><i class="fas ${x[0]}"></i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
 
   const sizes=_ktSatirlar(m);
-  const _kbK=document.getElementById('ktDetailKabul'); if(_kbK) _kbK.innerHTML=_takipKabulHtml('kordonTakip', m);
   const host=document.getElementById('ktDetailRows');
   if(!sizes.length){
     host.innerHTML = metreMi
@@ -8686,7 +8710,7 @@ function ktRenderDetail(){
       </div>
       <div class="ft-row-hist" id="ktHist-${z.id}" style="display:none;">${_ktHistoryHtml(m.id, z)}</div>
     </div>`;
-  }).join('');
+  }).join('') + _takipKabulHtml('kordonTakip', m);
 }
 function _ktHistoryHtml(modelId, z){
   const rows=[];
@@ -8898,6 +8922,7 @@ function _ktTeslimAc(seciliIds, onlyMissing){
   const html=_takipTeslimBelgesi({
     tur:'Kordon', cogul:'kordonlar', dosya:'Kordon_Teslim_Durumu',
     onlyMissing: onlyMissing,
+    qr: models.length===1 ? _takipDurumQr('kordonTakip', models[0]) : '',
     sayi:(v,metre)=>_ktSayi(v, metre),
     models: models.map(m=>{ const mm=_ktMetreMi(m); return { kod:m.modelKodu||'—', renk:m.renk||'', tedarikci:m.tedarikci||'', termin:m.termin||'',
       metre:mm, birimEtiket: mm?'HAM KORDON · METRE':'CM & BEDEN · ADET',
@@ -9093,6 +9118,7 @@ function ktPickModel(id){
   let msg=m.modelKodu+' seçildi · '+filled+' ölçü dolduruldu';
   if(skipped) msg+=' ('+skipped+' stoksuz atlandı)';
   if(tasan) msg+=' ('+tasan+' ölçü sığmadı — 10 satır sınırı)';
+  try{ _kfIrsaliyeFoto('kordonTakip', m); }catch(_){}   // koli fotoğrafları irsaliyeye (QR'da görünür)
   toast(msg, filled?'success':'info');
 }
 
@@ -9427,6 +9453,49 @@ function _tkgGeriAlGoster(store, modelId, eklenen, mesaj, kabulId){
   clearTimeout(_tkgGeriSayac);
   _tkgGeriSayac=setTimeout(function(){ el.classList.remove('show'); }, 7000);
 }
+// ── Teslim durumu QR'ı: okutan kişi güncel durumu ve koli fotoğraflarını görür ──
+function _takipDurumPayload(m, type){
+  const kordon = type==='ktdurum';
+  const satirlar = (kordon && typeof _ktSatirlar==='function') ? _ktSatirlar(m) : _ftSizesSorted(m);
+  const rows = satirlar.map(z=>({ beden:z.beden||'', cm:(z.cm!=null?z.cm:''), siparis:+z.siparisAdet||0, gelen:_ftGelen(z), koli:_tkKoli(z) }));
+  const eksik = rows.some(r=>r.siparis>r.gelen);
+  const photos=[];
+  (m.kabuller||[]).slice().sort((a,b)=>(b.id||0)-(a.id||0)).forEach(k=>{
+    (k.fotolar||[]).forEach((u,i)=>{
+      if(!u) return;
+      const bu=(k.koliler||[]).filter(x=>x.f===i); if(!bu.length) return;
+      photos.push({ url:u, at:k.tarih||'', yazi:(k.tarih?_ftFmtDate(k.tarih)+' · ':'')+bu.map(x=>x.cm+' cm · '+(+x.adet||0).toLocaleString('tr')).join(' | ') });
+    });
+  });
+  return { v:1, id:m.id, type, no:m.modelKodu||'', model:m.modelKodu||'', renk:m.renk||'', termin:m.termin||'',
+    tarih:new Date().toISOString().slice(0,10), durum: eksik?'bekliyor':'teslim', durumSatir:rows, photos, updatedAt:Date.now() };
+}
+function _takipDurumQr(store, m){
+  try{
+    const cfg=(typeof _getGithubConfig==='function')?_getGithubConfig():null;
+    if(!cfg || !cfg.owner || !cfg.repo || !cfg.token || !m || !m.id) return '';
+    const url=_buildQrScanUrl(m, store==='kordonTakip'?'ktdurum':'ftdurum');   // görüntüleme verisini de yayınlar
+    return _buildQrDataUrl(url, {size:512, correctLevel:'M'});
+  }catch(e){ return ''; }
+}
+
+// İrsaliye Kes: takipteki modelin koli fotoğrafları irsaliyenin fotoğraflarına
+// kendiliğinden eklenir (zaten GitHub'da; yeniden yüklenmez). Başka modelden
+// kalan koli fotoğrafları çıkarılır, elle eklenenlere dokunulmaz.
+function _kfIrsaliyeFoto(store, m){
+  if(typeof _newFormPhotos==='undefined' || !m) return;
+  const adres=[];
+  (m.kabuller||[]).slice().sort((a,b)=>(b.id||0)-(a.id||0)).forEach(k=>{
+    (k.fotolar||[]).forEach((u,i)=>{ if(u && (k.koliler||[]).some(x=>x.f===i) && adres.indexOf(u)<0) adres.push(u); });
+  });
+  _newFormPhotos = _newFormPhotos.filter(p=>!(p.koli && p.koliModel!==store+':'+m.id));
+  const var_=new Set(_newFormPhotos.map(p=>p.url).filter(Boolean));
+  const ek=adres.filter(u=>!var_.has(u)).slice(0, 12);
+  ek.forEach(u=>_newFormPhotos.push({ data:'', url:u, at:new Date().toISOString(), koli:true, koliModel:store+':'+m.id }));
+  try{ renderNewFormPhotoGallery(); }catch(_){}
+  if(ek.length) setTimeout(()=>toast(ek.length+' koli fotoğrafı irsaliyeye eklendi','info'), 700);
+}
+
 // ── Koli sayıları ve "Gelen koliler" (mal kabul) bölümü ──────────────
 function _tkKoli(z){ return (z && z.teslimatlar || []).reduce(function(s,t){ return s+(+t.koli||0); },0); }
 function _tkModelKoli(m){ return (m && m.sizes || []).reduce(function(s,z){ return s+_tkKoli(z); },0); }
@@ -18708,7 +18777,7 @@ function _buildQrScanUrl(item, type){
 function _buildQrPayloadV4Short(item, type){
   // Format: <id_base36>.<typeCode>.<owner>~<repo>[.<branch>]
   // Ornek: mq9ridmt.k.Eyupbayuk31~Eyup.data  (36 karakter vs onceki 104)
-  const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da'};
+  const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da',ftdurum:'ftd',ktdurum:'ktd'};
   const id36     = Number(item.id).toString(36);
   const typeCode = _T[type] || type;
   try{
@@ -18764,7 +18833,7 @@ function _scheduleViewerJsonRefresh(id, type){
 function _buildQrPayloadV3(item, type){
   // Kısa anahtarlar: a=app(ip), v=versiyon, i=id, t=type, r=owner/repo, b=branch
   // Eski format (app/id/type) hala decode edilebilir (geriye dönük uyum)
-  const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da'};
+  const _T = {standart:'s',fermuar:'f',lastik:'l',dugme:'d',toptan:'tp',satenaskilik:'sa',kordon:'k',dantel:'da',ftdurum:'ftd',ktdurum:'ktd'};
   const p = { a:'ip', v:3, i:item.id, t:_T[type]||type };
   try{
     const cfg = (typeof _getGithubConfig === 'function') ? _getGithubConfig() : null;
@@ -20314,6 +20383,7 @@ async function _uploadPhotoToCatbox(dataUrl, _retryCount){
 // QR taranınca atölye direkt GitHub'dan JSON çeker (auth, security rule yok)
 // ====================================================================
 function _buildViewerPayload(item, type){
+  if(type==='ftdurum' || type==='ktdurum') return _takipDurumPayload(item, type);
   const photos = (typeof _getPhotosArray === 'function') ? _getPhotosArray(item) : [];
   return {
     v: 1,
@@ -20595,8 +20665,8 @@ function renderNewFormPhotoGallery(){
   const countLabel = total > 1 ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${total} fotoğraf eklenecek — kaydet tuşuna basınca sıraya alınır</div>` : '';
   host.innerHTML = countLabel + _newFormPhotos.map((p,i)=>`
     <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15);margin:2px;">
-      <img src="${p.data}" style="width:80px;height:80px;object-fit:cover;display:block;" alt="foto ${i+1}">
-      <div style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;border-radius:4px;padding:1px 4px;font-weight:700;">${i+1}</div>
+      <img src="${p.data||p.url}" style="width:80px;height:80px;object-fit:cover;display:block;" alt="foto ${i+1}">
+      <div style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;border-radius:4px;padding:1px 4px;font-weight:700;">${i+1}${p.koli?' · koli':''}</div>
       <button onclick="removeNfPhotoAt(${i})" style="position:absolute;top:2px;right:2px;background:rgba(239,68,68,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;"><i class="fas fa-xmark"></i></button>
     </div>
   `).join('');
@@ -20680,7 +20750,7 @@ function _attachNfPhotosToItem(item, type){
   if(!_newFormPhotos.length) return;
   // Fotoğrafları localStorage'e KAYDETME - sadece GitHub'a yüklenecek
   // Base64 data'yı item'a ekleme, sadece placeholder
-  const photos = _newFormPhotos.map(p=>({ data:'', at:p.at, url:'', urlAt:'', urlManual:false }));
+  const photos = _newFormPhotos.map(p=>({ data:'', at:p.at, url:p.url||'', urlAt:p.url?p.at:'', urlManual:false }));
   item._photos = photos;
   // _photo ve _photoAt alanlarını boş bırak - localStorage'i şişirmesin
   item._photo = '';
@@ -20735,13 +20805,16 @@ function _uploadNfPhotosInBackground(savedId, type){
   _newFormPhotos = [];
   renderNewFormPhotoGallery();
   const total = photoCopies.length;
-  if(total > 1) toast('' + total + ' fotoğraf — sırayla yüklenecek','info');
+  const _yeni = photoCopies.filter(p=>!p.url).length;
+  if(_yeni > 1) toast('' + _yeni + ' fotoğraf — sırayla yüklenecek','info');
   // Sırayla (bir foto tamamen bitmeden diğeri başlamadan) yükle — eş zamanlı PUT'lar
   // GitHub'ın aynı branch'e commit çakışmasına (409) yol açıyordu, özellikle 5+ fotoda.
   (async () => {
-    for(let idx=0; idx<photoCopies.length; idx++){
+    const yuklenecek = photoCopies.map((p,i)=>i).filter(i=>!photoCopies[i].url);   // koli fotoğrafları zaten GitHub'da
+    for(let n=0; n<yuklenecek.length; n++){
+      const idx=yuklenecek[n];
       await _uploadPhotoInBackground(savedId, type, photoCopies[idx].data, idx);
-      if(idx < photoCopies.length - 1) await new Promise(r=>setTimeout(r, 4000));
+      if(n < yuklenecek.length - 1) await new Promise(r=>setTimeout(r, 4000));
     }
   })();
 }
