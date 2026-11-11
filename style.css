@@ -19889,3 +19889,8 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
 .tk-lb .aks-lb-ic{ gap:18px; }
 .tk-lb-f{ margin:0; display:flex; flex-direction:column; align-items:center; gap:6px; }
 .tk-lb-f figcaption{ color:#fff; font-size:13px; font-weight:700; }
+
+/* İrsaliyeler filtre paneli: açılır menü filtre satırının dışına taşar.
+   Satırdaki eski "overflow:auto" (tek satır yana kaydırma) menüyü kesip
+   görünmez yapıyordu (telefonda "Tüm Durumlar" açılmıyor gibiydi). */
+html #t2FiltreKutu .filter-row{ overflow:visible !important; }
