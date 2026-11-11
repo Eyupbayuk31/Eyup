@@ -4,6 +4,11 @@
 //  tur:'siparis' → "PDF'ten Satın Alma": sipariş e-postası ekran görüntüsü,
 //                  fotoğraf ya da (yazısız/taranmış) PDF → model başına
 //                  {beden, cm, adet} satırları
+//  tur:'gelen'   → Gelen Gir "İrsaliyeden oku": tedarikçinin sevk irsaliyesi /
+//                  çeki listesi (fotoğraf ya da yazı) → gelen {beden, cm, adet}
+//  tur:'form'    → İrsaliye formlarında "Hızlı doldur": yazı (WhatsApp mesajı,
+//                  sesle yazdırma) ya da fotoğraf → formun alanları
+// Yazı (metin) tek başına da gönderilebilir; fotoğraf zorunlu değil.
 // Anahtar (GEMINI_API_KEY) yalnızca Vercel ortam değişkeninde durur.
 
 const MODELLER = (process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : [])
@@ -63,6 +68,70 @@ const SEMA_SIPARIS = {
   },
   required: ['modeller']
 };
+
+const ISTEM_GELEN =
+  'Bu belge bir fermuar ya da kordon tedarikçisinin bize gönderdiği SEVK İRSALİYESİ, çeki listesi ya da teslimat mesajı. ' +
+  'Fotoğraf, ekran görüntüsü ya da yazı olabilir. Bu teslimatta GELEN miktarları çıkar.\n' +
+  'Kurallar:\n' +
+  '- model: bizim model kodumuz (bir-üç harf + rakamlar, ör. J4842). Tedarikçi stok/iş numarasını model yazma. Yoksa boş.\n' +
+  '- satirlar: her uzunluk (cm) için bir satır; adet o teslimatta gelen tam sayı. Beden ya da beden grubu yazıyorsa beden alanına yaz (ör. "XS-S-M"). ' +
+  'Ham kordon gibi metre ile gelen malda cm=0 yaz, adet alanına metreyi yaz.\n' +
+  '- renk: varsa renk adı. Koli sayısı, fiyat, KDV, tutar, irsaliye no gibi bilgileri satıra koyma. toplam: belgede yazan toplam miktar, yoksa 0.\n' +
+  '- Okuyamadığın değeri uydurma, boş bırak.';
+
+const FORM_TARIF = {
+  standart: 'POŞET irsaliyesi. Miktarlar poşet ölçüsüne göre: 30x40, 35x45, 40x60, 50x70, 60x90, 100x100 → posetler listesi (olcu "30x40" biçiminde). ' +
+    'Geniş bant, dar bant, kılçık adetleri → bant_genis, bant_dar, kilcik. "Mal adedi" (kaç adet ürün için verildiği) → mal_adedi.',
+  fermuar: 'FERMUAR irsaliyesi. Miktarlar beden ve uzunluk (cm) başına adet → satirlar. Beden grubu (ör. "XS-S-M 23 cm 500") varsa beden alanına grubu yaz.',
+  kordon: 'KORDON irsaliyesi. Ya cm başına adet (satirlar; beden varsa yaz) ya da sadece toplam metre (metre alanı).',
+  dugme: 'DÜĞME irsaliyesi. Tek miktar: toplam adet → adet.',
+  lastik: 'LASTİK irsaliyesi. Lastiğin eni cm olarak → cm, toplam metre → metre.',
+  dantel: 'DANTEL irsaliyesi. Toplam metre → metre.',
+  satenaskilik: 'SATEN ASKILIK irsaliyesi. Toplam metre → metre.',
+  toptan: 'TOPTAN SİPARİŞ. Müşteri firma adı → firma, ürün kodu → model, beden başına adet → satirlar (cm=0).'
+};
+function istemForm(form, bugun) {
+  return 'Bir tekstil firmasında atölyeye malzeme gönderirken kesilen irsaliyenin formunu dolduruyoruz. ' +
+    (FORM_TARIF[form] || FORM_TARIF.fermuar) + '\n' +
+    'Kaynak: kullanıcının yazdığı / sesle söylediği kısa not, WhatsApp mesajı ya da bir kâğıdın fotoğrafı. Bugünün tarihi ' + bugun + '.\n' +
+    'Alanlar:\n' +
+    '- atolye: malın gönderildiği atölye adı, metinde geçtiği gibi ama ek almadan (ör. "Paşa\'ya" → "Paşa").\n' +
+    '- model: bizim model kodumuz (bir-üç harf + rakamlar, ör. J4842, I6399AX). "J 4842" ise birleştir.\n' +
+    '- renk: renk adı (ör. Kahverengi). teslim_eden / teslim_alan: kişi adları açıkça yazıyorsa.\n' +
+    '- tarih ve termin: YYYY-AA-GG biçiminde; "yarın", "cuma" gibi ifadeleri bugüne göre çevir. Yazmıyorsa boş.\n' +
+    '- aciklama: yalnızca açıkça not olarak yazılan kısa bilgi, yoksa boş.\n' +
+    '- Bu irsaliye türüyle ilgisi olmayan alanları boş bırak / 0 yaz. Fiyat ve tutar yazma. Okuyamadığın değeri uydurma.';
+}
+const SEMA_FORM = {
+  type: 'OBJECT',
+  properties: {
+    atolye: { type: 'STRING' }, firma: { type: 'STRING' }, model: { type: 'STRING' }, renk: { type: 'STRING' },
+    teslim_eden: { type: 'STRING' }, teslim_alan: { type: 'STRING' },
+    tarih: { type: 'STRING' }, termin: { type: 'STRING' }, aciklama: { type: 'STRING' },
+    satirlar: {
+      type: 'ARRAY',
+      items: { type: 'OBJECT', properties: { beden: { type: 'STRING' }, cm: { type: 'NUMBER' }, adet: { type: 'INTEGER' } }, required: ['adet'] }
+    },
+    metre: { type: 'NUMBER' }, adet: { type: 'INTEGER' }, cm: { type: 'NUMBER' },
+    posetler: { type: 'ARRAY', items: { type: 'OBJECT', properties: { olcu: { type: 'STRING' }, adet: { type: 'INTEGER' } }, required: ['olcu', 'adet'] } },
+    bant_genis: { type: 'INTEGER' }, bant_dar: { type: 'INTEGER' }, kilcik: { type: 'INTEGER' }, mal_adedi: { type: 'INTEGER' }
+  }
+};
+const FORMLAR = Object.keys(FORM_TARIF);
+const yazi = v => String(v == null ? '' : v).trim().slice(0, 120);
+const tam = v => Math.max(0, Math.round(+v || 0));
+const tarihMi = v => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '').trim()) ? String(v).trim() : '');
+function formSonucu(o) {
+  return {
+    atolye: yazi(o.atolye), firma: yazi(o.firma), model: yazi(o.model).toUpperCase().replace(/\s+/g, ''), renk: yazi(o.renk),
+    teslimEden: yazi(o.teslim_eden), teslimAlan: yazi(o.teslim_alan), tarih: tarihMi(o.tarih), termin: tarihMi(o.termin),
+    aciklama: yazi(o.aciklama),
+    satirlar: (o.satirlar || []).map(z => ({ beden: yazi(z.beden), cm: +z.cm || 0, adet: tam(z.adet) })).filter(z => z.adet > 0),
+    metre: Math.max(0, Math.round((+o.metre || 0) * 10) / 10), adet: tam(o.adet), cm: Math.max(0, +o.cm || 0),
+    posetler: (o.posetler || []).map(p => ({ olcu: yazi(p.olcu), adet: tam(p.adet) })).filter(p => p.adet > 0),
+    bant: { genis: tam(o.bant_genis), dar: tam(o.bant_dar), kilcik: tam(o.kilcik) }, malAdedi: tam(o.mal_adedi)
+  };
+}
 
 const SEMA = {
   type: 'OBJECT',
@@ -128,28 +197,34 @@ module.exports = async function (req, res) {
   if (req.headers['x-irsaliye'] !== 'koli') { res.status(403).json({ hata: 'İzin yok' }); return; }
   let govde = req.body;
   if (typeof govde === 'string') { try { govde = JSON.parse(govde); } catch (_) { govde = null; } }
-  const siparis = !!(govde && govde.tur === 'siparis');
+  const tur = (govde && ['siparis', 'gelen', 'form'].includes(govde.tur)) ? govde.tur : 'koli';
+  const siparis = tur === 'siparis' || tur === 'gelen';   // ikisi de {modeller:[{satirlar}]} döner
+  const form = tur === 'form' ? (FORMLAR.includes(govde.form) ? govde.form : 'fermuar') : '';
+  const metin = (tur !== 'koli' && govde && typeof govde.metin === 'string') ? govde.metin.trim().slice(0, 4000) : '';
+  const bugun = (govde && tarihMi(govde.bugun)) || new Date().toISOString().slice(0, 10);
 
   const anahtar = process.env.GEMINI_API_KEY;
   if (!anahtar) { res.status(500).json({ hata: 'Sunucuda GEMINI_API_KEY tanımlı değil (Vercel ayarları).' }); return; }
 
   const fotolar = (govde && Array.isArray(govde.fotolar)) ? govde.fotolar : [];
-  if (!fotolar.length) { res.status(400).json({ hata: 'Fotoğraf yok' }); return; }
+  if (!fotolar.length && !metin) { res.status(400).json({ hata: tur === 'koli' ? 'Fotoğraf yok' : 'Yazı ya da fotoğraf yok' }); return; }
   if (fotolar.length > EN_COK_FOTO) { res.status(400).json({ hata: 'Tek seferde en çok ' + EN_COK_FOTO + ' fotoğraf' }); return; }
 
-  const parcalar = [{ text: siparis ? ISTEM_SIPARIS : ISTEM }];
+  const istem = tur === 'form' ? istemForm(form, bugun) : tur === 'gelen' ? ISTEM_GELEN : tur === 'siparis' ? ISTEM_SIPARIS : ISTEM;
+  const parcalar = [{ text: istem }];
+  if (metin) parcalar.push({ text: 'Kullanıcının yazdığı metin (--- işaretleri arasında):\n---\n' + metin + '\n---' });
   let toplamBoy = 0;
   for (let i = 0; i < fotolar.length; i++) {
     // Görsel (JPEG data URL) ya da sipariş için PDF (data:application/pdf;base64,…)
     const ham = String(fotolar[i] || '');
-    const pdf = siparis && /^data:application\/pdf;base64,/.test(ham);
+    const pdf = tur !== 'koli' && /^data:application\/pdf;base64,/.test(ham);
     const veri = ham.replace(/^data:[\w/+.-]+;base64,/, '');
     const sinir = pdf ? 3000000 : EN_BUYUK_FOTO;
     toplamBoy += veri.length;
     if (!veri || veri.length > sinir || toplamBoy > 4000000 || !/^[A-Za-z0-9+/=]+$/.test(veri.slice(0, 200))) {
       res.status(400).json({ hata: (i + 1) + '. dosya okunamadı ya da çok büyük' }); return;
     }
-    parcalar.push({ text: (siparis ? 'Belge ' : 'Foto ') + (i + 1) });
+    parcalar.push({ text: (tur === 'koli' ? 'Foto ' : 'Belge ') + (i + 1) });
     parcalar.push({ inline_data: { mime_type: pdf ? 'application/pdf' : 'image/jpeg', data: veri } });
   }
 
@@ -166,7 +241,7 @@ module.exports = async function (req, res) {
       await new Promise(r => setTimeout(r, 2500));
     }
     let c; const t0 = Date.now();
-    try { c = await gemini(anahtar, model, parcalar, siparis ? SEMA_SIPARIS : SEMA); }
+    try { c = await gemini(anahtar, model, parcalar, tur === 'form' ? SEMA_FORM : siparis ? SEMA_SIPARIS : SEMA); }
     catch (e) {
       const st = e && e.name === 'AbortError' ? 'zaman aşımı' : 'bağlantı';
       denemeler.push({ model, status: st, ms: Date.now() - t0 });
@@ -175,8 +250,9 @@ module.exports = async function (req, res) {
     denemeler.push({ model, status: c.status, ms: Date.now() - t0 });
     if (c.ok) {
       try {
-        const metin = ((c.govde.candidates || [])[0] || {}).content.parts.map(p => p.text || '').join('');
-        const sonuc = JSON.parse(metin);
+        const metinCevap = ((c.govde.candidates || [])[0] || {}).content.parts.map(p => p.text || '').join('');
+        const sonuc = JSON.parse(metinCevap);
+        if (tur === 'form') { res.status(200).json({ sonuc: formSonucu(sonuc || {}), model, denemeler }); return; }
         if (siparis) {
           const modeller = (sonuc.modeller || []).map(m => ({
             model: String(m.model || '').trim().toUpperCase().replace(/\s+/g, ''),
@@ -184,7 +260,7 @@ module.exports = async function (req, res) {
             tedarikci: String(m.tedarikci || '').trim(),
             toplam: Math.max(0, Math.round(+m.toplam || 0)),
             satirlar: (m.satirlar || []).map(z => ({ beden: String(z.beden || '').trim(), cm: +z.cm || 0, adet: Math.max(0, Math.round(+z.adet || 0)) }))
-              .filter(z => z.cm > 0 && z.adet > 0)
+              .filter(z => z.adet > 0 && (z.cm > 0 || tur === 'gelen'))   // gelen: metreyle gelen ham kordonda cm yok
           })).filter(m => m.satirlar.length || m.model);
           res.status(200).json({ modeller, model, denemeler });
           return;
