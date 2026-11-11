@@ -18620,6 +18620,36 @@ window._yeniSurumVar = function(){
   if(b) b.title='Yeni sürüm hazır — yenile';
 };
 
+// Telefonda PWA arka planda açık kalır; yayına çıkan yeni sürüm uygulama
+// tamamen kapatılmadan gelmez (eski kod çalışmaya devam eder). Uygulamaya
+// dönüldüğünde ve 10 dakikada bir sayfanın sürüm damgasına (ETag) bakılır;
+// değiştiyse "Yeni sürüm var · Yenile" çıkar. Kendiliğinden yenilemez:
+// yarım kalan form kaybolmasın.
+(function(){
+  if(location.protocol!=='https:') return;
+  var ilk=null, bildirildi='', son=0;
+  function damga(){
+    return fetch('/index.html', {method:'HEAD', cache:'no-store'})
+      .then(function(r){ return r.ok ? (r.headers.get('etag')||r.headers.get('last-modified')||'') : ''; })
+      .catch(function(){ return ''; });
+  }
+  function bak(){
+    var simdi=Date.now(); if(simdi-son<60000) return; son=simdi;
+    damga().then(function(d){
+      if(!d) return;
+      if(ilk===null){ ilk=d; return; }
+      if(d===ilk || d===bildirildi) return;
+      bildirildi=d;
+      try{ window._yeniSurumVar(); }catch(_){}
+      try{ toastAction('Uygulamanın yeni sürümü var.', 'info', 'Yenile', function(){ window.uygulamayiYenile(); }); }catch(_){}
+    });
+  }
+  setTimeout(bak, 3000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') bak(); });
+  window.addEventListener('focus', bak);
+  setInterval(bak, 10*60000);
+})();
+
 
 // --- Online/Offline detection ---
 function updateOnlineStatus() {
