@@ -2515,11 +2515,12 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
           <div class="ft-imp-yukle" id="ftImpYukle">
             <label class="ft-imp-drop" for="ftImpDosya" id="ftImpDrop">
               <i class="fas fa-file-arrow-up"></i>
-              <b>PDF seç</b>
-              <span>Birden fazla seçebilirsin · bilgisayarda sürükleyip bırak</span>
+              <b>PDF ya da fotoğraf seç</b>
+              <span>Sipariş PDF'i, e-posta ekran görüntüsü ya da kâğıt fotoğrafı · birden fazla seçebilirsin</span>
             </label>
-            <input type="file" id="ftImpDosya" accept="application/pdf,.pdf,text/plain,.txt" multiple hidden onchange="ftImpDosyalar(this.files);this.value='';">
+            <input type="file" id="ftImpDosya" accept="application/pdf,.pdf,text/plain,.txt,image/*" multiple hidden onchange="ftImpDosyalar(this.files);this.value='';">
             <div class="ft-imp-yollar">
+              <button type="button" class="ft-imp-link" onclick="ftImpFotoCek()"><i class="fas fa-camera"></i> Fotoğraf çek</button>
               <button type="button" class="ft-imp-link" onclick="ftImpYapistirAc()"><i class="fas fa-paste"></i> Yazıyı yapıştır</button>
               <button type="button" class="ft-imp-link" onclick="ftImpIstemKopyala()"><i class="fas fa-copy"></i> Gemini komutunu kopyala</button>
             </div>
@@ -7602,17 +7603,58 @@ function ftImpMetinOku(sessiz){
 function ftImpDosyalar(files){
   files=[].slice.call(files||[]); if(!files.length) return;
   var drop=document.getElementById('ftImpDrop'); if(drop) drop.classList.add('okunuyor');
-  var is=files.map(function(f){
+  var gorseller=files.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name); });
+  var digerleri=files.filter(function(f){ return gorseller.indexOf(f)<0; });
+  var is=digerleri.map(function(f){
     var pdfMi=/\.pdf$/i.test(f.name) || f.type==='application/pdf';
     var oku = pdfMi ? f.arrayBuffer().then(_ftImpPdfMetin) : f.text();
     return oku.then(function(metin){
       var b=_ftImpCoz(metin, f.name);
+      // Yazısı olmayan (taranmış / fotoğraftan yapılmış) PDF: Gemini okusun
+      if(pdfMi && !b.some(function(x){ return x.satirlar.length; })){
+        return _ftImpDataUrl(f).then(function(d){ return _ftImpGemini([{veri:d, ad:f.name}]); });
+      }
       if(!b.length) b=[{model:'', satirlar:[], pdfToplam:null}];
       if(!b[0].model) b[0].model=_ftImpDosyaModel(f.name);
       _ftImpEkle(b, f.name);
     }).catch(function(e){ toast(f.name+': okunamadı ('+(e&&e.message||e)+')','error'); });
   });
+  // Ekran görüntüsü / fotoğraf: küçültülüp hepsi tek okumada Gemini'ye
+  if(gorseller.length){
+    is.push(Promise.all(gorseller.map(function(f){ return _kfKucult(f).then(function(v){ return {veri:v, ad:f.name}; }); }))
+      .then(_ftImpGemini)
+      .catch(function(e){ toast('Fotoğraf okunamadı: '+(e&&e.message||e),'error'); }));
+  }
   Promise.all(is).then(function(){ if(drop) drop.classList.remove('okunuyor'); });
+}
+function ftImpFotoCek(){
+  var i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.setAttribute('capture','environment');
+  i.onchange=function(){ ftImpDosyalar(i.files); };
+  i.click();
+}
+function _ftImpDataUrl(f){
+  return new Promise(function(res, rej){ var r=new FileReader(); r.onload=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; r.readAsDataURL(f); });
+}
+// Sipariş belgelerini Gemini'ye okut (sunucu fonksiyonu, tur:'siparis') → kartlar
+function _ftImpGemini(belgeler){
+  if(!belgeler || !belgeler.length) return Promise.resolve();
+  var ad=belgeler.map(function(b){ return b.ad; }).join(', ');
+  var bilgi=document.getElementById('ftImpAltYazi'), eski=bilgi?bilgi.textContent:'';
+  if(bilgi) bilgi.textContent='Gemini okuyor… ('+belgeler.length+' belge)';
+  return fetch('/api/etiket-oku', { method:'POST', headers:{'Content-Type':'application/json','x-irsaliye':'koli'},
+      body: JSON.stringify({ tur:'siparis', fotolar: belgeler.map(function(b){ return b.veri; }) }) })
+    .then(function(r){ return r.json().catch(function(){ return {hata:'Sunucu cevabı okunamadı ('+r.status+')'}; }).then(function(j){ if(!r.ok || j.hata) throw new Error(j.hata || ('HTTP '+r.status)); return j; }); })
+    .then(function(j){
+      var mod=(j.modeller||[]);
+      if(!mod.length || !mod.some(function(m){ return m.satirlar.length; })){ toast('Belgede cm / adet bulunamadı. Yazıyı yapıştırmayı dene.','error'); return; }
+      var ted=document.getElementById('ftImpTed'), tedOku=mod.map(function(m){ return m.tedarikci; }).filter(Boolean)[0];
+      if(ted && !ted.value.trim() && tedOku) ted.value=tedOku;
+      _ftImpEkle(mod.map(function(m){
+        return { model:m.model||'', renk:m.renk||'', pdfToplam:m.toplam||null,
+          satirlar:m.satirlar.map(function(z){ return {cm:_ftImpCm(z.cm), adet:Math.round(+z.adet||0), beden:(typeof _takipBedenNorm==='function'?_takipBedenNorm(z.beden):z.beden)||''}; }) };
+      }), ad+' · Gemini');
+    })
+    .finally(function(){ if(bilgi) bilgi.textContent=eski; });
 }
 // Tekrar sipariş (RPT) adı: "M1S10178" → "M1S10178 RPT", o da varsa "RPT 2", "RPT 3"…
 function _ftImpTaban(kod){ return String(kod||'').trim().replace(/\s+RPT(\s*\d+)?$/i,''); }
@@ -9682,7 +9724,11 @@ function _kfCiz(){
     return '<button type="button" class="kf-ft '+sinif+'" onclick="_kfBuyut('+i+')" title="Büyüt / düzelt">'+
       '<img src="'+f.veri+'" alt=""><span class="kf-ft-y">'+yazi+'</span></button>';
   }).join('');
+  var onceki=(m && m.kabuller || []).filter(function(k){ return (k.koliler||[]).length; }).sort(function(a,b){ return (b.id||0)-(a.id||0); });
+  var oncekiHtml = onceki.length ? '<div class="kf-onceki"><i class="fas fa-clock-rotate-left"></i> Daha önce gelen: '+
+    onceki.slice(0,3).map(function(k){ return '<b>'+esc(_ftFmtDate(k.tarih||''))+'</b> '+k.koliler.length+' koli'; }).join(' · ')+(onceki.length>3?' …':'')+'</div>' : '';
   kap.innerHTML=
+    oncekiHtml+
     '<div class="kf-ust">'+
       '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(true)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-camera"></i> Koli fotoğrafı çek</button>'+
       '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSec(false)"'+(F.okunuyor?' disabled':'')+'><i class="fas fa-images"></i> Galeriden yükle</button>'+

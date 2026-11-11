@@ -19917,3 +19917,6 @@ html #t2FiltreKutu .filter-row{ overflow:visible !important; }
 html .pdd-menu{ background:var(--bg-card-solid, var(--bg-main, #111)) !important; z-index:80 !important; }
 html .pdd.open{ z-index:80; }
 .fer-grup{ color:var(--primary); letter-spacing:.2px; }
+.kf-onceki{ font-size:12px; color:var(--text-muted); padding:2px 2px 8px; }
+.kf-onceki i{ margin-right:5px; }
+.kf-onceki b{ color:var(--text-main); font-weight:700; }
