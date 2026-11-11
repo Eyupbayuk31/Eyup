@@ -19894,3 +19894,9 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
    Satırdaki eski "overflow:auto" (tek satır yana kaydırma) menüyü kesip
    görünmez yapıyordu (telefonda "Tüm Durumlar" açılmıyor gibiydi). */
 html #t2FiltreKutu .filter-row{ overflow:visible !important; }
+
+/* Sayfa giriş animasyonu bitince son karesini (transform) tutmasın: kalan
+   transform, telefonda altta sabit duran "Kaydet" düğmesini ekrana değil
+   sayfanın dibine yapıştırıyordu (Fermuar/Kordon İrsaliyesi'nde kaydet yok
+   gibi görünüyordu). Animasyonun son hali zaten sayfanın normal hali. */
+#page-fermuar, #page-kordon, #page-stok, #page-stok-utupaket, #page-stok-dikim{ animation-fill-mode:backwards !important; }
