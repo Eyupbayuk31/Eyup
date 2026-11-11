@@ -2521,11 +2521,12 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
             <input type="file" id="ftImpDosya" accept="application/pdf,.pdf,text/plain,.txt,image/*" multiple hidden onchange="ftImpDosyalar(this.files);this.value='';">
             <div class="ft-imp-yollar">
               <button type="button" class="ft-imp-link" onclick="ftImpFotoCek()"><i class="fas fa-camera"></i> Fotoğraf çek</button>
+              <button type="button" class="ft-imp-link" onclick="ftImpGaleri()"><i class="fas fa-images"></i> Galeriden seç</button>
               <button type="button" class="ft-imp-link" onclick="ftImpYapistirAc()"><i class="fas fa-paste"></i> Yazıyı yapıştır</button>
               <button type="button" class="ft-imp-link" onclick="ftImpIstemKopyala()"><i class="fas fa-copy"></i> Gemini komutunu kopyala</button>
             </div>
             <div class="ft-imp-yapistir" id="ftImpYapistir" hidden>
-              <textarea class="form-input" id="ftImpMetin" rows="7" placeholder="Gemini'nin yazdığı listeyi buraya yapıştır.&#10;&#10;Örnek:&#10;Model J5305&#10;58 cm 320&#10;60,5 cm 640" onpaste="setTimeout(function(){ ftImpMetinOku(true); },60)"></textarea>
+              <textarea class="form-input" id="ftImpMetin" rows="7" placeholder="Sipariş e-postasının yazısını ya da Gemini'nin listesini buraya yapıştır.placeholder="Gemini'nin yazdığı listeyi buraya yapıştır.&#10;#10;&#10;Örnek:&#10;Model J5305&#10;58 cm 320&#10;60,5 cm 640" onpaste="setTimeout(function(){ ftImpMetinOku(true); },60)"></textarea>
               <button type="button" class="btn btn-secondary" onclick="ftImpMetinOku()"><i class="fas fa-arrow-down"></i> Oku</button>
             </div>
           </div>
@@ -7632,6 +7633,13 @@ function ftImpDosyalar(files){
       .catch(function(e){ toast('Fotoğraf okunamadı: '+(e&&e.message||e),'error'); }));
   }
   Promise.all(is).then(function(){ if(drop) drop.classList.remove('okunuyor'); });
+}
+// Android, PDF + fotoğraf kabul eden seçicide galeriyi göstermiyor (Kamera / Dosyalar
+// soruyor). Yalnız fotoğraf kabul eden seçici doğrudan galeriyi açar.
+function ftImpGaleri(){
+  var i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.multiple=true;
+  i.onchange=function(){ ftImpDosyalar(i.files); };
+  i.click();
 }
 function ftImpFotoCek(){
   var i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.setAttribute('capture','environment');
