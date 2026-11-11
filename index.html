@@ -7664,7 +7664,7 @@ function _ftImpGemini(belgeler, metin){
       if(!mod.length || !mod.some(function(m){ return m.satirlar.length; })){ toast(metin && !belgeler.length ? 'Yazıda cm / adet bulunamadı' : 'Belgede cm / adet bulunamadı. Yazıyı yapıştırmayı dene.','error'); return false; }
       var ted=document.getElementById('ftImpTed'), tedOku=mod.map(function(m){ return m.tedarikci; }).filter(Boolean)[0];
       if(ted && !ted.value.trim() && tedOku) ted.value=tedOku;
-      _ftImpEkle(_ftImpRenkeAyir(mod), ad+' · Gemini');
+      _ftImpEkle(_ftImpRenkeAyir(mod, j.belgeler), ad+' · Gemini');
       return true;
     })
     .finally(function(){ if(bilgi) bilgi.textContent=eski; });
@@ -7688,18 +7688,31 @@ function _ftImpBaslikRenk(baslik){
   }
   return '';
 }
-function _ftImpRenkeAyir(mod){
-  var gruplar=[], bul={}, adlar={};
+function _ftImpRenkeAyir(mod, belgeler){
+  var gruplar=[], bul={}, adlar={}, adKod={}, kesin={};
   // Renk adı (başlıktaki "SYAH" → Siyah) kayıtta, kod (RJ76) satırda. Adı bilinen
   // kod, başlıksız fotoğraftaki aynı kodlu satırlara da verilir: "Siyah (RJ76)"
+  function adVer(kod, ad){ kod=_ftImpRenkNorm(kod); if(!kod||!ad) return; adlar[kod]=ad; (adKod[_ftImpRenkNorm(ad)]=adKod[_ftImpRenkNorm(ad)]||{})[kod]=1; }
+  // 1) Kesin yol: başlığı ve tek renk kodu aynı fotoğrafta görünen belge
+  //    ("J 5911 - SEPARE - SYAH" + RJ76 → RJ76 = Siyah)
+  (belgeler||[]).forEach(function(b){
+    var kod=(b.renkKodlari||[]).filter(function(x,i,a){ return a.map(_ftImpRenkNorm).indexOf(_ftImpRenkNorm(x))===i; });
+    var ad=b.baslik && kod.length===1 ? _ftImpBaslikRenk(b.baslik) : '';
+    if(ad){ adVer(kod[0], ad); kesin[_ftImpRenkNorm(kod[0])]=_ftImpRenkNorm(ad); }
+  });
+  // 2) Kayıt düzeyindeki ad (yalnız tek kodlu kayıtta ve 1. yol bir ad vermediyse)
   mod.forEach(function(m){
     var kodlar={}; (m.satirlar||[]).forEach(function(z){ if(z.renk) kodlar[_ftImpRenkNorm(z.renk)]=1; });
     var k=Object.keys(kodlar);
-    // Renk alanına kod yazıldıysa ad başlıktan çözülür ("... - SEPARE - SYAH" → Siyah)
-    if(m.renk && k.length===1 && _ftImpRenkNorm(m.renk)===k[0]) m.renk='';
-    if(!m.renk && m.baslik) m.renk=_ftImpBaslikRenk(m.baslik);
-    if(m.renk && k.length===1 && _ftImpRenkNorm(m.renk)!==k[0]) adlar[k[0]]=String(m.renk).trim();
+    var ad=String(m.renk||'').trim();
+    if(ad && k.length===1 && _ftImpRenkNorm(ad)===k[0]) ad='';
+    if(!ad && m.baslik) ad=_ftImpBaslikRenk(m.baslik);
+    // Kesin yoldan başka bir koda verilmiş ad bu koda verilmez
+    var baskasinin=Object.keys(kesin).some(function(kod){ return kod!==k[0] && kesin[kod]===_ftImpRenkNorm(ad); });
+    if(ad && k.length===1 && !adlar[k[0]] && !baskasinin) adVer(k[0], ad);
   });
+  // Aynı ad birden çok koda verildiyse (Gemini adı her listeye yaydı) güvenilmez: ad kullanılmaz
+  Object.keys(adKod).forEach(function(a){ var kl=Object.keys(adKod[a]); if(kl.length>1) kl.forEach(function(kod){ if(!kesin[kod] && adlar[kod] && _ftImpRenkNorm(adlar[kod])===a) delete adlar[kod]; }); });
   function renkYazi(kod, ad){
     kod=String(kod||'').trim(); ad=String(ad||'').trim();
     if(kod && !ad) ad=adlar[_ftImpRenkNorm(kod)]||'';
@@ -7708,9 +7721,8 @@ function _ftImpRenkeAyir(mod){
   }
   mod.forEach(function(m){
     var kodlar={}; (m.satirlar||[]).forEach(function(z){ if(z.renk) kodlar[_ftImpRenkNorm(z.renk)]=1; });
-    var tekKod=Object.keys(kodlar).length<=1;
     (m.satirlar||[]).forEach(function(z){
-      var renk=z.renk ? renkYazi(z.renk, tekKod?m.renk:'') : String(m.renk||'').trim();
+      var renk=z.renk ? renkYazi(z.renk, '') : String(m.renk||'').trim();
       var anahtar=_ftNormModel(m.model||'')+'|'+_ftImpRenkNorm(renk);
       var g=bul[anahtar];
       if(!g){ g=bul[anahtar]={model:m.model||'', renk:renk, pdfToplam:null, satirlar:[], gor:{}}; gruplar.push(g); }
