@@ -22965,8 +22965,29 @@ document.addEventListener('keydown', function(e){
   function findUser(username){
     return getUsers().find(u => u.username.toLowerCase() === username.toLowerCase()) || null;
   }
-  // İlk açılışta varsayılan kullanıcıyı kaydet
-  if(!localStorage.getItem(USERS_KEY)) saveUsers(getUsers());
+  // İlk açılışta varsayılan kullanıcı SADECE bu cihaza yazılır. Eskiden buluta
+  // da yazılıyordu: yeni bir cihaz açılınca buluttaki gerçek admin kaydının
+  // üstüne admin/123 yazılıp şifre sıfırlanabiliyordu. Bulut listesi zaten
+  // açılışta iner (bootRead) ve bu yerel kaydın yerini alır.
+  if(!localStorage.getItem(USERS_KEY)){ try { localStorage.setItem(USERS_KEY, JSON.stringify(getUsers())); } catch(e){} }
+  // Kullanıcının kaydını DOĞRUDAN buluttan oku ve yerel kopyayı tazele.
+  // Onay durumu canlı dinleyiciye bırakılmaz: iOS arka plandaki uygulamanın
+  // bağlantısını uyutuyor, onay telefona hiç ulaşmayabiliyor.
+  async function bulutKullanici(username){
+    try{
+      if(!window._fs || !window._fs.getDoc || !username) return null;
+      const { db, doc, getDoc } = window._fs;
+      const snap = await getDoc(doc(db, 'appdata', USERS_KEY, 'items', 'u_' + String(username).toLowerCase()));
+      if(!snap || !snap.exists()) return null;
+      const bu = snap.data(); if(!bu || !bu.username) return null;
+      // Yerel kopyayı güncelle (setData DEĞİL: buluta geri yazma yok)
+      const users = getUsers();
+      const i = users.findIndex(x => x.username.toLowerCase() === bu.username.toLowerCase());
+      if(i >= 0) users[i] = Object.assign({}, users[i], bu); else users.push(bu);
+      try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch(e){}
+      return bu;
+    }catch(e){ console.warn('[auth] buluttan kullanıcı okunamadı', e); return null; }
+  }
 
   // Dışa aç (settings sayfası kullanır)
   window.authGetUsers = getUsers;
@@ -23359,10 +23380,21 @@ document.addEventListener('keydown', function(e){
     // irsaliye_users'i arka planda gunceller) burada otomatik yakalanip
     // kullanici bekletilmeden icerı alinir.
     clearInterval(_pendingPollTimer);
-    _pendingPollTimer = setInterval(()=>{
-      const fresh = findUser(_pendingUsername);
+    if(_pendingGorunur) document.removeEventListener('visibilitychange', _pendingGorunur);
+    let _soruyor = false;
+    const kontrol = async ()=>{
+      if(!_pendingUsername || _soruyor) return;
+      let fresh = findUser(_pendingUsername);
+      if(!fresh || fresh.approved === false){
+        _soruyor = true;
+        const bu = await bulutKullanici(_pendingUsername);
+        _soruyor = false;
+        if(bu) fresh = bu;
+      }
+      if(!_pendingUsername) return;
       if(fresh && fresh.approved !== false){
         clearInterval(_pendingPollTimer); _pendingPollTimer = null;
+        document.removeEventListener('visibilitychange', _pendingGorunur);
         pendingStatus.className = 'lg-pending-status ok';
         pendingStatus.innerHTML = '<i class="fas fa-check-circle"></i> Onaylandı! Giriş yapılıyor…';
         setTimeout(()=>{
@@ -23375,10 +23407,16 @@ document.addEventListener('keydown', function(e){
           backToLoginFromPending(true);
         }, 900);
       }
-    }, 4000);
+    };
+    _pendingPollTimer = setInterval(kontrol, 4000);
+    _pendingGorunur = ()=>{ if(document.visibilityState === 'visible') kontrol(); };
+    document.addEventListener('visibilitychange', _pendingGorunur);
+    setTimeout(kontrol, 1500);
   }
+  let _pendingGorunur = null;
   window.backToLoginFromPending = function(skipModeSwitch){
     clearInterval(_pendingPollTimer); _pendingPollTimer = null;
+    if(_pendingGorunur) document.removeEventListener('visibilitychange', _pendingGorunur);
     pendingView.style.display = 'none';
     lgTabs.style.display = '';
     _pendingUsername = null;
@@ -23500,8 +23538,14 @@ document.addEventListener('keydown', function(e){
     err.classList.remove('show');
     btn.classList.add('loading');
 
-    setTimeout(()=>{
-      const matched = findUser(u);
+    setTimeout(async ()=>{
+      let matched = findUser(u);
+      // Bu cihazda kayıt yok (yeni cihaz, liste henüz inmedi) ya da onay
+      // bekliyor görünüyor: başka cihazda onaylanmış olabilir, buluta sor.
+      if(!matched || matched.approved === false){
+        const bu = await bulutKullanici(u);
+        if(bu) matched = bu;
+      }
       if(matched && matched.password === p && matched.approved === false){
         // Sifre dogru ama hesap henuz kurucu tarafindan onaylanmadi —
         // yanlis-sifre sayacini artirmadan onay ekranina yonlendir.
