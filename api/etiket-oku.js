@@ -4,7 +4,8 @@
 // yalnızca Vercel ortam değişkeninde durur, sayfaya hiç gitmez.
 
 const MODELLER = (process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : [])
-  .concat(['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-flash']);
+  // Flash-Lite önce: ücretsiz katmanda Flash 25 sn'de cevap vermedi, Lite 3 sn'de verdi
+  .concat(['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-2.5-flash']);
 const EN_COK_FOTO = 12;
 const EN_BUYUK_FOTO = 1600000;   // base64 karakter (~1,2 MB)
 
