@@ -4,8 +4,10 @@
 // yalnızca Vercel ortam değişkeninde durur, sayfaya hiç gitmez.
 
 const MODELLER = (process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : [])
-  // Flash-Lite önce: ücretsiz katmanda Flash 25 sn'de cevap vermedi, Lite 3 sn'de verdi
-  .concat(['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-2.5-flash']);
+  // Flash-Lite önce: ücretsiz katmanda Flash 25 sn'de cevap vermedi, Lite 3 sn'de verdi.
+  // (gemini-2.5-flash yeni kullanıcılara kapatıldı → 404, listeden çıkarıldı)
+  .concat(['gemini-flash-lite-latest', 'gemini-flash-latest']);
+const GECICI = [429, 500, 503];   // anlık yoğunluk / dakikalık sınır: bekleyip bir kez daha dene
 const EN_COK_FOTO = 12;
 const EN_BUYUK_FOTO = 1600000;   // base64 karakter (~1,2 MB)
 
@@ -48,6 +50,8 @@ function hataMetni(status, govde) {
   if (status === 429) return 'Günlük ücretsiz okuma hakkı doldu ya da çok sık istek gitti. Biraz sonra tekrar dene.';
   if (status === 400 && /api key/i.test(m)) return 'Gemini anahtarı geçersiz. Vercel\'deki GEMINI_API_KEY\'i kontrol et.';
   if (status === 403) return 'Gemini anahtarının bu modele izni yok.';
+  if (status === 503 || status === 500) return 'Gemini şu an yoğun. Birkaç saniye sonra tekrar dene.';
+  if (status === 'zaman aşımı') return 'Gemini zamanında cevap vermedi. Tekrar dene.';
   return 'Gemini hatası (' + status + ')' + (m ? ': ' + m.slice(0, 160) : '');
 }
 
@@ -102,12 +106,22 @@ module.exports = async function (req, res) {
 
   let son = null;
   const denemeler = [];   // hangi model, ne cevap, kaç ms — sorun ayıklamak için (gizli bilgi yok)
-  for (const model of MODELLER) {
+  const denenecek = [];
+  MODELLER.forEach((m, i) => { denenecek.push(m); if (i === 0) denenecek.push(m); });   // ilk model iki şans
+  for (let di = 0; di < denenecek.length; di++) {
+    const model = denenecek[di];
+    const tekrar = di > 0 && denenecek[di - 1] === model;
+    if (tekrar) {
+      const onceki = denemeler[denemeler.length - 1];
+      if (!onceki || !(GECICI.includes(onceki.status) || onceki.status === 'bağlantı')) continue;   // kalıcı hatada tekrar deneme
+      await new Promise(r => setTimeout(r, 2500));
+    }
     let c; const t0 = Date.now();
     try { c = await gemini(anahtar, model, parcalar); }
     catch (e) {
-      denemeler.push({ model, status: e && e.name === 'AbortError' ? 'zaman aşımı' : 'bağlantı', ms: Date.now() - t0 });
-      son = { status: 502, govde: { error: { message: 'Bağlantı hatası' } } }; continue;
+      const st = e && e.name === 'AbortError' ? 'zaman aşımı' : 'bağlantı';
+      denemeler.push({ model, status: st, ms: Date.now() - t0 });
+      son = { status: st, govde: null }; continue;
     }
     denemeler.push({ model, status: c.status, ms: Date.now() - t0 });
     if (c.ok) {
@@ -134,6 +148,9 @@ module.exports = async function (req, res) {
     // Model yoksa / kotası bittiyse / meşgulse sıradaki modeli dene
     if (![404, 429, 500, 503].includes(c.status)) break;
   }
-  const st = (son && son.status) || 502;
-  res.status(st === 429 ? 429 : 502).json({ hata: hataMetni(st, son && son.govde), denemeler });
+  // En anlamlı hata: kota (429) > yoğunluk > ilk denemenin hatası. 404 (kaldırılmış model) en son.
+  const durumlar = denemeler.map(d => d.status);
+  const st = durumlar.includes(429) ? 429 : (durumlar.find(x => x !== 404) || (son && son.status) || 502);
+  const ozet = denemeler.map(d => d.model.replace('gemini-', '').replace('-latest', '') + ': ' + d.status).join(', ');
+  res.status(st === 429 ? 429 : 502).json({ hata: hataMetni(st, st === (son && son.status) ? son.govde : null) + ' (' + ozet + ')', denemeler });
 };
