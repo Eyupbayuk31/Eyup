@@ -9550,9 +9550,6 @@ function takipGelenKaydet(){
     var t={id:eid, tarih:tarih, adet:g.adet};
     var buKoli=kabul ? kabul.koliler.filter(function(k){ return k.sizeId===g.sizeId; }) : [];
     var kSay=_kfKutuSay(buKoli);
-    // Satırın renk kodunu öğren (bir dahaki kolide aynı cm iki renkteyse kodla eşleşsin)
-    var rkS=buKoli.map(function(k){ return k.rk; }).filter(Boolean);
-    if(rkS.length && !z.renkKodu) z.renkKodu=rkS[0];
     if(kSay){ t.koli=kSay; t.kabulId=kabul.id; }
     z.teslimatlar.push(t);
     eklenen.push({sizeId:g.sizeId, eid:eid});
@@ -9774,14 +9771,9 @@ function _kfEslestir(m, satirlar, fotolar){
         var rk=_kfRenkNorm(k.renk_kodu), ra=_kfRenkNorm(typeof _ftImpBaslikRenk==='function'?_ftImpBaslikRenk(k.baslik||''):'');
         var r=(rk||ra) ? ad.filter(function(z){ var zr=_kfRenkNorm(z.renk); if(!zr) return false;
           return (rk && (zr===rk || zr.indexOf(rk)>=0 || rk.indexOf(zr)>=0)) || (ra && (zr===ra || zr.indexOf(ra)>=0)); }) : [];
-        // Öğrenilmiş renk kodu (Moda: "1400690 127" → Kahverengi satırı; önceki kabulden)
-        if(r.length!==1 && rk){
-          // Kod renge aittir: aynı rengin herhangi bir ölçüsünde öğrenildiyse hepsinde geçerli
-          var kodRenk={}; satirlar.forEach(function(z){ if(z.renkKodu && z.renk) kodRenk[_kfRenkNorm(z.renkKodu)]=_kfRenkNorm(z.renk); });
-          var ok=ad.filter(function(z){ return (z.renkKodu && _kfRenkNorm(z.renkKodu)===rk) || (kodRenk[rk] && _kfRenkNorm(z.renk)===kodRenk[rk]); });
-          if(ok.length===1) r=ok;
-        }
-        // Kullanıcının seçtiği renk (koli büyütülünce "Bu koli hangi renk?")
+        // Kod renk adında geçmiyorsa (Moda: "1400690 127" / Kahverengi) tahmin edilmez,
+        // her teslimatta sorulur: renk kodu siparişten siparişe değişebilir.
+        // Kullanıcının bu yüklemede seçtiği renk (koli büyütülünce "Bu koli hangi renk?")
         if(r.length!==1){
           var sec=k.secRenk || (rk && _tkg && _tkg.foto && _tkg.foto.renkSec && _tkg.foto.renkSec[rk]) || '';
           if(sec){ var sr=ad.filter(function(z){ return _kfRenkNorm(z.renk)===sec; }); if(sr.length===1) r=sr; }
