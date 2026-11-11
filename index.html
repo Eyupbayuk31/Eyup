@@ -9548,7 +9548,7 @@ function takipGelenKaydet(){
     z.teslimatlar=z.teslimatlar||[];
     var eid=taban+i;   // aynı milisaniyede birden çok kayıt: kimlikler çakışmasın
     var t={id:eid, tarih:tarih, adet:g.adet};
-    var kSay=kabul ? kabul.koliler.filter(function(k){ return k.sizeId===g.sizeId; }).length : 0;
+    var kSay=kabul ? _kfKutuSay(kabul.koliler.filter(function(k){ return k.sizeId===g.sizeId; })) : 0;
     if(kSay){ t.koli=kSay; t.kabulId=kabul.id; }
     z.teslimatlar.push(t);
     eklenen.push({sizeId:g.sizeId, eid:eid});
@@ -9562,7 +9562,7 @@ function takipGelenKaydet(){
   takipGelenKapat();
   _tkgYenile(store, modelId);
   _tkgGeriAlGoster(store, modelId, eklenen,
-    '+'+_tkgSayi(toplam,metre)+' '+(metre?'m':'adet')+' kaydedildi ('+eklenen.length+' '+(metre?'renk':'ölçü')+(kabul?', '+kabul.koliler.length+' koli':'')+')',
+    '+'+_tkgSayi(toplam,metre)+' '+(metre?'m':'adet')+' kaydedildi ('+eklenen.length+' '+(metre?'renk':'ölçü')+(kabul?', '+_kfKutuSay(kabul.koliler)+' koli':'')+')',
     kabul ? kabul.id : null);
   if(fotoYukle) _kfFotolariYukle(store, modelId, kabul.id, fotoYukle);
 }
@@ -9640,7 +9640,10 @@ function _kfIrsaliyeFoto(store, m){
 
 // ── Koli sayıları ve "Gelen koliler" (mal kabul) bölümü ──────────────
 function _tkKoli(z){ return (z && z.teslimatlar || []).reduce(function(s,t){ return s+(+t.koli||0); },0); }
-function _tkModelKoli(m){ return (m && m.sizes || []).reduce(function(s,z){ return s+_tkKoli(z); },0); }
+function _tkModelKoli(m){
+  if(m && (m.kabuller||[]).length) return m.kabuller.reduce(function(s,k){ return s+_kfKutuSay(k.koliler); },0);
+  return (m && m.sizes || []).reduce(function(s,z){ return s+_tkKoli(z); },0);
+}
 function _tkKabul(store, modelId, kabulId){
   var m=(getData(store)||[]).filter(function(x){ return x.id===modelId; })[0];
   return m ? ((m.kabuller||[]).filter(function(k){ return k.id===kabulId; })[0]||null) : null;
@@ -9660,18 +9663,18 @@ function _takipKabulHtml(store, m){
   return '<div class="tk-kabul"><div class="tk-kabul-b"><i class="fas fa-boxes-stacked"></i> Gelen koliler</div>'+
     kl.map(function(k){
       var top=0, grup={};
-      k.koliler.forEach(function(x){ top+=+x.adet||0; var g=grup[x.cm]||(grup[x.cm]={n:0,a:0}); g.n++; g.a+=+x.adet||0; });
+      k.koliler.forEach(function(x,xi){ top+=+x.adet||0; var g=grup[x.cm]||(grup[x.cm]={n:0,a:0,k:{}}); var kk=x.e!=null?x.f+'/'+x.e:'#'+xi; if(!g.k[kk]){ g.k[kk]=1; g.n++; } g.a+=+x.adet||0; });
       var cmler=Object.keys(grup).sort(cmSira).map(function(c){ return '<span><b>'+esc(c)+' cm</b> '+grup[c].n+' koli · '+(grup[c].a).toLocaleString('tr')+'</span>'; }).join('');
       var foto=(k.fotolar||[]);
       var resim=foto.map(function(u,i){
-        var bu=k.koliler.filter(function(x){ return x.f===i; })[0];
+        var buL=k.koliler.filter(function(x){ return x.f===i; }), bu=buL[0];
         if(!bu) return '';   // kolisi silinen teslimatın fotoğrafı gösterilmez
-        var alt=bu ? (esc(bu.cm)+' cm · '+(+bu.adet||0).toLocaleString('tr')) : '';
+        var alt=buL.length>1 ? ('Karışık · '+buL.reduce(function(t,x){ return t+(+x.adet||0); },0).toLocaleString('tr')) : (esc(bu.cm)+' cm · '+(+bu.adet||0).toLocaleString('tr'));
         return u ? '<button type="button" class="tk-kb-ft" onclick="takipKabulFoto(\''+store+'\','+m.id+','+k.id+','+i+')" title="Büyüt"><img src="'+esc(u)+'" alt="" loading="lazy"><span>'+alt+'</span></button>'
                  : '<span class="tk-kb-ft bos" title="Fotoğraf yüklenmedi"><i class="fas fa-image"></i><span>'+alt+'</span></span>';
       }).join('');
       return '<div class="tk-kb">'+
-        '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+k.koliler.length+' koli · '+top.toLocaleString('tr')+' adet</span>'+
+        '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+_kfKutuSay(k.koliler)+' koli · '+top.toLocaleString('tr')+' adet</span>'+
           (k.siparisNo?'<small>Sipariş '+esc(k.siparisNo)+'</small>':'')+'</div>'+
         '<div class="tk-kb-cm">'+cmler+'</div>'+
         (resim?'<div class="tk-kb-seri">'+resim+'</div>':'')+
@@ -9690,7 +9693,7 @@ function takipKabulFoto(store, modelId, kabulId, bas){
   }).join('');
   if(!parca){ toast('Bu teslimatın fotoğrafı yok','info'); return; }
   var kap=document.createElement('div'); kap.className='aks-lb kf-lb tk-lb'; kap.setAttribute('role','dialog'); kap.setAttribute('aria-label','Koli fotoğrafları');
-  kap.innerHTML='<div class="aks-lb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih))+' · ':'')+(k.koliler||[]).length+' koli</b><button type="button" class="aks-lb-x" aria-label="Kapat"><i class="fas fa-xmark"></i></button></div>'+
+  kap.innerHTML='<div class="aks-lb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih))+' · ':'')+_kfKutuSay(k.koliler)+' koli</b><button type="button" class="aks-lb-x" aria-label="Kapat"><i class="fas fa-xmark"></i></button></div>'+
     '<div class="aks-lb-ic">'+parca+'</div>';
   var kapat=function(){ kap.remove(); document.removeEventListener('keydown',tus,true); };
   var tus=function(e){ if(e.key==='Escape'){ e.stopPropagation(); kapat(); } };
@@ -9750,23 +9753,45 @@ function _kfEslestir(m, satirlar, fotolar){
       if(f.cikar || k.cikar) { k.sorun='çıkarıldı'; return; }
       if(k.okunabildi===false || !(+k.miktar>0) || !(+k.uzunluk>0)){ k.sorun='Okunamadı'; return; }
       if(k.model && _ftNormModel(k.model)!==mk){ k.sorun='Başka model: '+k.model; return; }
-      var z=satirlar.filter(function(z){ return z.cm!=null && z.cm!=='' && Math.abs(_ftNum(z.cm)-(+k.uzunluk))<0.01; })[0];
+      var ad=satirlar.filter(function(z){ return z.cm!=null && z.cm!=='' && Math.abs(_ftNum(z.cm)-(+k.uzunluk))<0.01; });
+      if(ad.length>1){
+        // Aynı cm iki renkte (ör. 511 ve "Siyah (RJ76)"): koli etiketindeki renk koduyla seç
+        var rk=_kfRenkNorm(k.renk_kodu);
+        var r=rk ? ad.filter(function(z){ var zr=_kfRenkNorm(z.renk); return zr && (zr===rk || zr.indexOf(rk)>=0 || rk.indexOf(zr)>=0); }) : [];
+        if(r.length===1) ad=r;
+        else { k.sorun=k.uzunluk+' cm '+ad.length+' renkte var, renk '+(k.renk_kodu?k.renk_kodu+' eşleşmedi':'okunamadı'); return; }
+      }
+      var z=ad[0];
       if(!z){ k.sorun=k.uzunluk+' cm siparişte yok'; return; }
       k.sizeId=z.id;
-      var imza=[k.uzunluk,k.miktar,k.siparis_no||'',k.renk_kodu||''].join('|');
+      var imza=[k.uzunluk,k.miktar,k.siparis_no||'',k.renk_kodu||'',(f.koliler||[]).length].join('|');
       if(gor[imza]) k.uyari='Aynı koli iki kez çekilmiş olabilir'; gor[imza]=1;
     });
   });
 }
+function _kfRenkNorm(r){ return String(r||'').toLocaleLowerCase('tr').replace(/[^a-z0-9ğüşıöç]/g,''); }
+// Koli sayısı: aynı fotoğraftaki aynı etiket (karışık koli: birden çok satır) tek koli
+function _kfKutuSay(koliler){
+  var gor={};
+  (koliler||[]).forEach(function(x,i){ gor[x.e!=null ? x.f+'/'+x.e : '#'+i]=1; });
+  return Object.keys(gor).length;
+}
 function _kfOzet(){
-  var o={koli:0, satir:{}, sorun:0, uyari:0};
-  (_tkg && _tkg.foto ? _tkg.foto.liste : []).forEach(function(f){
+  var o={koli:0, satir:{}, sorun:0, uyari:0}, kutu={};
+  (_tkg && _tkg.foto ? _tkg.foto.liste : []).forEach(function(f, fi){
     (f.koliler||[]).forEach(function(k){
       if(k.sorun==='çıkarıldı') return;
-      if(k.sizeId){ o.koli++; var s=o.satir[k.sizeId]||(o.satir[k.sizeId]={adet:0,koli:0}); s.adet+=+k.miktar; s.koli++; if(k.uyari) o.uyari++; }
+      var kk=fi+'/'+(k.etiket||1);
+      if(k.sizeId){
+        kutu[kk]=1;
+        var s=o.satir[k.sizeId]||(o.satir[k.sizeId]={adet:0,koli:0,_k:{}}); s.adet+=+k.miktar;
+        if(!s._k[kk]){ s._k[kk]=1; s.koli++; }
+        if(k.uyari) o.uyari++;
+      }
       else if(k.sorun) o.sorun++;
     });
   });
+  o.koli=Object.keys(kutu).length;
   return o;
 }
 // Okunanları Gelen Gir kutularına yaz (yalnız fotoğrafla dolan satırlara dokunur)
@@ -9810,13 +9835,13 @@ function _kfCiz(){
     var k=(f.koliler||[])[0]||{}, cok=(f.koliler||[]).length>1;
     var sinif = f.cikar ? 'cikti' : f.durum==='okunuyor' ? 'bekle' : (f.koliler||[]).some(function(x){ return x.sorun && x.sorun!=='çıkarıldı'; }) ? 'kotu' : (f.koliler||[]).some(function(x){ return x.uyari; }) ? 'uyar' : f.durum==='tamam' ? 'iyi' : 'bekle';
     var yazi = f.cikar ? 'Çıkarıldı' : f.durum==='okunuyor' ? 'Okunuyor' : f.durum!=='tamam' ? 'Bekliyor'
-      : cok ? f.koliler.length+' koli' : (k.sorun ? k.sorun : (esc(String(k.uzunluk))+' cm · '+_kfSayi(k.miktar)));
+      : cok ? (_kfFotoKutu(f)>1 ? _kfFotoKutu(f)+' koli' : 'Karışık · '+_kfSayi(f.koliler.reduce(function(t,x){ return t+(+x.miktar||0); },0))) : (k.sorun ? k.sorun : (esc(String(k.uzunluk))+' cm · '+_kfSayi(k.miktar)));
     return '<button type="button" class="kf-ft '+sinif+'" onclick="_kfBuyut('+i+')" title="Büyüt / düzelt">'+
       '<img src="'+f.veri+'" alt=""><span class="kf-ft-y">'+yazi+'</span></button>';
   }).join('');
   var onceki=(m && m.kabuller || []).filter(function(k){ return (k.koliler||[]).length; }).sort(function(a,b){ return (b.id||0)-(a.id||0); });
   var oncekiHtml = onceki.length ? '<div class="kf-onceki"><i class="fas fa-clock-rotate-left"></i> Daha önce gelen: '+
-    onceki.slice(0,3).map(function(k){ return '<b>'+esc(_ftFmtDate(k.tarih||''))+'</b> '+k.koliler.length+' koli'; }).join(' · ')+(onceki.length>3?' …':'')+'</div>' : '';
+    onceki.slice(0,3).map(function(k){ return '<b>'+esc(_ftFmtDate(k.tarih||''))+'</b> '+_kfKutuSay(k.koliler)+' koli'; }).join(' · ')+(onceki.length>3?' …':'')+'</div>' : '';
   kap.innerHTML=
     oncekiHtml+
     '<div class="kf-ust">'+
@@ -9828,6 +9853,7 @@ function _kfCiz(){
     durum+
     (seri?'<div class="kf-seri">'+seri+'</div>':'');
 }
+function _kfFotoKutu(f){ var g={}; (f.koliler||[]).forEach(function(k){ g[k.etiket||1]=1; }); return Object.keys(g).length; }
 // Dosya seçici (kamera ya da galeri). Kamera tek tek çeker, her çekim eklenir.
 function _kfSec(kamera){
   var i=document.createElement('input'); i.type='file'; i.accept='image/*';
@@ -9872,7 +9898,7 @@ function _kfBuyut(i){
       (k.uyari?'<div class="kf-lb-uyari"><i class="fas fa-triangle-exclamation"></i> '+esc(k.uyari)+'</div>':'')+
       '<label>Uzunluk <input class="form-input" type="number" step="0.5" min="0" inputmode="decimal" data-j="'+j+'" data-a="uzunluk" value="'+(+k.uzunluk||'')+'"> cm</label>'+
       '<label>Miktar <input class="form-input" type="number" min="0" inputmode="numeric" data-j="'+j+'" data-a="miktar" value="'+(+k.miktar||'')+'"> adet</label>'+
-      (k.siparis_no||k.renk_kodu?'<small>'+esc([k.model, k.siparis_no, k.renk_kodu?('renk '+k.renk_kodu):''].filter(Boolean).join(' · '))+'</small>':'')+
+      (k.siparis_no||k.renk_kodu?'<small>'+esc([k.model, k.siparis_no, k.renk_kodu?('renk '+k.renk_kodu):'', (f.koliler||[]).length>1&&_kfFotoKutu(f)===1?'karışık koli':''].filter(Boolean).join(' · '))+'</small>':'')+
     '</div>';
   }).join('');
   kap.innerHTML='<div class="aks-lb-ust"><b>Koli '+(i+1)+'</b><button type="button" class="aks-lb-x" aria-label="Kapat"><i class="fas fa-xmark"></i></button></div>'+
@@ -9909,7 +9935,7 @@ function _kfKabulHazirla(id, tarih){
       var kutu=document.querySelector('#tkgListe .tkg-satir[data-id="'+k.sizeId+'"] .tkg-kutu');
       if(!kutu || !(+kutu.value>0)) return;          // satırı elle sıfırladıysa sayma
       if(fIdx[i]==null){ fIdx[i]=fotolar.length; fotolar.push(f.veri); }
-      koliler.push({sizeId:k.sizeId, cm:String(k.uzunluk), adet:+k.miktar, f:fIdx[i]});
+      koliler.push({sizeId:k.sizeId, cm:String(k.uzunluk), adet:+k.miktar, f:fIdx[i], e:k.etiket||1});
       if(k.siparis_no) sip[k.siparis_no]=(sip[k.siparis_no]||0)+1;
       if(k.renk_kodu) rk[k.renk_kodu]=(rk[k.renk_kodu]||0)+1;
     });
@@ -9918,7 +9944,7 @@ function _kfKabulHazirla(id, tarih){
   var enCok=function(o){ return Object.keys(o).sort(function(a,b){ return o[b]-o[a]; })[0]||''; };
   return { id:id, koliler:koliler, yukle:fotolar,
     kayit:{ id:id, tarih:tarih, kaynak:'foto', siparisNo:enCok(sip), renkKodu:enCok(rk),
-            koliler:koliler.map(function(k){ return {sizeId:k.sizeId, cm:k.cm, adet:k.adet, f:k.f}; }),
+            koliler:koliler.map(function(k){ return {sizeId:k.sizeId, cm:k.cm, adet:k.adet, f:k.f, e:k.e}; }),
             fotolar:fotolar.map(function(){ return ''; }) } };
 }
 // Fotoğrafları GitHub'a yükle, mal kabul kaydına adreslerini yaz

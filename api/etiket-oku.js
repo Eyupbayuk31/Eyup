@@ -28,7 +28,10 @@ const ISTEM =
   've bir tablo: Renk (ör. "1400690 127"), Uzunluk (cm, ör. 23), Miktar (adet, ör. 1350).\n' +
   'Kurallar: model alanına sadece model kodunu yaz (J4842 gibi), tedarikçi iş numarasını (212211-2) yazma. ' +
   'uzunluk cm cinsinden sayı, miktar adet cinsinden tam sayı. Emin olmadığın alanı boş bırak ya da 0 yaz, uydurma. ' +
-  'Fotoğrafta okunabilir koli etiketi yoksa okunabildi=false yaz. Her fotoğraf için tam bir kayıt döndür.';
+  'Fotoğrafta okunabilir koli etiketi yoksa okunabildi=false yaz.\n' +
+  'KARIŞIK KOLİ: bir etiketin tablosunda birden çok satır (farklı uzunluk ya da renk) varsa HER SATIR için ayrı kayıt döndür; ' +
+  'miktarları toplama, en büyük uzunluğa yazma. Aynı etiketin satırları aynı etiket numarasını alır. ' +
+  'Fotoğrafta birden çok koli etiketi varsa her etikete sırayla 1, 2, 3 numarası ver. Her satırın renk_kodu alanına o satırdaki Color/Renk değerini yaz (ör. RJ76).';
 
 const ISTEM_SIPARIS =
   'Bu belgeler bir fermuar ya da kordon SATIN ALMA siparişi: e-posta ekran görüntüsü, kâğıt fotoğrafı ya da PDF olabilir. ' +
@@ -170,6 +173,7 @@ const SEMA = {
         type: 'OBJECT',
         properties: {
           foto:        { type: 'INTEGER', description: 'Fotoğraf numarası (Foto N içindeki N)' },
+          etiket:      { type: 'INTEGER', description: 'Fotoğraftaki kaçıncı koli etiketi (1, 2, ...); aynı etiketin satırları aynı numara' },
           okunabildi:  { type: 'BOOLEAN' },
           model:       { type: 'STRING' },
           uzunluk:     { type: 'NUMBER' },
@@ -300,6 +304,7 @@ module.exports = async function (req, res) {
         }
         const koliler = (sonuc.koliler || []).map(k => ({
           foto: Math.max(0, (parseInt(k.foto, 10) || 1) - 1),       // 0 tabanlı
+          etiket: Math.max(1, parseInt(k.etiket, 10) || 1),
           okunabildi: k.okunabildi !== false,
           model: String(k.model || '').trim().toUpperCase().replace(/\s+/g, ''),
           uzunluk: +k.uzunluk || 0,
