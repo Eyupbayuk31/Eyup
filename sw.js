@@ -8,7 +8,10 @@ const KABUK = ['/', '/index.html', '/style.css',
   '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(KABUK)).then(() => self.skipWaiting()));
+  // Kabuk indirilemezse (telefonda bağlantı yarıda koptu) kurulum yine de
+  // tamamlansın: yoksa yeni sürüm hiç devreye girmez, telefon eskide kalır.
+  // Önbellek ilk başarılı açılışta zaten doluyor.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(KABUK)).catch(() => {}).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
