@@ -10751,7 +10751,9 @@ function _ydCiz(){
   function sat(et, deger, sinif){ satir.push('<div class="yd-s'+(sinif?' '+sinif:'')+'"><span class="yd-et">'+et+'</span><span class="yd-dg">'+deger+'</span></div>'); }
   if(f==='gelen'){
     var cur=(_tkgModel()||{}).modelKodu||'';
-    if(r.model && _ftNormModel(r.model).replace(/\s+/g,'')!==_ftNormModel(cur).replace(/\s+/g,'')) uyari.push('Belgedeki model <b>'+esc(r.model)+'</b>, bu ekran <b>'+esc(cur)+'</b>. Doğru modelde olduğundan emin ol.');
+    // Elle düzeltilmiş rakam bir fazla karakter okunabiliyor (J48482 / J4842): uyarma
+    var _bir=function(a,b){ a=_ftNormModel(a).replace(/\s+/g,''); b=_ftNormModel(b).replace(/\s+/g,''); if(a===b) return true; if(a.length!==b.length+1) return false; for(var i=0;i<a.length;i++){ if(a.slice(0,i)+a.slice(i+1)===b) return true; } return false; };
+    if(r.model && !_bir(r.model, cur)) uyari.push('Belgedeki model <b>'+esc(r.model)+'</b>, bu ekran <b>'+esc(cur)+'</b>. Doğru modelde olduğundan emin ol.');
     var e=_ydGelenEsle(r);
     e.esler.forEach(function(x){ sat(esc(x.yazi), '<b>'+(+x.adet).toLocaleString('tr')+'</b> '+(_tkg.metre?'m':'adet'), 'iyi'); });
     if(e.bos.length) uyari.push('Ekranda karşılığı olmayan: '+e.bos.map(esc).join(', '));
