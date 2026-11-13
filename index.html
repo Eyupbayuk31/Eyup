@@ -9654,7 +9654,7 @@ function _takipDurumPayload(m, type){
     (k.fotolar||[]).forEach((u,i)=>{
       if(!u) return;
       const bu=(k.koliler||[]).filter(x=>x.f===i); if(!bu.length) return;
-      photos.push({ url:u, at:k.tarih||'', cm:bu.map(x=>String(x.cm)).filter((v,j,l)=>l.indexOf(v)===j), yazi:(k.tarih?_ftFmtDate(k.tarih)+' · ':'')+bu.map(x=>x.cm+' cm · '+(+x.adet||0).toLocaleString('tr')).join(' | ') });
+      photos.push({ url:u, at:k.tarih||'', cm:bu.map(x=>String(x.cm)).filter((v,j,l)=>v && l.indexOf(v)===j), yazi:(k.tarih?_ftFmtDate(k.tarih)+' · ':'')+bu.map(x=>x.cm ? x.cm+' cm · '+(+x.adet||0).toLocaleString('tr') : (+x.adet||0).toLocaleString('tr')+' m').join(' | ') });
     });
   });
   return { v:1, id:m.id, type, no:m.modelKodu||'', model:m.modelKodu||'', renk:m.renk||'', termin:m.termin||'',
@@ -9712,17 +9712,17 @@ function _takipKabulHtml(store, m){
     kl.map(function(k){
       var top=0, grup={};
       k.koliler.forEach(function(x,xi){ top+=+x.adet||0; var g=grup[x.cm]||(grup[x.cm]={n:0,a:0,k:{}}); var kk=x.e!=null?x.f+'/'+x.e:'#'+xi; if(!g.k[kk]){ g.k[kk]=1; g.n++; } g.a+=+x.adet||0; });
-      var cmler=Object.keys(grup).sort(cmSira).map(function(c){ return '<span><b>'+esc(c)+' cm</b> '+grup[c].n+' koli · '+(grup[c].a).toLocaleString('tr')+'</span>'; }).join('');
+      var cmler=Object.keys(grup).sort(cmSira).map(function(c){ return '<span><b>'+(c?esc(c)+' cm':'Metre')+'</b> '+grup[c].n+' koli · '+(grup[c].a).toLocaleString('tr')+(c?'':' m')+'</span>'; }).join('');
       var foto=(k.fotolar||[]);
       var resim=foto.map(function(u,i){
         var buL=k.koliler.filter(function(x){ return x.f===i; }), bu=buL[0];
         if(!bu) return '';   // kolisi silinen teslimatın fotoğrafı gösterilmez
-        var alt=buL.length>1 ? ('Karışık · '+buL.reduce(function(t,x){ return t+(+x.adet||0); },0).toLocaleString('tr')) : (esc(bu.cm)+' cm · '+(+bu.adet||0).toLocaleString('tr'));
+        var alt=buL.length>1 ? ('Karışık · '+buL.reduce(function(t,x){ return t+(+x.adet||0); },0).toLocaleString('tr')) : (bu.cm ? esc(bu.cm)+' cm · '+(+bu.adet||0).toLocaleString('tr') : (+bu.adet||0).toLocaleString('tr')+' m');
         return u ? '<button type="button" class="tk-kb-ft" onclick="takipKabulFoto(\''+store+'\','+m.id+','+k.id+','+i+')" title="Büyüt"><img src="'+esc(u)+'" alt="" loading="lazy"><span>'+alt+'</span></button>'
                  : '<span class="tk-kb-ft bos" title="Fotoğraf yüklenmedi"><i class="fas fa-image"></i><span>'+alt+'</span></span>';
       }).join('');
       return '<div class="tk-kb">'+
-        '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+_kfKutuSay(k.koliler)+' koli · '+top.toLocaleString('tr')+' adet</span>'+
+        '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+_kfKutuSay(k.koliler)+' koli · '+top.toLocaleString('tr')+(k.koliler.every(function(x){ return x.m; })?' m':' adet')+'</span>'+
           (k.siparisNo?'<small>Sipariş '+esc(k.siparisNo)+'</small>':'')+'</div>'+
         '<div class="tk-kb-cm">'+cmler+'</div>'+
         (resim?'<div class="tk-kb-seri">'+resim+'</div>':'')+
@@ -9808,9 +9808,27 @@ function _kfEslestir(m, satirlar, fotolar){
     (f.koliler||[]).forEach(function(k){
       k.sizeId=null; k.sorun=''; k.uyari=''; k.yokCm=null; k.renkAday=null; k.tekrar=false; k.renkFarki=null;
       if(f.cikar || k.cikar) { k.sorun='çıkarıldı'; return; }
-      if(k.okunabildi===false || !(+k.miktar>0) || !(+k.uzunluk>0)){ k.sorun='Okunamadı'; return; }
+      var metreMi=!!(_tkg && _tkg.metre);
+      if(k.okunabildi===false || !(+k.miktar>0) || (!metreMi && !(+k.uzunluk>0))){ k.sorun=(!metreMi && +k.miktar>0 && !(+k.uzunluk>0)) ? 'Uzunluk (cm) yok' : 'Okunamadı'; return; }
       var km=_kfEtiketModel(k);
       if(km && _kfModelTaban(km)!==mk){ k.sorun='Başka model: '+km; return; }
+      if(metreMi){
+        // Ham kordon: satırlar renk renk; tek satırsa ona, değilse etiketteki renkle
+        var rkM=_kfRenkNorm(k.renk_kodu), raM=_kfRenkNorm(_ftImpBaslikRenk(k.baslik||''));
+        var adM=satirlar.length===1 ? satirlar : satirlar.filter(function(z){ var zr=_kfRenkNorm(z.renk); return zr && ((rkM && (zr===rkM || zr.indexOf(rkM)>=0 || rkM.indexOf(zr)>=0)) || (raM && zr.indexOf(raM)>=0)); });
+        if(adM.length!==1){
+          var secM=k.secRenk || (rkM && _tkg.foto && _tkg.foto.renkSec && _tkg.foto.renkSec[rkM]) || '';
+          if(secM){ var sm=satirlar.filter(function(z){ return _kfRenkNorm(z.renk)===secM; }); if(sm.length===1) adM=sm; }
+        }
+        if(adM.length!==1){
+          k.sorun=(k.renk_kodu?k.renk_kodu+' ':'')+'hangi renk? (büyüt, seç)';
+          k.renkAday=satirlar.map(function(z){ return z.renk||''; }).filter(function(x,i,a){ return x && a.indexOf(x)===i; });
+          return;
+        }
+        k.sizeId=adM[0].id; k.metre=true;
+        if(k.koli_no){ var imM=k.koli_no+'|m'; if(gor[imM]){ k.sizeId=null; k.tekrar=true; k.sorun='İki kez çekilmiş, sayılmadı'; return; } gor[imM]=1; }
+        return;
+      }
       var ad=satirlar.filter(function(z){ return z.cm!=null && z.cm!=='' && Math.abs(_ftNum(z.cm)-(+k.uzunluk))<0.01; });
       if(ad.length>1){
         // Aynı cm iki renkte (ör. 511 ve "Siyah (RJ76)"): koli etiketindeki renk koduyla seç
@@ -9916,14 +9934,14 @@ function _kfCiz(){
   if(!_tkg){ kap.innerHTML=''; kap.hidden=true; return; }
   kap.hidden=false;
   var irsBtn='<button type="button" class="btn btn-secondary kf-btn" onclick="ydAc(\'gelen\')"><i class="fas fa-file-lines"></i> İrsaliyeden oku</button>';
-  if(_tkg.metre){ kap.innerHTML='<div class="kf-ust">'+irsBtn+'<span class="kf-ipucu">Tedarikçinin irsaliyesini çek ya da yazısını yapıştır, metre kendiliğinden dolsun.</span></div>'; return; }
+
   var F=_tkg.foto, o=_kfOzet(), m=_tkgModel();
   var durum='';
   if(F.okunuyor) durum='<div class="kf-durum okunuyor"><i class="fas fa-spinner fa-spin"></i> Etiketler okunuyor… ('+F.liste.filter(function(f){ return f.durum==='okunuyor'; }).length+' fotoğraf)</div>';
   else if(F.hata) durum='<div class="kf-durum hata"><i class="fas fa-circle-exclamation"></i><span>'+esc(F.hata)+'</span><button type="button" class="kf-tekrar" onclick="_kfOkuBekleyen()">Tekrar dene</button></div>';
   else if(o.koli || o.sorun || o.tekrar){
     var parca=[];
-    if(m) _tkgSatirlar(m).forEach(function(z){ var d=o.satir[z.id]; if(d) parca.push('<b>'+esc(String(z.cm))+' cm</b> '+d.koli+' koli · '+_kfSayi(d.adet)); });
+    if(m) _tkgSatirlar(m).forEach(function(z){ var d=o.satir[z.id]; if(d) parca.push(_tkg.metre ? '<b>'+esc(z.renk||'—')+'</b> '+d.koli+' koli · '+_tkgSayi(d.adet,true)+' m' : '<b>'+esc(String(z.cm))+' cm</b> '+d.koli+' koli · '+_kfSayi(d.adet)); });
     durum='<div class="kf-durum"><i class="fas fa-box"></i><span>'+o.koli+' koli okundu'+(parca.length?': '+parca.join(' &nbsp;|&nbsp; '):'')+
       (o.sorun?' · <em class="kf-kotu">'+o.sorun+' koli eşleşmedi</em>':'')+(o.tekrar?' · <em class="kf-uyar">'+o.tekrar+' koli iki kez çekilmiş, sayılmadı</em>':'')+(o.uyari?' · <em class="kf-uyar">'+o.uyari+' şüpheli</em>':'')+'</span></div>';
   }
@@ -9931,7 +9949,7 @@ function _kfCiz(){
     var k=(f.koliler||[])[0]||{}, cok=(f.koliler||[]).length>1;
     var sinif = f.cikar ? 'cikti' : f.durum==='okunuyor' ? 'bekle' : (f.koliler||[]).some(function(x){ return x.sorun && x.sorun!=='çıkarıldı'; }) ? 'kotu' : (f.koliler||[]).some(function(x){ return x.uyari; }) ? 'uyar' : f.durum==='tamam' ? 'iyi' : 'bekle';
     var yazi = f.cikar ? 'Çıkarıldı' : f.durum==='okunuyor' ? 'Okunuyor' : f.durum!=='tamam' ? 'Bekliyor'
-      : cok ? (_kfFotoKutu(f)>1 ? _kfFotoKutu(f)+' koli' : 'Karışık · '+_kfSayi(f.koliler.reduce(function(t,x){ return t+(+x.miktar||0); },0))) : (k.sorun ? k.sorun : (esc(String(k.uzunluk))+' cm · '+_kfSayi(k.miktar)));
+      : cok ? (_kfFotoKutu(f)>1 ? _kfFotoKutu(f)+' koli' : 'Karışık · '+_kfSayi(f.koliler.reduce(function(t,x){ return t+(+x.miktar||0); },0))) : (k.sorun ? k.sorun : (k.metre ? _kfSayi(k.miktar)+' m' : esc(String(k.uzunluk))+' cm · '+_kfSayi(k.miktar)));
     return '<button type="button" class="kf-ft '+sinif+'" onclick="_kfBuyut('+i+')" title="Büyüt / düzelt">'+
       '<img src="'+f.veri+'" alt=""><span class="kf-ft-y">'+yazi+'</span></button>';
   }).join('');
@@ -10135,7 +10153,7 @@ function _kfKabulHazirla(id, tarih){
       var kutu=document.querySelector('#tkgListe .tkg-satir[data-id="'+k.sizeId+'"] .tkg-kutu');
       if(!kutu || !(+kutu.value>0)) return;          // satırı elle sıfırladıysa sayma
       if(fIdx[i]==null){ fIdx[i]=fotolar.length; fotolar.push(f.veri); }
-      koliler.push({sizeId:k.sizeId, cm:String(k.uzunluk), adet:+k.miktar, f:fIdx[i], e:k.etiket||1, rk:k.renk_kodu||''});
+      koliler.push({sizeId:k.sizeId, cm:k.metre?'':String(k.uzunluk), adet:+k.miktar, f:fIdx[i], e:k.etiket||1, rk:k.renk_kodu||'', m:k.metre?1:undefined});
       if(k.siparis_no) sip[k.siparis_no]=(sip[k.siparis_no]||0)+1;
       if(k.renk_kodu) rk[k.renk_kodu]=(rk[k.renk_kodu]||0)+1;
     });
@@ -10144,7 +10162,7 @@ function _kfKabulHazirla(id, tarih){
   var enCok=function(o){ return Object.keys(o).sort(function(a,b){ return o[b]-o[a]; })[0]||''; };
   return { id:id, koliler:koliler, yukle:fotolar,
     kayit:{ id:id, tarih:tarih, kaynak:'foto', siparisNo:enCok(sip), renkKodu:enCok(rk),
-            koliler:koliler.map(function(k){ return {sizeId:k.sizeId, cm:k.cm, adet:k.adet, f:k.f, e:k.e}; }),
+            koliler:koliler.map(function(k){ return {sizeId:k.sizeId, cm:k.cm, adet:k.adet, f:k.f, e:k.e, m:k.m}; }),
             fotolar:fotolar.map(function(){ return ''; }) } };
 }
 // Fotoğrafları GitHub'a yükle, mal kabul kaydına adreslerini yaz
@@ -10700,7 +10718,8 @@ function _ydGelenEsle(r){
   var sz=_tkgSatirlar(m), esler=[], bos=[], top={};
   if(_tkg.metre){
     var metre=r.metre || r.satirlar.reduce(function(t,z){ return t+z.adet; },0);
-    var hedef = sz.length===1 ? sz[0] : sz.filter(function(z){ return r.renk && _ydKatla(z.renk)===_ydKatla(r.renk); })[0];
+    var bosluksuz=function(x){ return _ydKatla(x).replace(/[^a-z0-9]/g,''); };   // "KAHVE RENGİ" = "Kahverengi"
+    var hedef = sz.length===1 ? sz[0] : sz.filter(function(z){ return r.renk && bosluksuz(z.renk)===bosluksuz(r.renk); })[0];
     if(metre>0 && hedef) esler.push({z:hedef, adet:metre, yazi:(hedef.renk||'—')});
     else if(metre>0) bos.push((r.renk||'renk yok')+' '+metre+' m');
     return {esler:esler, bos:bos};
@@ -21592,7 +21611,8 @@ function _qrFotoBilgi(url){
   });
   if(!bul) return {};
   var cm=bul.map(function(x){ return String(x.cm); }).filter(function(v,i,a){ return a.indexOf(v)===i; });
-  return { cm:cm, yazi: bul.map(function(x){ return String(x.cm).replace('.',',')+' cm · '+(+x.adet||0).toLocaleString('tr'); }).join(' | ') };
+  cm=cm.filter(Boolean);
+  return { cm:cm, yazi: bul.map(function(x){ return x.cm ? String(x.cm).replace('.',',')+' cm · '+(+x.adet||0).toLocaleString('tr') : (+x.adet||0).toLocaleString('tr')+' m'; }).join(' | ') };
 }
 function _qrFotoEkle(p){ var o={url:p.url, at:p.at||''}; var b=_qrFotoBilgi(p.url); if(b.cm){ o.cm=b.cm; o.yazi=b.yazi; } return o; }
 function _buildViewerPayload(item, type){

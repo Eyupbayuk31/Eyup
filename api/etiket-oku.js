@@ -32,6 +32,8 @@ const ISTEM =
   'baslik alanına model kodunun geçtiği satırı aynen yaz (ör. "J 5911 - SEPARE - PEMBE"). ' +
   'uzunluk cm cinsinden sayı, miktar adet cinsinden tam sayı. Emin olmadığın alanı boş bırak ya da 0 yaz, uydurma. ' +
   'Fotoğrafta okunabilir koli etiketi yoksa okunabildi=false yaz.\n' +
+  'ELLE YAZILMIŞ ETİKET: torba ya da koli üstüne kâğıtla yazılmış olabilir. Üstüne yazılarak düzeltilmiş rakamda düzeltilmiş hâli geçerlidir (model kodu çoğunlukla bir harf + 4 rakam, ör. J4842). ' +
+  'HAM KORDON / METRE: ölçüsüz mal metreyle gelir ("3645 MT", "3645 metre"): uzunluk=0, miktar=metre, renk_kodu=yazan renk adı (ör. KAHVE RENGİ).\n' +
   'KARIŞIK KOLİ: bir etiketin tablosunda birden çok satır (farklı uzunluk ya da renk) varsa HER SATIR için ayrı kayıt döndür; ' +
   'miktarları toplama, en büyük uzunluğa yazma. Aynı etiketin satırları aynı etiket numarasını alır. ' +
   'Fotoğrafta birden çok koli etiketi varsa her etikete sırayla 1, 2, 3 numarası ver. Her satırın renk_kodu alanına o satırdaki Color/Renk değerini yaz (ör. RJ76).';
@@ -105,6 +107,7 @@ const ISTEM_GELEN =
   '- model: bizim model kodumuz (bir-üç harf + rakamlar, ör. J4842). Tedarikçi stok/iş numarasını model yazma. Yoksa boş.\n' +
   '- satirlar: her uzunluk (cm) için bir satır; adet o teslimatta gelen tam sayı. Beden ya da beden grubu yazıyorsa beden alanına yaz (ör. "XS-S-M"). ' +
   'Ham kordon gibi metre ile gelen malda cm=0 yaz, adet alanına metreyi yaz.\n' +
+  '- Elle yazılmış kâğıtta üstüne yazılarak düzeltilmiş rakamın düzeltilmiş hâlini al (model kodu çoğunlukla bir harf + 4 rakam, ör. J4842).\n' +
   '- renk: varsa renk adı. Koli sayısı, fiyat, KDV, tutar, irsaliye no gibi bilgileri satıra koyma. toplam: belgede yazan toplam miktar, yoksa 0.\n' +
   '- Okuyamadığın değeri uydurma, boş bırak.';
 
