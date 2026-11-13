@@ -7675,7 +7675,7 @@ function _ftImpGemini(belgeler, metin){
   var ad=belgeler.length ? belgeler.map(function(b){ return b.ad; }).join(', ') : 'Yapıştırılan yazı';
   var bilgi=document.getElementById('ftImpAltYazi'), eski=bilgi?bilgi.textContent:'';
   if(bilgi) bilgi.textContent='Gemini okuyor… ('+(belgeler.length?belgeler.length+' belge':'yazı')+')';
-  return fetch('/api/etiket-oku', { method:'POST', headers:{'Content-Type':'application/json','x-irsaliye':'koli'},
+  return _etiketOkuIstek({
       body: JSON.stringify({ tur:'siparis', metin: metin, fotolar: belgeler.map(function(b){ return b.veri; }) }) })
     .then(function(r){ return r.json().catch(function(){ return {hata:'Sunucu cevabı okunamadı ('+r.status+')'}; }).then(function(j){ if(!r.ok || j.hata) throw new Error(j.hata || ('HTTP '+r.status)); return j; }); })
     .then(function(j){
@@ -9777,12 +9777,27 @@ function _kfKucult(file){
     im.src=u;
   });
 }
+// /api/etiket-oku isteği. Telefonda bağlantı fotoğraf gönderilirken kopabiliyor
+// (tarayıcı "Failed to fetch" diyor); öyle olursa 2 sn ve 5 sn sonra kendiliğinden
+// tekrar dener. Sunucunun verdiği hata (kota, okunamadı) tekrar denenmez.
+function _etiketOkuIstek(ops){
+  var deneme=0;
+  var git=function(){
+    return fetch('/api/etiket-oku', { method:'POST', headers:{'Content-Type':'application/json','x-irsaliye':'koli'}, body: ops.body })
+      .catch(function(e){
+        deneme++;
+        if(deneme<=2) return new Promise(function(r){ setTimeout(r, deneme===1?2000:5000); }).then(git);
+        throw new Error('İnternet bağlantısı koptu, fotoğraflar gönderilemedi. Bağlantını kontrol edip tekrar dene.');
+      });
+  };
+  return git();
+}
 // Fotoğrafları okut → her fotoğraf için koliler[]
 function _kfOkut(fotolar){
   var partiler=[]; for(var i=0;i<fotolar.length;i+=_KF_PARTI) partiler.push(fotolar.slice(i,i+_KF_PARTI));
   return partiler.reduce(function(ch, parti){
     return ch.then(function(){
-      return fetch('/api/etiket-oku', { method:'POST', headers:{'Content-Type':'application/json','x-irsaliye':'koli'},
+      return _etiketOkuIstek({
         body: JSON.stringify({ fotolar: parti.map(function(f){ return f.veri; }) }) })
       .then(function(r){ return r.json().catch(function(){ return {hata:'Sunucu cevabı okunamadı ('+r.status+')'}; }).then(function(j){ if(!r.ok || j.hata) throw new Error(j.hata || ('HTTP '+r.status)); return j; }); })
       .then(function(j){
@@ -10695,7 +10710,7 @@ function ydOku(gemini){
   }
   _yd.okunuyor=true; _yd.sonuc=null; _ydCiz();
   var oturum=_yd;
-  fetch('/api/etiket-oku', { method:'POST', headers:{'Content-Type':'application/json','x-irsaliye':'koli'},
+  _etiketOkuIstek({
       body: JSON.stringify({ tur: form==='gelen'?'gelen':'form', form: form, metin: metin, bugun: _ydBugun(), fotolar: _yd.fotolar.map(function(f){ return f.veri; }) }) })
     .then(function(r){ return r.json().catch(function(){ return {hata:'Sunucu cevabı okunamadı ('+r.status+')'}; }).then(function(j){ if(!r.ok || j.hata) throw new Error(j.hata || ('HTTP '+r.status)); return j; }); })
     .then(function(j){
@@ -18916,7 +18931,7 @@ window.uygulamayiYenile = async function(){
   // GÜVENLİK AĞI: aşağıdaki adımların herhangi biri takılırsa (ağ yavaş,
   // servis çalışanı cevap vermiyor) yine de 5 saniye içinde yeniden yükle.
   // Bu olmadan PWA'da F5 hiç tepki vermiyor gibi görünüyordu.
-  var bekci = setTimeout(function(){ try{ location.reload(); }catch(_){} }, 5000);
+  var bekci = setTimeout(function(){ try{ location.reload(); }catch(_){} }, 9000);
   try{ if(typeof toast==='function') toast('Yenileniyor…','info'); }catch(_){}
   // Bekleyen yazmalar varsa buluta gitsin (kaybolmasın)
   if(window._fsInflight && window._fsInflight.size){
@@ -18930,12 +18945,31 @@ window.uygulamayiYenile = async function(){
     await _yenileSure(function(){ return reg.update(); }, 1800);
     if(reg.waiting){ try{ reg.waiting.postMessage('skipWaiting'); }catch(_){} }
   }, 2200);
-  // Uygulama kabuğu önbelleğini temizle (veriler localStorage/IndexedDB'de, dokunulmuyor)
+  // Uygulama kabuğu önbelleğini tazele (veriler localStorage/IndexedDB'de, dokunulmuyor).
+  // Önce yeni sayfa ağdan indirilir; ancak indirilebilirse eski önbellek silinip
+  // yenisi konur. Eskiden önce her şey siliniyordu: o an bağlantı takılırsa
+  // elde yedek kalmıyor, telefon "Bu siteye ulaşılamıyor" gösteriyordu.
+  var agVar = true;
   await _yenileSure(async function(){
     if(!window.caches || !caches.keys) return;
+    var html, css;
+    try{
+      html = await fetch('/index.html', {cache:'reload'});
+      css  = await fetch('/style.css',  {cache:'reload'});
+    }catch(_){ agVar = false; return; }
+    if(!html || !html.ok || !css || !css.ok){ agVar = false; return; }
     var adlar = await caches.keys();
     await Promise.all(adlar.map(function(a){ return caches.delete(a); }));
-  }, 2000);
+    var c = await caches.open('irsaliye-v2');
+    await Promise.all([c.put('/index.html', html.clone()), c.put('/', html), c.put('/style.css', css)]);
+  }, 6000);
+  if(!agVar){
+    clearTimeout(bekci);
+    window._yenileniyor = false;
+    if(btn){ delete btn.dataset.calisiyor; btn.classList.remove('donuyor'); }
+    try{ toast('İnternet bağlantısı yok, yenilenemedi. Bağlantı gelince tekrar dene.','error'); }catch(_){}
+    return;
+  }
   clearTimeout(bekci);
   // Önbellek zaten silindi; adrese damga eklemeye gerek yok (adres temiz kalsın)
   location.reload();

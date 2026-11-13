@@ -19,6 +19,19 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Ne ağ ne önbellek varsa tarayıcının "Bu siteye ulaşılamıyor" sayfası yerine
+// sade bir sayfa: bağlantı gelince kendiliğinden yeniden dener.
+function cevrimdisiSayfa() {
+  const html = '<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Bağlantı yok</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;'
+    + 'font-family:system-ui,sans-serif;background:#111;color:#eee;text-align:center;padding:24px;box-sizing:border-box}'
+    + 'button{margin-top:18px;padding:14px 28px;font-size:16px;border:0;border-radius:12px;background:#f5b800;color:#111;font-weight:700}'
+    + 'p{color:#aaa;line-height:1.5}</style></head><body><div><h2>Bağlantı kurulamadı</h2>'
+    + '<p>İnternet gelince sayfa kendiliğinden açılır.</p><button onclick="location.reload()">Tekrar dene</button></div>'
+    + '<script>addEventListener("online",function(){location.reload()});setInterval(function(){if(navigator.onLine)location.reload()},8000)<\/script></body></html>';
+  return new Response(html, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
 self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
 
 self.addEventListener('fetch', (e) => {
@@ -43,17 +56,21 @@ self.addEventListener('fetch', (e) => {
   // (kutular üst üste biniyor, liste kaymıyor). Ağ yoksa önbelleğe düşer.
   const cssMi = url.pathname.endsWith('.css');
   if (cssMi || istek.mode === 'navigate' || (istek.headers.get('accept') || '').includes('text/html')) {
+    // Ağ bir kez takılırsa 1,5 sn sonra bir kez daha denenir (telefonda Wi-Fi
+    // geçişlerinde ilk istek sık düşüyor).
+    const getir = () => fetch(istek).catch(() => new Promise(r => setTimeout(r, 1500)).then(() => fetch(istek)));
     e.respondWith(
-      fetch(istek)
+      getir()
         .then(y => { const kopya = y.clone(); caches.open(CACHE).then(c => c.put(istek, kopya)); return y; })
         .catch(() => caches.match(istek).then(y => {
           if (y) return y;
-          if (cssMi) return undefined;
+          if (cssMi) return Response.error();
           // Uygulama dışı sayfalar (ör. /gamze) çevrimdışıyken uygulama
           // kabuğuna düşmesin — alakasız bir ekran açılıyor.
-          if (url.pathname.replace(/\/+$/, '') !== '' && !url.pathname.endsWith('/index.html')
-              && !/^\/(#|$)/.test(url.pathname)) return undefined;
-          return caches.match('/index.html');
+          const kabukMu = !(url.pathname.replace(/\/+$/, '') !== '' && !url.pathname.endsWith('/index.html')
+              && !/^\/(#|$)/.test(url.pathname));
+          return (kabukMu ? caches.match('/index.html').then(k => k || caches.match('/')) : Promise.resolve(null))
+            .then(k => k || cevrimdisiSayfa());
         }))
     );
     return;
