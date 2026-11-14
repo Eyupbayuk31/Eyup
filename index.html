@@ -3811,7 +3811,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
             </div>
           </div>
           <div class="s-body">
-            <button class="btn btn-primary" onclick="if(typeof deferredPrompt!=='undefined'&&deferredPrompt){installPWA();}else{toast('Tarayıcınız desteklemiyor veya zaten yüklü','info');}" style="width:100%;justify-content:center;"><i class="fas fa-download"></i> Ana Ekrana Ekle</button>
+            <button class="btn btn-primary" onclick="installPWA(true)" style="width:100%;justify-content:center;"><i class="fas fa-download"></i> Ana Ekrana Ekle</button>
           </div>
         </div>
         <button type="button" class="t2-gelismis-ac" onclick="var p=this.closest('.s-panel'); p.classList.toggle('t2-gel-acik'); this.querySelector('span').textContent=p.classList.contains('t2-gel-acik')?'Gelişmiş ayarları gizle':'Gelişmiş ayarları göster';">
@@ -18820,10 +18820,22 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 });
 
-function installPWA() {
+// Tarayıcı kurulum penceresini hazır etmediyse (Edge bunu hemen vermiyor)
+// "desteklemiyor" demek yerine o tarayıcının menüsünden nasıl kurulacağını söyle.
+function _pwaElleYol() {
+  var ua = navigator.userAgent || '';
+  var tekPencere = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  if (tekPencere) return 'Zaten uygulama olarak açıksın.';
+  if (/iPhone|iPad|iPod/.test(ua)) return 'Safari\'de alttaki Paylaş düğmesine bas, "Ana Ekrana Ekle"yi seç.';
+  if (/SamsungBrowser/.test(ua)) return 'Samsung Internet menüsünden "Sayfayı ekle" > "Ana ekran"ı seç.';
+  if (/Edg\//.test(ua)) return (/Android/.test(ua) ? 'Edge menüsünden "Telefona ekle"yi seç.' : 'Edge\'de sağ üstteki üç nokta menüsü > Uygulamalar > "Bu siteyi uygulama olarak yükle"yi seç. Orada "Aç" yazıyorsa zaten kurulu.');
+  if (/Firefox/.test(ua)) return 'Firefox menüsünden "Yükle" ya da "Ana ekrana ekle"yi seç.';
+  return (/Android/.test(ua) ? 'Chrome menüsünden (sağ üst üç nokta) "Ana ekrana ekle"yi seç.' : 'Chrome\'da sağ üstteki üç nokta > "Yayınla, kaydet ve paylaş" > "Sayfayı uygulama olarak yükle"yi seç. Orada "Aç" yazıyorsa zaten kurulu.');
+}
+function installPWA(ayarlardan) {
   if (!deferredPrompt) {
-    toast('Tarayıcınız desteklemiyor veya zaten yüklü','info');
-    dismissPWA();
+    toast(_pwaElleYol(),'info');
+    if (!ayarlardan) dismissPWA();
     return;
   }
   deferredPrompt.prompt();
