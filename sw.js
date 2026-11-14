@@ -59,12 +59,20 @@ self.addEventListener('fetch', (e) => {
   // (kutular üst üste biniyor, liste kaymıyor). Ağ yoksa önbelleğe düşer.
   const cssMi = url.pathname.endsWith('.css');
   if (cssMi || istek.mode === 'navigate' || (istek.headers.get('accept') || '').includes('text/html')) {
-    // Ağ bir kez takılırsa 1,5 sn sonra bir kez daha denenir (telefonda Wi-Fi
-    // geçişlerinde ilk istek sık düşüyor).
-    const getir = () => fetch(istek).catch(() => new Promise(r => setTimeout(r, 1500)).then(() => fetch(istek)));
+    // Sayfa tarayıcıya verilmeden önce SONUNA KADAR indirilir. Bazı ağlarda
+    // (şirket güvenlik duvarı, zayıf Wi-Fi) bağlantı 1,7 MB'lık sayfanın ortasında
+    // kesiliyor; yarım cevap olduğu gibi verilince tarayıcı ERR_FAILED gösteriyordu.
+    // Yarıda kesilirse ya da sunucu 5xx dönerse hata sayılır: 1,5 sn sonra bir kez
+    // daha denenir, yine olmazsa önbellekteki son sağlam sürüm açılır.
+    const indir = () => fetch(istek).then(y => {
+      if (y.status >= 500) throw new Error('sunucu ' + y.status);
+      if (!y.ok) return y;                       // 404, yönlendirme: olduğu gibi
+      return y.blob().then(govde => new Response(govde, { status: y.status, statusText: y.statusText, headers: y.headers }));
+    });
+    const getir = () => indir().catch(() => new Promise(r => setTimeout(r, 1500)).then(indir));
     e.respondWith(
       getir()
-        .then(y => { const kopya = y.clone(); caches.open(CACHE).then(c => c.put(istek, kopya)); return y; })
+        .then(y => { if (y.ok) { const kopya = y.clone(); caches.open(CACHE).then(c => c.put(istek, kopya)); } return y; })
         .catch(() => caches.match(istek).then(y => {
           if (y) return y;
           if (cssMi) return Response.error();
