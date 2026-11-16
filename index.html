@@ -4660,9 +4660,9 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
           <i class="fas fa-share-alt"></i>
           <span>Paylaş</span>
         </button>
-        <button class="modal-action-btn primary" onclick="generatePDFFromModal()" id="modalPdfBtn">
-          <i class="fas fa-file-pdf"></i>
-          <span>PDF</span>
+        <button class="modal-action-btn primary" onclick="generateImageFromModal()" id="modalPdfBtn" title="İrsaliyenin fotoğrafı: telefonda paylaşım açılır, WhatsApp'a tek dokunuşla gider">
+          <i class="fas fa-image"></i>
+          <span>Fotoğraf</span>
         </button>
         <button class="modal-action-btn secondary t2-modal-diger" type="button" onclick="event.stopPropagation(); _t2DigerAc(this.closest('.modal-actions-new').querySelector('.modal-actions-secondary'))" aria-label="Diğer işlemler">
           <i class="fas fa-ellipsis"></i>
@@ -4670,6 +4670,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </button>
       </div>
       <div class="modal-actions-secondary">
+        <button class="modal-action-btn secondary" onclick="generatePDFFromModal()" id="modalPdfIndirBtn" title="PDF dosyası indir">
+          <i class="fas fa-file-pdf"></i>
+          <span>PDF indir</span>
+        </button>
         <button class="modal-action-btn secondary edit-accent" onclick="editCurrentModalItem()" id="modalEditBtn" title="Bu irsaliyeyi düzenle" style="display:none;">
           <i class="fas fa-pen"></i>
           <span>Düzenle</span>
@@ -4688,7 +4692,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         </button>
         <button class="modal-action-btn secondary" onclick="goSignatureForModal()" id="modalSigBtn" title="Fotoğraf ekle">
           <i class="fas fa-camera"></i>
-          <span>Foto</span>
+          <span>Foto ekle</span>
         </button>
       </div>
     </div>
@@ -10243,7 +10247,9 @@ function _kfFotolariYukle(store, modelId, kabulId, veriler){
   veriler.reduce(function(ch, v, i){
     return ch.then(function(){
       if(window._kfIptal && window._kfIptal[kabulId]) return;
-      return _uploadPhotoToCatbox(v).then(function(u){ adresler[i]=u; }).catch(function(e){ adresler[i]=''; console.warn('[koli] foto yüklenemedi', e); });
+      // Bağlantı anlık koparsa 3 sn ve 8 sn sonra tekrar dene
+      var dene=function(kalan){ return _uploadPhotoToCatbox(v).catch(function(e){ if(kalan<=0) throw e; return new Promise(function(r){ setTimeout(r, kalan===2?3000:8000); }).then(function(){ return dene(kalan-1); }); }); };
+      return dene(2).then(function(u){ adresler[i]=u; }).catch(function(e){ adresler[i]=''; console.warn('[koli] foto yüklenemedi', e); });
     });
   }, Promise.resolve()).then(function(){
     if(window._kfIptal && window._kfIptal[kabulId]) return;
@@ -12421,6 +12427,13 @@ function _trTarih(t){
 function generatePDFFromModal() {
   if (currentModalItem && currentModalType) {
     generatePDF(currentModalItem.id, currentModalType);
+  }
+}
+// Detaydaki ana düğme: PDF ile aynı belgenin fotoğrafı (PNG). Telefonda doğrudan
+// paylaşım sayfası açılır; bilgisayarda dosya iner. PDF "Diğer" menüsünde.
+function generateImageFromModal() {
+  if (currentModalItem && currentModalType) {
+    generatePDF(currentModalItem.id, currentModalType, 'image');
   }
 }
 
