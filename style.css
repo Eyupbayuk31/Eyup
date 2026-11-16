@@ -19776,6 +19776,11 @@ html .ft-imp-modal .ft-imp-alan.ft-imp-beden .form-input{ padding:0 6px !importa
   padding:8px 10px; border-radius:10px; background:color-mix(in srgb, var(--primary) 9%, transparent); margin-bottom:8px; }
 .kf-durum > i{ color:var(--primary); margin-top:3px; }
 .kf-durum.okunuyor{ color:var(--text-muted); }
+.kf-sadece{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:8px 0 2px; font-size:12.5px; color:var(--text-muted); }
+.kf-sadece.zaten{ padding:10px 12px; border-radius:12px; border:1px solid color-mix(in srgb, var(--warning, #f59e0b) 45%, transparent); background:color-mix(in srgb, var(--warning, #f59e0b) 10%, transparent); color:var(--text-main); }
+.kf-sadece.zaten > span i{ color:var(--warning, #f59e0b); margin-right:4px; }
+.kf-sadece .kf-btn{ flex:0 0 auto; }
+@media (max-width:600px){ .kf-sadece .kf-btn{ width:100%; justify-content:center; } }
 .kf-durum.hata{ background:color-mix(in srgb, var(--danger, #ef4444) 12%, transparent); align-items:center; }
 .kf-durum.hata > i{ color:var(--danger, #ef4444); }
 .kf-durum.hata span{ flex:1; }

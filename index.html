@@ -9811,15 +9811,29 @@ function _kfOkut(fotolar){
 // Okunan kolileri modelin satırlarıyla eşleştir (sorun alanını doldurur)
 // Model karşılaştırması: boşluksuz, RPT eki yok ("J5911 RPT 2" = "J 5911")
 function _kfModelTaban(x){ return _ftNormModel(x||'').replace(/\s+RPT(\s*\d+)?$/,'').replace(/\s+/g,''); }
+// Karşılaştırma kimliği: elle yazılmış etikette karışan harf/rakamlar aynı sayılır
+// (M1S10388 = M1510388, O/0, I/1, B/8, Z/2). İlk harf olduğu gibi kalır.
+function _kfModelKimlik(x){ var t=_kfModelTaban(x); return t.charAt(0)+t.slice(1).replace(/S/g,'5').replace(/O/g,'0').replace(/I/g,'1').replace(/B/g,'8').replace(/Z/g,'2'); }
+// Okunan kodun sistemdeki yazılışı (fermuar ya da kordon takibinde aynı kimlikli model varsa)
+function _kfBilinenAd(km){
+  var k=_kfModelKimlik(km), bul='';
+  ['fermuarTakip','kordonTakip'].forEach(function(st){ if(bul) return; (getData(st)||[]).some(function(x){ if(x && x.modelKodu && _kfModelKimlik(x.modelKodu)===k){ bul=_kfModelTaban(x.modelKodu); return true; } return false; }); });
+  return bul || km;
+}
 // Etiketten okunan model: harfsiz kod (YKK ürün kodu 4964423) model değil; yoksa başlık satırından
+// "M1S10388-SYAH KASIM 2026" → M1S10388; YKK ürün tanımı (VSOR-56) model değil
 function _kfEtiketModel(k){
+  var D=/^[A-Z]{1,3}(\d{3,}|\d{1,2}[A-Z]\d{3,})$/;   // J4842, M1023289, M1S10388; PB1 / DA8MAVI97 değil
   var m=String(k.model||'').toUpperCase().replace(/İ/g,'I').replace(/\s+/g,'');
-  if(m && /[A-Z]/.test(m) && /\d/.test(m)) return m;
-  var b=String(k.baslik||'').toUpperCase().replace(/İ/g,'I').match(/\b([A-Z]{1,3})\s?(\d{3,6})\b/);
-  return b ? b[1]+b[2] : '';
+  if(D.test(m)) return m;
+  var p=m.split(/[-_\/]/).filter(function(x){ return D.test(x); })[0]; if(p) return p;
+  var b=String(k.baslik||'').toUpperCase().replace(/İ/g,'I').match(/\b([A-Z]{1,3})\s?(\d{3,}|\d{1,2}[A-Z]\d{3,})\b/);
+  if(b) return b[1]+b[2];
+  if(/^[A-Z]{2,6}-\d{1,3}$/.test(m)) return '';
+  return (m && /[A-Z]/.test(m) && /\d/.test(m)) ? m : '';
 }
 function _kfEslestir(m, satirlar, fotolar){
-  var mk=_kfModelTaban(m.modelKodu||''), gor={};
+  var mk=_kfModelKimlik(m.modelKodu||''), gor={};
   fotolar.forEach(function(f){
     (f.koliler||[]).forEach(function(k){
       k.sizeId=null; k.sorun=''; k.uyari=''; k.yokCm=null; k.renkAday=null; k.tekrar=false; k.renkFarki=null;
@@ -9827,7 +9841,7 @@ function _kfEslestir(m, satirlar, fotolar){
       var metreMi=!!(_tkg && _tkg.metre);
       if(k.okunabildi===false || !(+k.miktar>0) || (!metreMi && !(+k.uzunluk>0))){ k.sorun=(!metreMi && +k.miktar>0 && !(+k.uzunluk>0)) ? 'Uzunluk (cm) yok' : 'Okunamadı'; return; }
       var km=_kfEtiketModel(k);
-      if(km && _kfModelTaban(km)!==mk){ k.sorun='Başka model: '+km; return; }
+      if(km && _kfModelKimlik(km)!==mk){ k.sorun='Başka model: '+km; return; }
       if(metreMi){
         // Ham kordon: satırlar renk renk; tek satırsa ona, değilse etiketteki renkle
         var rkM=_kfRenkNorm(k.renk_kodu), raM=_kfRenkNorm(_ftImpBaslikRenk(k.baslik||''));
@@ -9983,7 +9997,47 @@ function _kfCiz(){
       (F.liste.length?'':'<span class="kf-ipucu">Koli etiketini çek ya da galerideki fotoğrafları yükle, adetler kendiliğinden dolsun.</span>')+
     '</div>'+
     durum+
+    _kfSadeceFotoHtml(m, o, F)+
     (seri?'<div class="kf-seri">'+seri+'</div>':'');
+}
+// Gelen adet daha önce elle girildiyse: adet eklemeden yalnızca koli fotoğraflarını
+// ve koli dökümünü (mal kabul kaydı) saklamak için. Okunan adetler o ölçülerde zaten
+// gelen görünüyorsa öne çıkarılır (Kaydet'e basılırsa adetler iki kez yazılırdı).
+function _kfZatenGirildi(m, o){
+  if(!m || !o || !o.koli) return false;
+  var ids=Object.keys(o.satir||{}); if(!ids.length) return false;
+  return ids.every(function(id){
+    var z=(m.sizes||[]).filter(function(x){ return String(x.id)===String(id); })[0];
+    return z && _ftGelen(z)>0 && _ftGelen(z)>=o.satir[id].adet;
+  });
+}
+function _kfSadeceFotoHtml(m, o, F){
+  if(!F || F.okunuyor || !o || !o.koli) return '';
+  var zaten=_kfZatenGirildi(m, o);
+  return '<div class="kf-sadece'+(zaten?' zaten':'')+'">'+
+    (zaten?'<span><i class="fas fa-circle-info"></i> Bu adetler bu ölçülerde zaten gelen olarak girilmiş görünüyor. Kaydet\'e basarsan ikinci kez eklenir.</span>':'<span>Gelen adedi daha önce elle girdiysen:</span>')+
+    '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSadeceFotoKaydet()"><i class="fas fa-images"></i> Adet ekleme, sadece fotoğrafları kaydet</button></div>';
+}
+function _kfSadeceFotoKaydet(){
+  if(!_tkg || !_tkg.foto) return;
+  var tarih=document.getElementById('tkgTarih').value||_tkgBugun();
+  var kabul=_kfKabulHazirla(Date.now(), tarih);
+  if(!kabul){ toast('Kaydedilecek koli yok','error'); return; }
+  var store=_tkg.store, modelId=_tkg.modelId, metre=_tkg.metre;
+  var list=getData(store)||[], m=list.filter(function(x){ return x.id===modelId; })[0]; if(!m) return;
+  // Koli dökümünü, fotoğrafı olmayan en son elle girilmiş gelene bağla (koli sayısı görünsün)
+  var sayi={}; kabul.koliler.forEach(function(k){ sayi[k.sizeId]=1; });
+  Object.keys(sayi).forEach(function(id){
+    var z=(m.sizes||[]).filter(function(x){ return String(x.id)===String(id); })[0]; if(!z) return;
+    var t=(z.teslimatlar||[]).filter(function(x){ return !x.kabulId; }).sort(function(a,b){ return (b.id||0)-(a.id||0); })[0];
+    if(t){ t.kabulId=kabul.id; t.koli=_kfKutuSay(kabul.koliler.filter(function(k){ return String(k.sizeId)===String(id); })); }
+  });
+  m.kabuller=(m.kabuller||[]).concat([kabul.kayit]);
+  _ftStamp(m); setData(store, list);
+  takipGelenKapat();
+  _tkgYenile(store, modelId);
+  toast(_kfKutuSay(kabul.koliler)+' koli fotoğrafı kaydediliyor; gelen '+(metre?'metre':'adet')+' değişmedi','success');
+  _kfFotolariYukle(store, modelId, kabul.id, kabul.yukle);
 }
 // Kolide gelen ama siparişte (satın almada) olmayan ölçüler: satın almacı eksik
 // girmiş olabilir. Ölçü başına adet kutusu + "Satın almaya ekle".
@@ -10002,8 +10056,8 @@ function _kfYokListe(){
 }
 function _kfYokHtml(m){
   var l=_kfYokListe(); if(!l.length || !m) return '';
-  var taban=_kfModelTaban(m.modelKodu);
-  var kardes=(getData(_tkg.store)||[]).filter(function(x){ return x.id!==m.id && _kfModelTaban(x.modelKodu)===taban; });
+  var taban=_kfModelKimlik(m.modelKodu);
+  var kardes=(getData(_tkg.store)||[]).filter(function(x){ return x.id!==m.id && _kfModelKimlik(x.modelKodu)===taban; });
   return '<div class="kf-yok"><div class="kf-yok-b"><i class="fas fa-triangle-exclamation"></i> Kolide gelen ama siparişte olmayan ölçü. Satın almacı eksik girmiş olabilir.</div>'+
     l.map(function(x){
       var var_=kardes.filter(function(k){ return (k.sizes||[]).some(function(z){ return Math.abs(_ftNum(z.cm)-x.cm)<0.01; }); }).map(function(k){ return k.modelKodu; });
@@ -10045,7 +10099,7 @@ function _kfRenkFarkiYeni(){
   var m=_tkgModel(); if(!m) return;
   // Yalnız renk farkı olan kolilerin fotoğrafları yeni satın almaya taşınır
   var liste=_tkg.foto.liste.filter(function(f){ return !f.cikar && (f.koliler||[]).some(function(k){ return k.renkFarki; }); });
-  _kfSatinAlmaOner(_tkg.store, _kfModelTaban(m.modelKodu), liste, {rpt:true, eski:m});
+  _kfSatinAlmaOner(_tkg.store, _kfModelKimlik(m.modelKodu), liste, {rpt:true, eski:m});
 }
 function _kfYokEkle(cm){
   if(!_tkg) return;
@@ -10232,8 +10286,8 @@ function _kfSatinAlmaOner(store, taban, liste, ops){
   liste.forEach(function(f){ (f.koliler||[]).forEach(function(k){
     var km=_kfEtiketModel(k);
     var metreK = store==='kordonTakip' && !(+k.uzunluk>0);   // ham kordon: torba / koli metreyle
-    if(!km || _kfModelTaban(km)!==taban || k.okunabildi===false || (!metreK && !(+k.uzunluk>0)) || !(+k.miktar>0)) return;
-    if(!kod) kod=km;
+    if(!km || _kfModelKimlik(km)!==taban || k.okunabildi===false || (!metreK && !(+k.uzunluk>0)) || !(+k.miktar>0)) return;
+    if(!kod) kod=_kfBilinenAd(km);
     if(ops.rpt && ops.eski && !(k.renkFarki || _kfRenkTutmuyor(k, (ops.eski.sizes||[]).map(function(z){ return z.renk; }).join(' ')))) return;   // eski siparişin rengindeki koli değil
     if(k.koli_no){ var im=k.koli_no+'|'+k.uzunluk; if(gor[im]) return; gor[im]=1; }   // aynı koli iki kez çekildiyse bir kez
     var ad=_ftImpBaslikRenk(k.baslik||''), rk=String(k.renk_kodu||'').trim();
@@ -10300,12 +10354,12 @@ function _kfSayfaSec(store, kamera){
       .then(function(l){ liste=l; return _kfOkut(liste); })
       .then(function(){
         bekle.remove();
-        var say={}; liste.forEach(function(f){ f.koliler.forEach(function(k){ var km=_kfEtiketModel(k); if(km) say[_kfModelTaban(km)]=(say[_kfModelTaban(km)]||0)+1; }); });
+        var say={}, adi={}; liste.forEach(function(f){ f.koliler.forEach(function(k){ var km=_kfEtiketModel(k); if(km){ var ki=_kfModelKimlik(km); say[ki]=(say[ki]||0)+1; if(!adi[ki]) adi[ki]=_kfBilinenAd(km); } }); });
         var sira=Object.keys(say).sort(function(a,b){ return say[b]-say[a]; });
         if(!sira.length){ toast('Fotoğraflarda model kodu okunamadı. Modeli açıp Gelen Gir içinden dene.','error'); return; }
         var tum=getData(store)||[];
         // Aynı model ve RPT'leri (J5911, J5911 RPT): kolilerin cm / rengine en çok uyan, bekleyeni olan
-        var aday=tum.filter(function(x){ return _kfModelTaban(x.modelKodu)===sira[0]; });
+        var aday=tum.filter(function(x){ return _kfModelKimlik(x.modelKodu)===sira[0]; });
         var puan=function(x){
           var p=0, sz=(x.sizes||[]);
           liste.forEach(function(f){ f.koliler.forEach(function(k){
@@ -10330,7 +10384,7 @@ function _kfSayfaSec(store, kamera){
         // Etiketlerde renk adı var ama hiçbir koli bu modelin rengine uymuyor → eski sipariş; yeni satın alma öner
         var renkli=0, uyan=0;
         liste.forEach(function(f){ f.koliler.forEach(function(k){
-          if(!_kfEtiketRenk(k).ad || _kfModelTaban(_kfEtiketModel(k))!==sira[0]) return;
+          if(!_kfEtiketRenk(k).ad || _kfModelKimlik(_kfEtiketModel(k))!==sira[0]) return;
           renkli++;
           if((m.sizes||[]).some(function(z){ return !_kfRenkTutmuyor(k, z.renk); })) uyan++;
         }); });
@@ -10339,7 +10393,7 @@ function _kfSayfaSec(store, kamera){
         if(!_tkg) return;
         liste.forEach(function(f){ f.durum='tamam'; });
         _tkg.foto.liste=liste; _kfUygula(); _kfCiz();
-        if(sira.length>1) toast('Başka model de var: '+sira.slice(1).join(', ')+'. Onları ayrıca gir.','info');
+        if(sira.length>1) toast('Başka model de var: '+sira.slice(1).map(function(x){ return adi[x]||x; }).join(', ')+'. Onları ayrıca gir.','info');
       })
       .catch(function(e){ bekle.remove(); toast('Okunamadı: '+(e&&e.message||e),'error'); });
   };

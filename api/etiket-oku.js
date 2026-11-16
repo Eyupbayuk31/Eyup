@@ -28,11 +28,15 @@ const ISTEM =
   've bir tablo: Renk (ör. "1400690 127"), Uzunluk (cm, ör. 23), Miktar (adet, ör. 1350).\n' +
   'YKK etiketlerinde model kodu "J 5911 - SEPARE - PEMBE" gibi bir satırdadır: model J5911, renk adı PEMBE. ' +
   '"Item" altındaki 7 haneli sayı (ör. 4964423) ve FS6000000X ürün kodudur, MODEL DEĞİLDİR.\n' +
+  'Bazı YKK etiketlerinde model satırı "M1S10388-SYAH KASIM 2026" gibidir (sipariş numarası OR01012316 ve 014211 - 000 satırının altında): ' +
+  'model M1S10388, renk adı SYAH (= SİYAH); KASIM 2026 sezondur. baslik alanına bu satırı aynen yaz. ' +
+  'Item satırındaki ürün tanımı (ör. "VSOR-56 DA8MAVI97 EFJ PB1 GREEN-F N-ANTI NEWKOB4") YKK ürün özelliğidir: içindeki VSOR-56, DA8MAVI97 gibi kodlar MODEL DEĞİLDİR, renk de değildir. ' +
+  'Color sütunundaki kod (ör. L1125) renk_kodu alanına yazılır.\n' +
   'Kurallar: model alanına sadece model kodunu yaz (J4842, J5911 gibi; mutlaka harfle başlar), tedarikçi iş numarasını (212211-2) ya da ürün kodunu yazma. ' +
   'baslik alanına model kodunun geçtiği satırı aynen yaz (ör. "J 5911 - SEPARE - PEMBE"). ' +
   'uzunluk cm cinsinden sayı, miktar adet cinsinden tam sayı. Emin olmadığın alanı boş bırak ya da 0 yaz, uydurma. ' +
   'Fotoğrafta okunabilir koli etiketi yoksa okunabildi=false yaz.\n' +
-  'ELLE YAZILMIŞ ETİKET: torba ya da koli üstüne kâğıtla yazılmış olabilir. Üstüne yazılarak düzeltilmiş rakamda düzeltilmiş hâli geçerlidir (model kodu çoğunlukla bir harf + 4 rakam, ör. J4842). ' +
+  'ELLE YAZILMIŞ ETİKET: torba ya da koli üstüne kâğıtla yazılmış olabilir. Model kodunun ortasında harf olabilir (M1S10388: M, 1, S harfi, 10388); elle yazılmış S harfini 5 rakamı sanma, aradaki boşlukları birleştir ("M1 S 10388" = M1S10388). Üstüne yazılarak düzeltilmiş rakamda düzeltilmiş hâli geçerlidir (model kodu çoğunlukla bir harf + 4 rakam, ör. J4842). ' +
   'HAM KORDON / METRE: ölçüsüz mal metreyle gelir ("3645 MT", "3645 metre"): uzunluk=0, miktar=metre, renk_kodu=yazan renk adı (ör. KAHVE RENGİ).\n' +
   'KARIŞIK KOLİ: bir etiketin tablosunda birden çok satır (farklı uzunluk ya da renk) varsa HER SATIR için ayrı kayıt döndür; ' +
   'miktarları toplama, en büyük uzunluğa yazma. Aynı etiketin satırları aynı etiket numarasını alır. ' +
@@ -196,6 +200,24 @@ const SEMA = {
   required: ['koliler']
 };
 
+// Etiketten okunan model kodunu temizle.
+// - Harfsiz kod (YKK ürün kodu 4964423) model değildir.
+// - YKK ürün tanımındaki kod (VSOR-56, CFC-56) model değildir.
+// - "M1S10388-SYAH" gibi renk eki taşıyorsa eki at.
+// - Model alanı boş ya da geçersizse başlık satırından ("M1S10388-SYAH KASIM 2026",
+//   "J 5911 - SEPARE - PEMBE") çıkar.
+const MODEL_DESEN = /^[A-Z]{1,3}(\d{3,}|\d{1,2}[A-Z]\d{3,})$/;   // J4842, M1023289, M1S10388; PB1 / DA8MAVI97 değil
+function modelTemiz(ham, baslik) {
+  const m = String(ham || '').trim().toUpperCase().replace(/İ/g, 'I').replace(/\s+/g, '');
+  if (MODEL_DESEN.test(m)) return m;
+  const parca = m.split(/[-_/]/).filter(x => MODEL_DESEN.test(x))[0];
+  if (parca) return parca;
+  const b = String(baslik || '').toUpperCase().replace(/İ/g, 'I').match(/\b[A-Z]{1,3}\s?(\d{3,}|\d{1,2}[A-Z]\d{3,})\b/);
+  if (b) return b[0].replace(/\s+/g, '');
+  if (/^[A-Z]{2,6}-\d{1,3}$/.test(m)) return '';          // VSOR-56 gibi ürün tanımı
+  return (/[A-Z]/.test(m) && /\d/.test(m)) ? m : '';
+}
+
 function hataMetni(status, govde) {
   const m = (govde && govde.error && govde.error.message) || '';
   if (status === 429) return 'Günlük ücretsiz okuma hakkı doldu ya da çok sık istek gitti. Biraz sonra tekrar dene.';
@@ -314,8 +336,7 @@ module.exports = async function (req, res) {
           foto: Math.max(0, (parseInt(k.foto, 10) || 1) - 1),       // 0 tabanlı
           etiket: Math.max(1, parseInt(k.etiket, 10) || 1),
           okunabildi: k.okunabildi !== false,
-          // Harfsiz kod (ör. YKK ürün kodu 4964423) model değildir
-          model: (m => (/[A-Z]/.test(m) && /\d/.test(m)) ? m : '')(String(k.model || '').trim().toUpperCase().replace(/\s+/g, '')),
+          model: modelTemiz(k.model, k.baslik),
           baslik: String(k.baslik || '').trim().slice(0, 120),
           koli_no: String(k.koli_no || '').replace(/\s+/g, '').slice(0, 40),
           uzunluk: +k.uzunluk || 0,
