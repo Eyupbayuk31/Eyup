@@ -4674,6 +4674,10 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
           <i class="fas fa-file-pdf"></i>
           <span>PDF indir</span>
         </button>
+        <button class="modal-action-btn secondary" onclick="koliFotoIrsaliyeyeEkle()" id="modalKoliFotoBtn" title="Takipteki koli fotoğraflarını bu irsaliyeye ekle (QR'da görünür)" style="display:none;">
+          <i class="fas fa-box-open"></i>
+          <span>Koli fotoğraflarını ekle</span>
+        </button>
         <button class="modal-action-btn secondary edit-accent" onclick="editCurrentModalItem()" id="modalEditBtn" title="Bu irsaliyeyi düzenle" style="display:none;">
           <i class="fas fa-pen"></i>
           <span>Düzenle</span>
@@ -9674,6 +9678,61 @@ function _takipDurumQr(store, m){
   }catch(e){ return ''; }
 }
 
+// Koli fotoğrafı irsaliye kesildikten SONRA yüklendiyse (ör. gelen elle girilmiş,
+// fotoğraflar sonradan "sadece fotoğrafları kaydet" ile eklendi) o modelin son
+// 45 gündeki irsaliyelerine de eklenir ve QR sayfası tazelenir. Dönen: irsaliye no'ları.
+function _kfFotoIrsaliyelere(store, m, urls){
+  urls=(urls||[]).filter(Boolean); if(!urls.length || !m) return [];
+  var key=store==='fermuarTakip'?'fermuarlar':'kordonlar', type=store==='fermuarTakip'?'fermuar':'kordon';
+  var kim=_kfModelKimlik(m.modelKodu), sinir=Date.now()-45*864e5, list=getData(key)||[], nolar=[], idler=[];
+  list.forEach(function(it){
+    if(!it || !it.model || _kfModelKimlik(it.model)!==kim) return;
+    var t=Date.parse(it.tarih||'')||0; if(t && t<sinir) return;
+    var ph=Array.isArray(it._photos)?it._photos.slice():[];
+    if(!ph.length && it._photoUrl) ph=[{data:'', at:it._photoAt||'', url:it._photoUrl, urlAt:it._photoAt||'', urlManual:false}];
+    var var_={}; ph.forEach(function(p){ if(p && p.url) var_[p.url]=1; });
+    var ek=urls.filter(function(u){ return !var_[u]; }).slice(0, Math.max(0, 20-ph.length));
+    if(!ek.length) return;
+    var su=new Date().toISOString();
+    ek.forEach(function(u){ ph.push({data:'', at:su, url:u, urlAt:su, urlManual:false, koli:true, koliModel:store+':'+m.id}); });
+    it._photos=ph; it._updatedAt=Date.now();
+    nolar.push(it.no||('#'+it.id)); idler.push(it.id);
+  });
+  if(idler.length){
+    setData(key, list);
+    idler.forEach(function(id){ try{ _scheduleViewerJsonRefresh(id, type); }catch(_){} });
+  }
+  return nolar;
+}
+
+// Bu irsaliyede henüz olmayan, takipteki aynı modelin koli fotoğrafları
+function _kfIrsTakipFotolari(item, type){
+  if(!item || !item.model || (type!=='fermuar' && type!=='kordon')) return [];
+  var store=type==='fermuar'?'fermuarTakip':'kordonTakip', kim=_kfModelKimlik(item.model), var_={}, out=[];
+  _getPhotosArray(item).forEach(function(p){ if(p && p.url) var_[p.url]=1; });
+  (getData(store)||[]).forEach(function(m){
+    if(!m || _kfModelKimlik(m.modelKodu||'')!==kim) return;
+    (m.kabuller||[]).forEach(function(k){ (k.fotolar||[]).forEach(function(u,i){ if(u && !var_[u] && (k.koliler||[]).some(function(x){ return x.f===i; })){ var_[u]=1; out.push({store:store, m:m, url:u}); } }); });
+  });
+  return out;
+}
+// Detay > Diğer > "Koli fotoğraflarını ekle": irsaliye fotoğraflardan önce kesildiyse
+function koliFotoIrsaliyeyeEkle(){
+  var item=currentModalItem, type=currentModalType; if(!item) return;
+  var ek=_kfIrsTakipFotolari(item, type);
+  if(!ek.length){ toast('Bu model için eklenecek koli fotoğrafı yok','info'); return; }
+  var key=TYPE_KEY_MAP[type], list=getData(key)||[], it=list.filter(function(x){ return String(x.id)===String(item.id); })[0]; if(!it) return;
+  var ph=Array.isArray(it._photos)?it._photos.slice():[];
+  if(!ph.length && it._photoUrl) ph=[{data:'', at:it._photoAt||'', url:it._photoUrl, urlAt:it._photoAt||'', urlManual:false}];
+  var su=new Date().toISOString(), yer=Math.max(0, 20-ph.length), eklenen=ek.slice(0, yer);
+  eklenen.forEach(function(e){ ph.push({data:'', at:su, url:e.url, urlAt:su, urlManual:false, koli:true, koliModel:e.store+':'+e.m.id}); });
+  it._photos=ph; it._updatedAt=Date.now();
+  setData(key, list);
+  try{ _scheduleViewerJsonRefresh(it.id, type); }catch(_){}
+  toast(eklenen.length+' koli fotoğrafı eklendi. QR sayfası birkaç saniye içinde güncellenir.','success');
+  try{ showDetailUni(it.id, type); }catch(_){}
+}
+
 // İrsaliye Kes: takipteki modelin koli fotoğrafları irsaliyenin fotoğraflarına
 // kendiliğinden eklenir (zaten GitHub'da; yeniden yüklenmez). Başka modelden
 // kalan koli fotoğrafları çıkarılır, elle eklenenlere dokunulmaz.
@@ -10258,6 +10317,7 @@ function _kfFotolariYukle(store, modelId, kabulId, veriler){
     k.fotolar=veriler.map(function(_,i){ return adresler[i]||''; });
     _ftStamp(m); setData(store, list);
     try{ _tkgYenile(store, modelId); }catch(_){}
+    try{ var irs=_kfFotoIrsaliyelere(store, m, k.fotolar); if(irs.length) toast('Koli fotoğrafları '+irs.join(', ')+' irsaliyesine de eklendi (QR\'da görünür)','info'); }catch(e){ console.warn('[koli] irsaliyeye eklenemedi', e); }
     var eksik=k.fotolar.filter(function(u){ return !u; }).length;
     if(eksik) toast(eksik+' koli fotoğrafı yüklenemedi','error');
   });
@@ -12124,6 +12184,8 @@ function showDetailUni(id,type){
   currentModalType = type;
   const editBtn = document.getElementById('modalEditBtn');
   if(editBtn) editBtn.style.display = EDIT_TYPE_PAGE[type] ? 'flex' : 'none';
+  const kfBtn = document.getElementById('modalKoliFotoBtn');
+  if(kfBtn) kfBtn.style.display = _kfIrsTakipFotolari(item, type).length ? 'flex' : 'none';
   document.getElementById('detailModal').classList.add('show');
 }
 
@@ -22111,7 +22173,7 @@ function _attachNfPhotosToItem(item, type){
   if(!_newFormPhotos.length) return;
   // Fotoğrafları localStorage'e KAYDETME - sadece GitHub'a yüklenecek
   // Base64 data'yı item'a ekleme, sadece placeholder
-  const photos = _newFormPhotos.map(p=>({ data:'', at:p.at, url:p.url||'', urlAt:p.url?p.at:'', urlManual:false }));
+  const photos = _newFormPhotos.map(p=>{ const o={ data:'', at:p.at, url:p.url||'', urlAt:p.url?p.at:'', urlManual:false }; if(p.koli){ o.koli=true; o.koliModel=p.koliModel; } return o; });
   item._photos = photos;
   // _photo ve _photoAt alanlarını boş bırak - localStorage'i şişirmesin
   item._photo = '';
