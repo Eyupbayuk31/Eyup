@@ -37,6 +37,8 @@ const ISTEM =
   'uzunluk cm cinsinden sayı, miktar adet cinsinden tam sayı. Emin olmadığın alanı boş bırak ya da 0 yaz, uydurma. ' +
   'Fotoğrafta okunabilir koli etiketi yoksa okunabildi=false yaz.\n' +
   'ELLE YAZILMIŞ ETİKET: torba ya da koli üstüne kâğıtla yazılmış olabilir. Model kodunun ortasında harf olabilir (M1S10388: M, 1, S harfi, 10388); elle yazılmış S harfini 5 rakamı sanma, aradaki boşlukları birleştir ("M1 S 10388" = M1S10388). Üstüne yazılarak düzeltilmiş rakamda düzeltilmiş hâli geçerlidir (model kodu çoğunlukla bir harf + 4 rakam, ör. J4842). ' +
+  'DÜĞME TORBASI: etikette çoğunlukla sadece model ve adet yazar (ör. "J4839 16.030", "J4835 17.500 AD"; nokta binlik ayracıdır): uzunluk=0, miktar=adet, renk yazmıyorsa renk_kodu boş. ' +
+  'TERAZİ: fotoğrafta tartı ekranı (WEIGHT, UNIT WEIGHT, COUNT) varsa o sayılar etiket değildir; miktar için etikette yazan sayıyı kullan.\n' +
   'HAM KORDON / METRE: ölçüsüz mal metreyle gelir ("3645 MT", "3645 metre"): uzunluk=0, miktar=metre, renk_kodu=yazan renk adı (ör. KAHVE RENGİ).\n' +
   'KARIŞIK KOLİ: bir etiketin tablosunda birden çok satır (farklı uzunluk ya da renk) varsa HER SATIR için ayrı kayıt döndür; ' +
   'miktarları toplama, en büyük uzunluğa yazma. Aynı etiketin satırları aynı etiket numarasını alır. ' +
