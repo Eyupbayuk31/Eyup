@@ -8426,14 +8426,15 @@ function _ykkSecimAc(){
   var S=_ykk.satirlar=_ykk.satirlar.slice().sort(function(a,b){ return (_ykkTarih(b.tarih)||'').localeCompare(_ykkTarih(a.tarih)||''); });
   var satir=S.map(function(s, i){
     var tk=_ykkTakipte(s.musteriNo), a=ak[s.id], gun=_ykkGun(s.tarih), eski=gun!=null && gun>_YKK_YENI_GUN;
-    var rozet=a ? '<em class="ykk-r al">Aktarıldı</em>' : tk ? '<em class="ykk-r tk">Takipte: '+esc(tk.modelKodu)+'</em>' : eski ? '<em class="ykk-r tk">Eski · '+gun+' gün</em>' : '<em class="ykk-r yeni">Yeni</em>';
-    var sec=!a && !tk && !eski;
+    var numune=/NUMUNE|SAMPLE/i.test(_ydKatla(s.musteriNo||'').toUpperCase());   // numune siparişi satın alma değildir
+    var rozet=a ? '<em class="ykk-r al">Aktarıldı</em>' : numune ? '<em class="ykk-r tk">Numune</em>' : tk ? '<em class="ykk-r tk">Takipte: '+esc(tk.modelKodu)+'</em>' : eski ? '<em class="ykk-r tk">Eski · '+gun+' gün</em>' : '<em class="ykk-r yeni">Yeni</em>';
+    var sec=!a && !tk && !eski && !numune;
     return '<label class="ykk-s'+(sec?' sec':'')+'"><input type="checkbox" data-i="'+i+'"'+(sec?' checked':'')+' onchange="this.closest(\'.ykk-s\').classList.toggle(\'sec\',this.checked);_ykkSayac()">'+
       '<span class="ykk-s-ana"><b>'+esc(s.musteriNo||'—')+'</b><small>'+esc(s.id)+' · '+esc(s.tarih||'')+' · '+esc(s.durum||'')+(s.termin?' · termin '+esc(String(s.termin).split(' ')[0]):'')+'</small></span>'+rozet+'</label>';
   }).join('');
   _ykkModal(
     '<div class="ykk-bas"><h3><i class="fas fa-cloud-arrow-down"></i> YKK siparişleri</h3><button type="button" class="ft-x" onclick="_ykkKapat()" aria-label="Kapat"><i class="fas fa-times"></i></button></div>'+
-    '<p class="ykk-not">Portal sayfasındaki '+S.length+' sipariş. Seçtiklerinin PDF\'i alınır ve <b>PDF\'ten Satın Alma</b> ile Fermuar Takip\'e eklenir; kaydetmeden önce kontrol edersin. Aktarılmış, takipte olan ya da '+_YKK_YENI_GUN+' günden eski siparişler seçili gelmez; istersen işaretleyebilirsin. Aynı adetler zaten girilmişse kaydederken de atlanır.</p>'+
+    '<p class="ykk-not">Portal sayfasındaki '+S.length+' sipariş. Seçtiklerinin PDF\'i alınır ve <b>PDF\'ten Satın Alma</b> ile Fermuar Takip\'e eklenir; kaydetmeden önce kontrol edersin. Aktarılmış, takipte olan, numune ya da '+_YKK_YENI_GUN+' günden eski siparişler seçili gelmez; istersen işaretleyebilirsin. Aynı adetler zaten girilmişse kaydederken de atlanır.</p>'+
     '<div class="ykk-liste">'+satir+'</div>'+
     '<div class="ykk-alt"><button type="button" class="btn btn-primary" id="ykkAl" onclick="_ykkAl()"><i class="fas fa-download"></i> <span id="ykkAlYazi">Seçilenleri al</span></button><button type="button" class="btn btn-secondary" onclick="_ykkKapat()">Vazgeç</button></div>'
   );
