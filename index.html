@@ -13717,7 +13717,12 @@ function generatePDF(id, type, mode) {
 
       toast('Yazdırma önizlemesi açıldı');
     } else {
-      toast('Popup engellendi — lütfen izin verin', 'error');
+      // Pencere açılamadı (PWA): gizli çerçeveden doğrudan yazdır
+      _gizliCerceve(html, function(govde, f){
+        try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ toast('Yazdırma açılamadı','error'); }
+        setTimeout(function(){ f.remove(); }, 60000);
+      });
+      toast('Yazdırma açılıyor…','info');
     }
     return;
   }
@@ -19329,21 +19334,53 @@ ${pages}
 </body></html>`;
 }
 
+// Belgeyi açılır pencere AÇMADAN sayfa içindeki gizli bir çerçevede hazırla.
+// PWA (uygulama penceresi) açılır pencereyi tarayıcı ayarı izin verse de
+// engelleyebiliyor ("Popup engellendi"). fn(govde, iframe) çerçeve hazır olunca
+// bir kez çağrılır; ağ yavaşsa 3 sn sonra yine çağrılır.
+function _gizliCerceve(html, fn){
+  const f=document.createElement('iframe');
+  f.setAttribute('aria-hidden','true');
+  f.style.cssText='position:fixed;left:-10000px;top:0;width:1000px;height:1400px;border:0;';
+  document.body.appendChild(f);
+  let oldu=false;
+  const calis=function(){
+    if(oldu) return; oldu=true;
+    const d=f.contentDocument; if(!d || !d.body){ f.remove(); toast('Belge hazırlanamadı','error'); return; }
+    try{ fn(d.body, f); }catch(e){ console.warn(e); f.remove(); }
+  };
+  f.addEventListener('load', function(){ setTimeout(calis, 300); }, {once:true});
+  setTimeout(calis, 3000);
+  f.srcdoc=html;
+  return f;
+}
 function bulkExportPDF(){
   const items=_bulkGetSelectedItems();
   if(!items.length) return toast('En az 1 kayıt seçin','error');
-  const w=_openHtmlWindow(_buildBulkHTML(items),'width=1000,height=700');
-  if(!w){ toast('Popup engellendi! İzin verin.','error'); return; }
-  toast(items.length+' kayıt için PDF önizlemesi açıldı — "PDF İndir" ile kaydedin','success');
+  const html=_buildBulkHTML(items);
+  const w=_openHtmlWindow(html,'width=1000,height=700');
+  if(w){
+    toast(items.length+' kayıt için PDF önizlemesi açıldı — "PDF İndir" ile kaydedin','success');
+  } else {
+    // Pencere açılamadı (PWA): PDF'i doğrudan indir
+    toast(items.length+' kayıt için PDF hazırlanıyor…','info');
+    const ad='Toplu_Irsaliye_'+new Date().toISOString().split('T')[0]+'.pdf';
+    _gizliCerceve(html, function(govde, f){
+      const kontrol=govde.querySelector('#bulkPdfControls'); if(kontrol) kontrol.remove();
+      Promise.resolve(_downloadElementAsPDF(govde, ad)).finally(function(){ setTimeout(function(){ f.remove(); }, 1000); });
+    });
+  }
   bulkClear(); // parti bitti: seçimi temizle
 }
 
 function bulkPrint(){
   const items=_bulkGetSelectedItems();
   if(!items.length) return toast('En az 1 kayıt seçin','error');
-  const w=_openHtmlWindow(_buildBulkHTML(items),'width=1000,height=700');
-  if(!w){ toast('Popup engellendi!','error'); return; }
-  _whenWindowReady(w, () => setTimeout(() => { try{ w.print(); }catch(e){} }, 500));
+  // Açılır pencere yok: gizli çerçeveden yazdırma penceresi açılır
+  _gizliCerceve(_buildBulkHTML(items), function(govde, f){
+    try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ toast('Yazdırma açılamadı','error'); }
+    setTimeout(function(){ f.remove(); }, 60000);   // yazdırma penceresi kapanınca çerçeve kaldırılır
+  });
   toast(items.length+' kayıt yazdırılıyor','info');
   // Bu yazdırma partisi bitti — seçimi temizle ki bir sonraki yazdırmaya
   // eski kayıtlar taşınmasın (aksi halde 2+2 seçimde 4 kayıt çıkıyordu).
