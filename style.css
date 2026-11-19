@@ -20067,3 +20067,6 @@ html .tkg-modal .kf-yok-a input.form-input{ height:40px; width:96px; min-width:0
 .ykk-adim small a{ color:var(--primary); text-decoration:underline; }
 .ykk-yi{ margin:8px 0 2px; }
 .ykk-yi-a{ cursor:grab; }
+.ft-c-sip .tk-tt{ display:block; margin-top:2px; font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0; overflow-wrap:anywhere; }
+.ft-c-sip .tk-tt i{ font-size:10px; margin-right:2px; }
+.ft-c-sip .tk-tt.gecti{ color:var(--danger); }
