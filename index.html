@@ -8280,22 +8280,67 @@ function _ykkAktarilan(){ var o={}; (getData('ykkAktarim')||[]).forEach(function
 // Portal başlığındaki renk: "C 1809 SEPARE PEMBE", "M1S10373-K-LACVERT-21-08-26",
 // "I 3302 SEPARE GREY MELANGE", "M1S10533-R-BROWN ILAVE". Renk olmayan kelimeler
 // (SEPARE, DIPLI, LAVE, tarih…) atılır; kısaltma / İngilizce adlar Türkçeye çevrilir.
-var _YKK_RENK_SOZ={SYAH:'Siyah',SIYAH:'Siyah',BLACK:'Siyah',BEYAZ:'Beyaz',BYZ:'Beyaz',WHITE:'Beyaz',GR:'Gri',GRI:'Gri',GREY:'Gri',GRAY:'Gri',
-  MELANGE:'Melanj',MELANJ:'Melanj',LACVERT:'Lacivert',LACIVERT:'Lacivert',LCVRT:'Lacivert',NAVY:'Lacivert',KAHVE:'Kahve',BROWN:'Kahve',
-  KIRMIZI:'Kırmızı',RED:'Kırmızı',BORDO:'Bordo',BURGUNDY:'Bordo',PEMBE:'Pembe',PINK:'Pembe',MAVI:'Mavi',BLUE:'Mavi',YESIL:'Yeşil',GREEN:'Yeşil',
-  TURKUAZ:'Turkuaz',TURQUOISE:'Turkuaz',EKRU:'Ekru',ECRU:'Ekru',BEJ:'Bej',BEIGE:'Bej',HAKI:'Haki',KHAKI:'Haki',ANTRASIT:'Antrasit',FUME:'Füme',
-  INDIGO:'İndigo',SARI:'Sarı',YELLOW:'Sarı',MOR:'Mor',PURPLE:'Mor',LILA:'Lila',VIZON:'Vizon',KREM:'Krem',CREAM:'Krem',MINT:'Mint',
-  KOYU:'Koyu',DARK:'Koyu',ACIK:'Açık',LIGHT:'Açık',K:'Koyu',A:'Açık'};
+// Tek kelime (katlanmış, büyük harf: Ş→S, İ→I …) → Türkçe renk adı
+var _YKK_RENK_SOZ={
+  // siyah / beyaz / krem
+  SIYAH:'Siyah',SYAH:'Siyah',SYH:'Siyah',SIYH:'Siyah',BLACK:'Siyah',BLK:'Siyah',BLCK:'Siyah',NOIR:'Siyah',
+  BEYAZ:'Beyaz',BYZ:'Beyaz',BYAZ:'Beyaz',BEYZ:'Beyaz',WHITE:'Beyaz',WHT:'Beyaz',OPTIK:'Optik Beyaz',OPTIC:'Optik Beyaz',
+  KREM:'Krem',CREAM:'Krem',IVORY:'Fildişi',FILDISI:'Fildişi',EKRU:'Ekru',ECRU:'Ekru',EKR:'Ekru',
+  BEJ:'Bej',BEIGE:'Bej',TAS:'Taş',STONE:'Taş',KUM:'Kum',SAND:'Kum',VIZON:'Vizon',MINK:'Vizon',CAMEL:'Camel',DEVETUYU:'Deve Tüyü',
+  TABA:'Taba',TAN:'Taba',TARCIN:'Tarçın',CINNAMON:'Tarçın',NATUREL:'Naturel',NATURAL:'Naturel',NUDE:'Ten',TEN:'Ten',
+  // sarı / turuncu / kırmızı / pembe
+  SARI:'Sarı',YELLOW:'Sarı',LIMON:'Limon',LEMON:'Limon',HARDAL:'Hardal',MUSTARD:'Hardal',
+  TURUNCU:'Turuncu',ORANJ:'Turuncu',ORANGE:'Turuncu',TRNC:'Turuncu',SOMON:'Somon',SALMON:'Somon',MERCAN:'Mercan',CORAL:'Mercan',
+  KIRMIZI:'Kırmızı',KRMZ:'Kırmızı',KRMIZI:'Kırmızı',RED:'Kırmızı',KIREMIT:'Kiremit',RUST:'Kiremit',
+  BORDO:'Bordo',BRD:'Bordo',BURGUNDY:'Bordo',BORDEAUX:'Bordo',SARAP:'Şarap',WINE:'Şarap',VISNE:'Vişne',CHERRY:'Vişne',
+  PEMBE:'Pembe',PMB:'Pembe',PMBE:'Pembe',PINK:'Pembe',PUDRA:'Pudra',POWDER:'Pudra',BLUSH:'Pudra',
+  FUSYA:'Fuşya',FUSIA:'Fuşya',FUCHSIA:'Fuşya',FUSCHIA:'Fuşya',MAGENTA:'Fuşya',ROSE:'Gül',GUL:'Gül',
+  // mor
+  MOR:'Mor',PURPLE:'Mor',LILA:'Lila',LILAC:'Lila',LAVANTA:'Lavanta',LAVENDER:'Lavanta',MURDUM:'Mürdüm',PLUM:'Mürdüm',PATLICAN:'Patlıcan',
+  // mavi / lacivert
+  LACIVERT:'Lacivert',LACVERT:'Lacivert',LACIVRT:'Lacivert',LCVRT:'Lacivert',LCV:'Lacivert',LAC:'Lacivert',NAVY:'Lacivert',MARINE:'Lacivert',
+  MAVI:'Mavi',MV:'Mavi',BLUE:'Mavi',BLU:'Mavi',SAKS:'Saks',COBALT:'Saks',ROYAL:'Saks',INDIGO:'İndigo',DENIM:'Denim',
+  BEBE:'Bebe',BABY:'Bebe',BUZ:'Buz',ICE:'Buz',PETROL:'Petrol',TEAL:'Petrol',TURKUAZ:'Turkuaz',TRKZ:'Turkuaz',TURQUOISE:'Turkuaz',AQUA:'Turkuaz',
+  // yeşil
+  YESIL:'Yeşil',YSL:'Yeşil',GREEN:'Yeşil',MINT:'Mint',HAKI:'Haki',HKI:'Haki',KHAKI:'Haki',ZEYTIN:'Zeytin',OLIVE:'Zeytin',
+  CAGLA:'Çağla',NEFTI:'Nefti',ZUMRUT:'Zümrüt',EMERALD:'Zümrüt',KUF:'Küf',
+  // gri
+  GRI:'Gri',GR:'Gri',GREY:'Gri',GRAY:'Gri',GRY:'Gri',MELANJ:'Melanj',MELANGE:'Melanj',MELANCE:'Melanj',
+  ANTRASIT:'Antrasit',ANTRA:'Antrasit',ANTR:'Antrasit',ANT:'Antrasit',ANTHRACITE:'Antrasit',CHARCOAL:'Antrasit',FUME:'Füme',SMOKE:'Füme',
+  // kahve
+  KAHVE:'Kahve',KHV:'Kahve',KHVE:'Kahve',KAHVERENGI:'Kahverengi',BROWN:'Kahve',BRWN:'Kahve',COFFEE:'Kahve',CIKOLATA:'Çikolata',CHOCOLATE:'Çikolata',TUTUN:'Tütün',TOBACCO:'Tütün',
+  // metal / diğer
+  GOLD:'Gold',ALTIN:'Altın',GUMUS:'Gümüş',SILVER:'Gümüş',NIKEL:'Nikel',NICKEL:'Nikel',BRONZ:'Bronz',BRONZE:'Bronz',BAKIR:'Bakır',COPPER:'Bakır',
+  SEFFAF:'Şeffaf',TRANSPARENT:'Şeffaf',LEOPAR:'Leopar',LEOPARD:'Leopar',
+  // ton sözcükleri
+  KOYU:'Koyu',DARK:'Koyu',DRK:'Koyu',ACIK:'Açık',LIGHT:'Açık',LT:'Açık',K:'Koyu',A:'Açık'};
+// Çok kelimeli adlar (önce bunlar aranır)
+var _YKK_RENK_IKILI=[['OFF WHITE','Kırık Beyaz'],['KIRIK BEYAZ','Kırık Beyaz'],['KIRLI BEYAZ','Kirli Beyaz'],['OPTIK BEYAZ','Optik Beyaz'],
+  ['GUL KURUSU','Gül Kurusu'],['DUSTY ROSE','Gül Kurusu'],['NAR CICEGI','Nar Çiçeği'],['SU YESILI','Su Yeşili'],['KUF YESILI','Küf Yeşili'],
+  ['SAKS MAVISI','Saks Mavisi'],['SAKS MAVI','Saks Mavisi'],['BEBE MAVISI','Bebe Mavisi'],['BEBE MAVI','Bebe Mavisi'],['BABY BLUE','Bebe Mavisi'],
+  ['BUZ MAVI','Buz Mavi'],['BUZ MAVISI','Buz Mavi'],['ICE BLUE','Buz Mavi'],['SKY BLUE','Gök Mavi'],['GOK MAVI','Gök Mavi'],['ROYAL BLUE','Saks Mavisi'],
+  ['DARK NAVY','Koyu Lacivert'],['DEEP NAVY','Koyu Lacivert'],['NAVY BLUE','Lacivert'],['KOYU LACIVERT','Koyu Lacivert'],['K LACIVERT','Koyu Lacivert'],['K LACVERT','Koyu Lacivert'],
+  ['GRI MELANJ','Gri Melanj'],['GREY MELANGE','Gri Melanj'],['GRAY MELANGE','Gri Melanj'],['GR MELANJ','Gri Melanj'],['ANTRASIT MELANJ','Antrasit Melanj'],
+  ['DEVE TUYU','Deve Tüyü'],['ACIK KAHVE','Açık Kahve'],['KOYU KAHVE','Koyu Kahve'],['DARK BROWN','Koyu Kahve'],['LIGHT BROWN','Açık Kahve'],
+  ['ACIK GRI','Açık Gri'],['KOYU GRI','Koyu Gri'],['LIGHT GREY','Açık Gri'],['DARK GREY','Koyu Gri'],['LIGHT GRAY','Açık Gri'],['DARK GRAY','Koyu Gri'],
+  ['ACIK MAVI','Açık Mavi'],['KOYU MAVI','Koyu Mavi'],['LIGHT BLUE','Açık Mavi'],['DARK BLUE','Koyu Mavi'],
+  ['ACIK PEMBE','Açık Pembe'],['LIGHT PINK','Açık Pembe'],['KOYU YESIL','Koyu Yeşil'],['DARK GREEN','Koyu Yeşil'],['ASKER YESILI','Haki'],['ARMY GREEN','Haki'],
+  ['OLIVE GREEN','Zeytin Yeşili'],['ZEYTIN YESILI','Zeytin Yeşili'],['CAGLA YESILI','Çağla Yeşili'],['NEFTI YESIL','Nefti'],['RED BROWN','Kiremit'],['R BROWN','Kahve']];
 var _YKK_RENK_DEGIL=/^(SEPARE|DIPLI|DEFACTO|LAVE|ILAVE|NUMUNE|RPT|KASIM|EKIM|ARALIK|OCAK|SUBAT|MART|NISAN|MAYIS|HAZIRAN|TEMMUZ|AGUSTOS|EYLUL)$/;
 function _ykkModelRenk(no){
   no=String(no||'');
   var model=_kfEtiketModel({baslik:no});
   var mk=model?_kfModelTaban(model):'';
   var katla=function(w){ return _ydKatla(w).toUpperCase(); };
-  var kel=no.split(/[\s\-–\/,;:()]+/).filter(Boolean);
+  // Çok kelimeli adları tek parça yap ("GREY MELANGE" → GREY_MELANGE)
+  var katliBas=' '+no.split(/[\s\-–\/,;:()]+/).filter(Boolean).map(function(w){ return katla(w); }).join(' ')+' ';
+  var ikili={};
+  _YKK_RENK_IKILI.forEach(function(x){ var anah=' '+x[0]+' '; if(katliBas.indexOf(anah)>=0){ var tek=x[0].replace(/ /g,'_'); katliBas=katliBas.split(anah).join(' '+tek+' '); ikili[tek]=x[1]; } });
+  var kel=katliBas.trim().split(' ').filter(Boolean);
   var renk=[];
   kel.forEach(function(w, i){
     var W=katla(w);
+    if(ikili[W]){ renk.push(ikili[W]); return; }
     if(/\d/.test(W) || _YKK_RENK_DEGIL.test(W)) return;
     if(mk && (_kfModelTaban(w)===mk || (W.length<=3 && i+1<kel.length && _kfModelTaban(w+kel[i+1])===mk))) return;   // "C 1809" / "M1S10373"
     if(W.length===1){
@@ -11702,7 +11747,9 @@ var _YD_BD = '(?:3xl|xxxl|2xl|xxl|xl|xxs|xs|tek beden|tek|std|s|m|l)';
 var _YD_BG = _YD_BD+'(?:\\s*[-\\/]\\s*'+_YD_BD+')*';
 var _YD_RENK = ['açık mavi','koyu mavi','açık gri','koyu gri','koyu lacivert','buz mavi','kirli beyaz','kahverengi','lacivert','siyah','beyaz','kahve',
   'bej','ekru','gri','antrasit','füme','kırmızı','bordo','mavi','indigo','yeşil','haki','mint','sarı','hardal','turuncu','pembe','pudra','mor','lila',
-  'vizon','taba','krem','gold','altın','gümüş','nikel','şeffaf','naturel','natürel','somon','petrol','fuşya','mercan','camel','taş','tarçın','zeytin','leopar'];
+  'vizon','taba','krem','gold','altın','gümüş','nikel','şeffaf','naturel','natürel','somon','petrol','fuşya','mercan','camel','taş','tarçın','zeytin','leopar',
+  'kırık beyaz','gül kurusu','nar çiçeği','su yeşili','saks mavisi','bebe mavisi','gri melanj','koyu kahve','açık kahve','koyu yeşil','zeytin yeşili',
+  'turkuaz','melanj','fildişi','limon','oranj','şarap','vişne','lila','lavanta','mürdüm','saks','denim','çağla','nefti','zümrüt','bronz','bakır','kiremit','çikolata','tütün','kum','bej','ekru','antrasit','füme','indigo','mint','haki','hardal','pudra','mor','sarı','turuncu','bordo','mavi','yeşil','gri'];
 var _YD_AY = {ocak:1,subat:2,mart:3,nisan:4,mayis:5,haziran:6,temmuz:7,agustos:8,eylul:9,ekim:10,kasim:11,aralik:12};
 var _YD_ATOLYE_GURULTU = /^(tekstil|tekstıl|konfeksiyon|konf|ltd|sti|san|tic|as|atolye|atolyesi|moda|giyim|ve|imalat|dikim)$/;
 
