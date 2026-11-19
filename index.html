@@ -8277,18 +8277,38 @@ function _ykkYerImiAdres(test){
 }
 function _ykkAktarilan(){ var o={}; (getData('ykkAktarim')||[]).forEach(function(x){ if(x && x.id) o[x.id]=x; }); return o; }
 // "C 1809 - SEPARE - GR LAVE" / "M1S20036-KIRMIZI-SEPARE" → {model, renk}
+// Portal başlığındaki renk: "C 1809 SEPARE PEMBE", "M1S10373-K-LACVERT-21-08-26",
+// "I 3302 SEPARE GREY MELANGE", "M1S10533-R-BROWN ILAVE". Renk olmayan kelimeler
+// (SEPARE, DIPLI, LAVE, tarih…) atılır; kısaltma / İngilizce adlar Türkçeye çevrilir.
+var _YKK_RENK_SOZ={SYAH:'Siyah',SIYAH:'Siyah',BLACK:'Siyah',BEYAZ:'Beyaz',BYZ:'Beyaz',WHITE:'Beyaz',GR:'Gri',GRI:'Gri',GREY:'Gri',GRAY:'Gri',
+  MELANGE:'Melanj',MELANJ:'Melanj',LACVERT:'Lacivert',LACIVERT:'Lacivert',LCVRT:'Lacivert',NAVY:'Lacivert',KAHVE:'Kahve',BROWN:'Kahve',
+  KIRMIZI:'Kırmızı',RED:'Kırmızı',BORDO:'Bordo',BURGUNDY:'Bordo',PEMBE:'Pembe',PINK:'Pembe',MAVI:'Mavi',BLUE:'Mavi',YESIL:'Yeşil',GREEN:'Yeşil',
+  TURKUAZ:'Turkuaz',TURQUOISE:'Turkuaz',EKRU:'Ekru',ECRU:'Ekru',BEJ:'Bej',BEIGE:'Bej',HAKI:'Haki',KHAKI:'Haki',ANTRASIT:'Antrasit',FUME:'Füme',
+  INDIGO:'İndigo',SARI:'Sarı',YELLOW:'Sarı',MOR:'Mor',PURPLE:'Mor',LILA:'Lila',VIZON:'Vizon',KREM:'Krem',CREAM:'Krem',MINT:'Mint',
+  KOYU:'Koyu',DARK:'Koyu',ACIK:'Açık',LIGHT:'Açık',K:'Koyu',A:'Açık'};
+var _YKK_RENK_DEGIL=/^(SEPARE|DIPLI|DEFACTO|LAVE|ILAVE|NUMUNE|RPT|KASIM|EKIM|ARALIK|OCAK|SUBAT|MART|NISAN|MAYIS|HAZIRAN|TEMMUZ|AGUSTOS|EYLUL)$/;
 function _ykkModelRenk(no){
-  var model=_kfEtiketModel({baslik:String(no||'')});
-  var renk=_ftImpBaslikRenk(no||'');
-  if(!renk){
-    // Listede olmayan renk adı (ör. GREY MELANGE): başlıktaki renk kelimeleri olduğu gibi
-    var kel=String(no||'').toLocaleUpperCase('tr').split(/[\s\-–\/,;:()]+/).filter(function(w){
-      return w && !/\d/.test(w) && !/^(SEPARE|DIPLI|DİPLİ|DEFACTO|LAVE|NUMUNE|KASIM|EKIM|EKİM|ARALIK|OCAK|SUBAT|ŞUBAT|MART|NISAN|NİSAN|MAYIS|HAZIRAN|TEMMUZ|AGUSTOS|AĞUSTOS|EYLUL|EYLÜL|RPT|[A-ZÇĞİÖŞÜ])$/.test(w);
-    });
-    if(model){ var mk=_kfModelTaban(model); kel=kel.filter(function(w){ return _kfModelTaban(w)!==mk; }); }
-    renk=kel.map(function(w){ return w.charAt(0)+w.slice(1).toLocaleLowerCase('tr'); }).join(' ');
-  }
-  return {model:model, renk:renk};
+  no=String(no||'');
+  var model=_kfEtiketModel({baslik:no});
+  var mk=model?_kfModelTaban(model):'';
+  var katla=function(w){ return _ydKatla(w).toUpperCase(); };
+  var kel=no.split(/[\s\-–\/,;:()]+/).filter(Boolean);
+  var renk=[];
+  kel.forEach(function(w, i){
+    var W=katla(w);
+    if(/\d/.test(W) || _YKK_RENK_DEGIL.test(W)) return;
+    if(mk && (_kfModelTaban(w)===mk || (W.length<=3 && i+1<kel.length && _kfModelTaban(w+kel[i+1])===mk))) return;   // "C 1809" / "M1S10373"
+    if(W.length===1){
+      // Tek harf: arkasında renk varsa K → Koyu, A → Açık; yoksa (ör. R-BROWN'daki R) atlanır
+      var sonra=kel[i+1]?katla(kel[i+1]):''; if(_YKK_RENK_SOZ[sonra] && (W==='K' || W==='A')) renk.push(_YKK_RENK_SOZ[W]);
+      return;
+    }
+    var t=_YKK_RENK_SOZ[W] || _ftImpBaslikRenk(w) || (w.charAt(0)+w.slice(1).toLocaleLowerCase('tr'));
+    renk.push(t);
+  });
+  var r=renk.filter(function(x,i,a){ return a.indexOf(x)===i; }).join(' ');
+  if(/^Kahve$/.test(r)) r='Kahverengi';
+  return {model:model, renk:r};
 }
 function _ykkTakipte(no){
   var mr=_ykkModelRenk(no); if(!mr.model) return null;
@@ -8325,18 +8345,21 @@ function _ykkModal(ic){
   document.body.appendChild(m);
   return m;
 }
+var _YKK_YENI_GUN=21;   // bundan eski siparişler "eski" sayılır, seçili gelmez
+function _ykkGun(t){ var d=_ykkTarih(t); if(!d) return null; return Math.floor((Date.now()-new Date(d+'T12:00:00').getTime())/864e5); }
 function _ykkSecimAc(){
-  var ak=_ykkAktarilan(), S=_ykk.satirlar;
+  var ak=_ykkAktarilan();
+  var S=_ykk.satirlar=_ykk.satirlar.slice().sort(function(a,b){ return (_ykkTarih(b.tarih)||'').localeCompare(_ykkTarih(a.tarih)||''); });
   var satir=S.map(function(s, i){
-    var tk=_ykkTakipte(s.musteriNo), a=ak[s.id];
-    var rozet=a ? '<em class="ykk-r al">Aktarıldı</em>' : tk ? '<em class="ykk-r tk">Takipte: '+esc(tk.modelKodu)+'</em>' : '<em class="ykk-r yeni">Yeni</em>';
-    var sec=!a && !tk;
+    var tk=_ykkTakipte(s.musteriNo), a=ak[s.id], gun=_ykkGun(s.tarih), eski=gun!=null && gun>_YKK_YENI_GUN;
+    var rozet=a ? '<em class="ykk-r al">Aktarıldı</em>' : tk ? '<em class="ykk-r tk">Takipte: '+esc(tk.modelKodu)+'</em>' : eski ? '<em class="ykk-r tk">Eski · '+gun+' gün</em>' : '<em class="ykk-r yeni">Yeni</em>';
+    var sec=!a && !tk && !eski;
     return '<label class="ykk-s'+(sec?' sec':'')+'"><input type="checkbox" data-i="'+i+'"'+(sec?' checked':'')+' onchange="this.closest(\'.ykk-s\').classList.toggle(\'sec\',this.checked);_ykkSayac()">'+
       '<span class="ykk-s-ana"><b>'+esc(s.musteriNo||'—')+'</b><small>'+esc(s.id)+' · '+esc(s.tarih||'')+' · '+esc(s.durum||'')+(s.termin?' · termin '+esc(String(s.termin).split(' ')[0]):'')+'</small></span>'+rozet+'</label>';
   }).join('');
   _ykkModal(
     '<div class="ykk-bas"><h3><i class="fas fa-cloud-arrow-down"></i> YKK siparişleri</h3><button type="button" class="ft-x" onclick="_ykkKapat()" aria-label="Kapat"><i class="fas fa-times"></i></button></div>'+
-    '<p class="ykk-not">Portal sayfasındaki '+S.length+' sipariş. Seçtiklerinin PDF\'i alınır ve <b>PDF\'ten Satın Alma</b> ile Fermuar Takip\'e eklenir; kaydetmeden önce kontrol edersin. Aktarılmış ya da takipte olan siparişler seçili gelmez.</p>'+
+    '<p class="ykk-not">Portal sayfasındaki '+S.length+' sipariş. Seçtiklerinin PDF\'i alınır ve <b>PDF\'ten Satın Alma</b> ile Fermuar Takip\'e eklenir; kaydetmeden önce kontrol edersin. Aktarılmış, takipte olan ya da '+_YKK_YENI_GUN+' günden eski siparişler seçili gelmez; istersen işaretleyebilirsin. Aynı adetler zaten girilmişse kaydederken de atlanır.</p>'+
     '<div class="ykk-liste">'+satir+'</div>'+
     '<div class="ykk-alt"><button type="button" class="btn btn-primary" id="ykkAl" onclick="_ykkAl()"><i class="fas fa-download"></i> <span id="ykkAlYazi">Seçilenleri al</span></button><button type="button" class="btn btn-secondary" onclick="_ykkKapat()">Vazgeç</button></div>'
   );
