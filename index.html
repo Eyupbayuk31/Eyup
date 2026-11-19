@@ -1110,6 +1110,39 @@
             merged.set(id, item);
           }
         }
+        // Takip koli kayıtları: bütün kayıt "son yazan kazanır" ile seçiliyor; fotoğraf
+        // adresleri yazılmadan önce kaydı almış başka bir cihazın eski kopyası adresleri
+        // boşla ezebiliyordu. Kopyalar birleşirken dolu adres her zaman korunur; bulut
+        // eksik kaldıysa düzeltilmiş kayıt geri yazılır.
+        if(key==='fermuarTakip' || key==='kordonTakip' || key==='dugmeTakip'){
+          for(const [id, kazanan] of merged){
+            const l=localMap.get(id), c=cloud.get(id);
+            if(!l || !c) continue;
+            const diger = (kazanan===l) ? c : l;
+            if(!Array.isArray(kazanan.kabuller) || !Array.isArray(diger.kabuller)) continue;
+            let kopya=null, bulutEksik=false;
+            kazanan.kabuller.forEach(function(k, ki){
+              const o=diger.kabuller.find(function(x){ return x && x.id===k.id; });
+              if(!o || !Array.isArray(o.fotolar)) return;
+              o.fotolar.forEach(function(u, si){
+                if(!u || (Array.isArray(k.fotolar) && k.fotolar[si])) return;
+                if(!kopya) kopya=JSON.parse(JSON.stringify(kazanan));
+                const kk=kopya.kabuller[ki]; kk.fotolar=Array.isArray(kk.fotolar)?kk.fotolar:[];
+                while(kk.fotolar.length<=si) kk.fotolar.push('');
+                kk.fotolar[si]=u;
+              });
+            });
+            if(kopya){
+              merged.set(id, kopya);
+              // Buluttaki kopyada olmayan adres var mı? Varsa düzeltilmiş kaydı yaz
+              (kopya.kabuller||[]).forEach(function(k){
+                const ck=(c.kabuller||[]).find(function(x){ return x && x.id===k.id; });
+                (k.fotolar||[]).forEach(function(u, si){ if(u && !(ck && ck.fotolar && ck.fotolar[si])) bulutEksik=true; });
+              });
+              if(bulutEksik){ try{ markWrite(key, id); fsSet(key, id, kopya).catch(function(e){ console.warn('[fs] koli foto onarim yazimi', e); }); }catch(_){} }
+            }
+          }
+        }
         // Henuz buluta inmemis (recent yazim) yerel ogeleri koru
         for(const [id, item] of localMap){
           if(!merged.has(id) && isRecent(recent, id)){
@@ -10495,6 +10528,7 @@ function _takipKabulHtml(store, m){
       return '<div class="tk-kb">'+
         '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+_kfKutuSay(k.koliler)+' koli · '+top.toLocaleString('tr')+(k.koliler.every(function(x){ return x.m; })?' '+_tkBr(store):' adet')+'</span>'+
           (k.siparisNo?'<small>Sipariş '+esc(k.siparisNo)+'</small>':'')+'</div>'+
+        (!bosSay && foto.some(Boolean)?'<div class="tk-kb-ok"><i class="fas fa-cloud"></i> Fotoğrafların hepsi bulutta</div>':'')+
         (bosSay?'<div class="tk-kb-eksik"><span><i class="fas fa-triangle-exclamation"></i> '+bosSay+' fotoğraf yüklenememiş. Aynı koli fotoğraflarını yeniden seçersen boş yerlerine konur, adet değişmez.</span>'+
           '<button type="button" class="btn btn-sm btn-secondary" onclick="takipKabulEksikFoto(\''+store+'\','+m.id+')"><i class="fas fa-images"></i> Eksik fotoğrafları yükle</button></div>':'')+
         '<div class="tk-kb-cm">'+cmler+'</div>'+
@@ -11123,8 +11157,8 @@ function _kfIsleriYukle(isler, bildir){
         if(irs.length) toast('Koli fotoğrafları '+irs.join(', ')+' irsaliyesine de eklendi (QR\'da görünür)','info');
       }catch(e){ console.warn('[koli] irsaliyeye eklenemedi', e); }
     });
-    if(hata) toast(hata+' koli fotoğrafı yüklenemedi; telefonda bekliyor, uygulama açılınca ya da internet gelince yeniden denenecek','error');
-    else if(!bildir && tamam.length) toast(tamam.length+' bekleyen koli fotoğrafı yüklendi','success');
+    if(hata) toast(hata+' koli fotoğrafı yüklenemedi; telefonda bekliyor, uygulama açılınca ya da internet gelince yeniden denenecek. Bunları telefondan SİLME.','error');
+    else if(tamam.length) toast(tamam.length+' koli fotoğrafı buluta kaydedildi. Telefondan silebilirsin.','success');
   });
 }
 // Uygulama açılınca / internet gelince telefonda bekleyen fotoğrafları yükle
@@ -22179,10 +22213,15 @@ async function _deletePhotosForItem(item){
     (_getPhotosArray(item) || []).forEach(p=>{ if(p && p.url) urls.add(p.url); });
   }
   if(item._photoUrl) urls.add(item._photoUrl);
+  // Koli fotoğrafları irsaliyeye de eklenir; irsaliye silinince Takip'teki koli
+  // kaydında (ya da başka bir kayıtta) hâlâ kullanılan dosya SİLİNMEZ.
+  let kullanilan = new Set();
+  try{ kullanilan = _collectReferencedPhotoPaths(); }catch(_){ return { tried: urls.size, deleted:0, skipped:true }; }
   let deleted = 0;
   for(const url of urls){
     const path = _extractGithubPath(url);
     if(!path) continue;
+    if(kullanilan.has(path)) continue;
     // backups/ klasorune dokunma — guvenlik
     if(path.startsWith(_BACKUP_FOLDER + '/')) continue;
     // URL hangi branch'i gosteriyorsa oradan sil (eski=main, yeni=data)
@@ -22238,7 +22277,7 @@ function _collectReferencedPhotoPaths(){
   }catch(_){}
   // Fermuar / Kordon Takip mal kabul (koli) fotoğrafları
   try{
-    ['fermuarTakip','kordonTakip'].forEach(st=>{
+    ['fermuarTakip','kordonTakip','dugmeTakip'].forEach(st=>{
       (getData(st) || []).forEach(m=>{ (m && m.kabuller || []).forEach(k=>{ (k.fotolar || []).forEach(addUrl); }); });
     });
   }catch(_){}
