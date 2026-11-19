@@ -7502,7 +7502,7 @@ function ftRenderDetail(){
     host.innerHTML='<div class="empty-state"><i class="fas fa-ruler"></i><p>Henüz beden yok. Yukarıdaki formla ekleyin — <b>küçükten büyüğe cm sırasına</b> göre listelenir.</p></div>';
     return;
   }
-  host.innerHTML = `<div class="ft-rowhead">
+  host.innerHTML = _takipBedenBar('fermuarTakip', m) + `<div class="ft-rowhead">
       <span>Beden</span><span>CM</span><span>Renk</span><span>Sipariş</span><span>Gelen</span><span>Kullanılan</span><span>Eksik</span><span>Stok</span><span></span>
     </div>` + sizes.map(z=>{
     // Satır düzenleme modundaysa satırın yerine düzenleme formu gelir
@@ -9037,7 +9037,7 @@ function ktRenderDetail(){
     ? `<div class="ft-rowhead km-rowhead">
       <span>Renk</span><span>Sipariş (m)</span><span>Gelen</span><span>Kullanılan</span><span>Eksik</span><span>Stok</span><span></span>
     </div>`
-    : `<div class="ft-rowhead">
+    : _takipBedenBar('kordonTakip', m) + `<div class="ft-rowhead">
       <span>Beden</span><span>CM</span><span>Renk</span><span>Sipariş</span><span>Gelen</span><span>Kullanılan</span><span>Eksik</span><span>Stok</span><span></span>
     </div>`) + sizes.map(z=>{
     const _duz=window._takipDuzenle;
@@ -9999,6 +9999,65 @@ function _tkBr(store){ return store==='dugmeTakip' ? 'adet' : 'm'; }          //
 function _tkBrUzun(store){ return store==='dugmeTakip' ? 'adet' : 'metre'; }
 function _tkMalAdi(store){ return store==='dugmeTakip' ? 'Düğme' : 'Ham kordon'; }
 
+// ── Hızlı beden doldur ──────────────────────────────────────────────
+// Satırlar cm sırasıyla dizili; ilk satır XS ise altındaki boş satırlar S, M, L, XL…
+// olur. Aradaki satırda beden yazılıysa sıra oradan devam eder. Yalnız boş bedenler
+// yazılır, yazılı olana dokunulmaz. "XS-S-M" gibi grup bedende sıra durur.
+var _TK_BEDEN_SIRA=['XXS','XS','S','M','L','XL','XXL','3XL'];
+function _takipBedenSiraNo(b){ return _TK_BEDEN_SIRA.indexOf(_takipBedenNorm(b||'')); }
+function _takipBedenBar(store, m){
+  var sz=_ftSizesSorted(m);
+  if(sz.length<2 || !sz.some(function(z){ return !String(z.beden||'').trim(); })) return '';
+  var cap=sz.some(function(z){ return _takipBedenSiraNo(z.beden)>=0; });
+  return '<div class="tk-beden-bar"><span><i class="fas fa-circle-info"></i> '+(cap
+      ? 'Yazılı bedenden sonrası cm sırasıyla devam eder (XS → S, M, L, XL…).'
+      : 'İlk satırın bedenini sor, altındakileri cm sırasıyla doldur (XS → S, M, L…).')+'</span>'+
+    '<button type="button" class="btn btn-sm btn-secondary" onclick="takipBedenDoldur(\''+store+'\','+m.id+')"><i class="fas fa-wand-magic-sparkles"></i> Bedenleri sırayla doldur</button></div>';
+}
+function takipBedenDoldur(store, modelId){
+  var list=getData(store)||[], m=list.filter(function(x){ return x.id===modelId; })[0]; if(!m) return;
+  var sz=_ftSizesSorted(m); if(!sz.length) return;
+  var i0=-1;
+  for(var i=0;i<sz.length;i++){ if(_takipBedenSiraNo(sz[i].beden)>=0){ i0=i; break; } }
+  if(i0<0){
+    var cev=prompt('İlk satırın ('+(sz[0].cm!=null?sz[0].cm+' cm':'en küçük')+') bedeni ne? (XXS, XS, S, M, L, XL, XXL, 3XL)','XS');
+    if(cev===null) return;
+    if(_takipBedenSiraNo(cev)<0){ toast('Tanınmayan beden: '+cev+' — XXS, XS, S, M, L, XL, XXL, 3XL yazın','error'); return; }
+    i0=0; sz[0].beden=_takipBedenNorm(cev);
+  }
+  var eski={}; sz.forEach(function(z){ eski[z.id]=z.beden||''; });
+  var yazilan=0, tasan=0;
+  var bos=function(z){ return !String(z.beden||'').trim(); };
+  // İleri: sıradaki bedenler
+  var cur=_takipBedenSiraNo(sz[i0].beden);
+  for(var j=i0+1;j<sz.length;j++){
+    var no=_takipBedenSiraNo(sz[j].beden);
+    if(no>=0){ cur=no; continue; }
+    if(!bos(sz[j])) break;                         // grup beden (XS-S-M): sıra burada durur
+    cur++;
+    if(cur>=_TK_BEDEN_SIRA.length){ tasan++; continue; }
+    sz[j].beden=_TK_BEDEN_SIRA[cur]; yazilan++;
+  }
+  // Geri: anchor'dan önceki boş satırlar küçük bedenler
+  cur=_takipBedenSiraNo(sz[i0].beden);
+  for(var k=i0-1;k>=0;k--){
+    if(!bos(sz[k])) break;
+    cur--; if(cur<0){ tasan++; continue; }
+    sz[k].beden=_TK_BEDEN_SIRA[cur]; yazilan++;
+  }
+  if(eski[sz[i0].id]!==sz[i0].beden) yazilan++;      // ilk satır sorulduysa
+  if(!yazilan){ toast('Doldurulacak boş beden yok','info'); return; }
+  _ftStamp(m); setData(store, list);
+  _takipCiz(store);
+  var msg=yazilan+' satıra beden yazıldı'+(tasan?' · '+tasan+' satır 3XL\'den sonra kaldı, elle yazın':'');
+  var geri=function(){
+    var l=getData(store)||[], mm=l.filter(function(x){ return x.id===modelId; })[0]; if(!mm) return;
+    (mm.sizes||[]).forEach(function(z){ if(eski[z.id]!=null) z.beden=eski[z.id]; });
+    _ftStamp(mm); setData(store, l); _takipCiz(store); toast('Bedenler eski haline döndü','info');
+  };
+  if(typeof toastAction==='function') toastAction(msg,'success','Geri al',geri); else toast(msg,'success');
+}
+
 // ============ TAKİP SATIRI DÜZENLEME (Fermuar + Kordon ortak) ============
 // Sipariş adedi ya da cm yanlış girildiğinde eskiden tek çare satırı silip
 // yeniden eklemekti — teslimat/kullanım geçmişi de siliniyordu. Artık satır
@@ -10432,13 +10491,24 @@ function _takipKabulHtml(store, m){
         return u ? '<button type="button" class="tk-kb-ft" onclick="takipKabulFoto(\''+store+'\','+m.id+','+k.id+','+i+')" title="Büyüt"><img src="'+esc(u)+'" alt="" loading="lazy"><span>'+alt+'</span></button>'
                  : '<span class="tk-kb-ft bos" title="Fotoğraf yüklenmedi"><i class="fas fa-image"></i><span>'+alt+'</span></span>';
       }).join('');
+      var bosSay=foto.filter(function(u,i){ return !u && k.koliler.some(function(x){ return x.f===i; }); }).length;
       return '<div class="tk-kb">'+
         '<div class="tk-kb-ust"><b>'+(k.tarih?esc(_ftFmtDate(k.tarih)):'—')+'</b><span>'+_kfKutuSay(k.koliler)+' koli · '+top.toLocaleString('tr')+(k.koliler.every(function(x){ return x.m; })?' '+_tkBr(store):' adet')+'</span>'+
           (k.siparisNo?'<small>Sipariş '+esc(k.siparisNo)+'</small>':'')+'</div>'+
+        (bosSay?'<div class="tk-kb-eksik"><span><i class="fas fa-triangle-exclamation"></i> '+bosSay+' fotoğraf yüklenememiş. Aynı koli fotoğraflarını yeniden seçersen boş yerlerine konur, adet değişmez.</span>'+
+          '<button type="button" class="btn btn-sm btn-secondary" onclick="takipKabulEksikFoto(\''+store+'\','+m.id+')"><i class="fas fa-images"></i> Eksik fotoğrafları yükle</button></div>':'')+
         '<div class="tk-kb-cm">'+cmler+'</div>'+
         (resim?'<div class="tk-kb-seri">'+resim+'</div>':'')+
       '</div>';
     }).join('')+'</div>';
+}
+// "Eksik fotoğrafları yükle": Gelen Gir açılır, galeri seçilir; okununca
+// "Adet ekleme, sadece fotoğrafları kaydet" boş yerlere koyar
+function takipKabulEksikFoto(store, modelId){
+  takipGelenAc(store, modelId);
+  if(!_tkg) return;
+  toast('Fotoğrafları seç; okununca "Adet ekleme, sadece fotoğrafları kaydet"e bas','info');
+  setTimeout(function(){ try{ _kfSec(false); }catch(_){} }, 250);
 }
 // Bir teslimatın koli fotoğraflarını büyük göster (baştan i. fotoğrafa kayar)
 function takipKabulFoto(store, modelId, kabulId, bas){
@@ -10728,6 +10798,27 @@ function _kfSadeceFotoHtml(m, o, F){
     (zaten?'<span><i class="fas fa-circle-info"></i> Bu adetler bu ölçülerde zaten gelen olarak girilmiş görünüyor. Kaydet\'e basarsan ikinci kez eklenir.</span>':'<span>Gelen adedi daha önce elle girdiysen:</span>')+
     '<button type="button" class="btn btn-secondary kf-btn" onclick="_kfSadeceFotoKaydet()"><i class="fas fa-images"></i> Adet ekleme, sadece fotoğrafları kaydet</button></div>';
 }
+// Daha önce kaydedilmiş ama fotoğrafı yüklenememiş koliler: yeniden çekilen / seçilen
+// fotoğraflar, okunan cm + adet ile o kayıttaki BOŞ yerlerle eşleştirilir.
+function _kfBosKabulEsle(m, kabul){
+  var adaylar=(m.kabuller||[]).filter(function(E){ return (E.koliler||[]).length && (E.fotolar||[]).some(function(u,i){ return !u && E.koliler.some(function(x){ return x.f===i; }); }); })
+    .sort(function(a,b){ return (b.id||0)-(a.id||0); });
+  for(var a=0;a<adaylar.length;a++){
+    var E=adaylar[a], alindi={}, es=[];
+    for(var pi=0; pi<kabul.yukle.length; pi++){
+      var bu=kabul.koliler.filter(function(x){ return x.f===pi; }); if(!bu.length) continue;
+      var imza=function(l){ return l.map(function(x){ return x.sizeId+':'+Math.round(+x.adet||0); }).sort().join('|'); };
+      var ben=imza(bu);
+      for(var si=0; si<(E.fotolar||[]).length; si++){
+        if(E.fotolar[si] || alindi[si]) continue;
+        var o=E.koliler.filter(function(x){ return x.f===si; }); if(!o.length) continue;
+        if(imza(o)===ben){ alindi[si]=1; es.push({slot:si, veri:kabul.yukle[pi]}); break; }
+      }
+    }
+    if(es.length && es.length>=Math.ceil(kabul.yukle.length/2)) return {E:E, es:es};
+  }
+  return null;
+}
 function _kfSadeceFotoKaydet(){
   if(!_tkg || !_tkg.foto) return;
   var tarih=document.getElementById('tkgTarih').value||_tkgBugun();
@@ -10735,6 +10826,14 @@ function _kfSadeceFotoKaydet(){
   if(!kabul){ toast('Kaydedilecek koli yok','error'); return; }
   var store=_tkg.store, modelId=_tkg.modelId, metre=_tkg.metre;
   var list=getData(store)||[], m=list.filter(function(x){ return x.id===modelId; })[0]; if(!m) return;
+  var esle=_kfBosKabulEsle(m, kabul);
+  if(esle){
+    takipGelenKapat();
+    _tkgYenile(store, modelId);
+    toast(esle.es.length+' fotoğraf '+(esle.E.tarih?_ftFmtDate(esle.E.tarih)+' tarihli ':'')+'kayıttaki boş yerine konuyor'+(kabul.yukle.length>esle.es.length?' · '+(kabul.yukle.length-esle.es.length)+' fotoğraf eşleşmedi':''),'success');
+    _kfFotolariYukle(store, modelId, esle.E.id, esle.es.map(function(x){ return x.veri; }), esle.es.map(function(x){ return x.slot; }));
+    return;
+  }
   // Koli dökümünü, fotoğrafı olmayan en son elle girilmiş gelene bağla (koli sayısı görünsün)
   var sayi={}; kabul.koliler.forEach(function(k){ sayi[k.sizeId]=1; });
   Object.keys(sayi).forEach(function(id){
@@ -10946,29 +11045,108 @@ function _kfKabulHazirla(id, tarih){
             fotolar:fotolar.map(function(){ return ''; }) } };
 }
 // Fotoğrafları GitHub'a yükle, mal kabul kaydına adreslerini yaz
-function _kfFotolariYukle(store, modelId, kabulId, veriler){
-  var cfg=(typeof _getGithubConfig==='function')?_getGithubConfig():null;
-  if(!cfg || !cfg.token || !cfg.owner || !cfg.repo){ toast('Koli fotoğrafları saklanmadı: GitHub ayarı yok (Ayarlar › GitHub Bulut Yükleme)','info'); return; }
-  var adresler=[];
-  veriler.reduce(function(ch, v, i){
-    return ch.then(function(){
-      if(window._kfIptal && window._kfIptal[kabulId]) return;
-      // Bağlantı anlık koparsa 3 sn ve 8 sn sonra tekrar dene
-      var dene=function(kalan){ return _uploadPhotoToCatbox(v).catch(function(e){ if(kalan<=0) throw e; return new Promise(function(r){ setTimeout(r, kalan===2?3000:8000); }).then(function(){ return dene(kalan-1); }); }); };
-      return dene(2).then(function(u){ adresler[i]=u; }).catch(function(e){ adresler[i]=''; console.warn('[koli] foto yüklenemedi', e); });
+// ── Koli fotoğraflarının GitHub'a yüklenmesi ──
+// Eskiden 19 fotoğraf tek tek yükleniyor, adresler ancak HEPSİ bitince kayda
+// yazılıyordu: telefon ekranı kapanır / uygulamadan çıkılırsa hiçbiri kalmıyor,
+// "Gelen koliler"de boş kutular görünüyordu. Artık:
+//   • her fotoğrafın adresi yüklendiği anda kendi yerine yazılır,
+//   • aynı anda 3 fotoğraf yüklenir,
+//   • yüklenmemiş fotoğraflar telefonda (IndexedDB) bekler; uygulama yeniden
+//     açılınca ya da internet gelince kaldığı yerden devam eder.
+var _KF_IDB=null;
+function _kfIdb(){
+  if(_KF_IDB) return _KF_IDB;
+  _KF_IDB=new Promise(function(res, rej){
+    try{
+      var rq=indexedDB.open('kf_bekleyen',1);
+      rq.onupgradeneeded=function(){ var db=rq.result; if(!db.objectStoreNames.contains('q')) db.createObjectStore('q',{keyPath:'id'}); };
+      rq.onsuccess=function(){ res(rq.result); };
+      rq.onerror=function(){ rej(rq.error); };
+    }catch(e){ rej(e); }
+  }).catch(function(e){ console.warn('[koli] IndexedDB yok', e); _KF_IDB=null; return null; });
+  return _KF_IDB;
+}
+function _kfIdbIs(mod, fn){
+  return _kfIdb().then(function(db){
+    if(!db) return null;
+    return new Promise(function(res){
+      try{ var tx=db.transaction('q', mod), st=tx.objectStore('q'), sonuc=fn(st); tx.oncomplete=function(){ res(sonuc && sonuc.result!==undefined ? sonuc.result : null); }; tx.onerror=function(){ res(null); }; }
+      catch(e){ res(null); }
     });
-  }, Promise.resolve()).then(function(){
-    if(window._kfIptal && window._kfIptal[kabulId]) return;
-    var list=getData(store)||[], m=list.filter(function(x){ return x.id===modelId; })[0]; if(!m) return;
-    var k=(m.kabuller||[]).filter(function(x){ return x.id===kabulId; })[0]; if(!k) return;
-    k.fotolar=veriler.map(function(_,i){ return adresler[i]||''; });
-    _ftStamp(m); setData(store, list);
-    try{ _tkgYenile(store, modelId); }catch(_){}
-    try{ var irs=_kfFotoIrsaliyelere(store, m, k.fotolar); if(irs.length) toast('Koli fotoğrafları '+irs.join(', ')+' irsaliyesine de eklendi (QR\'da görünür)','info'); }catch(e){ console.warn('[koli] irsaliyeye eklenemedi', e); }
-    var eksik=k.fotolar.filter(function(u){ return !u; }).length;
-    if(eksik) toast(eksik+' koli fotoğrafı yüklenemedi','error');
   });
 }
+function _kfIdbKoy(rec){ return _kfIdbIs('readwrite', function(st){ st.put(rec); }); }
+function _kfIdbSil(id){ return _kfIdbIs('readwrite', function(st){ st.delete(id); }); }
+function _kfIdbHepsi(){ return _kfIdbIs('readonly', function(st){ return st.getAll(); }).then(function(x){ return x||[]; }); }
+// Tek fotoğrafın adresini kabulün kendi yerine yaz (diğer yerlere dokunmaz)
+function _kfSlotYaz(store, modelId, kabulId, slot, url){
+  var list=getData(store)||[], m=list.filter(function(x){ return x.id===modelId; })[0]; if(!m) return false;
+  var k=(m.kabuller||[]).filter(function(x){ return x.id===kabulId; })[0]; if(!k) return false;
+  k.fotolar=Array.isArray(k.fotolar)?k.fotolar:[];
+  while(k.fotolar.length<=slot) k.fotolar.push('');
+  k.fotolar[slot]=url;
+  _ftStamp(m); setData(store, list);
+  return true;
+}
+// veriler: yüklenecek fotoğraflar (dataURL); slotlar: her birinin kabuldeki yeri (yoksa 0,1,2…)
+function _kfFotolariYukle(store, modelId, kabulId, veriler, slotlar){
+  var cfg=(typeof _getGithubConfig==='function')?_getGithubConfig():null;
+  if(!cfg || !cfg.token || !cfg.owner || !cfg.repo){ toast('Koli fotoğrafları saklanmadı: GitHub ayarı yok (Ayarlar › GitHub Bulut Yükleme)','info'); return; }
+  var isler=veriler.map(function(v,i){ var sl=slotlar?slotlar[i]:i; return {id:kabulId+'_'+sl, store:store, modelId:modelId, kabulId:kabulId, slot:sl, veri:v, at:Date.now()}; });
+  Promise.all(isler.map(_kfIdbKoy)).catch(function(){}).then(function(){ _kfIsleriYukle(isler, true); });
+}
+var _kfYukleniyor={};
+function _kfIsleriYukle(isler, bildir){
+  isler=isler.filter(function(x){ if(_kfYukleniyor[x.id]) return false; _kfYukleniyor[x.id]=1; return true; });
+  if(!isler.length) return Promise.resolve();
+  var sira=0, tamam=[], hata=0, dokunulan={};
+  var dene=function(v, kalan){ return _uploadPhotoToCatbox(v).catch(function(e){ if(kalan<=0) throw e; return new Promise(function(r){ setTimeout(r, kalan===2?3000:8000); }).then(function(){ return dene(v, kalan-1); }); }); };
+  var isci=function(){
+    if(sira>=isler.length) return Promise.resolve();
+    var x=isler[sira++];
+    if(window._kfIptal && window._kfIptal[x.kabulId]){ delete _kfYukleniyor[x.id]; return _kfIdbSil(x.id).then(isci); }
+    return dene(x.veri, 2).then(function(u){
+      var yazildi=_kfSlotYaz(x.store, x.modelId, x.kabulId, x.slot, u);
+      if(yazildi){ tamam.push({x:x, u:u}); dokunulan[x.store+'|'+x.modelId]={store:x.store, modelId:x.modelId}; }
+      return _kfIdbSil(x.id);
+    }, function(e){ hata++; console.warn('[koli] foto yüklenemedi', e); })
+    .then(function(){ delete _kfYukleniyor[x.id]; return isci(); });
+  };
+  return Promise.all([isci(), isci(), isci()]).then(function(){
+    Object.keys(dokunulan).forEach(function(k){
+      var d=dokunulan[k];
+      try{ _tkgYenile(d.store, d.modelId); }catch(_){}
+      try{
+        var m=(getData(d.store)||[]).filter(function(x){ return x.id===d.modelId; })[0];
+        var urls=tamam.filter(function(t){ return t.x.store===d.store && t.x.modelId===d.modelId; }).map(function(t){ return t.u; });
+        var irs=_kfFotoIrsaliyelere(d.store, m, urls);
+        if(irs.length) toast('Koli fotoğrafları '+irs.join(', ')+' irsaliyesine de eklendi (QR\'da görünür)','info');
+      }catch(e){ console.warn('[koli] irsaliyeye eklenemedi', e); }
+    });
+    if(hata) toast(hata+' koli fotoğrafı yüklenemedi; telefonda bekliyor, uygulama açılınca ya da internet gelince yeniden denenecek','error');
+    else if(!bildir && tamam.length) toast(tamam.length+' bekleyen koli fotoğrafı yüklendi','success');
+  });
+}
+// Uygulama açılınca / internet gelince telefonda bekleyen fotoğrafları yükle
+function _kfBekleyenDevam(){
+  try{
+    var cfg=(typeof _getGithubConfig==='function')?_getGithubConfig():null;
+    if(!cfg || !cfg.token || !cfg.owner || !cfg.repo) return;
+    _kfIdbHepsi().then(function(l){
+      if(!l.length) return;
+      var kalan=[];
+      l.forEach(function(x){
+        var m=(getData(x.store)||[]).filter(function(y){ return y.id===x.modelId; })[0];
+        var k=m && (m.kabuller||[]).filter(function(y){ return y.id===x.kabulId; })[0];
+        if(!k || (k.fotolar||[])[x.slot]) { _kfIdbSil(x.id); return; }   // kabul silinmiş ya da zaten yüklü
+        kalan.push(x);
+      });
+      if(kalan.length) _kfIsleriYukle(kalan, false);
+    });
+  }catch(_){}
+}
+setTimeout(_kfBekleyenDevam, 15000);
+window.addEventListener('online', function(){ setTimeout(_kfBekleyenDevam, 4000); });
 // Sayfa düğmesi: önce fotoğraflar okunur, model bulunur, o modelin Gelen Gir'i hazır açılır
 function takipKoliFoto(store){
   // Önce sor: koli elde mi (kamera) yoksa fotoğraflar galeride mi
