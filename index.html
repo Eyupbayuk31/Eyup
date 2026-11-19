@@ -7981,10 +7981,10 @@ function _ftImpAile(kod){
 // rengin satırlarına bakılır.
 function _ftImpAyniMi(k, m){
   if(!k.satirlar.length) return false;
-  var rk=_kfRenkNorm(String(k.renk||'').replace(/\(.*\)/,'')), sz=(m.sizes||[]);
+  var rk=String(k.renk||'').replace(/\(.*\)/,'').trim(), sz=(m.sizes||[]);
   var renkli=sz.filter(function(x){ return x.renk && _kfRenkNorm(x.renk); });
   if(rk && renkli.length){
-    var uy=sz.filter(function(x){ var xr=_kfRenkNorm(x.renk||''); return !xr || xr.indexOf(rk)>=0 || rk.indexOf(xr)>=0; });
+    var uy=sz.filter(function(x){ return !_kfRenkNorm(x.renk||'') || _renkAyni(x.renk, rk); });
     if(uy.length) sz=uy;
   }
   return k.satirlar.every(function(z){ return sz.some(function(x){ return _ftNum(x.cm)===+z.cm && +x.siparisAdet===+z.adet; }); });
@@ -8330,6 +8330,11 @@ var _YKK_RENK_DEGIL=/^(SEPARE|DIPLI|DEFACTO|LAVE|ILAVE|NUMUNE|RPT|KASIM|EKIM|ARA
 function _ykkModelRenk(no){
   no=String(no||'');
   var model=_kfEtiketModel({baslik:no});
+  return {model:model, renk:_ykkRenkCoz(no, model)};
+}
+// Yazıdaki renk kelimelerini Türkçe renk adına çevir (model kodu ve renk olmayan kelimeler atılır)
+function _ykkRenkCoz(no, model){
+  no=String(no||'').replace(/\([^)]*\)/g,' ');
   var mk=model?_kfModelTaban(model):'';
   var katla=function(w){ return _ydKatla(w).toUpperCase(); };
   // Çok kelimeli adları tek parça yap ("GREY MELANGE" → GREY_MELANGE)
@@ -8353,15 +8358,39 @@ function _ykkModelRenk(no){
   });
   var r=renk.filter(function(x,i,a){ return a.indexOf(x)===i; }).join(' ');
   if(/^Kahve$/.test(r)) r='Kahverengi';
-  return {model:model, renk:r};
+  return r;
+}
+// Renk karşılaştırma anahtarı: "navy", "Lacivert", "LCV" → lacivert; "SİYAH (RJ76)" → siyah
+function _renkKanon(r){
+  var c=_ykkRenkCoz(r, '');
+  return _ydKatla(c || String(r||'').replace(/\([^)]*\)/g,'')).replace(/kahverengi/g,'kahve').replace(/[^a-z]/g,'');
+}
+function _renkAyni(a, b){ var x=_renkKanon(a), y=_renkKanon(b); return !!x && !!y && (x===y || x.indexOf(y)>=0 || y.indexOf(x)>=0); }
+// Takipteki modelin "taban kodu": "C1809 KASIM SİYAH" → C1809, "J5911 RPT 2" → J5911
+function _ykkTabanKod(modelKodu){ var k=_kfEtiketModel({baslik:String(modelKodu||'').replace(/\s+RPT(\s*\d+)?$/i,'')}); return k ? _kfModelKimlik(k) : _kfModelKimlik(modelKodu||''); }
+// Bu modelin bu renkte takipteki kaydı (model adında renk / sezon yazılı olsa da)
+function _ykkModelBul(model, renk){
+  if(!model) return {ayni:null, aile:[]};
+  var k=_kfModelKimlik(model);
+  var aile=(getData('fermuarTakip')||[]).filter(function(m){ return _ykkTabanKod(m.modelKodu)===k; });
+  if(!renk) return {ayni:aile[0]||null, aile:aile};
+  var ayni=aile.filter(function(m){
+    var adlar=[m.renk, _ykkRenkCoz(m.modelKodu, model)].concat((m.sizes||[]).map(function(z){ return z.renk; }));
+    return adlar.some(function(x){ return x && _renkAyni(x, renk); });
+  });
+  // RPT değil, asıl kayıt önce
+  ayni.sort(function(a,b){ return (/\sRPT/i.test(a.modelKodu)?1:0)-(/\sRPT/i.test(b.modelKodu)?1:0); });
+  return {ayni:ayni[0]||null, aile:aile};
+}
+// Takipte bu renk nasıl yazılmış (navy, SİYAH…) — aynı yazım kullanılsın
+function _ykkRenkYazimi(m, renk){
+  if(!m) return '';
+  var adlar=[m.renk].concat((m.sizes||[]).map(function(z){ return z.renk; })).filter(Boolean).map(function(x){ return String(x).replace(/\s*\([^)]*\)\s*$/,'').trim(); });
+  return adlar.filter(function(x){ return _renkAyni(x, renk); })[0] || '';
 }
 function _ykkTakipte(no){
   var mr=_ykkModelRenk(no); if(!mr.model) return null;
-  var k=_kfModelKimlik(mr.model), rn=_kfRenkNorm(mr.renk);
-  var ayni=(getData('fermuarTakip')||[]).filter(function(m){ return _kfModelKimlik(m.modelKodu||'')===k; });
-  if(!ayni.length) return null;
-  if(!rn) return ayni[0];
-  return ayni.filter(function(m){ return [m.renk].concat((m.sizes||[]).map(function(z){ return z.renk; })).some(function(r){ var x=_kfRenkNorm(r); return x && (x.indexOf(rn)>=0 || rn.indexOf(x)>=0); }); })[0] || null;
+  return _ykkModelBul(mr.model, mr.renk).ayni;
 }
 var _ykk={kaynak:null, origin:'', satirlar:[], istenen:[], pdf:{}, kalem:{}, hata:{}};
 function _ykkPortalMi(o){ return o===_YKK_PORTAL || (location.hostname==='localhost' && /^http:\/\/localhost:\d+$/.test(o)); }
@@ -8441,12 +8470,19 @@ function _ykkKalemKart(s, kalemler){
     if(g.satir[cm]==null){ g.satir[cm]=0; g.sira.push(cm); }
     g.satir[cm]+=Math.round(x.adet);
   });
+  // Takipte bu model + renk varsa onun adı ("C1809 KASIM SİYAH") ve renk yazımı ("SİYAH") kullanılır;
+  // böylece aynı sipariş ayrı bir "C1809" olarak ikinci kez açılmaz, mükerrer kontrolü de o aileye bakar
+  var bul=_ykkModelBul(mr.model, mr.renk), takip=bul.ayni;
+  var modelAdi = takip ? String(takip.modelKodu).replace(/\s+RPT(\s*\d+)?$/i,'') : mr.model;
+  // Aile takipte ama bu renk yok: renkler ayrı modelde tutuluyor ("C1809 KASIM SİYAH") → "C1809 BORDO"
+  if(!takip && bul.aile.length && mr.renk) modelAdi = mr.model+' '+mr.renk.toLocaleUpperCase('tr');
+  var renkAdi = (takip && _ykkRenkYazimi(takip, mr.renk)) || mr.renk;
   return {atla:atla, bloklar:sira.map(function(kod){
     var g=grup[kod];
     // Renk adı başlıkta ("I 2413 SYAH DEFACTO" → Siyah); portaldaki kod (RJ76) parantez içinde
-    var renk = mr.renk ? (kod ? mr.renk+' ('+kod+')' : mr.renk) : kod;
+    var renk = renkAdi ? (kod ? renkAdi+' ('+kod+')' : renkAdi) : kod;
     var satirlar=g.sira.sort(function(a,b){ return +a-+b; }).map(function(cm){ return {cm:cm, adet:g.satir[cm], beden:''}; });
-    return {model:mr.model, satirlar:satirlar, renk:renk, pdfToplam:satirlar.reduce(function(t,z){ return t+z.adet; },0)};
+    return {model:modelAdi, satirlar:satirlar, renk:renk, pdfToplam:satirlar.reduce(function(t,z){ return t+z.adet; },0)};
   })};
 }
 function _ykkPdfleriIsle(){
