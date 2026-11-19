@@ -510,7 +510,7 @@
     const FS_KEYS = [
       'irsaliyeler','fermuarlar','lastikler','dugmeler','toptanlar','satenaskilikler','kordonlar','danteller',
       'atolyeler','stoklar','stokHareketler','recycleBin',
-      'irsaliye_users','aksesuarlar','waybillTemplates','fermuarTakip','kordonTakip','dugmeTakip','telaKontrol',
+      'irsaliye_users','aksesuarlar','waybillTemplates','fermuarTakip','kordonTakip','dugmeTakip','telaKontrol','ykkAktarim',
       'irsaliye_github_cfg', // admin'in token'i tum cihazlarda paylasilsin
       'app_settings',        // genel uygulama ayarlari (QR publishUrl vs.) — array-of-one formatinda
       'audit_log',           // kim ne zaman ne yapti — iki cihazda da goruner
@@ -2435,6 +2435,7 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
             <button class="btn btn-secondary" onclick="ftOpenPdfModal()"><i class="fas fa-file-pdf"></i> PDF / Eksik</button>
           </div>
           <button class="btn btn-secondary ft-imp-ac" onclick="ftImpAc()"><i class="fas fa-file-import"></i> PDF'ten Satın Alma</button>
+          <button class="btn btn-secondary ykk-ac" onclick="ykkKurulumAc()" title="YKK portalındaki siparişleri tek düğmeyle al"><i class="fas fa-cloud-arrow-down"></i> YKK'dan Al</button>
           <button class="btn btn-secondary kf-ac" onclick="takipKoliFoto('fermuarTakip')" title="Gelen kolilerin etiketini çek, model ve adetler kendiliğinden dolsun"><i class="fas fa-camera"></i> Koli Fotoğrafı</button>
           <button class="btn btn-primary" onclick="ftOpenOrderModal()"><i class="fas fa-plus"></i> Yeni Model</button>
         </div>
@@ -8137,6 +8138,12 @@ function ftImpKaydet(){
   }
   if(!yeni && !guncel){ toast('Kaydedilecek satır yok','error'); return; }
   setData(kordon?'kordonTakip':'fermuarTakip', list);
+  // YKK portalından gelen siparişler: bir dahaki sefere "Aktarıldı" görünsün
+  if(_ftImp.ykk && _ftImp.ykk.length){
+    try{ var _yl=getData('ykkAktarim')||[], _ys=new Date().toISOString();
+      _ftImp.ykk.forEach(function(x){ if(!_yl.some(function(y){ return y.id===x.id; })) _yl.unshift({id:x.id, musteriNo:x.musteriNo||'', at:_ys, _updatedAt:Date.now()}); });
+      setData('ykkAktarim', _yl); }catch(_){}
+  }
   _ftImp={kartlar:[], store:kordon?'kordonTakip':'fermuarTakip'};
   document.getElementById('ftImpModal').classList.remove('show');
   if(kordon){
@@ -8150,6 +8157,207 @@ function ftImpKaydet(){
   toast(parca.join(', ')+' · '+adet.toLocaleString('tr')+' adet satın alma','success');
   if(yeni+guncel===1 && sonId!=null) setTimeout(function(){ if(kordon) ktOpenDetailModal(sonId); else ftOpenDetailModal(sonId); },150);
 }
+// ═══════════════════════════════════════════════════════════════════
+// YKK PORTALINDAN SİPARİŞ AKTARIMI (yer imi düğmesi)
+// Portal (customerportal.ykk.com.tr) her girişte e-posta kodu istiyor; şifre
+// saklanmaz. Kullanıcı portala kendisi girer, Siparişler sayfasında yer imi
+// düğmesine basar. Düğme: satırları okur → İrsaliye Pro'yu açar → seçilen
+// siparişlerin PDF düğmelerine sırayla basıp inen PDF'i yakalar → buraya
+// gönderir. PDF'ler "PDF'ten Satın Alma"ya düşer; kaydedilince sipariş
+// numarası 'ykkAktarim' deposuna yazılır, bir dahaki sefere işaretli gelir.
+// ═══════════════════════════════════════════════════════════════════
+var _YKK_PORTAL='https://customerportal.ykk.com.tr';
+// Yer imi düğmesinin kodu. Portal sayfasında çalışır; dışarıdan hiçbir şey yüklemez.
+// (Yorum satırı yok: javascript: adresine tek parça gömülüyor.)
+function _ykkYerImi(APP, TEST){
+  if(!TEST && location.hostname!=='customerportal.ykk.com.tr'){ alert('Bu düğme YKK portalında, Siparişler sayfasında çalışır.'); return; }
+  var rows=[].slice.call(document.querySelectorAll('tr[data-entity^="Order;"]'));
+  if(!rows.length){ alert('Bu sayfada sipariş listesi bulunamadı. Portalda Siparişler sayfasını aç.'); return; }
+  var tablo=rows[0].closest('table');
+  var bas=[].slice.call(tablo.querySelectorAll('thead th')).map(function(t){ return t.textContent.trim(); });
+  function hucre(tr, ad){ var i=bas.indexOf(ad); return (i>=0 && tr.cells[i]) ? tr.cells[i].textContent.trim() : ''; }
+  var satirlar=rows.map(function(tr){ return {id:tr.getAttribute('data-entity').split(';')[1], durum:hucre(tr,'Durum'), tarih:hucre(tr,'Tarih'), musteriNo:hucre(tr,'Müşteri Sipariş No'), marka:hucre(tr,'Marka'), termin:hucre(tr,'Termin Süresi')}; });
+  var w=window.open(APP+'/#ykk-aktar','ykkAktar');
+  if(!w){ alert('İrsaliye Pro açılamadı. Bu site için açılır pencereye izin ver ve tekrar bas.'); return; }
+  var kutu=document.createElement('div');
+  kutu.style.cssText='position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#111827;color:#fff;padding:12px 16px;border-radius:12px;font:600 14px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+  kutu.textContent='İrsaliye Pro açılıyor…';
+  document.body.appendChild(kutu);
+  var gonderildi=false;
+  function yakala(tr){
+    return new Promise(function(res, rej){
+      var bitti=false, oc=URL.createObjectURL, wo=window.open, ac=HTMLAnchorElement.prototype.click, bizim={};
+      function geri(){ URL.createObjectURL=oc; window.open=wo; HTMLAnchorElement.prototype.click=ac; }
+      function son(b, hata){ if(bitti) return; bitti=true; clearTimeout(zs); setTimeout(geri, 400); if(b) res(b); else rej(new Error(hata||'PDF gelmedi')); }
+      URL.createObjectURL=function(o){ var u=oc.call(URL, o); if(o && o.size>0){ bizim[u]=1; son(o); } return u; };
+      HTMLAnchorElement.prototype.click=function(){ if(bizim[this.href]) return; return ac.apply(this, arguments); };
+      window.open=function(u){ if(u && typeof u==='string' && !/^javascript:/i.test(u)){ fetch(u, {credentials:'include'}).then(function(r){ return r.blob(); }).then(function(b){ son(b); }, function(){ son(null, 'PDF indirilemedi'); }); return null; } return wo.apply(window, arguments); };
+      var zs=setTimeout(function(){ son(null, 'PDF 30 sn içinde gelmedi'); }, 30000);
+      var btn=[].slice.call(tr.querySelectorAll('button,a')).filter(function(x){ return /^\s*PDF\s*$/i.test(x.textContent); })[0];
+      if(!btn){ son(null, 'PDF düğmesi yok'); return; }
+      btn.click();
+    });
+  }
+  function kapatPencereler(){ [].slice.call(document.querySelectorAll('.modal.show .btn-close, .modal.show [data-bs-dismiss="modal"]')).forEach(function(b){ try{ b.click(); }catch(_){} }); }
+  window.addEventListener('message', function(e){
+    if(e.origin!==APP) return;
+    var d=e.data||{};
+    if(d.tip==='ykk-hazir' && !gonderildi){ gonderildi=true; kutu.textContent='İrsaliye Pro\'da siparişleri seç'; w.postMessage({tip:'ykk-liste', satirlar:satirlar}, APP); }
+    else if(d.tip==='ykk-pdf-iste'){
+      var idler=d.idler||[], i=0;
+      (function sonraki(){
+        if(i>=idler.length){ kutu.textContent='Bitti: '+idler.length+' sipariş gönderildi'; setTimeout(function(){ kutu.remove(); }, 4000); w.postMessage({tip:'ykk-bitti'}, APP); return; }
+        var id=idler[i++], tr=document.querySelector('tr[data-entity="Order;'+id+'"]');
+        kutu.textContent='PDF alınıyor '+i+'/'+idler.length+' · '+id;
+        if(!tr){ w.postMessage({tip:'ykk-pdf', id:id, hata:'Satır bu sayfada yok'}, APP); sonraki(); return; }
+        yakala(tr).then(function(b){ w.postMessage({tip:'ykk-pdf', id:id, pdf:b}, APP); }, function(er){ w.postMessage({tip:'ykk-pdf', id:id, hata:String(er && er.message || er)}, APP); })
+          .then(function(){ kapatPencereler(); setTimeout(sonraki, 700); });
+      })();
+    }
+  });
+}
+function _ykkYerImiAdres(test){
+  var kod='('+_ykkYerImi.toString()+')('+JSON.stringify(location.origin)+','+(test?'true':'false')+')';
+  return 'javascript:'+encodeURIComponent(kod);
+}
+function _ykkAktarilan(){ var o={}; (getData('ykkAktarim')||[]).forEach(function(x){ if(x && x.id) o[x.id]=x; }); return o; }
+// "C 1809 - SEPARE - GR LAVE" / "M1S20036-KIRMIZI-SEPARE" → {model, renk}
+function _ykkModelRenk(no){
+  var model=_kfEtiketModel({baslik:String(no||'')});
+  return {model:model, renk:_ftImpBaslikRenk(no||'')};
+}
+function _ykkTakipte(no){
+  var mr=_ykkModelRenk(no); if(!mr.model) return null;
+  var k=_kfModelKimlik(mr.model), rn=_kfRenkNorm(mr.renk);
+  var ayni=(getData('fermuarTakip')||[]).filter(function(m){ return _kfModelKimlik(m.modelKodu||'')===k; });
+  if(!ayni.length) return null;
+  if(!rn) return ayni[0];
+  return ayni.filter(function(m){ return [m.renk].concat((m.sizes||[]).map(function(z){ return z.renk; })).some(function(r){ var x=_kfRenkNorm(r); return x && (x.indexOf(rn)>=0 || rn.indexOf(x)>=0); }); })[0] || null;
+}
+var _ykk={kaynak:null, origin:'', satirlar:[], istenen:[], pdf:{}, hata:{}};
+function _ykkPortalMi(o){ return o===_YKK_PORTAL || (location.hostname==='localhost' && /^http:\/\/localhost:\d+$/.test(o)); }
+window.addEventListener('message', function(e){
+  if(!_ykkPortalMi(e.origin)) return;
+  var d=e.data||{};
+  if(d.tip==='ykk-liste'){ _ykk={kaynak:e.source, origin:e.origin, satirlar:d.satirlar||[], istenen:[], pdf:{}, hata:{}}; _ykkSecimAc(); }
+  else if(d.tip==='ykk-pdf' && e.source===_ykk.kaynak){ if(d.pdf) _ykk.pdf[d.id]=d.pdf; else _ykk.hata[d.id]=d.hata||'alınamadı'; _ykkIlerleme(); }
+  else if(d.tip==='ykk-bitti' && e.source===_ykk.kaynak){ _ykkPdfleriIsle(); }
+});
+// Yer imi düğmesi bu sekmeyi açınca hazır olduğumuzu portala bildir
+(function(){
+  if(!/ykk-aktar/.test(location.hash) || !window.opener) return;
+  var say=0, t=setInterval(function(){
+    if(_ykk.kaynak || ++say>90){ clearInterval(t); return; }
+    try{ window.opener.postMessage({tip:'ykk-hazir'}, '*'); }catch(_){}
+  }, 1000);
+})();
+function _ykkKapat(){ var m=document.getElementById('ykkModal'); if(m) m.remove(); }
+function _ykkModal(ic){
+  _ykkKapat();
+  var m=document.createElement('div'); m.className='modal-overlay show'; m.id='ykkModal';
+  m.innerHTML='<div class="modal ykk-modal">'+ic+'</div>';
+  m.addEventListener('click', function(e){ if(e.target===m) _ykkKapat(); });
+  document.body.appendChild(m);
+  return m;
+}
+function _ykkSecimAc(){
+  var ak=_ykkAktarilan(), S=_ykk.satirlar;
+  var satir=S.map(function(s, i){
+    var tk=_ykkTakipte(s.musteriNo), a=ak[s.id];
+    var rozet=a ? '<em class="ykk-r al">Aktarıldı</em>' : tk ? '<em class="ykk-r tk">Takipte: '+esc(tk.modelKodu)+'</em>' : '<em class="ykk-r yeni">Yeni</em>';
+    var sec=!a && !tk;
+    return '<label class="ykk-s'+(sec?' sec':'')+'"><input type="checkbox" data-i="'+i+'"'+(sec?' checked':'')+' onchange="this.closest(\'.ykk-s\').classList.toggle(\'sec\',this.checked);_ykkSayac()">'+
+      '<span class="ykk-s-ana"><b>'+esc(s.musteriNo||'—')+'</b><small>'+esc(s.id)+' · '+esc(s.tarih||'')+' · '+esc(s.durum||'')+(s.termin?' · termin '+esc(String(s.termin).split(' ')[0]):'')+'</small></span>'+rozet+'</label>';
+  }).join('');
+  _ykkModal(
+    '<div class="ykk-bas"><h3><i class="fas fa-cloud-arrow-down"></i> YKK siparişleri</h3><button type="button" class="ft-x" onclick="_ykkKapat()" aria-label="Kapat"><i class="fas fa-times"></i></button></div>'+
+    '<p class="ykk-not">Portal sayfasındaki '+S.length+' sipariş. Seçtiklerinin PDF\'i alınır ve <b>PDF\'ten Satın Alma</b> ile Fermuar Takip\'e eklenir; kaydetmeden önce kontrol edersin. Aktarılmış ya da takipte olan siparişler seçili gelmez.</p>'+
+    '<div class="ykk-liste">'+satir+'</div>'+
+    '<div class="ykk-alt"><button type="button" class="btn btn-primary" id="ykkAl" onclick="_ykkAl()"><i class="fas fa-download"></i> <span id="ykkAlYazi">Seçilenleri al</span></button><button type="button" class="btn btn-secondary" onclick="_ykkKapat()">Vazgeç</button></div>'
+  );
+  _ykkSayac();
+}
+function _ykkSayac(){
+  var n=document.querySelectorAll('#ykkModal .ykk-liste input:checked').length;
+  var y=document.getElementById('ykkAlYazi'); if(y) y.textContent=n ? ('Seçilenleri al ('+n+')') : 'Sipariş seç';
+  var b=document.getElementById('ykkAl'); if(b) b.disabled=!n;
+}
+function _ykkAl(){
+  var idx=[].slice.call(document.querySelectorAll('#ykkModal .ykk-liste input:checked')).map(function(c){ return +c.dataset.i; });
+  if(!idx.length) return;
+  _ykk.istenen=idx.map(function(i){ return _ykk.satirlar[i]; });
+  _ykk.pdf={}; _ykk.hata={};
+  try{ _ykk.kaynak.postMessage({tip:'ykk-pdf-iste', idler:_ykk.istenen.map(function(s){ return s.id; })}, _ykk.origin); }
+  catch(e){ toast('Portal sekmesine ulaşılamadı. Portal sekmesini kapatmadan yer imi düğmesine yeniden bas.','error'); return; }
+  _ykkModal('<div class="ykk-bas"><h3><i class="fas fa-spinner fa-spin"></i> PDF\'ler alınıyor</h3></div>'+
+    '<p class="ykk-not" id="ykkIlerleme">0/'+_ykk.istenen.length+'</p><p class="ykk-not">Portal sekmesi PDF düğmelerine sırayla basıyor. O sekmeyi kapatma.</p>');
+}
+function _ykkIlerleme(){
+  var el=document.getElementById('ykkIlerleme'); if(!el) return;
+  var n=Object.keys(_ykk.pdf).length, h=Object.keys(_ykk.hata).length;
+  el.textContent=(n+h)+'/'+_ykk.istenen.length+(h?' · '+h+' alınamadı':'');
+}
+function _ykkTarih(t){ var m=String(t||'').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2) : ''; }
+function _ykkPdfleriIsle(){
+  _ykkKapat();
+  var gelen=_ykk.istenen.filter(function(s){ return _ykk.pdf[s.id]; });
+  var hatali=_ykk.istenen.filter(function(s){ return !_ykk.pdf[s.id]; });
+  if(hatali.length) toast(hatali.length+' siparişin PDF\'i alınamadı ('+hatali.map(function(s){ return s.id; }).join(', ')+'). Portalda PDF düğmesine basıp inen dosyayı buraya sürükle.','error');
+  if(!gelen.length) return;
+  try{ showPage('fermuar-takip'); }catch(_){}
+  ftImpAc('fermuarTakip');
+  _ftImp.ykk=gelen.map(function(s){ return {id:s.id, musteriNo:s.musteriNo}; });
+  var ted=document.getElementById('ftImpTed'); if(ted && !ted.value.trim()) ted.value='YKK';
+  if(gelen.length===1){ var tr=_ykkTarih(gelen[0].termin), te=document.getElementById('ftImpTermin'); if(te && tr) te.value=tr; }
+  var dosyalar=gelen.map(function(s){
+    var ad='YKK_'+s.id+'_'+String(s.musteriNo||'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,40)+'.pdf';
+    return new File([_ykk.pdf[s.id]], ad, {type:'application/pdf'});
+  });
+  var drop=document.getElementById('ftImpDrop'); if(drop) drop.classList.add('okunuyor');
+  // Önce yerel okuma; cm / adet çıkmayanlar Gemini'ye 5'erli gider (okuma hakkı az harcansın)
+  Promise.all(dosyalar.map(function(f){
+    return f.arrayBuffer().then(_ftImpPdfMetin).then(function(metin){
+      var b=_ftImpCoz(metin, f.name);
+      if(b.some(function(x){ return x.satirlar.length; })){ _ftImpEkle(b, f.name); return null; }
+      return f;
+    }).catch(function(){ return f; });
+  })).then(function(kalan){
+    kalan=kalan.filter(Boolean);
+    var gruplar=[]; for(var i=0;i<kalan.length;i+=5) gruplar.push(kalan.slice(i,i+5));
+    return gruplar.reduce(function(ch, g){
+      return ch.then(function(){
+        return Promise.all(g.map(function(f){ return _ftImpDataUrl(f).then(function(v){ return {veri:v, ad:f.name}; }); }))
+          .then(_ftImpGemini).catch(function(e){ toast('Okunamadı: '+(e&&e.message||e),'error'); });
+      });
+    }, Promise.resolve());
+  }).then(function(){
+    if(drop) drop.classList.remove('okunuyor');
+    toast(gelen.length+' YKK siparişi okundu. Kontrol edip Kaydet\'e bas.','success');
+  });
+}
+// Kurulum: yer imi düğmesi
+function ykkKurulumAc(){
+  var adres=_ykkYerImiAdres(false);
+  var m=_ykkModal(
+    '<div class="ykk-bas"><h3><i class="fas fa-cloud-arrow-down"></i> YKK\'dan sipariş al</h3><button type="button" class="ft-x" onclick="_ykkKapat()" aria-label="Kapat"><i class="fas fa-times"></i></button></div>'+
+    '<p class="ykk-not">Şifre bu uygulamada saklanmaz. Portala sen girersin (e-posta kodu dahil), sonra tek düğmeyle siparişler buraya gelir. Bilgisayardaki tarayıcıda çalışır.</p>'+
+    '<ol class="ykk-adim">'+
+      '<li><b>Bir kere kur:</b> aşağıdaki düğmeyi fareyle tutup tarayıcının <b>yer imleri çubuğuna</b> sürükle. Çubuk görünmüyorsa Ctrl+Shift+B.<div class="ykk-yi"><a class="btn btn-primary ykk-yi-a" href="#" draggable="true" onclick="event.preventDefault();toast(\'Bu düğmeye tıklama; yer imleri çubuğuna sürükle\',\'info\')"><i class="fas fa-bookmark"></i> YKK → İrsaliye Pro</a></div>'+
+        '<small>Sürüklenmiyorsa: <a href="#" onclick="event.preventDefault();_ykkKopyala()">kodu kopyala</a>, yeni bir yer imi oluştur, adres kısmına yapıştır, adını "YKK → İrsaliye Pro" koy.</small></li>'+
+      '<li>YKK portalına gir, <b>Siparişler</b> sayfasını aç (yeni siparişler ilk sayfada).</li>'+
+      '<li>Yer imleri çubuğundaki <b>YKK → İrsaliye Pro</b>\'ya bas. Bu uygulama açılır, siparişleri seçersin, PDF\'ler okunup satın almaya düşer.</li>'+
+    '</ol>'+
+    '<p class="ykk-not"><i class="fas fa-circle-info"></i> Düğme bu adrese bağlanır: <b>'+esc(location.origin)+'</b>. Şirkette başka adresten giriyorsan düğmeyi o adresten kur.</p>'
+  );
+  var a=m.querySelector('.ykk-yi-a'); if(a) a.setAttribute('href', adres);
+}
+function _ykkKopyala(){
+  var adres=_ykkYerImiAdres(false);
+  (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(adres) : Promise.reject())
+    .then(function(){ toast('Kod kopyalandı. Yeni yer iminin adres kısmına yapıştır.','success'); },
+          function(){ prompt('Bu kodu kopyala, yeni yer iminin adres kısmına yapıştır:', adres); });
+}
+
 // Fermuar Takip sayfasına PDF sürüklenirse doğrudan içe aktarmayı aç
 (function(){
   function hedef(e){ return e.target && e.target.closest && (e.target.closest('#page-fermuar-takip') || e.target.closest('#page-kordon-takip') || e.target.closest('#ftImpModal')); }

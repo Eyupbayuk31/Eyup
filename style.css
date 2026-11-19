@@ -20042,3 +20042,28 @@ html .tkg-modal .kf-yok-a input.form-input{ height:40px; width:96px; min-width:0
 @media (max-width:600px){ .tk-kb-eksik .btn{ width:100%; justify-content:center; } }
 .tk-kb-ok{ margin:4px 0 8px; font-size:12px; font-weight:700; color:var(--success, #059669); }
 .tk-kb-ok i{ margin-right:5px; }
+
+/* YKK portalından sipariş aktarımı */
+.ykk-modal{ max-width:640px; width:calc(100% - 24px); }
+.ykk-bas{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.ykk-bas h3{ font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px; margin:0; }
+.ykk-bas h3 i{ color:var(--primary); }
+.ykk-not{ font-size:13px; color:var(--text-muted); line-height:1.5; margin:0 0 10px; }
+.ykk-liste{ display:flex; flex-direction:column; gap:6px; max-height:52vh; overflow:auto; margin-bottom:12px; }
+.ykk-s{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:12px; cursor:pointer; }
+.ykk-s.sec{ border-color:color-mix(in srgb, var(--primary) 60%, transparent); background:color-mix(in srgb, var(--primary) 7%, transparent); }
+.ykk-s input{ width:18px; height:18px; flex:0 0 auto; accent-color:var(--primary); }
+.ykk-s-ana{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.ykk-s-ana b{ font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ykk-s-ana small{ font-size:11.5px; color:var(--text-muted); }
+.ykk-r{ font-style:normal; font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; white-space:nowrap; flex:0 0 auto; }
+.ykk-r.yeni{ background:color-mix(in srgb, var(--primary) 16%, transparent); color:var(--primary); }
+.ykk-r.al{ background:color-mix(in srgb, var(--success, #059669) 15%, transparent); color:var(--success, #059669); }
+.ykk-r.tk{ background:color-mix(in srgb, var(--text-dim, #94a3b8) 18%, transparent); color:var(--text-muted); }
+.ykk-alt{ display:flex; gap:10px; }
+.ykk-alt .btn-primary{ flex:1; justify-content:center; }
+.ykk-adim{ margin:0 0 12px 18px; padding:0; font-size:13.5px; line-height:1.55; display:flex; flex-direction:column; gap:10px; }
+.ykk-adim small{ display:block; color:var(--text-muted); margin-top:4px; }
+.ykk-adim small a{ color:var(--primary); text-decoration:underline; }
+.ykk-yi{ margin:8px 0 2px; }
+.ykk-yi-a{ cursor:grab; }
