@@ -7551,7 +7551,7 @@ function ftRenderDetail(){
         <span class="ft-row-beden">${z.beden?esc(z.beden):'—'}</span>
         <span class="ft-row-cm">${z.cm!=null?z.cm+' cm':'—'}</span>
         <span class="ft-row-renk">${z.renk?esc(z.renk):'—'}</span>
-        <span class="ft-c-sip" data-l="Sipariş">${(+z.siparisAdet||0).toLocaleString('tr')}</span>
+        <span class="ft-c-sip" data-l="Sipariş">${(+z.siparisAdet||0).toLocaleString('tr')}${_tkTahminiHtml(z, zb)}</span>
         <span class="pos ft-c-gel" data-l="Gelen">${zg.toLocaleString('tr')}${_tkKoli(z)?`<small class="tk-koli">${_tkKoli(z)} koli</small>`:''}</span>
         <span class="neg ft-c-kul" data-l="Kullanılan">${zk.toLocaleString('tr')}</span>
         <span class="${zb>0?'bad':(zg>(+z.siparisAdet||0)?'fz':'')} ft-c-eks" data-l="Eksik">${zb>0?zb.toLocaleString('tr'):(zg>(+z.siparisAdet||0)?'+'+(zg-(+z.siparisAdet||0)).toLocaleString('tr')+' fazla':'—')}</span>
@@ -7566,6 +7566,12 @@ function ftRenderDetail(){
       <div class="ft-row-hist" id="ftHist-${z.id}" style="display:none;">${_ftHistoryHtml(m.id, z)}</div>
     </div>`;
   }).join('') + _takipKabulHtml('fermuarTakip', m);
+}
+// Satırın tahmini teslim tarihi (YKK Detaylar'dan). Eksik kaldıysa gösterilir; geçtiyse kırmızı.
+function _tkTahminiHtml(z, bekleyen){
+  if(!z || !z.tahminiTeslim || !(bekleyen>0)) return '';
+  var gecti = z.tahminiTeslim < new Date().toISOString().slice(0,10);
+  return '<small class="tk-tt'+(gecti?' gecti':'')+'" title="Tahmini teslim tarihi"><i class="fas fa-calendar-day"></i> Tahmini '+esc(_t2Tarih(z.tahminiTeslim))+'</small>';
 }
 function _ftHistoryHtml(modelId, z){
   const rows=[];
@@ -7991,7 +7997,7 @@ function _ftImpAyniMi(k, m){
 }
 function _ftImpEkle(bloklar, kaynak){
   bloklar.forEach(function(b){
-    var k={id:Date.now()+Math.floor(Math.random()*1e6), kaynak:kaynak, model:b.model||'', satirlar:b.satirlar.map(function(z){ return {cm:z.cm, adet:z.adet, beden:z.beden||''}; }),
+    var k={id:Date.now()+Math.floor(Math.random()*1e6), kaynak:kaynak, model:b.model||'', satirlar:b.satirlar.map(function(z){ return {cm:z.cm, adet:z.adet, beden:z.beden||'', teslim:z.teslim||''}; }),
       pdfToplam:b.pdfToplam, renk:b.renk||'', mod:'ekle', dahil:true, tekrar:false};
     var m=_ftImpMevcut(k.model);
     // Model takipte varsa varsayılan: ayrı tekrar sipariş (RPT). Var olan modelin
@@ -8122,14 +8128,15 @@ function ftImpKaydet(){
     var m=list.find(function(x){ return _ftNormModel(x.modelKodu)===n; });
     if(m && _ftImpMetreMi(m)) k.mod='rpt';
     var kRenk=(k.renk||renk||'').trim();
+    var kTt=sat.map(function(z){ return z.teslim; }).filter(Boolean).sort()[0]||'';
     if(m && k.mod==='rpt' && rptBu[n]){ m=rptBu[n]; }
     else if(m && k.mod==='rpt' && !yeniBu[m.id]){
       // Tekrar sipariş: ayrı model. Tedarikçi/renk boşsa asıl modelden gelir.
       var asil=m;
-      m={id:Date.now()+(sayac++), modelKodu:_ftImpRptAd(k.model, list), renk:kRenk||asil.renk||'', tedarikci:ted||asil.tedarikci||'', termin:termin, sizes:[], createdAt:new Date().toISOString()};
+      m={id:Date.now()+(sayac++), modelKodu:_ftImpRptAd(k.model, list), renk:kRenk||asil.renk||'', tedarikci:ted||asil.tedarikci||'', termin:termin||kTt, sizes:[], createdAt:new Date().toISOString()};
       list.unshift(m); yeni++; rptler.push(m.modelKodu); rptBu[n]=m;
     } else if(!m){
-      m={id:Date.now()+(sayac++), modelKodu:k.model.trim(), renk:kRenk, tedarikci:ted, termin:termin, sizes:[], createdAt:new Date().toISOString()};
+      m={id:Date.now()+(sayac++), modelKodu:k.model.trim(), renk:kRenk, tedarikci:ted, termin:termin||kTt, sizes:[], createdAt:new Date().toISOString()};
       list.unshift(m); yeni++; yeniBu[m.id]=1;
     } else if(yeniBu[m.id]){ /* bu kayıtta açılan model: diğer rengi eklenir */ }
     else {
@@ -8141,11 +8148,31 @@ function ftImpKaydet(){
     sat.forEach(function(z){
       // Aynı cm farklı renk ayrı satırdır
       var s=m.sizes.find(function(x){ return _ftNum(x.cm)===+z.cm && (!kRenk || !x.renk || _ftImpRenkNorm(x.renk)===_ftImpRenkNorm(kRenk)); });
-      if(s){ s.siparisAdet = k.mod==='yaz' ? z.adet : (+s.siparisAdet||0)+z.adet; if(z.beden && (!s.beden || k.mod==='yaz')) s.beden=z.beden; if(kRenk && !s.renk) s.renk=kRenk; }
-      else m.sizes.push({id:Date.now()+(sayac++)*7+Math.floor(Math.random()*1000), beden:z.beden||'', cm:String(z.cm), renk:kRenk||m.renk||'', siparisAdet:z.adet, teslimatlar:[], kullanimlar:[]});
+      if(s){ s.siparisAdet = k.mod==='yaz' ? z.adet : (+s.siparisAdet||0)+z.adet; if(z.beden && (!s.beden || k.mod==='yaz')) s.beden=z.beden; if(kRenk && !s.renk) s.renk=kRenk; if(z.teslim) s.tahminiTeslim=z.teslim; }
+      else m.sizes.push({id:Date.now()+(sayac++)*7+Math.floor(Math.random()*1000), beden:z.beden||'', cm:String(z.cm), renk:kRenk||m.renk||'', siparisAdet:z.adet, tahminiTeslim:z.teslim||'', teslimatlar:[], kullanimlar:[]});
       adet+=z.adet;
     });
     _ftStamp(m); sonId=m.id;
+  }
+  var ttSay=0;
+  _ftImp.kartlar.filter(function(k){ return !k.dahil && k.tekrar; }).forEach(function(k){
+    var m=list.find(function(x){ return x.modelKodu===k.tekrar; }); if(!m) return;
+    var rk=String(k.renk||renk||'').replace(/\(.*\)/,'').trim(), deg=false;
+    k.satirlar.forEach(function(z){
+      if(!z.teslim) return;
+      // Mükerrer denetimiyle aynı eşleşme: aynı cm + aynı adet, renk eşdeğer (Siyah = SYAH)
+      var sz=(m.sizes||[]).find(function(x){ return _ftNum(x.cm)===+z.cm && +x.siparisAdet===+z.adet && (!rk || !_kfRenkNorm(x.renk||'') || _renkAyni(x.renk, rk)); });
+      if(sz && sz.tahminiTeslim!==z.teslim){ sz.tahminiTeslim=z.teslim; deg=true; ttSay++; }
+    });
+    if(deg){ _ftStamp(m); if(!sonId) sonId=m.id; }
+  });
+  if(!yeni && !guncel && ttSay){
+    setData(kordon?'kordonTakip':'fermuarTakip', list);
+    _ftImp={kartlar:[], store:kordon?'kordonTakip':'fermuarTakip'};
+    document.getElementById('ftImpModal').classList.remove('show');
+    if(kordon) renderKordonTakip(); else renderFermuarTakip();
+    toast('Yeni sipariş yok; '+ttSay+' satırın tahmini teslim tarihi güncellendi','success');
+    return;
   }
   if(!yeni && !guncel){ toast('Kaydedilecek satır yok','error'); return; }
   setData(kordon?'kordonTakip':'fermuarTakip', list);
@@ -8234,8 +8261,10 @@ function _ykkYerImi(APP, TEST){
           setTimeout(function(){
             satirlar=[].slice.call(k.tbl.querySelectorAll('tbody tr')).filter(function(r){ return r.cells.length>4; });
             var basRow=[].slice.call(k.tbl.querySelectorAll('thead tr')).filter(function(r){ return /Uzunluk/.test(r.textContent); })[0] || k.tbl.rows[0];
-            var bas=[].slice.call(basRow.cells).map(function(c){ return c.textContent.replace(/\s+/g,' ').trim(); });
-            var ix=function(ad){ return bas.indexOf(ad); };
+            // Başlıklar iki satıra bölünebiliyor ("Tahmini<br>Teslim"): boşluksuz, küçük harfle karşılaştır
+            var nz=function(t){ return String(t||'').replace(/\s+/g,'').toLowerCase(); };
+            var bas=[].slice.call(basRow.cells).map(function(c){ return nz(c.textContent); });
+            var ix=function(ad){ return bas.indexOf(nz(ad)); };
             var kalemler=satirlar.map(function(r){
               var g=function(ad){ var i=ix(ad); return i>=0 ? deger(r.cells[i]) : ''; };
               return {urun:g('Ürün Kodu'), ad:g('Adı'), adet:sayi(g('Miktar')), adetBirim:g('Miktar Birim'), cm:sayi(g('Uzunluk')), cmBirim:g('Uzunluk Birim'), renk:g('Renk'), teslim:g('Tahmini Teslim'), durum:g('Durum')};
@@ -8470,6 +8499,8 @@ function _ykkKalemKart(s, kalemler){
     var cm=String(Math.round(x.cm*100)/100);
     if(g.satir[cm]==null){ g.satir[cm]=0; g.sira.push(cm); }
     g.satir[cm]+=Math.round(x.adet);
+    var tt=_ykkTarih(x.teslim); g.tt=g.tt||{};
+    if(tt && (!g.tt[cm] || tt>g.tt[cm])) g.tt[cm]=tt;
   });
   // Takipte bu model + renk varsa onun adı ("C1809 KASIM SİYAH") ve renk yazımı ("SİYAH") kullanılır;
   // böylece aynı sipariş ayrı bir "C1809" olarak ikinci kez açılmaz, mükerrer kontrolü de o aileye bakar
@@ -8482,7 +8513,7 @@ function _ykkKalemKart(s, kalemler){
     var g=grup[kod];
     // Renk adı başlıkta ("I 2413 SYAH DEFACTO" → Siyah); portaldaki kod (RJ76) parantez içinde
     var renk = renkAdi ? (kod ? renkAdi+' ('+kod+')' : renkAdi) : kod;
-    var satirlar=g.sira.sort(function(a,b){ return +a-+b; }).map(function(cm){ return {cm:cm, adet:g.satir[cm], beden:''}; });
+    var satirlar=g.sira.sort(function(a,b){ return +a-+b; }).map(function(cm){ return {cm:cm, adet:g.satir[cm], beden:'', teslim:(g.tt&&g.tt[cm])||''}; });
     return {model:modelAdi, satirlar:satirlar, renk:renk, pdfToplam:satirlar.reduce(function(t,z){ return t+z.adet; },0)};
   })};
 }
