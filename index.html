@@ -99,9 +99,9 @@
     function tbl(baslik, cols, rows, toplam){
       if(!rows) return '';
       return '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">'+baslik+'</h3>'
-        +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr>'
+        +'<div class="qr-table" role="region" aria-label="'+baslik+'" tabindex="0"><table><thead><tr>'
         +cols.map(function(c){return '<th style="background:#f3f4f6;color:#111827;font-size:11px;text-transform:uppercase;padding:8px 12px;text-align:left;font-weight:700;">'+c+'</th>';}).join('')
-        +'</tr></thead><tbody>'+rows+'</tbody></table>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
         +(toplam!=null?'<div style="text-align:right;font-size:15px;font-weight:800;color:#111827;padding:10px 0;border-top:2px solid #111827;margin-top:8px;">Toplam: '+toplam+'</div>':'');
     }
 
@@ -212,7 +212,7 @@
       }).join('');
       photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">'+(_durumBelge?'Gelen Koli Fotoğrafları':'Kanıt Fotoğrafları')+' (<span id="qrFotoSay">'+d.photos.length+'</span>)</h3>'
         +_filtre
-        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;">'+imgs+'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;margin-top:12px;">'+imgs+'</div>'
         +'<div style="font-size:11px;color:#888;text-align:center;margin-top:10px;">Fotoğraflara dokunarak büyütebilirsiniz</div>';
     } else if(d.photoUrl){
       photoHtml = '<h3 style="font-size:14px;font-weight:700;color:#111827;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Ürün Fotoğrafı</h3>'
@@ -245,7 +245,7 @@
       + infoItem('Termin', trTarih(d.termin))
       + (!hasSizeTable ? infoItem('Adet', d.adet) : '')
       + (!hasSizeTable ? infoItem('Toplam', d.total || d.totalAdet) : '')
-      + (d.renk ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid #111827;border-radius:10px;padding:10px 12px;grid-column:span 2;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+esc(d.renk)+'</div></div>' : '');
+      + (d.renk ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid #111827;border-radius:10px;padding:10px 12px;grid-column:1/-1;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;font-weight:700;margin-bottom:3px;">Renk</div><div style="font-size:14px;font-weight:600;color:#1a1a2e;">'+esc(d.renk)+'</div></div>' : '');
 
     var html = '<!DOCTYPE html><html lang="tr"><head>'
       + '<meta charset="UTF-8">'
@@ -258,11 +258,15 @@
       + '.hdr{background:linear-gradient(135deg,#111827,#111827);color:#fff;padding:24px 20px;}'
       + '.hdr h1{font-size:22px;font-weight:800;}'
       + '.no{font-size:24px;font-weight:800;letter-spacing:.5px;}'
-      + '.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}'
+      + '.qr-body{padding:20px;overflow-wrap:anywhere;}'
+      + '.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px;}'
+      + '.qr-table{overflow-x:auto;margin-bottom:10px;border:1px solid #e5e7eb;border-radius:8px;}'
+      + '.qr-table table{width:100%;border-collapse:collapse;overflow-wrap:normal;}'
+      + '.qr-table tr:last-child td{border-bottom:0!important;}'
       + '.ftr{padding:16px 20px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#6b7280;}'
       + '.print-bar{padding:16px;text-align:center;background:#f5f3ff;}'
       + '.print-btn{background:linear-gradient(135deg,#111827,#111827);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(17,24,39,.35);}'
-      + '@media(max-width:600px){.info-grid{grid-template-columns:1fr;}.hdr h1{font-size:18px;}.no{font-size:20px;}}'
+      + '@media(max-width:600px){body{padding:10px;}.qr-body{padding:14px;}.info-grid{grid-template-columns:minmax(0,1fr);}.hdr h1{font-size:18px;}.no{font-size:20px;overflow-wrap:anywhere;}}'
       + '@media print{body{background:#fff;padding:0;}.wrap{box-shadow:none;border-radius:0;}.print-bar{display:none!important;}}'
       + '</style></head><body>'
       + '<div class="wrap">'
@@ -271,7 +275,7 @@
       + '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;flex-wrap:wrap;gap:8px;">'
       + '<div class="no">'+esc(d.no||'—')+'</div>'
       + '</div></div>'
-      + '<div style="padding:20px;">'
+      + '<div class="qr-body">'
       + '<div class="info-grid">'+infoHtml+'</div>'
       + sizesHtml
       + (d.aciklama ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;color:#92400e;"><b>Not:</b> '+esc(d.aciklama)+'</div>' : '')
@@ -3721,11 +3725,18 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <!-- Left: calendar -->
         <div class="cal-panel-main">
           <div class="cal-nav">
-            <button class="cal-nav-btn" onclick="calPrev()"><i class="fas fa-chevron-left"></i></button>
-            <h3 class="cal-nav-title" id="calTitle">Ocak 2025</h3>
-            <button class="cal-nav-today" onclick="calToday()">Bugün</button>
-            <div class="t2-cal-gor" role="tablist" aria-label="Görünüm"><button type="button" data-g="ay" onclick="calGorunum('ay')">Ay</button><button type="button" data-g="hafta" onclick="calGorunum('hafta')">Hafta</button></div>
-            <button class="cal-nav-btn" onclick="calNext()"><i class="fas fa-chevron-right"></i></button>
+            <div class="cal-period">
+              <button type="button" class="cal-nav-btn" onclick="calPrev()" aria-label="Önceki dönem"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+              <h3 class="cal-nav-title" id="calTitle" aria-live="polite">Takvim</h3>
+              <button type="button" class="cal-nav-btn" onclick="calNext()" aria-label="Sonraki dönem"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+            </div>
+            <div class="cal-view-actions">
+              <button type="button" class="cal-nav-today" onclick="calToday()">Bugün</button>
+              <div class="t2-cal-gor" role="group" aria-label="Takvim görünümü">
+                <button type="button" data-g="ay" onclick="calGorunum('ay')" aria-pressed="true">Ay</button>
+                <button type="button" data-g="hafta" onclick="calGorunum('hafta')" aria-pressed="false">Hafta</button>
+              </div>
+            </div>
           </div>
           <div class="cal-grid" id="calGrid"></div>
         </div>
@@ -4684,11 +4695,13 @@ try{ var _r=localStorage.getItem('irsaliyeler'); if(!_r || _r==='[]'){ document.
         <span class="mk-ipucu"><i class="fas fa-magnifying-glass"></i> Üstteki aramaya model kodu yazarak da açabilirsiniz <kbd>Ctrl</kbd><kbd>K</kbd></span>
       </div>
       <div class="mk-search">
-        <i class="fas fa-cube"></i>
-        <input id="mkInput" class="form-input" placeholder="Model kodu yaz — ör. I6399AX" autocomplete="off"
-               oninput="MK.oneriGoster(this.value)" onkeydown="MK.tus(event)">
-        <button class="btn btn-primary" onclick="MK.ac(document.getElementById('mkInput').value)"><i class="fas fa-magnifying-glass"></i> Aç</button>
-        <div class="mk-oneri" id="mkOneri"></div>
+        <div class="mk-search-field">
+          <i class="fas fa-cube" aria-hidden="true"></i>
+          <input id="mkInput" class="form-input" aria-label="Model kodu" placeholder="Örn. I6399AX" autocomplete="off"
+                 oninput="MK.oneriGoster(this.value)" onkeydown="MK.tus(event)">
+          <div class="mk-oneri" id="mkOneri"></div>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="MK.ac(document.getElementById('mkInput').value)"><i class="fas fa-magnifying-glass"></i> Aç</button>
       </div>
       <div id="mkGovde"></div>
     </div>
@@ -17838,7 +17851,9 @@ function renderCalendar(){
   const today=_calIso(now);
   const allItems=getUnifiedList();
   const hafta=_calHafta();
-  document.querySelectorAll('.t2-cal-gor button').forEach(b=>b.classList.toggle('on', b.dataset.g===(hafta?'hafta':'ay')));
+  document.querySelectorAll('.t2-cal-gor button').forEach(b=>{
+    b.setAttribute('aria-pressed', String(b.dataset.g===(hafta?'hafta':'ay')));
+  });
   grid.classList.toggle('t2-cal-hafta', hafta);
   let html='';
   calDayNames.forEach(d=>{html+=`<div class="cal-day-name">${d}</div>`;});
